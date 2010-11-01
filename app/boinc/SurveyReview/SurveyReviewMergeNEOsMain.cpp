@@ -4,6 +4,7 @@
 #include <orsa/print.h>
 #include <orsa/statistic.h>
 
+#include <orsaSolarSystem/data.h>
 #include <orsaSolarSystem/datetime.h>
 #include <orsaSolarSystem/print.h>
 
@@ -14,6 +15,7 @@
 #include "fit.h"
 #include "skycoverage.h"
 #include "eta.h"
+#include "SurveyReview.h"
 
 // SQLite3
 #include "sqlite3.h"
@@ -28,6 +30,8 @@ int main(int argc, char ** argv) {
     orsa::Debug::instance()->initTimer();
     
     ORSA_DEBUG("process ID: %i",getpid());
+    
+    orsaSPICE::SPICE::instance()->loadKernel("de405.bsp");
     
     // needed to work with SQLite database
     sqlite3     * db;
@@ -191,6 +195,19 @@ int main(int argc, char ** argv) {
             }
         }
     }
+
+    // a bodygroup with Earth and Sun, to compute the Earth MOID to check if a NEO is a PHO  
+    osg::ref_ptr<orsa::BodyGroup> bg = new orsa::BodyGroup;
+    // SUN
+    osg::ref_ptr<orsa::Body> sun   = SPICEBody("SUN",orsaSolarSystem::Data::MSun());
+    bg->addBody(sun.get());
+    // EARTH
+    osg::ref_ptr<orsa::Body> earth = SPICEBody("EARTH",orsaSolarSystem::Data::MEarth());
+    bg->addBody(earth.get());
+    // MOON
+    /* osg::ref_ptr<orsa::Body> moon  = SPICEBody("MOON",orsaSolarSystem::Data::MMoon());
+       bg->addBody(moon.get());
+    */
     
     {
         // now the real work
@@ -199,7 +216,10 @@ int main(int argc, char ** argv) {
         const double JD = 2455650; // epoch of orbits
         const orsa::Time orbitEpoch = orsaSolarSystem::julianToTime(JD);
         
-        char sql_line[1024];
+        orsa::Orbit tmpOrbit;
+        tmpOrbit.compute(earth.get(),sun.get(),bg.get(),orbitEpoch);
+        const orsa::Orbit earthOrbit = tmpOrbit;
+        
         std::string sql;        
         
         sql = "begin";
@@ -273,17 +293,38 @@ int main(int argc, char ** argv) {
                 const int z_M_min    = (  lrint(orbit_M_at_epoch*orsa::radToDeg()/grain_M_DEG)/z_M_delta)*z_M_delta;
                 const int z_M_max    = (1+lrint(orbit_M_at_epoch*orsa::radToDeg()/grain_M_DEG)/z_M_delta)*z_M_delta;
                 
+#warning MAKE SURE you are using the correct definition for z_H
                 // this is the same as z_H_max: all objects with H up to H_max
-                const int z_H     = (1+lrint((*it_orb).H.getRef()/grain_H)/z_H_delta)*z_H_delta;
+                // const int z_H     = (1+lrint((*it_orb).H.getRef()/grain_H)/z_H_delta)*z_H_delta;
+                //
+                // this is the same as z_H_min: all objects with H up to H_min
+                const int z_H     = (lrint((*it_orb).H.getRef()/grain_H)/z_H_delta)*z_H_delta;
                 
-#warning must check if it is a PHO!!
+                ORSA_DEBUG("H: %g   z_H: %i",(*it_orb).H.getRef(),z_H);
+                
+                bool isPHO=false;
+                {
+                    static unsigned int oID=0;
+                    osg::ref_ptr<OrbitID> orbitID = new OrbitID(oID++,earthOrbit);
+                    orbitID->a                = (*it_orb).orbit.getRef().a;
+                    orbitID->e                = (*it_orb).orbit.getRef().e;
+                    orbitID->i                = (*it_orb).orbit.getRef().i;
+                    orbitID->omega_node       = (*it_orb).orbit.getRef().omega_node;
+                    orbitID->omega_pericenter = (*it_orb).orbit.getRef().omega_pericenter;
+                    orbitID->M                = orbit_M_at_epoch;
+                    
+                    orbitID->mu =orsaSolarSystem::Data::GMSun();
+                    
+                    isPHO=orbitID->isPHO();
+                }
                 
                 if (1) {
                     // debug output
                     if ((*it_orb).number.isSet()) {
-                        ORSA_DEBUG("observed: [%i] obj: [%i] z_a: [%i,%i] z_e: [%i,%i] z_i: [%i,%i] z_node: [%i,%i] z_peri: [%i,%i] z_M: [%i,%i] z_H: %i",
+                        ORSA_DEBUG("observed: [%i] obj: [%i] PHO: [%i] z_a: [%i,%i] z_e: [%i,%i] z_i: [%i,%i] z_node: [%i,%i] z_peri: [%i,%i] z_M: [%i,%i] z_H: %i",
                                    found,
                                    (*it_orb).number.getRef(),
+                                   isPHO,
                                    z_a_min,
                                    z_a_max,
                                    z_e_min,
@@ -298,9 +339,10 @@ int main(int argc, char ** argv) {
                                    z_M_max,
                                    z_H);
                     } else if ((*it_orb).designation.isSet()) {
-                        ORSA_DEBUG("observed: [%i] obj: [%s] z_a: [%i,%i] z_e: [%i,%i] z_i: [%i,%i] z_node: [%i,%i] z_peri: [%i,%i] z_M: [%i,%i] z_H: %i",
+                        ORSA_DEBUG("observed: [%i] obj: [%s] PHO: [%i] z_a: [%i,%i] z_e: [%i,%i] z_i: [%i,%i] z_node: [%i,%i] z_peri: [%i,%i] z_M: [%i,%i] z_H: %i",
                                    found,
                                    (*it_orb).designation.getRef().c_str(),
+                                   isPHO,
                                    z_a_min,
                                    z_a_max,
                                    z_e_min,
@@ -319,29 +361,54 @@ int main(int argc, char ** argv) {
                     }
                 }
                 
-#warning COMPLETE! NEOs and PHOs....
-                /* sprintf(sql_line,"UPDATE grid SET ......");
-                   do {
-                   rc = sqlite3_exec(db,sql_line,NULL,NULL,&zErr);
-                   if (rc==SQLITE_BUSY) {
-                   ORSA_DEBUG("database busy, retrying...");
-                   usleep(100000);
-                   }
-                   } while (rc==SQLITE_BUSY);
-                   if (rc != SQLITE_OK) {
-                   if (zErr != NULL) {
-                   ORSA_DEBUG("SQL error: %s\n",zErr);
-                   sqlite3_free(zErr);
-                   sqlite3_close(db);
-                   exit(0);
-                   }
-                   }
-                */
+                char sql_line[1024];
+                if (isPHO) {
+                    if (found) {
+                        sprintf(sql_line,"UPDATE grid SET N_NEO=N_NEO+1, N_PHO=N_PHO+1, NEO_in_field=NEO_in_field+1, PHO_in_field=PHO_in_field+1");
+                    } else {
+                        sprintf(sql_line,"UPDATE grid SET N_NEO=N_NEO+1, N_PHO=N_PHO+1");
+                    }
+                } else {
+                    if (found) {
+                        sprintf(sql_line,"UPDATE grid SET N_NEO=N_NEO+1, NEO_in_field=NEO_in_field+1");
+                    } else {
+                        sprintf(sql_line,"UPDATE grid SET N_NEO=N_NEO+1");
+                    }
+                }
+                // then the WHERE ... (extra white space as first character!)
+                char sql_where[1024];
+                // NOTE the "<=" in z_H 
+                sprintf(sql_where," WHERE z_a_min=%i and z_a_max=%i and z_e_min=%i and z_e_max=%i and z_i_min=%i and z_i_max=%i and z_node_min=%i and z_node_max=%i and z_peri_min=%i and z_peri_max=%i and z_M_min=%i and z_M_max=%i and z_H<=%i",
+                        z_a_min,z_a_max,
+                        z_e_min,z_e_max,
+                        z_i_min,z_i_max,
+                        z_node_min,z_node_max,
+                        z_peri_min,z_peri_max,
+                        z_M_min,z_M_max,
+                        z_H);
+                strcat(sql_line,sql_where);
+                ORSA_DEBUG("executing [%s]",sql_line);
+                //
+                do {
+                    rc = sqlite3_exec(db,sql_line,NULL,NULL,&zErr);
+                    if (rc==SQLITE_BUSY) {
+                        ORSA_DEBUG("database busy, retrying...");
+                        usleep(100000);
+                    }
+                } while (rc==SQLITE_BUSY);
+                if (rc != SQLITE_OK) {
+                    if (zErr != NULL) {
+                        ORSA_DEBUG("SQL error: %s\n",zErr);
+                        sqlite3_free(zErr);
+                        sqlite3_close(db);
+                        exit(0);
+                    }
+                }
+                
             }
             
             ++it_orb;
         }
-        
         
         sql = "commit";
         do {
@@ -359,7 +426,6 @@ int main(int argc, char ** argv) {
                 exit(0); 
             }
         }
-        
         
     }
     
