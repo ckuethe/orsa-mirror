@@ -5,76 +5,65 @@
 
 using namespace orsa;
 
-/* 
-   mpz_class orsa::factorial(const mpz_class & i) {
-   if (i <= 1) {
-   return 1;
-   }
-   return (i*factorial(i-1));
-   }
-*/
-
-mpz_class orsa::factorial(const mpz_class & i) {
-    // ORSA_DEBUG("f: %Zi",i.get_mpz_t());
-    static std::vector< orsa::Cache<mpz_class> > _factorial_table;
-    const unsigned long int index = i.get_ui();
-    // static mpz_class _mpz_one("1");
-    if (i <= 1) {
-        return 1;
-    } else if (_factorial_table.size() > i) {
-        if (!_factorial_table[index].isSet()) {
-            _factorial_table[index].set(i*factorial(i-1));
+mpz_class orsa::factorial(const mpz_class & i,
+                          const bool & cache) {
+    if (cache) {
+        // ORSA_DEBUG("f: %Zi",i.get_mpz_t());
+        static std::vector< orsa::Cache<mpz_class> > _factorial_table;
+        const unsigned long int index = i.get_ui();
+        // static mpz_class _mpz_one("1");
+        if (i <= 1) {
+            return 1;
+        } else if (_factorial_table.size() > i) {
+            if (!_factorial_table[index].isSet()) {
+                _factorial_table[index].set(i*factorial(i-1,cache));
+            }
+            return _factorial_table[index].get();
+        } else {
+            _factorial_table.resize(index+1);
+            _factorial_table[index].set(i*factorial(i-1,cache));
+            return _factorial_table[index].get();
         }
-        return _factorial_table[index].get();
     } else {
-        _factorial_table.resize(index+1);
-        _factorial_table[index].set(i*factorial(i-1));
-        return _factorial_table[index].get();
+        if (i <= 1) {
+            return 1;
+        }
+        return (i*factorial(i-1,cache));    
+    }   
+}
+
+mpz_class orsa::bi_factorial(const mpz_class & i,
+                             const bool & cache) {
+    if (cache) {
+        // ORSA_DEBUG("bf: %Zi",i.get_mpz_t());
+        static std::vector< orsa::Cache<mpz_class> > _bi_factorial_table;
+        const unsigned long int index = i.get_ui();
+        // static mpz_class _mpz_one("1");
+        // static mpz_class _mpz_two("2");
+        if (i <= 1) {
+            return 1;
+        } else if (_bi_factorial_table.size() > i) {
+            if (!_bi_factorial_table[index].isSet()) {
+                _bi_factorial_table[index].set(i*bi_factorial(i-2,cache));
+            }
+            return _bi_factorial_table[index].get();
+        } else {
+            _bi_factorial_table.resize(index+1);
+            _bi_factorial_table[index].set(i*bi_factorial(i-2,cache));
+            return _bi_factorial_table[index].get();
+        }
+    } else {
+        if (i <= mpz_class("1")) {
+            return mpz_class("1");
+        }
+        return (i*bi_factorial(i-2,cache));
     }
 }
 
-/* 
-   mpz_class orsa::bi_factorial(const mpz_class & i) {
-   ORSA_DEBUG("bf: %Zi",i.get_mpz_t());
-   if (i <= mpz_class("1")) {
-   return mpz_class("1");
-   }
-   return (i*bi_factorial(i-mpz_class("2")));
-   }
-*/
-
-mpz_class orsa::bi_factorial(const mpz_class & i) {
-    // ORSA_DEBUG("bf: %Zi",i.get_mpz_t());
-    static std::vector< orsa::Cache<mpz_class> > _bi_factorial_table;
-    const unsigned long int index = i.get_ui();
-    // static mpz_class _mpz_one("1");
-    // static mpz_class _mpz_two("2");
-    if (i <= 1) {
-        return 1;
-    } else if (_bi_factorial_table.size() > i) {
-        if (!_bi_factorial_table[index].isSet()) {
-            _bi_factorial_table[index].set(i*bi_factorial(i-2));
-        }
-        return _bi_factorial_table[index].get();
-    } else {
-        _bi_factorial_table.resize(index+1);
-        _bi_factorial_table[index].set(i*bi_factorial(i-2));
-        return _bi_factorial_table[index].get();
-    }
-}
-
-mpz_class orsa::binomial(const mpz_class & n, const mpz_class & k) {
-    const mpz_class retVal = ( (factorial(n)) / 
-                               (factorial(k)*factorial(n-k)) );
-
-    /* 
-       ORSA_DEBUG("binomial(%Zi,%Zi) = %Zi",
-       n.get_mpz_t(),
-       k.get_mpz_t(),
-       retVal.get_mpz_t());
-    */
-  
-    return retVal;
+mpz_class orsa::binomial(const mpz_class & n,
+                         const mpz_class & k,
+                         const bool & cache) {
+    return factorial(n,cache)/(factorial(k,cache)*factorial(n-k,cache));
 }
 
 int orsa::power_sign(const mpz_class & l) {

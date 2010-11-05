@@ -14,13 +14,17 @@
 namespace orsa {
   
     // computes i! (factorial)
-    mpz_class factorial(const mpz_class & i);
-  
+    mpz_class factorial(const mpz_class & i,
+                        const bool & cache=true);
+    
     // computes i!! (bi-factorial)
-    mpz_class bi_factorial(const mpz_class & i);
-  
-    mpz_class binomial(const mpz_class & n, const mpz_class & k);
-  
+    mpz_class bi_factorial(const mpz_class & i,
+                           const bool & cache=true);
+    
+    mpz_class binomial(const mpz_class & n,
+                       const mpz_class & k,
+                       const bool & cache=true);
+    
     // (-1)^l
     int power_sign(const mpz_class & l);
   
