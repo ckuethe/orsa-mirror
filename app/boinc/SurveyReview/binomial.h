@@ -21,62 +21,56 @@ bool BinomialConfidenceInterval(unsigned int & N_low,
     {
         // search N_low
         const double probThreshold = (1.0-CL)/2;
-        unsigned int N = N_mean;
-        double runningBinProb;
-        while (N >= R) {
-            runningBinProb = 0.0;
-            unsigned int Z=R;
-            while (Z<=N) {
-                runningBinProb +=
-                    orsa::binomial(Z,R).get_d() *
-                    orsa::int_pow(p,R) *
-                    orsa::int_pow(1-p,Z-R);
-                ++Z;
-            }
-            runningBinProb *= p;
-            // ORSA_DEBUG("(low) N: %i  rBP: %g",N,runningBinProb);
-            if (N == R) break;
-            if (runningBinProb <= probThreshold) {
+        double runningBinProb = 0.0;
+        unsigned int Z=R;
+        while (1) {
+            runningBinProb +=
+                p *
+                orsa::binomial(Z,R,false).get_d() *
+                orsa::int_pow(p,R) *
+                orsa::int_pow(1-p,Z-R);
+            ORSA_DEBUG("(low) N: %i  rBP: %g",Z,runningBinProb);
+            if (runningBinProb >= probThreshold) {
+                if (Z > R) {
+                    --Z;
+                }
                 break;
             } else {
-                --N;
+                ++Z;
             }
         }
-        N_low = N;
+        N_low = Z;
     }
-
+    
     {
         // search N_high
         const double probThreshold = (1.0+CL)/2;
-        unsigned int N = N_mean;
-        double runningBinProb;
+        double runningBinProb = 0.0;
+        unsigned int Z=R;
         while (1) {
-            runningBinProb = 0.0;
-            unsigned int Z=R;
-            while (Z<=N) {
-                runningBinProb +=
-                    orsa::binomial(Z,R).get_d() *
-                    orsa::int_pow(p,R) *
-                    orsa::int_pow(1-p,Z-R);
-                ++Z;
-            }
-            runningBinProb *= p;
-            // ORSA_DEBUG("(high) N: %i  rBP: %g",N,runningBinProb);
+            runningBinProb +=
+                p *
+                orsa::binomial(Z,R,false).get_d() *
+                orsa::int_pow(p,R) *
+                orsa::int_pow(1-p,Z-R);
+            ORSA_DEBUG("(high) N: %i  rBP: %g",Z,runningBinProb);
             if (runningBinProb >= probThreshold) {
                 break;
             } else {
-                ++N;
+                ++Z;
             }
         }
-        N_high = N;
+        N_high = Z;
     }
     
-    /* ORSA_DEBUG("N_low: %i   N_mean = %g -> %i   N_high: %i",
-       N_low,
-       ((R+1)/p)-1,
-       N_mean,
-       N_high);
-    */
+    ORSA_DEBUG("R: %i   p: %g   N_low: %i   N_mean = %g -> %i   N_high: %i   (C.L.: %g\%)",
+               R,
+               p,
+               N_low,
+               ((R+1)/p)-1,
+               N_mean,
+               N_high,
+               100*CL);
     
     return true;
 }
