@@ -18,11 +18,15 @@ bool BinomialConfidenceInterval(unsigned int & N_low,
     
     N_mean = lrint(((R+1)/p)-1);
     
-    {
+    // notice how the R==0 case is handled in a special way for both N_low and N_high
+    
+    if (R==0) {
+        N_low = R;
+    } else {
         // search N_low
         const double probThreshold = (1.0-CL)/2;
         double runningBinProb = 0.0;
-        unsigned int Z=R;
+        unsigned int Z = R;
         while (1) {
             runningBinProb +=
                 p *
@@ -44,9 +48,9 @@ bool BinomialConfidenceInterval(unsigned int & N_low,
     
     {
         // search N_high
-        const double probThreshold = (1.0+CL)/2;
+        const double probThreshold = (R==0 ? CL : (1.0+CL)/2);
         double runningBinProb = 0.0;
-        unsigned int Z=R;
+        unsigned int Z = R;
         while (1) {
             runningBinProb +=
                 p *
