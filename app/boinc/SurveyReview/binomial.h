@@ -30,15 +30,15 @@ bool bisectionSearch(unsigned int & N_minus,
     double p_plus  =  cumulativeProbability(p, N_plus,  R, cache);
     if (p_minus > probThreshold) {
         if (N_minus==R) {
-            N_plus = R+1;
+            N_plus = R;
             return true;
         } else {
-            ORSA_DEBUG("problem: N_minus is above threshold");
+            ORSA_DEBUG("problem: N_minus=%i is above threshold",N_minus);
             return false;
         }
     }
     if (p_plus  < probThreshold) {
-        ORSA_DEBUG("problem: N_plus is below threshold");
+        ORSA_DEBUG("problem: N_plus=%i is below threshold",N_plus);
         return false;
     }
     unsigned int N_middle;
@@ -48,7 +48,7 @@ bool bisectionSearch(unsigned int & N_minus,
         if (N_middle==N_minus) break;
         if (N_middle==N_plus)  break;
         p_middle = cumulativeProbability(p, N_middle, R, cache);
-        ORSA_DEBUG("N: %i  cP: %g",N_middle,p_middle);
+        // ORSA_DEBUG("N: %i  cP: %g",N_middle,p_middle);
         if (p_middle <= probThreshold) {
             N_minus = N_middle;
             p_minus = p_middle;
@@ -63,9 +63,9 @@ bool bisectionSearch(unsigned int & N_minus,
 bool BinomialConfidenceInterval(unsigned int & N_low,
                                 unsigned int & N_mean,
                                 unsigned int & N_high,
-                                const double & CL /* confidence level (between 0.0 and 1.0) */,
-                                const unsigned int & R /* found objects */,
-                                const double & p /* probability */,
+                                const double & CL,      /* confidence level (between 0.0 and 1.0) */
+                                const unsigned int & R, /* found objects */
+                                const double & p,       /* cumulative probability */
                                 const bool & cache=true) {
     // check input
     if ((p<=0.0) || (p>1.0)) {
@@ -86,7 +86,7 @@ bool BinomialConfidenceInterval(unsigned int & N_low,
         // search N_low
         const double probThreshold = (1.0-CL)/2;
         unsigned int N_minus = R;
-        unsigned int N_plus  = N_mean;
+        unsigned int N_plus  = N_mean+1;
         if (bisectionSearch(N_minus,N_plus,R,p,probThreshold,cache)) {
             N_low = N_minus;
         } else {
@@ -98,7 +98,7 @@ bool BinomialConfidenceInterval(unsigned int & N_low,
         // search N_high
         const double probThreshold = (R==0 ? CL : (1.0+CL)/2);
         unsigned int N_minus = N_mean;
-        unsigned int N_plus  = 5*N_mean;
+        unsigned int N_plus  = 5*(N_mean+1);
         if (bisectionSearch(N_minus,N_plus,R,p,probThreshold,cache)) {
             N_high = N_plus;
         } else {
@@ -106,14 +106,15 @@ bool BinomialConfidenceInterval(unsigned int & N_low,
         }
     }
     
-    ORSA_DEBUG("R: %i   p: %g   N_low: %i   N_mean = %g -> %i   N_high: %i   (C.L.: %g\%)",
-               R,
-               p,
-               N_low,
-               ((R+1)/p)-1,
-               N_mean,
-               N_high,
-               100*CL);
+    /* ORSA_DEBUG("R: %i   p: %g   N_low: %i   N_mean = %g -> %i   N_high: %i   (C.L.: %g\%)",
+       R,
+       p,
+       N_low,
+       ((R+1)/p)-1,
+       N_mean,
+       N_high,
+       100*CL);
+    */
     
     return true;
 }
