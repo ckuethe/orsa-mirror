@@ -2,7 +2,7 @@
 
 #include <orsa/box.h>
 #include <orsa/double.h>
-#include <orsa/legendre.h>
+// #include <orsa/legendre.h>
 #include <orsa/multimin.h>
 #include <orsa/statistic.h>
 #include <orsa/unit.h>
@@ -203,7 +203,7 @@ void orsa::convert(std::vector< std::vector<double> > & C,
                 ORSA_DEBUG("norm_C[%i][%i] = %+16.12f +/- %16.12f   norm: %f",
                            l,m,norm_C_lm,norm_C_lm_uncertainty,normalization(l,m));
             }
-      
+            
             C[l][m]      = C_lm;
             norm_C[l][m] = norm_C_lm;
       
