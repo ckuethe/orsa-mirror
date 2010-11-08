@@ -154,8 +154,8 @@ namespace orsa {
             // ORSA_DEBUG("computed value: dP(%i,%i) = %g",l,m,_dP[l][m].get());
         }
     public:
-        const double P(const unsigned int l, 
-                       const unsigned int m) const {
+        double P(const unsigned int l, 
+                 const unsigned int m) const {
             // ORSA_DEBUG("called P(%i,%i)",l,m);
             if (m > l) {
                 ORSA_ERROR("incorrect values: m > l (%i > %i)",m,l);
@@ -190,8 +190,8 @@ namespace orsa {
         }
     public:
         //! dP returns the value of dP/d theta, assuming P=P(cos theta);
-        const double dP(const unsigned int l, 
-                        const unsigned int m) const {
+        double dP(const unsigned int l, 
+                  const unsigned int m) const {
             if (m > l) {
                 ORSA_ERROR("incorrect values: l < m (%i < %i)",l,m);
                 return 0;
