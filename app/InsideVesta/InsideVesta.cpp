@@ -76,8 +76,8 @@ int main() {
     
     const unsigned int N = 25000;
     // remember, there is another RNG, see GlobalRNG in InsideVesta.h
-    int randomSeed = getpid();
-    
+    // int randomSeed = getpid();
+    int randomSeed = 85719;
     
     // save this for later!
     osg::ref_ptr<RandomPointsInShape> randomPointsInShape = new RandomPointsInShape(shape.get(),N,randomSeed);
