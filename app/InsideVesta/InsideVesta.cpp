@@ -72,7 +72,7 @@ int main() {
     orsa::Matrix shapeToLocal;
     orsa::Matrix localToShape;
     orsa::Matrix inertiaMatrix;
-    orsa::PaulMoment * paulMoment;
+    osg::ref_ptr<orsa::PaulMoment> paulMoment;
     
     const unsigned int N = 100000;
     // remember, there is another RNG, see GlobalRNG in InsideVesta.h
@@ -104,10 +104,19 @@ int main() {
                                          randomPointsInShape,
                                          refMD.get());
     
+    const orsa::Vector ref_centerOfMass  = centerOfMass;
+    const orsa::Matrix ref_shapeToLocal  = shapeToLocal;
+    const orsa::Matrix ref_localToShape  = localToShape;
+    const orsa::Matrix ref_inertiaMatrix = inertiaMatrix;
+    const osg::ref_ptr<orsa::PaulMoment> ref_paulMoment = paulMoment;
+    
+    // additional, to track rotational axis offset
+    const orsa::Vector ref_rotAxis = ref_localToShape*orsa::Vector(0,0,1);
+    
     std::vector< std::vector<double> > ref_C, ref_S, ref_norm_C, ref_norm_S;
     std::vector<double> ref_J;
     orsa::convert(ref_C, ref_S, ref_norm_C, ref_norm_S, ref_J,
-                  paulMoment, 
+                  paulMoment.get(), 
                   FromUnits(300,orsa::Unit::KM));
     
     if (1) {
@@ -115,7 +124,7 @@ int main() {
         std::vector< std::vector<double> > C, S, norm_C, norm_S;
         std::vector<double> J;
         orsa::convert(C, S, norm_C, norm_S, J,
-                      paulMoment, 
+                      paulMoment.get(), 
                       FromUnits(300,orsa::Unit::KM));
         
         ORSA_DEBUG("$\\rho_{m}$ & $%9.3f$ \\\\",orsa::FromUnits(orsa::FromUnits(refMD->_mantleDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
@@ -177,10 +186,15 @@ int main() {
                                              centerOfMass,
                                              randomPointsInShape,
                                              md.get());
+        // derived
+        const double centerOfMassOffset = (ref_centerOfMass-centerOfMass).length();
+        const orsa::Vector rotAxis = localToShape*orsa::Vector(0,0,1);
+        const double rotAxisOffset = acos(ref_rotAxis*rotAxis);
+        
         std::vector< std::vector<double> > C, S, norm_C, norm_S;
         std::vector<double> J;
         orsa::convert(C, S, norm_C, norm_S, J,
-                      paulMoment, 
+                      paulMoment.get(), 
                       FromUnits(300,orsa::Unit::KM));
         double deltaMax=0.0;
         unsigned int max_l=0, max_m=0;
@@ -212,7 +226,7 @@ int main() {
         deltaRMS = sqrt(deltaRMS);
         
         // output
-        ORSA_DEBUG("SAMPLE: %8.1f %10.3e %10.3e %+8.1f %+8.1f %+8.1f %10.1f %10.1f %10.1f %8.1f %10.3e %10.3e %i %i",
+        ORSA_DEBUG("SAMPLE: %8.1f %10.3e %10.3e %+8.1f %+8.1f %+8.1f %10.1f %10.1f %10.1f %8.1f %10.3e %10.3e %8.1f %10.6f %i %i",
                    val.coreDensity.getRef(),
                    orsa::FromUnits(md->_coreVolume,orsa::Unit::KM,-3),
                    orsa::FromUnits(md->_coreVolume*val.coreDensity.getRef(),orsa::Unit::KG,-1),
@@ -225,6 +239,8 @@ int main() {
                    md->_mantleDensity,
                    deltaMax,
                    deltaRMS,
+                   centerOfMassOffset,
+                   orsa::radToDeg()*rotAxisOffset,
                    max_l,
                    max_m);
         
