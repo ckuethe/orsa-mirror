@@ -108,29 +108,37 @@ public:
     ModelMassDistribution(const Model::Values & val) :
         orsa::MassDistribution(),
         _val(val),
-        _am2(orsa::int_pow(_val.coreRadiusX.getRef(),-2)),
-        _bm2(orsa::int_pow(_val.coreRadiusY.getRef(),-2)),
-        _cm2(orsa::int_pow(_val.coreRadiusZ.getRef(),-2)),
         _coreVolume((4.0/3.0)*orsa::pi()*_val.coreRadiusX.getRef()*_val.coreRadiusY.getRef()*_val.coreRadiusZ.getRef()),
-        _mantleDensity((_val.totalMass.getRef()-_coreVolume*_val.coreDensity.getRef())/(_val.totalVolume.getRef()-_coreVolume)) { }
+        _mantleDensity((_val.totalMass.getRef()-_coreVolume*_val.coreDensity.getRef())/(_val.totalVolume.getRef()-_coreVolume)) {
+        if (_coreVolume > 0.0) {
+            _am2 = orsa::int_pow(_val.coreRadiusX.getRef(),-2);
+            _bm2 = orsa::int_pow(_val.coreRadiusY.getRef(),-2);
+            _cm2 = orsa::int_pow(_val.coreRadiusZ.getRef(),-2);
+        }
+    }
 protected:
     ~ModelMassDistribution() { }
 public:    
     double density(const orsa::Vector & v) const {
-        if ( (orsa::square(v.getX()-_val.coreCenterX.getRef())*_am2 +
-              orsa::square(v.getY()-_val.coreCenterY.getRef())*_bm2 +
-              orsa::square(v.getZ()-_val.coreCenterZ.getRef())*_cm2) <= 1.0) {
-            // inside core
-            return _val.coreDensity.getRef();
+        if (_coreVolume > 0.0) {
+            if ( (orsa::square(v.getX()-_val.coreCenterX.getRef())*_am2.getRef() +
+                  orsa::square(v.getY()-_val.coreCenterY.getRef())*_bm2.getRef() +
+                  orsa::square(v.getZ()-_val.coreCenterZ.getRef())*_cm2.getRef()) <= 1.0) {
+                // inside core
+                return _val.coreDensity.getRef();
+            } else {
+                return _mantleDensity;
+            }
         } else {
             return _mantleDensity;
         }
     }
 public:
     const Model::Values _val;
-    const double _am2, _bm2, _cm2;
     const double _coreVolume;
     const double _mantleDensity;
+protected:
+    orsa::Cache<double> _am2, _bm2, _cm2;
 };
 
 #endif // _INSIDE_VESTA_H_

@@ -32,13 +32,13 @@ int main() {
     Model model;
     model.totalMass   = new Par(vestaMass,vestaMass);
     model.totalVolume = new Par(volume,volume);
-    model.coreDensity = new Par(bulkDensity, 10.0*g_cm3);
-    model.coreCenterX = new Par(-10.0*km,    10.0*km);
-    model.coreCenterY = new Par(-10.0*km,    10.0*km);
-    model.coreCenterZ = new Par(-10.0*km,    10.0*km);
-    model.coreRadiusX = new Par( 70.0*km,   150.0*km);
-    model.coreRadiusY = new Par( 70.0*km,   150.0*km);
-    model.coreRadiusZ = new Par( 70.0*km,   150.0*km);
+    model.coreDensity = new Par(bulkDensity, 20.0*g_cm3);
+    model.coreCenterX = new Par(-50.0*km,    50.0*km);
+    model.coreCenterY = new Par(-50.0*km,    50.0*km);
+    model.coreCenterZ = new Par(-50.0*km,    50.0*km);
+    model.coreRadiusX = new Par(  0.0*km,   200.0*km);
+    model.coreRadiusY = new Par(  0.0*km,   200.0*km);
+    model.coreRadiusZ = new Par(  0.0*km,   200.0*km);
     
     osg::ref_ptr<orsa::Shape> shape; 
     {
@@ -81,8 +81,11 @@ int main() {
     
     // save this for later!
     osg::ref_ptr<RandomPointsInShape> randomPointsInShape = new RandomPointsInShape(shape.get(),N,randomSeed);
-        
-    // volume = orsa::volume(randomPointsInShape);
+    
+    ORSA_DEBUG("volume from shape: %g   input value: %g   (ratio: %g)",
+               orsa::volume(randomPointsInShape),
+               volume,
+               orsa::volume(randomPointsInShape)/volume);
     
     centerOfMass = orsa::centerOfMass(randomPointsInShape,
                                       refMD.get());
