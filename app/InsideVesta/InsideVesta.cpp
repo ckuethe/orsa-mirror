@@ -74,7 +74,7 @@ int main() {
     orsa::Matrix inertiaMatrix;
     osg::ref_ptr<orsa::PaulMoment> paulMoment;
     
-    const unsigned int N = 100000;
+    const unsigned int N = 25000;
     // remember, there is another RNG, see GlobalRNG in InsideVesta.h
     int randomSeed = getpid();
     
@@ -196,28 +196,25 @@ int main() {
         orsa::convert(C, S, norm_C, norm_S, J,
                       paulMoment.get(), 
                       FromUnits(300,orsa::Unit::KM));
-        double deltaMax=0.0;
-        unsigned int max_l=0, max_m=0;
+        std::vector<double> deltaMax;
+        deltaMax.resize(degree+1); // [2] to [degree], but [0] and [1] are unused...
         double deltaRMS=0.0;
         unsigned int deltaRMS_count=0;
         for (unsigned int l=2; l<=degree; ++l) {
+            deltaMax[l] = 0.0;
             for (unsigned int m=0; m<=l; ++m) {
                 const double delta = fabs(norm_C[l][m]-ref_norm_C[l][m]);
                 deltaRMS += orsa::square(delta);
                 ++deltaRMS_count;
-                if (delta>deltaMax) {
-                    deltaMax=delta;
-                    max_l = l;
-                    max_m = m;
+                if (delta>deltaMax[l]) {
+                    deltaMax[l]=delta;
                 }
                 if (m!=0) {
                     const double delta = fabs(norm_S[l][m]-ref_norm_S[l][m]);
                     deltaRMS += orsa::square(delta);
                     ++deltaRMS_count;
-                    if (delta>deltaMax) {
-                        deltaMax=delta;
-                        max_l = l;
-                        max_m = m;
+                    if (delta>deltaMax[l]) {
+                        deltaMax[l]=delta;
                     }
                 }
             }
@@ -226,7 +223,7 @@ int main() {
         deltaRMS = sqrt(deltaRMS);
         
         // output
-        ORSA_DEBUG("SAMPLE: %8.1f %10.3e %10.3e %+8.1f %+8.1f %+8.1f %10.1f %10.1f %10.1f %8.1f %10.3e %10.3e %8.1f %10.6f %i %i",
+        ORSA_DEBUG("SAMPLE: %8.1f %10.3e %10.3e %+8.1f %+8.1f %+8.1f %10.1f %10.1f %10.1f %8.1f %10.3e %10.3e %10.3e %10.3e %8.1f %10.6f",
                    val.coreDensity.getRef(),
                    orsa::FromUnits(md->_coreVolume,orsa::Unit::KM,-3),
                    orsa::FromUnits(md->_coreVolume*val.coreDensity.getRef(),orsa::Unit::KG,-1),
@@ -237,12 +234,12 @@ int main() {
                    val.coreRadiusY.getRef(),
                    val.coreRadiusZ.getRef(),
                    md->_mantleDensity,
-                   deltaMax,
+                   deltaMax[2],
+                   deltaMax[3],
+                   deltaMax[4],
                    deltaRMS,
                    centerOfMassOffset,
-                   orsa::radToDeg()*rotAxisOffset,
-                   max_l,
-                   max_m);
+                   orsa::radToDeg()*rotAxisOffset);
         
     }    
     
