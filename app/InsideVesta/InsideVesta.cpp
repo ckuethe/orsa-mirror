@@ -212,7 +212,7 @@ int main() {
         deltaRMS = sqrt(deltaRMS);
         
         // output
-        ORSA_DEBUG("SAMPLE: %.1f %.3e %.3e %+8.1f %+8.1f %+8.1f %10.1f %10.1f %10.1f %.1f %.3e %.3e %i %i",
+        ORSA_DEBUG("SAMPLE: %8.1f %10.3e %10.3e %+8.1f %+8.1f %+8.1f %10.1f %10.1f %10.1f %8.1f %10.3e %10.3e %i %i",
                    val.coreDensity.getRef(),
                    orsa::FromUnits(md->_coreVolume,orsa::Unit::KM,-3),
                    orsa::FromUnits(md->_coreVolume*val.coreDensity.getRef(),orsa::Unit::KG,-1),
