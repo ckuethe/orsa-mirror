@@ -74,7 +74,7 @@ int main() {
     orsa::Matrix inertiaMatrix;
     osg::ref_ptr<orsa::PaulMoment> paulMoment;
     
-    const unsigned int N = 25000;
+    const unsigned int N = 1000000;
     // remember, there is another RNG, see GlobalRNG in InsideVesta.h
     // int randomSeed = getpid();
     int randomSeed = 85719;
