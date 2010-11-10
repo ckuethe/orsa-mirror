@@ -10,6 +10,8 @@ GlobalRNG * GlobalRNG::_instance = 0;
 // int main(int argc, char **argv) {
 int main() {
     
+    orsa::Debug::instance()->initTimer();
+    
     // units
     const double    km = orsa::FromUnits(1,orsa::Unit::KM);
     const double g_cm3 = orsa::FromUnits(orsa::FromUnits(1,orsa::Unit::GRAM),orsa::Unit::CM,-3);
@@ -32,7 +34,7 @@ int main() {
     Model model;
     model.totalMass   = new Par(vestaMass,vestaMass);
     model.totalVolume = new Par(volume,volume);
-    model.coreDensity = new Par(bulkDensity, 20.0*g_cm3);
+    model.coreDensity = new Par(bulkDensity, 10.0*g_cm3);
     model.coreCenterX = new Par(-50.0*km,    50.0*km);
     model.coreCenterY = new Par(-50.0*km,    50.0*km);
     model.coreCenterZ = new Par(-50.0*km,    50.0*km);
@@ -48,7 +50,7 @@ int main() {
         }
         shape = vestaShapeThomas.get();
     }
-
+    
     // choose here if sample the reference solution...
     // const Model::Values refVal = model.sample();
     // ... or fix it manually (make sure it's within the model limits above!)
@@ -65,7 +67,6 @@ int main() {
     const Model::Values refVal = tmpVal;
     
     osg::ref_ptr<ModelMassDistribution> refMD = new ModelMassDistribution(refVal);
-    
     
     // double dummy_volume;
     orsa::Vector centerOfMass;
@@ -172,6 +173,12 @@ int main() {
     while (1) {
         const Model::Values val = model.sample();
         osg::ref_ptr<ModelMassDistribution> md = new ModelMassDistribution(val);
+        {
+            // some consistency checks 
+            if (md->_mantleDensity <= 0.0) {
+                continue;
+            }
+        }
         centerOfMass = orsa::centerOfMass(randomPointsInShape,
                                           md.get());
         orsa::diagonalizedInertiaMatrix(shapeToLocal,
