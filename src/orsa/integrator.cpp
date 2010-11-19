@@ -117,7 +117,7 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
             // try to add massless bodies at small groups and integrate
             // the test for a good addition is that getCommonInterval returns true
             {
-                // orsa::Cache<unsigned int> old_bgDump_size; // don't init now, to skip first iteration, where the massive bodies are integrated, along with possibly some massless bodies
+                orsa::Cache<unsigned int> old_bgDump_size; // don't init now, to skip first iteration, where the massive bodies are integrated, along with possibly some massless bodies
                 while (bgDump->size() != 0) {
                     const orsa::BodyGroup::BodyList bl = bgDump->getBodyList();
                     orsa::BodyGroup::BodyList::const_iterator it = bl.begin();
@@ -145,15 +145,14 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
                         ORSA_DEBUG("problems...");
                         return false;
                     }
-                    /* if (old_bgDump_size.isSet()) {
-                       if (bgDump->size() == old_bgDump_size.getRef()) {
-                       ORSA_DEBUG("problem while dealing with massless bodies");
-                       break;
-                       }
-                       }
-                       old_bgDump_size = bgDump->size();
-                    */
-                }
+                    if (old_bgDump_size.isSet()) {
+                        if (bgDump->size() == old_bgDump_size.getRef()) {
+                            ORSA_DEBUG("problem while dealing with massless bodies");
+                            break;
+                        }
+                    }
+                    old_bgDump_size = bgDump->size();
+               }
             }
         }
     }
