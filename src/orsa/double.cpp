@@ -74,17 +74,29 @@ int orsa::power_sign(const mpz_class & l) {
     }
 }
 
-double orsa::int_pow(const double & x, 
-                     const int    & p) {
+/* double orsa::int_pow(const double & x, 
+   const int    & p) {
+   if (p ==  2) return x*x;
+   if (p ==  1) return x;
+   if (p ==  0) return 1;
+   if (p == -1) return 1/x;
+   double _pow = x;
+   const int max_k = abs(p);
+   for (int k=1; k<max_k; ++k) {
+   _pow *= x;
+   }
+   if (p < 0) _pow = 1/_pow;
+   return _pow;
+   }
+*/
+
+template <class T> T orsa::int_pow(const T & x,
+                                   const int & p) {
     if (p ==  2) return x*x;
     if (p ==  1) return x;
     if (p ==  0) return 1;
     if (p == -1) return 1/x;
-    /* if (fabs(x) < epsilon()) {
-       return 0;
-       }
-    */
-    double _pow = x;
+    T _pow = x;
     const int max_k = abs(p);
     for (int k=1; k<max_k; ++k) {
         _pow *= x;
@@ -92,6 +104,15 @@ double orsa::int_pow(const double & x,
     if (p < 0) _pow = 1/_pow;
     return _pow;
 }
+
+template int orsa::int_pow(const int & x,
+                           const int & p);
+
+template double orsa::int_pow(const double & x,
+                              const int & p);
+
+template mpf_class orsa::int_pow(const mpf_class & x,
+                                 const int & p);
 
 const double & orsa::epsilon() {
     static const double _eps = __DBL_EPSILON__; /* 2.2204460492503131e-16 */
