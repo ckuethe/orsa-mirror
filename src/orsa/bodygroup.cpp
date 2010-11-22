@@ -63,6 +63,14 @@ bool BodyGroup::addBody(const Body * b) {
         insertIBPS(ibps, b, false, false);
     }
     
+    {
+        // debug
+        /* ORSA_DEBUG("added body [%s]  inertial: %x",
+           b->getName().c_str(),
+           b->getInitialConditions().inertial.get());
+        */
+    }
+    
     return true;
 }
 
@@ -165,18 +173,26 @@ bool BodyGroup::getClosestIBPS(orsa::IBPS       & ibps,
 bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
                                     const orsa::Body * b,
                                     const orsa::Time & t) const {
-  
+    
     if (!b->alive(t)) {
         // ORSA_DEBUG("out, body [%s]",b->getName().c_str());
         return false;
     }
-  
-    /* 
-       ORSA_DEBUG("body: [%s]  bodies: %i",
+    
+    if (b->getInitialConditions().time.isSet()) {
+        if (b->getInitialConditions().time.getRef() == t) {
+            ibps = b->getInitialConditions();
+            return true;
+        }
+    }
+    
+    /* ORSA_DEBUG("body: [%s]  bodies: %i   inertial: %x   t: [below]",
        b->getName().c_str(),
-       size());
+       size(),
+       b->getInitialConditions().inertial.get());
+       orsa::print(t);
     */
-  
+    
     if (b->getInitialConditions().dynamic()) {
         IBPS ibps1, ibps2;
         osg::ref_ptr<const orsa::BodyGroup::BodyInterval> bi = getBodyInterval(b);
@@ -306,11 +322,9 @@ bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
                        b->getName().c_str(),
                        b->getInitialConditions().dynamic());
             orsa::print(t);
-      
             ORSA_DEBUG("body initial conditions time: [below]");
             orsa::print(b->getInitialConditions().time.getRef());
-      
-            // ORSA_DEBUG("..out..");
+            
             return false;
         }	
     } else {
@@ -374,6 +388,7 @@ bool BodyGroup::getInterpolatedPosVel(Vector     & position,
 bool BodyGroup::getInterpolatedMass(double     & mass,
                                     const Body * b,
                                     const Time & t) const {
+    // ORSA_DEBUG("called for [%s]",b->getName().c_str());
     orsa::IBPS ibps;
     if (getInterpolatedIBPS(ibps,b,t)) {
         if (ibps.inertial.get()) {
