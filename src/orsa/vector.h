@@ -16,6 +16,7 @@ namespace orsa {
         // constructors
     public:
         Vector() { }
+        // Vector() : _x(0.0), _y(0.0), _z(0.0), _l(0.0), _l2(0.0) { }
     public:
         Vector(const Vector & v) : _x(v._x), _y(v._y), _z(v._z), _l(v._l), _l2(v._l2) { 
             check();
