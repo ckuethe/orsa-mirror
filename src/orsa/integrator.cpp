@@ -42,15 +42,16 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
             ++it;
         }
     }
-    
-    /* ORSA_DEBUG("CALL start: %f [day]",
+
+    /* 
+       ORSA_DEBUG("CALL start: %f [day]",
        FromUnits(start.get_d(),Unit::DAY,-1));
        orsa::print(start);
        ORSA_DEBUG("CALL stop:  %f [day]",
        FromUnits(stop.get_d(),Unit::DAY,-1));
        orsa::print(stop);
     */
-  
+    
     // always start <= stop
     // but integration direction may not be from start to stop.... 
     // maybe I should change the name of the variables!!
@@ -78,6 +79,7 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
                 needMicroIntegrations=true;
             }
         }
+        // ORSA_DEBUG("needMicroIntegrations: %i",needMicroIntegrations);
         if (needMicroIntegrations) {
             // compute global interval
             Time t1, t2;
@@ -369,9 +371,9 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
             // debug
             BodyGroup::BodyList::const_iterator _b_it = bg->getBodyList().begin();
             while (_b_it != bg->getBodyList().end()) { 
-                orsa::BodyGroup::BodyInterval * _b_interval = bg->getBodyInterval((*_b_it).get());
-                orsa::BodyGroup::BodyInterval::DataType & _b_interval_data = _b_interval->getData();
-                orsa::BodyGroup::BodyInterval::DataType::iterator _b_interval_data_it = _b_interval_data.begin();
+                const orsa::BodyGroup::BodyInterval * _b_interval = bg->getBodyInterval((*_b_it).get());
+                const orsa::BodyGroup::BodyInterval::DataType & _b_interval_data = _b_interval->getData();
+                orsa::BodyGroup::BodyInterval::DataType::const_iterator _b_interval_data_it = _b_interval_data.begin();
                 unsigned int counter=0;
                 while (_b_interval_data_it != _b_interval_data.end()) {
                     ++counter;
@@ -462,9 +464,10 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
                         orsa::BodyGroup::BodyInterval::DataType & _b_interval_data = _b_interval->getData();
                         orsa::BodyGroup::BodyInterval::DataType::iterator _b_interval_data_it = _b_interval_data.begin();
                         while (_b_interval_data_it != _b_interval_data.end()) {
-                            /* ORSA_DEBUG("testing: body [%s]   t: %f   [tmp: %i]   this: %x   end: %x",
+                            /* ORSA_DEBUG("testing: body [%s]   t: %f   (now: %f)   [tmp: %i]   this: %x   end: %x",
                                (*_b_it)->getName().c_str(),
                                (*_b_interval_data_it).time.getRef().get_d(),
+                               t.get_d(),
                                (*_b_interval_data_it).tmp,
                                (&(*_b_interval_data_it)),
                                (&(*(_b_interval_data.end()))));
@@ -495,9 +498,36 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
             */
             
         } else {
-            // last call was rejected...
+            // last call was rejected, remove all tmp entries
+            BodyGroup::BodyList::const_iterator _b_it = bg->getBodyList().begin();
+            while (_b_it != bg->getBodyList().end()) { 
+                if (!((*_b_it)->getInitialConditions().dynamic())) { 
+                    ++_b_it;
+                    continue;
+                }
+                orsa::BodyGroup::BodyInterval * _b_interval = bg->getBodyInterval((*_b_it).get());
+                orsa::BodyGroup::BodyInterval::DataType & _b_interval_data = _b_interval->getData();
+                orsa::BodyGroup::BodyInterval::DataType::iterator _b_interval_data_it = _b_interval_data.begin();
+                while (_b_interval_data_it != _b_interval_data.end()) {
+                    /* ORSA_DEBUG("testing: body [%s]   t: %f   [tmp: %i]   this: %x   end: %x",
+                       (*_b_it)->getName().c_str(),
+                       (*_b_interval_data_it).time.getRef().get_d(),
+                       (*_b_interval_data_it).tmp,
+                       (&(*_b_interval_data_it)),
+                       (&(*(_b_interval_data.end()))));
+                    */
+                    if ((*_b_interval_data_it).tmp==true) {
+                        _b_interval_data_it = _b_interval_data.erase(_b_interval_data_it);
+                    } else {
+                        ++_b_interval_data_it;
+                    }
+                }     
+                // IMPORTANT!
+                _b_interval->update();
+                ++_b_it;
+            }
         }
-    
+        
         if ((t+next_dt-tEnd)*sign.getRef() > zeroTime) {
             next_dt = tEnd - t;
             if (next_dt == zeroTime) {

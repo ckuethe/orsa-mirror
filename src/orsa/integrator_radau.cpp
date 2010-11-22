@@ -28,7 +28,12 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                            orsa::Time       & next_timestep) {
   
     // ORSA_DEBUG("called...");
-  
+    
+    /* ORSA_DEBUG("call start, start+timestep [below]");
+       orsa::print(start);
+       orsa::print(start+timestep);
+    */
+    
     unsigned int niter = 2;
   
     const BodyGroup::BodyList & bl = bg->getBodyList();
@@ -770,9 +775,26 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                     }
 	  
                     ibps.tmp = true;
-	  
-                    bg->insertIBPS(ibps,k,onlyIfExtending.getRef(),true);
-	  
+                    
+                    // if (!bg->insertIBPS(ibps,k,onlyIfExtending.getRef(),true)) {
+                    // when ibps.tmp is true, the varialbe onlyIfExtending passed to insert must be "false"
+                    if (!bg->insertIBPS(ibps,k,false,true)) {
+                        ORSA_DEBUG("insert failed t: %.8f [interval: %.8f -> %.8f]",
+                                   orsa::FromUnits(ibps.time.getRef().get_d(),orsa::Unit::DAY,-1),
+                                   orsa::FromUnits(bg->getBodyInterval((*bl_it).get())->min().time.getRef().get_d(),orsa::Unit::DAY,-1),
+                                   orsa::FromUnits(bg->getBodyInterval((*bl_it).get())->max().time.getRef().get_d(),orsa::Unit::DAY,-1));
+                        /* ORSA_DEBUG("problem, body: [%s]",(*bl_it).get()->getName().c_str());
+                           ORSA_DEBUG("insert failed, ibps.tmp: %i, ibps.time [below]",ibps.tmp);
+                           orsa::print(ibps.time.getRef());
+                           ORSA_DEBUG("interval range: min,max [below]");
+                           orsa::print(bg->getBodyInterval((*bl_it).get())->min().time.getRef());
+                           orsa::print(bg->getBodyInterval((*bl_it).get())->max().time.getRef());
+                           ORSA_DEBUG("call start, start+timestep [below]");
+                           orsa::print(start);
+                           orsa::print(start+timestep);
+                        */
+                    }
+                    
                     ++bl_it;
                 }
             }
@@ -958,7 +980,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
             orsa::Quaternion tmpQ, gkQ;
             orsa::Vector     tmpV, gkV;
             // double     tmpD, gkD;
-      
+            
             switch (j) {
                 case 1: 
                     /* 
@@ -983,7 +1005,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                         */
 	    
                         const orsa::Body * k = (*bl_it).get();
-	    
+                        
                         if ((*bl_it)->getInitialConditions().translational.get()) {
                             if ((*bl_it)->getInitialConditions().translational->dynamic()) {
 		
@@ -1583,26 +1605,14 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
     // check this only on "initialization" steps, i.e. when niter > 2
     if ((niter > 2) && (fabs(next_timestep.get_d()/timestep.get_d()) < 1.0)) {
         next_timestep = orsa::Time(FromUnits(timestep.get_d()*0.8,Unit::MICROSECOND,-1));
-        // std::cerr << "Radau: step rejected! New proposed timestep: " << timestep.Getdouble() << std::endl;
-        // frame_out = frame_in;
         _lastCallRejected = true;
-        // niter = 6;
-        // std::cerr << "[rej]" << std::endl;
-    
-        /* 
-           ORSA_DEBUG("REJECTED, next_timestep: %20.12f [day]",
-           FromUnits(FromUnits(next_timestep.getMuSec(),Unit::MICROSECOND),Unit::DAY,-1)());
-        */
-    
-        // ORSA_DEBUG("done.");
-    
+        // ORSA_DEBUG("last call REJECTED");
+        // "rollback" (kind of) all inserts in this call (done in the Integrator class calling this method)
         return true;
-    
     } else {
-        // ORSA_DEBUG("->>>>>>>> CALL NOT REJECTED!!!");
         _lastCallRejected = false;
     }
-  
+    
     if (fabs(timestep.get_d()/timestep.get_d()) > 1.4) {
         // timestep = timestep_done * 1.4;
         next_timestep = orsa::Time(FromUnits(timestep.get_d()*1.4,Unit::MICROSECOND,-1));
@@ -1891,8 +1901,16 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
       
             if (!bg->insertIBPS(ibps,k,onlyIfExtending.getRef(),false)) {
                 ORSA_DEBUG("problem, body: [%s]",(*bl_it).get()->getName().c_str());
+                ORSA_DEBUG("insert failed, ibps.tmp: %i, ibps.time [below]",ibps.tmp);
+                orsa::print(ibps.time.getRef());
+                ORSA_DEBUG("interval range: min,max [below]");
+                orsa::print(bg->getBodyInterval((*bl_it).get())->min().time.getRef());
+                orsa::print(bg->getBodyInterval((*bl_it).get())->max().time.getRef());
+                ORSA_DEBUG("call start, start+timestep [below]");
+                orsa::print(start);
+                orsa::print(start+timestep);
             }
-      
+            
             ++bl_it;
         }
     }
@@ -1946,7 +1964,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                 if ((*bl_it)->getInitialConditions().translational->dynamic()) {
 	  
                     orsa::Vector local_s[7];
-	  
+                    
                     local_s[0] = b[0][k] - e[0][k];
                     local_s[1] = b[1][k] - e[1][k];
                     local_s[2] = b[2][k] - e[2][k];
@@ -1954,7 +1972,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                     local_s[4] = b[4][k] - e[4][k];
                     local_s[5] = b[5][k] - e[5][k];
                     local_s[6] = b[6][k] - e[6][k];
-	  
+
                     // Estimate B values for the next sequence
 	  
                     e[0][k] = q1*(b[6][k]* 7.0 + b[5][k]* 6.0 + b[4][k]* 5.0 + b[3][k]* 4.0 + b[2][k]* 3.0 + b[1][k]*2.0 + b[0][k]);
@@ -1964,7 +1982,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                     e[4][k] = q5*(b[6][k]*21.0 + b[5][k]* 6.0 + b[4][k]);
                     e[5][k] = q6*(b[6][k]* 7.0 + b[5][k]);
                     e[6][k] = q7* b[6][k];
-	  
+                    
                     b[0][k] = e[0][k] + local_s[0];
                     b[1][k] = e[1][k] + local_s[1];
                     b[2][k] = e[2][k] + local_s[2];
@@ -2037,7 +2055,9 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
 	  
                 }
             }
-      
+            
+            // ORSA_DEBUG("..done");
+            
             ++bl_it;
         }
     }
@@ -2152,6 +2172,16 @@ void IntegratorRadau::_body_mass_or_number_changed(orsa::BodyGroup  * bg,
             g[l].clear();
             b[l].clear();
             e[l].clear();
+            /* const BodyGroup::BodyList & bl = bg->getBodyList();
+               BodyGroup::BodyList::const_iterator bl_it = bl.begin();
+               while (bl_it != bl.end()) {
+               const orsa::Body * k = (*bl_it).get();
+               g[l][k] = orsa::Vector(0,0,0);
+               b[l][k] = orsa::Vector(0,0,0);
+               e[l][k] = orsa::Vector(0,0,0);
+               ++bl_it;
+               }
+            */
         }
         x.clear();
         v.clear();
