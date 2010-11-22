@@ -179,9 +179,9 @@ bool Interaction::acceleration(InteractionVector & a,
                 if (!b->alive(t)) {
                     continue;
                 }
-	
+                
                 // ORSA_DEBUG("b is [%s]",b->getName().c_str());
-	
+                
                 if (!bg->getInterpolatedMass(m_b,b,t)) {
                     ORSA_DEBUG("problems...");
                 }
@@ -214,7 +214,10 @@ bool Interaction::acceleration(InteractionVector & a,
                     ORSA_DEBUG("problems...");
                     return false;
                 }
-	
+                
+                // ORSA_DEBUG("ref_b_ibps.inertial->paulMoment() = %x",ref_b_ibps.inertial->paulMoment());
+                // ORSA_DEBUG("    b_ibps.inertial->paulMoment() = %x",    b_ibps.inertial->paulMoment());
+                
                 /* if (ref_b->getPaulMoment() || 
                    b->getPaulMoment()) {
                 */
