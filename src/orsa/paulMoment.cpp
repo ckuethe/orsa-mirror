@@ -188,8 +188,8 @@ void orsa::convert(std::vector< std::vector<double> > & C,
                 }
             }
       
-            pq_factor /= int_pow(2,l);
-            pq_factor_uncertainty /= int_pow(2,l);
+            pq_factor /= int_pow(2.0,l);
+            pq_factor_uncertainty /= int_pow(2.0,l);
       
             const double C_lm = pq_factor;
             const double C_lm_uncertainty = fabs(pq_factor_uncertainty);
@@ -289,8 +289,8 @@ void orsa::convert(std::vector< std::vector<double> > & C,
                 }
             }
             //
-            pq_factor /= int_pow(2,l);
-            pq_factor_uncertainty /= int_pow(2,l);
+            pq_factor /= int_pow(2.0,l);
+            pq_factor_uncertainty /= int_pow(2.0,l);
             //
             const double S_lm = pq_factor;
             const double S_lm_uncertainty = fabs(pq_factor_uncertainty);
