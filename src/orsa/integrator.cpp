@@ -34,7 +34,7 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
         const orsa::BodyGroup::BodyList bl = bg->getBodyList();
         orsa::BodyGroup::BodyList::const_iterator it = bl.begin();
         while (it != bl.end()) {
-            ORSA_DEBUG("integration includes body [%s] id: %i   time interval: [below]",
+            ORSA_DEBUG("integration includes body [%s] id: %i   requested integration time: [below]",
                        (*it)->getName().c_str(),
                        (*it)->id());
             orsa::print(start);
@@ -366,7 +366,7 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
             ret_val = false;
             break;
         }
-    
+        
         if (0) {
             // debug
             BodyGroup::BodyList::const_iterator _b_it = bg->getBodyList().begin();
