@@ -48,7 +48,7 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
             if (bg->getInterpolatedIBPS(ibps,(*_b_it).get(),start)) {
 	
 	
-                if (!ibps.translational->dynamic()) {
+                if (!ibps.dynamic()) {
                     ++_b_it;
                     continue;
                 }
@@ -134,7 +134,7 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
     
         if (bg->getInterpolatedIBPS(ibps,b,start+_h2)) {
       
-            if (!ibps.translational->dynamic()) {
+            if (!ibps.dynamic()) {
                 continue;
             }
       
@@ -297,7 +297,7 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
       
             if (bg->getInterpolatedIBPS(ibps,(*_b_it).get(),start+_h2)) {
 	
-                if (!ibps.translational->dynamic()) {
+                if (!ibps.dynamic()) {
                     ++_b_it;
                     continue;
                 }
