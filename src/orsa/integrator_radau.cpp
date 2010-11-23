@@ -779,10 +779,11 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                     // if (!bg->insertIBPS(ibps,k,onlyIfExtending.getRef(),true)) {
                     // when ibps.tmp is true, the varialbe onlyIfExtending passed to insert must be "false"
                     if (!bg->insertIBPS(ibps,k,false,true)) {
-                        ORSA_DEBUG("insert failed t: %.8f [interval: %.8f -> %.8f]",
-                                   orsa::FromUnits(ibps.time.getRef().get_d(),orsa::Unit::DAY,-1),
-                                   orsa::FromUnits(bg->getBodyInterval((*bl_it).get())->min().time.getRef().get_d(),orsa::Unit::DAY,-1),
-                                   orsa::FromUnits(bg->getBodyInterval((*bl_it).get())->max().time.getRef().get_d(),orsa::Unit::DAY,-1));
+                        /* ORSA_DEBUG("insert failed t: %.8f [interval: %.8f -> %.8f]",
+                           orsa::FromUnits(ibps.time.getRef().get_d(),orsa::Unit::DAY,-1),
+                           orsa::FromUnits(bg->getBodyInterval((*bl_it).get())->min().time.getRef().get_d(),orsa::Unit::DAY,-1),
+                           orsa::FromUnits(bg->getBodyInterval((*bl_it).get())->max().time.getRef().get_d(),orsa::Unit::DAY,-1));
+                        */
                         /* ORSA_DEBUG("problem, body: [%s]",(*bl_it).get()->getName().c_str());
                            ORSA_DEBUG("insert failed, ibps.tmp: %i, ibps.time [below]",ibps.tmp);
                            orsa::print(ibps.time.getRef());
@@ -1896,19 +1897,20 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
 	  
                 }
             }
-      
+            
             ibps.tmp = false;
-      
+            
             if (!bg->insertIBPS(ibps,k,onlyIfExtending.getRef(),false)) {
-                ORSA_DEBUG("problem, body: [%s]",(*bl_it).get()->getName().c_str());
-                ORSA_DEBUG("insert failed, ibps.tmp: %i, ibps.time [below]",ibps.tmp);
-                orsa::print(ibps.time.getRef());
-                ORSA_DEBUG("interval range: min,max [below]");
-                orsa::print(bg->getBodyInterval((*bl_it).get())->min().time.getRef());
-                orsa::print(bg->getBodyInterval((*bl_it).get())->max().time.getRef());
-                ORSA_DEBUG("call start, start+timestep [below]");
-                orsa::print(start);
-                orsa::print(start+timestep);
+                /* ORSA_DEBUG("problem, body: [%s]",(*bl_it).get()->getName().c_str());
+                   ORSA_DEBUG("insert failed, ibps.tmp: %i, ibps.time [below]",ibps.tmp);
+                   orsa::print(ibps.time.getRef());
+                   ORSA_DEBUG("interval range: min,max [below]");
+                   orsa::print(bg->getBodyInterval((*bl_it).get())->min().time.getRef());
+                   orsa::print(bg->getBodyInterval((*bl_it).get())->max().time.getRef());
+                   ORSA_DEBUG("call start, start+timestep [below]");
+                   orsa::print(start);
+                   orsa::print(start+timestep);
+                */
             }
             
             ++bl_it;
