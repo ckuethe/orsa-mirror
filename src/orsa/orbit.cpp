@@ -58,10 +58,12 @@ double Orbit::eccentricAnomaly(const double & e, const double & M) {
         } while ((fabs(E-old_E) > 10*(fabs(E)+fabs(M))*epsilon()) && (count < max_count));
     
         if (count >= max_count) {
-            ORSA_ERROR("Orbit::eccentricAnomaly(...): max count reached");
-            // ORSA_ERROR("Orbit::eccentricAnomaly(): max count reached, e = %g    E = %g   fabs(E-old_E) = %g   10*(fabs(E)+fabs(M))*epsilon() = %g",e,E,fabs(E-old_E),10*(fabs(E)+fabs(M))*std::numeric_limits<double>::epsilon());
+            // ORSA_ERROR("Orbit::eccentricAnomaly(...): max count reached");
+            ORSA_WARNING("Orbit::GetEccentricAnomaly(): max count reached, e = %g    E = %g   fabs(E-old_E) = %g   10*(fabs(E)+fabs(M)+twopi())*epsilon() = %g",e,E,fabs(E-old_E),10*(fabs(E)+fabs(M)+twopi())*epsilon());
         }
-    
+        
+        // ORSA_DEBUG("count: %i",count);
+        
     } else {
     
         double m = fmod(10*twopi()+fmod(M,twopi()),twopi());
@@ -97,7 +99,7 @@ double Orbit::eccentricAnomaly(const double & e, const double & M) {
             E = x + m;
             ++count;
       
-        } while ((fabs(E-old_E) > 10*(fabs(E)+fabs(M)+twopi())*epsilon()) && (count < max_count));
+        } while ((fabs(E-old_E) > 100*(fabs(E)+fabs(M)+twopi())*epsilon()) && (count < max_count));
     
         if (iflag) {
             E = twopi() - E;
@@ -105,11 +107,13 @@ double Orbit::eccentricAnomaly(const double & e, const double & M) {
         }
     
         if (count >= max_count) {
-            ORSA_WARNING("Orbit::eccentricAnomaly(...): max count reached...");
-            // ORSA_WARNING("Orbit::GetEccentricAnomaly(): max count reached, e = %g    E = %g   fabs(E-old_E) = %g   10*(fabs(E)+fabs(M))*std::numeric_limits<double>::epsilon() = %g",e,E,fabs(E-old_E),10*(fabs(E)+fabs(M))*std::numeric_limits<double>::epsilon());
+            // ORSA_WARNING("Orbit::eccentricAnomaly(...): max count reached...");
+            ORSA_WARNING("Orbit::GetEccentricAnomaly(): max count reached, e = %g    E = %g   fabs(E-old_E) = %g   100*(fabs(E)+fabs(M)+twopi())*epsilon() = %g",e,E,fabs(E-old_E),100*(fabs(E)+fabs(M)+twopi())*epsilon());
         }
+        
+        // ORSA_DEBUG("count: %i",count);
     }
-  
+    
     return E;
 }
 
