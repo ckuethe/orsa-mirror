@@ -46,3 +46,11 @@ bool SpiceBodyTranslationalCallback::update(const orsa::Time & t) {
   
     return true;
 }
+
+void  SpiceBodyTranslationalCallback::lock() {
+    mutex.lock();
+}
+
+void SpiceBodyTranslationalCallback::unlock() {
+    mutex.unlock();
+}

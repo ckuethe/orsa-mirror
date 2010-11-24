@@ -1,9 +1,10 @@
 #ifndef _ORSA_SOLAR_SYSTEM_ATTITUDE_
 #define _ORSA_SOLAR_SYSTEM_ATTITUDE_
 
-// #include <orsa/attitude.h>
 #include <orsa/body.h>
 #include <orsa/print.h>
+
+#include <QMutex>
 
 namespace orsaSolarSystem {
   
@@ -35,6 +36,11 @@ namespace orsaSolarSystem {
         orsa::Vector     getOmega() const { return _omegaVector.getRef(); }
     public:
         bool update(const orsa::Time &);
+    public:
+        void lock();
+        void unlock();
+    protected:
+        QMutex mutex;
     private:
         const orsa::Time   _t0;
         const double _phi0;
@@ -67,6 +73,11 @@ namespace orsaSolarSystem {
         orsa::Vector     getOmega() const { return _omegaVector.getRef(); }
     public:
         bool update(const orsa::Time &);
+    public:
+        void lock();
+        void unlock();
+    protected:
+        QMutex mutex;
     private:
         const orsa::Time   _t0;
         const double _phi0;

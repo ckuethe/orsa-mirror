@@ -180,7 +180,7 @@ namespace orsa {
         bool getInterpolatedIBPS(orsa::IBPS       & ibps,
                                  const orsa::Body * b,
                                  const Time       & t) const;
-    
+        
     public:
         bool getClosestIBPS(orsa::IBPS       & ibps,
                             const orsa::Body * b,

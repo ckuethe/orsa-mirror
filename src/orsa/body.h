@@ -44,9 +44,13 @@ namespace orsa {
         virtual bool dynamic() const { return (type() == BP_DYNAMIC); }
     public:	
         /* update() should be implemented by all properties of type BP_PRECOMPUTED */
-        virtual bool update(const orsa::Time &) = 0; 
+        virtual bool update(const orsa::Time &) = 0;
+    public:
+        // encapsulate the update and data retrevial in a lock/unlock, useful for properties of type BP_PRECOMPUTED in multi-threaded applications
+        virtual void lock() = 0;
+        virtual void unlock() = 0;
     };
-  
+    
     /***/
   
     /*
@@ -245,8 +249,11 @@ namespace orsa {
         BodyPropertyType type() const { return BP_CONSTANT; }
     public:
         bool update(const orsa::Time &) { return true; }
+    public:
+        void lock() { }
+        void unlock() { }
     };
-  
+    
     class ConstantInertialBodyProperty : public InertialBodyProperty {
     public:
         ConstantInertialBodyProperty(const double           & m,
@@ -332,8 +339,11 @@ namespace orsa {
         BodyPropertyType type() const { return BP_CONSTANT; }
     public:
         bool update(const orsa::Time &) { return true; }
+    public:
+        void lock() { }
+        void unlock() { }
     };
-  
+    
     /***/
   
     class TranslationalBodyProperty : public BodyProperty {
@@ -352,8 +362,11 @@ namespace orsa {
         BodyPropertyType type() const { return BP_CONSTANT; }
     public:
         bool update(const orsa::Time &) { return true; }
+    public:
+        void lock() { }
+        void unlock() { }
     };
-  
+    
     class PrecomputedTranslationalBodyProperty : public TranslationalBodyProperty {
     public:
         BodyPropertyType type() const { return BP_PRECOMPUTED; }
@@ -378,6 +391,9 @@ namespace orsa {
         BodyPropertyType type() const { return BP_DYNAMIC; }
     public:
         bool update(const orsa::Time &) { return true; }
+    public:
+        void lock() { }
+        void unlock() { }
     public:
         orsa::Vector position() const { 
             // ORSA_DEBUG("_position: %.20e",_position.getRef().length());
@@ -464,8 +480,11 @@ namespace orsa {
         BodyPropertyType type() const { return BP_CONSTANT; }
     public:
         bool update(const orsa::Time &) { return true; }
+    public:
+        void lock() { }
+        void unlock() { }
     };
-  
+    
     class PrecomputedRotationalBodyProperty : public RotationalBodyProperty {
     public:
         BodyPropertyType type() const { return BP_PRECOMPUTED; }
@@ -486,6 +505,9 @@ namespace orsa {
         BodyPropertyType type() const { return BP_DYNAMIC; }
     public:
         bool update(const orsa::Time &) { return true; }
+    public:
+        void lock() { }
+        void unlock() { }
     public:
         bool get(orsa::Quaternion & q,
                  orsa::Vector     & omega) const {
@@ -547,7 +569,32 @@ namespace orsa {
             }
             return true;
         }
-    
+        
+    public:
+        void lock() {
+            if (inertial.get()) {
+                inertial->lock();
+            }
+            if (translational.get()) {
+                translational->lock();
+            }
+            if (rotational.get()) {
+                rotational->lock();
+            }
+        }
+    public:
+        void unlock() {
+            if (inertial.get()) {
+                inertial->unlock();
+            }
+            if (translational.get()) {
+                translational->unlock();
+            }
+            if (rotational.get()) {
+                rotational->unlock();
+            }
+        }
+        
     public:
         bool dynamic() const {
             if (inertial.get()) {

@@ -51,3 +51,11 @@ bool SpiceBodyRotationalCallback::update(const orsa::Time & t) {
   
     return true;
 }
+
+void  SpiceBodyRotationalCallback::lock() {
+    mutex.lock();
+}
+
+void SpiceBodyRotationalCallback::unlock() {
+    mutex.unlock();
+}

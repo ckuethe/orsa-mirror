@@ -61,6 +61,14 @@ bool ConstantZRotationEcliptic_RotationalBodyProperty::update(const orsa::Time &
     return true;
 }
 
+void ConstantZRotationEcliptic_RotationalBodyProperty::lock() {
+    mutex.lock();
+}
+
+void ConstantZRotationEcliptic_RotationalBodyProperty::unlock() {
+    mutex.unlock();
+}
+
 // ConstantZRotationEquatorial_RotationalBodyProperty
 
 ConstantZRotationEquatorial_RotationalBodyProperty::ConstantZRotationEquatorial_RotationalBodyProperty (const Time   & t0,
@@ -103,4 +111,12 @@ bool ConstantZRotationEquatorial_RotationalBodyProperty::update(const orsa::Time
     _omegaVector = _omega * (_m*orsa::Vector(0,0,1)).normalized();
   
     return true;
+}
+
+void ConstantZRotationEquatorial_RotationalBodyProperty::lock() {
+    mutex.lock();
+}
+
+void ConstantZRotationEquatorial_RotationalBodyProperty::unlock() {
+    mutex.unlock();
 }

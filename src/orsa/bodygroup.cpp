@@ -173,18 +173,22 @@ bool BodyGroup::getClosestIBPS(orsa::IBPS       & ibps,
 bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
                                     const orsa::Body * b,
                                     const orsa::Time & t) const {
+
+    // NO update(t) calls here, because it's not within a lock/unlock block
+    // commented all [R] update calls...
     
     if (!b->alive(t)) {
         // ORSA_DEBUG("out, body [%s]",b->getName().c_str());
         return false;
     }
     
-    if (b->getInitialConditions().time.isSet()) {
-        if (b->getInitialConditions().time.getRef() == t) {
-            ibps = b->getInitialConditions();
-            return true;
-        }
-    }
+    /* if (b->getInitialConditions().time.isSet()) {
+       if (b->getInitialConditions().time.getRef() == t) {
+       ibps = b->getInitialConditions();
+       return true;
+       }
+       }
+    */
     
     /* ORSA_DEBUG("body: [%s]  bodies: %i   inertial: %x   t: [below]",
        b->getName().c_str(),
@@ -202,11 +206,15 @@ bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
             return false;
         }
         if (bi->getSubInterval(ibps,ibps1,ibps2)) {
+            /* ORSA_DEBUG("IBPS 1 & 2 times: [below]");
+               orsa::print(ibps1.time.getRef());
+               orsa::print(ibps2.time.getRef());
+            */
             if ((t == ibps1.time.getRef()) && (t == ibps2.time.getRef())) {
                 ibps = ibps1;	
                 //
                 // VERY IMPORTANT call to update(t);
-                ibps.update(t);
+                // [R] ibps.update(t);
                 // ORSA_DEBUG("out, body [%s]",b->getName().c_str());
                 return true;
             } else {
@@ -220,7 +228,7 @@ bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
                 if (ibps1.time.getRef() == ibps2.time.getRef()) {
                     ibps = ibps1;
                     // ORSA_DEBUG("out, body [%s]",b->getName().c_str());
-                    ibps.update(t);
+                    // [R] ibps.update(t);
                     return true;	  
                 } else {
                     // to copy pointers...
@@ -241,7 +249,7 @@ bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
                             const double mt = ((m2-m1)/(t2-t1).get_d())*(t-t1).get_d();
                             ibps.inertial->setMass(mt);
                         } else {
-                            ibps.inertial->update(t);
+                            // [R] ibps.inertial->update(t);
                         }
                     }
 	  
@@ -250,6 +258,10 @@ bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
                         if (ibps.translational->dynamic()) {
                             osg::ref_ptr<orsa::PhysicalSpline<orsa::Vector> > s = new orsa::PhysicalSpline<orsa::Vector>;
                             //
+                            ibps1.translational->lock();
+                            ibps2.translational->lock();
+                            ibps1.update(t);
+                            ibps2.update(t);
                             if (s->set(ibps1.translational->position(),
                                        ibps1.translational->velocity(),
                                        ibps1.time.getRef(),
@@ -273,8 +285,10 @@ bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
                                 ORSA_DEBUG("problems...");
                                 return false;
                             }
+                            ibps1.translational->unlock();
+                            ibps2.translational->unlock();
                         } else {
-                            ibps.translational->update(t);
+                            // [R] ibps.translational->update(t);
                         }
                     } 
 	  
@@ -307,13 +321,13 @@ bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
                                                  ibps1.rotational->getOmega());
 	      
                         } else {
-                            ibps.rotational->update(t); 
+                            // [R] ibps.rotational->update(t); 
                         }
                     }
 	  
 	  
                     // ORSA_DEBUG("out, body [%s]",b->getName().c_str());
-                    ibps.update(t);
+                    // [R] ibps.update(t);
                     return true;
                 }
             }	
@@ -329,7 +343,7 @@ bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
         }	
     } else {
         ibps = b->getInitialConditions();
-        ibps.update(t);
+        // [R] ibps.update(t);
         // ORSA_DEBUG("out, body [%s]",b->getName().c_str());
         return true;
     } 
@@ -341,7 +355,10 @@ bool BodyGroup::getInterpolatedPosition(Vector     & position,
     orsa::IBPS ibps;
     if (getInterpolatedIBPS(ibps,b,t)) {
         if (ibps.translational.get()) {
+            ibps.lock();
+            ibps.update(t);
             position = ibps.translational->position();
+            ibps.unlock();
             return true;
         } else {
             return false;
@@ -357,7 +374,10 @@ bool BodyGroup::getInterpolatedVelocity(Vector     & velocity,
     orsa::IBPS ibps;
     if (getInterpolatedIBPS(ibps,b,t)) {
         if (ibps.translational.get()) {
+            ibps.lock();
+            ibps.update(t);
             velocity = ibps.translational->velocity();
+            ibps.unlock();
             return true;
         } else {
             return false;
@@ -374,8 +394,11 @@ bool BodyGroup::getInterpolatedPosVel(Vector     & position,
     orsa::IBPS ibps;
     if (getInterpolatedIBPS(ibps,b,t)) {
         if (ibps.translational.get()) {
+            ibps.lock();
+            ibps.update(t);
             position = ibps.translational->position();
             velocity = ibps.translational->velocity();
+            ibps.unlock();
             return true;
         } else {
             return false;
@@ -392,7 +415,10 @@ bool BodyGroup::getInterpolatedMass(double     & mass,
     orsa::IBPS ibps;
     if (getInterpolatedIBPS(ibps,b,t)) {
         if (ibps.inertial.get()) {
+            ibps.lock();
+            ibps.update(t);
             mass = ibps.inertial->mass();
+            ibps.unlock();
             return true;
         } else {
             return false;
