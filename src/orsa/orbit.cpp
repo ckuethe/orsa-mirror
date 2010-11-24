@@ -34,8 +34,9 @@ double Orbit::eccentricAnomaly(const double & e, const double & M) {
     
         unsigned int count = 0;
         const unsigned int max_count = 1024;
+        orsa::Cache<double> oldDelta;
         do {
-      
+            
             sx = sin(x);
             cx = cos(x);
       
@@ -54,9 +55,18 @@ double Orbit::eccentricAnomaly(const double & e, const double & M) {
             ++count;
             // update x, ready for the next iteration
             x = E;
-      
-        } while ((fabs(E-old_E) > 10*(fabs(E)+fabs(M))*epsilon()) && (count < max_count));
-    
+
+            if (oldDelta.isSet()) {
+                if (fabs(E-old_E) >= oldDelta.getRef()) {
+                    // ORSA_DEBUG("delta: %g   count: %i",fabs(E-old_E),count);
+                    break;
+                }
+            }
+            oldDelta = fabs(E-old_E);
+
+        } while (1);
+        // } while ((fabs(E-old_E) > 10*(fabs(E)+fabs(M))*epsilon()) && (count < max_count));
+        
         if (count >= max_count) {
             // ORSA_ERROR("Orbit::eccentricAnomaly(...): max count reached");
             ORSA_WARNING("Orbit::GetEccentricAnomaly(): max count reached, e = %g    E = %g   fabs(E-old_E) = %g   10*(fabs(E)+fabs(M)+twopi())*epsilon() = %g",e,E,fabs(E-old_E),10*(fabs(E)+fabs(M)+twopi())*epsilon());
@@ -81,6 +91,7 @@ double Orbit::eccentricAnomaly(const double & e, const double & M) {
     
         unsigned int count = 0;
         const unsigned int max_count = 128;
+        orsa::Cache<double> oldDelta;
         do {
       
             sa = sin(x+m);
@@ -98,9 +109,18 @@ double Orbit::eccentricAnomaly(const double & e, const double & M) {
             old_E = E;
             E = x + m;
             ++count;
-      
-        } while ((fabs(E-old_E) > 100*(fabs(E)+fabs(M)+twopi())*epsilon()) && (count < max_count));
-    
+
+            if (oldDelta.isSet()) {
+                if (fabs(E-old_E) >= oldDelta.getRef()) {
+                    // ORSA_DEBUG("delta: %g   count: %i",fabs(E-old_E),count);
+                    break;
+                }
+            }
+            oldDelta = fabs(E-old_E);
+            
+        } while (1);
+        // } while ((fabs(E-old_E) > 100*(fabs(E)+fabs(M)+twopi())*epsilon()) && (count < max_count));
+        
         if (iflag) {
             E = twopi() - E;
             old_E = twopi() - old_E;
