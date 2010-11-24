@@ -239,7 +239,11 @@ orsa::Matrix orsa::localToGlobal(const orsa::Body       * b,
     orsa::IBPS ibps;
     if (bg->getInterpolatedIBPS(ibps, b, t)) { 
         if (ibps.rotational.get()) {
-            return QuaternionToMatrix(ibps.rotational.get()->getQ());
+            ibps.rotational->lock();
+            ibps.rotational->update(t);
+            const orsa::Matrix m = QuaternionToMatrix(ibps.rotational.get()->getQ());
+            ibps.rotational->unlock();
+            return m;
         } else {
             // ORSA_DEBUG("problems... body: [%s]",b->getName().c_str());
             return orsa::Matrix::identity();
@@ -262,9 +266,12 @@ orsa::Matrix orsa::globalToLocal(const orsa::Body       * b,
     orsa::IBPS ibps;
     if (bg->getInterpolatedIBPS(ibps, b, t)) { 
         if (ibps.rotational.get()) {
+            ibps.rotational->lock();
+            ibps.rotational->update(t);
             const orsa::Matrix m = QuaternionToMatrix(ibps.rotational.get()->getQ());
             orsa::Matrix m_tr;
             orsa::Matrix::transpose(m, m_tr);
+            ibps.rotational->unlock();
             return m_tr;
         } else {
             // ORSA_DEBUG("problems... body: [%s]",b->getName().c_str());
