@@ -602,7 +602,7 @@ orsa::PaulMoment * orsa::computePaulMoment(const unsigned int order,
                             const double largest = std::max(fabs(M),fabs(dM));
                             //
                             const int    p10 = floor(log10(largest));
-                            const double d10 = exp10(p10);
+                            const double d10 = pow(10,p10);
                             //
                             const double  M10 =  M/d10;
                             const double dM10 = dM/d10;
