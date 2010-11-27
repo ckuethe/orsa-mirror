@@ -4,23 +4,36 @@
 #include <orsa/cache.h>
 #include <orsa/double.h>
 
+#define ORSA_VECTOR_INIT_ZERO // comment this out if no default initialization is wanted
+
 namespace osg {
     class Vec3f;
     class Vec3d;
 }
 
 namespace orsa {
-  
-    class Vector {
     
+    class Vector {
+        
         // constructors
     public:
+#ifdef ORSA_VECTOR_INIT_ZERO
+        Vector() : _x(0.0), _y(0.0), _z(0.0), _l(0.0), _l2(0.0) { } 
+#else
         Vector() { }
-        // Vector() : _x(0.0), _y(0.0), _z(0.0), _l(0.0), _l2(0.0) { }
+#endif
+        
     public:
+#ifdef ORSA_VECTOR_INIT_ZERO
         Vector(const Vector & v) : _x(v._x), _y(v._y), _z(v._z), _l(v._l), _l2(v._l2) { 
             check();
         }
+#else
+        Vector(const Vector & v) : _x(v._x), _y(v._y), _z(v._z) { 
+            check();
+        }
+#endif
+        
     public:	
         Vector(const double & x, 
                const double & y, 
@@ -37,8 +50,11 @@ namespace orsa {
             _y = v._y;
             _z = v._z;
             //
+#ifdef ORSA_VECTOR_INIT_ZERO
             _l  = v._l;
-            _l2 = v._l2; 
+            _l2 = v._l2;
+#endif
+            check();
             return (*this);
         }
     
@@ -47,9 +63,9 @@ namespace orsa {
         inline const double & getY() const { return _y; }
         inline const double & getZ() const { return _z; }
     public:    
-        inline void setX(const double & x) { orsa::check(x); _x = x; _reset_cache(); }
-        inline void setY(const double & y) { orsa::check(y); _y = y; _reset_cache(); }
-        inline void setZ(const double & z) { orsa::check(z); _z = z; _reset_cache(); }
+        inline void setX(const double & x) { orsa::check(x); _x = x; _reset_cache(); check(); }
+        inline void setY(const double & y) { orsa::check(y); _y = y; _reset_cache(); check(); }
+        inline void setZ(const double & z) { orsa::check(z); _z = z; _reset_cache(); check(); }
     public:
         osg::Vec3f getVec3f() const;
         osg::Vec3d getVec3d() const;
@@ -59,7 +75,8 @@ namespace orsa {
             _x += v._x;
             _y += v._y;
             _z += v._z;
-            _reset_cache(); 
+            _reset_cache();
+            check();
             return *this;
         }
     
@@ -67,7 +84,8 @@ namespace orsa {
             _x -= v._x;
             _y -= v._y;
             _z -= v._z;
-            _reset_cache(); 
+            _reset_cache();
+            check();
             return *this;
         }
     
@@ -76,7 +94,8 @@ namespace orsa {
             _x *= f;
             _y *= f;
             _z *= f;
-            _reset_cache(); 
+            _reset_cache();
+            check();
             return *this;
         }
     
@@ -89,7 +108,8 @@ namespace orsa {
             _x /= f;
             _y /= f;
             _z /= f;
-            _reset_cache(); 
+            _reset_cache();
+            check();
             return *this;
         }
     
@@ -122,12 +142,10 @@ namespace orsa {
             _x = x;
             _y = y;
             _z = z;
-            //
             check();
-            //
             _reset_cache(); 
         }
-    
+        
         // metrics
         const double & length() const;    
         const double & lengthSquared() const;
@@ -200,23 +218,21 @@ namespace orsa {
     }
   
     inline Vector operator * (const Vector & v, const double & f) {
-        orsa::check(f);
         Vector p(v);
         p *= f;
         return p;
     }
   
     inline Vector operator / (const Vector & v, const double & f) {
-        orsa::check(f);
         Vector p(v);
         p /= f;
         return p;
     }
   
     Vector externalProduct (const Vector & lhs, const Vector & rhs);
-  
+    
     bool operator == (const Vector &, const Vector &);
-  
+    
     inline bool operator != (const Vector & v1, const Vector & v2) {
         return !(v1 == v2);
     }

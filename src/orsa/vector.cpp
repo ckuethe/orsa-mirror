@@ -53,7 +53,7 @@ const double & Vector::lengthSquared() const {
 // normalization
 Vector Vector::normalized() const {
     if (length() > 0) {
-        const double _one_over_l = 1/length();
+        const double _one_over_l = 1.0/length();
         return Vector(_x*_one_over_l,
                       _y*_one_over_l,
                       _z*_one_over_l);
@@ -67,7 +67,7 @@ Vector Vector::normalized() const {
 
 Vector & Vector::normalize() {
     if (length() > 0) {
-        const double _one_over_l = 1/length();
+        const double _one_over_l = 1.0/length();
         _x *= _one_over_l;
         _y *= _one_over_l;
         _z *= _one_over_l;
@@ -83,6 +83,8 @@ void Vector::check() const {
     orsa::check(_x);
     orsa::check(_y);
     orsa::check(_z);
+    if ( _l.isSet()) orsa::check( _l.getRef());
+    if (_l2.isSet()) orsa::check(_l2.getRef());
 }
 
 bool orsa::operator == (const Vector & v1, const Vector & v2) {
