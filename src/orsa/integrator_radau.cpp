@@ -143,14 +143,22 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
             if (!bg->getInterpolatedIBPS(ibps,b,start)) {
                 ORSA_DEBUG("problem, body: [%s]",b->getName().c_str());
             }
-      
+            
             const orsa::Body * k = b;
       
             if (b->getInitialConditions().translational.get()) {
                 if (b->getInitialConditions().translational->dynamic()) {
-                    // if (bg->getInterpolatedIBPS(ibps,b,start)) {
-                    x1[k] = ibps.translational->position();
-                    v1[k] = ibps.translational->velocity();
+                    /* x1[k] = ibps.translational->position();
+                       v1[k] = ibps.translational->velocity();
+                    */
+                    /* orsa::Vector _fr, _fv;
+                       bg->getInterpolatedPosVel(_fr,_fv,b,start);
+                       orsa::print(_fr);
+                       orsa::print(_fv);
+                       x1[k] = _fr;
+                       v1[k] = _fv;
+                    */
+                    bg->getInterpolatedPosVel(x1[k],v1[k],b,start);
                     a1[k] = acc[bodyIndex];
                     /* } else {
                        ORSA_DEBUG("problem, body: [%s]",b->getName().c_str());
@@ -196,11 +204,15 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
 	      
                             const orsa::Matrix g2l = orsa::globalToLocal(b,bg,start);
                             const orsa::Matrix l2g = orsa::localToGlobal(b,bg,start);
-	      
+                            
+                            ibps.lock();
+                            ibps.update(start);
                             const orsa::Vector omega = ibps.rotational->getOmega();
+                            ibps.unlock();
+                            
                             const orsa::Matrix I     = inertiaMoment;
                             const orsa::Vector T     = torque[bodyIndex];
-	      
+                            
                             orsa::Vector omegaDot;
 	      
                             Euler(omegaDot,
@@ -210,7 +222,11 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                             //
                             omegaDot = l2g * omegaDot;
 	      
+                            ibps.lock();
+                            ibps.update(start);
                             Q1[k]       = ibps.rotational->getQ();
+                            ibps.unlock();
+                            
                             Q1Dot[k]    = RotationalBodyProperty::qDot(Q1[k], omega);
                             Q1DotDot[k] = RotationalBodyProperty::qDotDot(Q1[k], omega, omegaDot);
                         }
@@ -720,14 +736,17 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                         ++bl_it;
                         continue;
                     }
-	  
+
+                    ibps.lock();
+                    
                     ibps.time = start + orsa::Time(FromUnits(h[j]*timestep.get_d(),Unit::MICROSECOND,-1));
 	  
                     if (!k->alive(ibps.time.getRef())) {
                         ++bl_it;
+                        ibps.unlock();
                         continue;
                     }
-	  
+                    
                     if ((*bl_it)->getInitialConditions().translational.get()) {
                         if ((*bl_it)->getInitialConditions().translational->dynamic()) {
 	      
@@ -795,6 +814,8 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                            orsa::print(start+timestep);
                         */
                     }
+                    
+                    ibps.unlock();
                     
                     ++bl_it;
                 }
@@ -1849,7 +1870,9 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                 ++bl_it;
                 continue;
             }
-      
+            
+            ibps.lock();
+            
             ibps.time = start + timestep;
       
             if ((*bl_it)->getInitialConditions().translational.get()) {
@@ -1913,6 +1936,8 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                 */
             }
             
+            ibps.unlock();
+            
             ++bl_it;
         }
     }
@@ -1966,6 +1991,14 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                 if ((*bl_it)->getInitialConditions().translational->dynamic()) {
 	  
                     orsa::Vector local_s[7];
+                    
+                    /* for (unsigned int lll=0;lll<=6;++lll) {
+                       orsa::print(lll);
+                       orsa::print(local_s[lll]);
+                       orsa::print(b[lll][k]);
+                       orsa::print(e[lll][k]);
+                       }
+                    */
                     
                     local_s[0] = b[0][k] - e[0][k];
                     local_s[1] = b[1][k] - e[1][k];
@@ -2174,17 +2207,19 @@ void IntegratorRadau::_body_mass_or_number_changed(orsa::BodyGroup  * bg,
             g[l].clear();
             b[l].clear();
             e[l].clear();
-            /* const BodyGroup::BodyList & bl = bg->getBodyList();
-               BodyGroup::BodyList::const_iterator bl_it = bl.begin();
-               while (bl_it != bl.end()) {
-               const orsa::Body * k = (*bl_it).get();
-               g[l][k] = orsa::Vector(0,0,0);
-               b[l][k] = orsa::Vector(0,0,0);
-               e[l][k] = orsa::Vector(0,0,0);
-               ++bl_it;
-               }
-            */
+#ifndef ORSA_VECTOR_INIT_ZERO
+            const BodyGroup::BodyList & bl = bg->getBodyList();
+            BodyGroup::BodyList::const_iterator bl_it = bl.begin();
+            while (bl_it != bl.end()) {
+                const orsa::Body * k = (*bl_it).get();
+                g[l][k] = orsa::Vector(0,0,0);
+                b[l][k] = orsa::Vector(0,0,0);
+                e[l][k] = orsa::Vector(0,0,0);
+                ++bl_it;
+            }
+#endif // ORSA_VECTOR_INIT_ZERO
         }
+        
         x.clear();
         v.clear();
         a.clear();
@@ -2196,26 +2231,7 @@ void IntegratorRadau::_body_mass_or_number_changed(orsa::BodyGroup  * bg,
         acc.clear();
     
         // rotational
-    
-        /* 
-           gPhi.resize(7);
-           bPhi.resize(7);
-           ePhi.resize(7);
-           //
-           for (unsigned int l=0;l<7;++l) {
-           gPhi[l].clear();
-           bPhi[l].clear();
-           ePhi[l].clear();
-           }
-           phi.clear();
-           phiDot.clear();
-           phiDotDot.clear();
-           //
-           phi1.clear();
-           phi1Dot.clear();
-           phi1DotDot.clear();
-        */
-        //
+        
         gQ.resize(7);
         bQ.resize(7);
         eQ.resize(7);
@@ -2224,7 +2240,9 @@ void IntegratorRadau::_body_mass_or_number_changed(orsa::BodyGroup  * bg,
             gQ[l].clear();
             bQ[l].clear();
             eQ[l].clear();
+            // no need to set to 0 the quaternions, that's done automatically by the default constructor
         }
+        
         Q.clear();
         QDot.clear();
         QDotDot.clear();
