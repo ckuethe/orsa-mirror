@@ -298,6 +298,9 @@ int main(int argc, char ** argv) {
                 // const int z_H     = (1+lrint((*it_orb).H.getRef()/grain_H)/z_H_delta)*z_H_delta;
                 //
                 // this is the same as z_H_min: all objects with H up to H_min
+                // const int z_H     = (lrint((*it_orb).H.getRef()/grain_H)/z_H_delta)*z_H_delta;
+                //
+                // this is the same as z_H_min: all objects with H larger than or equal to H_min
                 const int z_H     = (lrint((*it_orb).H.getRef()/grain_H)/z_H_delta)*z_H_delta;
                 
                 ORSA_DEBUG("H: %g   z_H: %i",(*it_orb).H.getRef(),z_H);
@@ -377,8 +380,8 @@ int main(int argc, char ** argv) {
                 }
                 // then the WHERE ... (extra white space as first character!)
                 char sql_where[1024];
-                // NOTE the "<=" in z_H 
-                sprintf(sql_where," WHERE z_a_min=%i and z_a_max=%i and z_e_min=%i and z_e_max=%i and z_i_min=%i and z_i_max=%i and z_node_min=%i and z_node_max=%i and z_peri_min=%i and z_peri_max=%i and z_M_min=%i and z_M_max=%i and z_H<=%i",
+                // NOTE the "<=" or ">=" in z_H 
+                sprintf(sql_where," WHERE z_a_min=%i and z_a_max=%i and z_e_min=%i and z_e_max=%i and z_i_min=%i and z_i_max=%i and z_node_min=%i and z_node_max=%i and z_peri_min=%i and z_peri_max=%i and z_M_min=%i and z_M_max=%i and z_H>=%i",
                         z_a_min,z_a_max,
                         z_e_min,z_e_max,
                         z_i_min,z_i_max,
