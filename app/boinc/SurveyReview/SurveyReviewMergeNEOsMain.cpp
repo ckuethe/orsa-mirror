@@ -280,6 +280,17 @@ int main(int argc, char ** argv) {
                 
                 const double orbit_M_at_epoch = fmod(orsa::twopi()+fmod((*it_orb).orbit.getRef().M+orsa::twopi()*(orbitEpoch-(*it_orb).orbit.getRef().epoch.getRef()).get_d()/(*it_orb).orbit.getRef().period(),orsa::twopi()),orsa::twopi());
                 
+                /* 
+                   #warning here should replace lrint with floor and 1+lrint with ceil ??
+                   ORSA_DEBUG("a: %g e: %g i: %g node: %g peri: %g M: %g",
+                   orsa::FromUnits((*it_orb).orbit.getRef().a,orsa::Unit::AU,-1),
+                   (*it_orb).orbit.getRef().e,
+                   (*it_orb).orbit.getRef().i*orsa::radToDeg(),
+                   (*it_orb).orbit.getRef().omega_node*orsa::radToDeg(),
+                   (*it_orb).orbit.getRef().omega_pericenter*orsa::radToDeg(),
+                   orbit_M_at_epoch*orsa::radToDeg());
+                */
+                
                 const int z_a_min    = (  lrint(orsa::FromUnits((*it_orb).orbit.getRef().a,orsa::Unit::AU,-1)/grain_a_AU)/z_a_delta)*z_a_delta;
                 const int z_a_max    = (1+lrint(orsa::FromUnits((*it_orb).orbit.getRef().a,orsa::Unit::AU,-1)/grain_a_AU)/z_a_delta)*z_a_delta;
                 const int z_e_min    = (  lrint((*it_orb).orbit.getRef().e/grain_e)/z_e_delta)*z_e_delta;
@@ -301,7 +312,7 @@ int main(int argc, char ** argv) {
                 // const int z_H     = (lrint((*it_orb).H.getRef()/grain_H)/z_H_delta)*z_H_delta;
                 //
                 // this is the same as z_H_min: all objects with H larger than or equal to H_min
-                const int z_H     = (1+lrint((*it_orb).H.getRef()/grain_H)/z_H_delta)*z_H_delta;
+                const int z_H     = ceil(((*it_orb).H.getRef()/grain_H)/z_H_delta)*z_H_delta;
                 
                 ORSA_DEBUG("H: %g   z_H: %i",(*it_orb).H.getRef(),z_H);
                 
