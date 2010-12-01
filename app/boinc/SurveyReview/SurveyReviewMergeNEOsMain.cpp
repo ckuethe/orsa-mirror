@@ -301,7 +301,7 @@ int main(int argc, char ** argv) {
                 // const int z_H     = (lrint((*it_orb).H.getRef()/grain_H)/z_H_delta)*z_H_delta;
                 //
                 // this is the same as z_H_min: all objects with H larger than or equal to H_min
-                const int z_H     = (lrint((*it_orb).H.getRef()/grain_H)/z_H_delta)*z_H_delta;
+                const int z_H     = (1+lrint((*it_orb).H.getRef()/grain_H)/z_H_delta)*z_H_delta;
                 
                 ORSA_DEBUG("H: %g   z_H: %i",(*it_orb).H.getRef(),z_H);
                 
