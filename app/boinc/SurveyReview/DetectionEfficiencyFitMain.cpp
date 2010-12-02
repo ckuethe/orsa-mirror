@@ -51,45 +51,45 @@ int main(int argc, char ** argv) {
     // const double V0=start_V;
     
     // alternative method using CountStats
-    std::vector< osg::ref_ptr<CountStats::Var> > varDefinition;
+    std::vector< osg::ref_ptr<Var> > varDefinition;
     //
     // [0] apparent magnitude
-    osg::ref_ptr<CountStats::LinearVar> var_V = new CountStats::LinearVar(start_V,stop_V,step_V);
+    osg::ref_ptr<LinearVar> var_V = new LinearVar(start_V,stop_V,step_V);
     varDefinition.push_back(var_V.get());
   
     // [1] apparent velocity
-    osg::ref_ptr<CountStats::LinearVar> var_U = new CountStats::LinearVar(start_U,stop_U,step_U);
+    osg::ref_ptr<LinearVar> var_U = new LinearVar(start_U,stop_U,step_U);
     varDefinition.push_back(var_U.get());
     
     // [2] airmass
-    osg::ref_ptr<CountStats::LinearVar> var_AM = new CountStats::LinearVar(start_AM,stop_AM,step_AM);
+    osg::ref_ptr<LinearVar> var_AM = new LinearVar(start_AM,stop_AM,step_AM);
     varDefinition.push_back(var_AM.get());
     
     // [3] galactic latitude
-    osg::ref_ptr<CountStats::LinearVar> var_GB = new CountStats::LinearVar(start_GB,stop_GB,step_GB);
+    osg::ref_ptr<LinearVar> var_GB = new LinearVar(start_GB,stop_GB,step_GB);
     varDefinition.push_back(var_GB.get());
     
     // [4] galactic longitude
-    osg::ref_ptr<CountStats::LinearVar> var_GL = new CountStats::LinearVar(start_GL,stop_GL,step_GL);
+    osg::ref_ptr<LinearVar> var_GL = new LinearVar(start_GL,stop_GL,step_GL);
     varDefinition.push_back(var_GL.get());
     
     // [ ] solar altitude
-    /* osg::ref_ptr<CountStats::LinearVar> var_SA = new CountStats::LinearVar(start_SA,stop_SA,step_SA);
+    /* osg::ref_ptr<LinearVar> var_SA = new LinearVar(start_SA,stop_SA,step_SA);
        varDefinition.push_back(var_SA.get());
     */
     
     // [ ] lunar altitude
-    /* osg::ref_ptr<CountStats::LinearVar> var_LA = new CountStats::LinearVar(start_LA,stop_LA,step_LA);
+    /* osg::ref_ptr<LinearVar> var_LA = new LinearVar(start_LA,stop_LA,step_LA);
        varDefinition.push_back(var_LA.get());
     */
     
     // [ ] lunar phase
-    /* osg::ref_ptr<CountStats::LinearVar> var_LP = new CountStats::LinearVar(start_LP,stop_LP,step_LP);
+    /* osg::ref_ptr<LinearVar> var_LP = new LinearVar(start_LP,stop_LP,step_LP);
        varDefinition.push_back(var_LP.get());
     */
     
     // [ ] lunar illumination
-    /* osg::ref_ptr<CountStats::LinearVar> var_LI = new CountStats::LinearVar(start_LI,stop_LI,step_LI);
+    /* osg::ref_ptr<LinearVar> var_LI = new LinearVar(start_LI,stop_LI,step_LI);
        varDefinition.push_back(var_LI.get());
     */
     
