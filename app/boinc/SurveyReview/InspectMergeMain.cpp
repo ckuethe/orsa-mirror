@@ -14,13 +14,18 @@
 // SQLite3
 #include "sqlite3.h"
 
-// class PlotStatsElement : public orsa::WeightedStatistic<double> { };
-// this version stores the sum...
-class PlotStatsElement : public osg::Referenced {
+class PlotStatsElement_WS : public orsa::WeightedStatistic<double> {
 public:
-    PlotStatsElement() : osg::Referenced(), _s(0.0), _n(0) { }
+    void insert(const double & x) {
+        orsa::WeightedStatistic<double>::insert(x,1.0);
+    }
+};
+
+class PlotStatsElement_Sum : public osg::Referenced {
+public:
+    PlotStatsElement_Sum() : osg::Referenced(), _s(0.0), _n(0) { }
 protected:
-    virtual ~PlotStatsElement() { }
+    virtual ~PlotStatsElement_Sum() { }
 public:
     void insert(const double & x) {
         _s += x;
@@ -39,38 +44,41 @@ protected:
     mpz_class _n;
 };
 
-class PlotStats : public BinStats<PlotStatsElement> {
+template <typename E, typename B> class PlotStats : public BinStats<E> {
 public:
     PlotStats(const std::vector< osg::ref_ptr<Var> > & varDefinition) :
-        BinStats<PlotStatsElement>(varDefinition) { }
+        BinStats<E>(varDefinition) { }
 public:
     bool insert(const std::vector<double> & xVector,
                 const double & val) {
-        if (xVector.size() != var.size()) {
+        if (xVector.size() != B::var.size()) {
             ORSA_DEBUG("dimension mismatch");
             return false;
         }
         std::vector<size_t> binVector;
-        if (!bin(binVector,xVector)) {
+        if (!B::bin(binVector,xVector)) {
             return false;
         }
-        const mpz_class idx = index(binVector);
-        if (data[idx].get()==0) {
+        const mpz_class idx = B::index(binVector);
+        if (B::data[idx].get()==0) {
             // lazy allocation
-            data[idx] = new PlotStatsElement;
+            B::data[idx] = new E;
         }
-        data[idx]->insert(val);
+        B::data[idx]->insert(val);
         // ORSA_DEBUG("xV: %g %g bV: %i %i",xVector[0],xVector[1],binVector[0],binVector[1]);
         return true;         
     }
 };
 
+typedef PlotStats<PlotStatsElement_WS,  BinStats<PlotStatsElement_WS>  > PlotStats_WS;
+typedef PlotStats<PlotStatsElement_Sum, BinStats<PlotStatsElement_Sum> > PlotStats_Sum;
+
 // Nsub is the number of sub-bins in each x,y bin -- to account for missing zero entries
 // i.e. if writing a,e then Nsub=Ni*Nnode*Nperi*Nm=18*12*12*12...
 void writeOutputFile(const std::string & filename,
-                     PlotStats * plotStats,
-                     const PlotStats::LinearVar * var_x,
-                     const PlotStats::LinearVar * var_y,
+                     PlotStats_WS * plotStats,
+                     const LinearVar * var_x,
+                     const LinearVar * var_y,
                      const unsigned int Nsub) {
     
     FILE * fp = fopen(filename.c_str(),"w");    
@@ -86,7 +94,46 @@ void writeOutputFile(const std::string & filename,
             
             std::vector<size_t> binVector;
             if (plotStats->bin(binVector,xVector)) {
-                const PlotStatsElement * e = plotStats->stats(plotStats->index(binVector));
+                const PlotStatsElement_WS * e = plotStats->stats(plotStats->index(binVector));
+                if (e) {
+                    gmp_fprintf(fp,
+                                "%8g %8g %8.6f %8.6f %6Zi\n",
+                                xVector[0],
+                                xVector[1],
+                                e->average(),
+                                e->average()*e->entries().get_d()/Nsub, // divide by Nsub to account for missing zero entries
+                                e->entries().get_mpz_t());
+#warning the two should be the same for a complete analysis, because over several years, each a,e bin has been observed at least once!
+                }
+            }
+        }
+    }
+    
+    fclose(fp);
+}
+
+// Nsub is the number of sub-bins in each x,y bin -- to account for missing zero entries
+// i.e. if writing a,e then Nsub=Ni*Nnode*Nperi*Nm=18*12*12*12...
+void writeOutputFile(const std::string & filename,
+                     PlotStats_Sum * plotStats,
+                     const LinearVar * var_x,
+                     const LinearVar * var_y,
+                     const unsigned int Nsub) {
+    
+    FILE * fp = fopen(filename.c_str(),"w");    
+    
+    std::vector<double> xVector;
+    xVector.resize(2);
+    
+    for (unsigned j=0; j<var_x->size(); ++j) {
+        for (unsigned k=0; k<var_y->size(); ++k) {
+            
+            xVector[0] = var_x->start+var_x->incr*(j+0.5);
+            xVector[1] = var_y->start+var_y->incr*(k+0.5);
+            
+            std::vector<size_t> binVector;
+            if (plotStats->bin(binVector,xVector)) {
+                const PlotStatsElement_Sum * e = plotStats->stats(plotStats->index(binVector));
                 if (e) {
                     gmp_fprintf(fp,
                                 "%8g %8g %8.6f %8.6f %6Zi\n",
@@ -105,14 +152,14 @@ void writeOutputFile(const std::string & filename,
 }
 
 // global vars, for use in the callbacks
-osg::ref_ptr<PlotStats> plotStats_ae_NEO_H18;
-osg::ref_ptr<PlotStats> plotStats_ae_PHO_H18;
+osg::ref_ptr< PlotStats_WS > plotStats_ae_NEO_H18;
+osg::ref_ptr< PlotStats_WS > plotStats_ae_PHO_H18;
 //
-osg::ref_ptr<PlotStats> plotStats_ai_NEO_H18;
-osg::ref_ptr<PlotStats> plotStats_ai_PHO_H18;
+osg::ref_ptr< PlotStats_WS > plotStats_ai_NEO_H18;
+osg::ref_ptr< PlotStats_WS > plotStats_ai_PHO_H18;
 //
-osg::ref_ptr<PlotStats> plotStats_aL_NEO_H18;
-osg::ref_ptr<PlotStats> plotStats_aL_PHO_H18;
+osg::ref_ptr< PlotStats_WS > plotStats_aL_NEO_H18;
+osg::ref_ptr< PlotStats_WS > plotStats_aL_PHO_H18;
 
 int inspectCallback(void  * /* unused */,
                     int     /* ncols  */,
@@ -280,43 +327,43 @@ int main(int argc, char ** argv) {
         const double a_min  = 1.90;
         const double a_max  = 2.30;
         const double a_step = 0.05;
-        osg::ref_ptr<PlotStats::LinearVar> var_a = new PlotStats::LinearVar(a_min,a_max,a_step);
+        osg::ref_ptr<LinearVar> var_a = new LinearVar(a_min,a_max,a_step);
         //
         const double e_min  = 0.00;
         const double e_max  = 1.00;
         const double e_step = 0.05;
-        osg::ref_ptr<PlotStats::LinearVar> var_e = new PlotStats::LinearVar(e_min,e_max,e_step);
+        osg::ref_ptr<LinearVar> var_e = new LinearVar(e_min,e_max,e_step);
         //
         const double i_min  =  0.00;
         const double i_max  = 90.00;
         const double i_step =  5.00;
-        osg::ref_ptr<PlotStats::LinearVar> var_i = new PlotStats::LinearVar(i_min,i_max,i_step);
+        osg::ref_ptr<LinearVar> var_i = new LinearVar(i_min,i_max,i_step);
         //
         const double L_min  =   0.00;
         const double L_max  = 360.00;
         const double L_step =  30.00;
-        osg::ref_ptr<PlotStats::LinearVar> var_L = new PlotStats::LinearVar(L_min,L_max,L_step);
+        osg::ref_ptr<LinearVar> var_L = new LinearVar(L_min,L_max,L_step);
         
         // a,e
-        std::vector< osg::ref_ptr<PlotStats::Var> > varDefinition_ae;
+        std::vector< osg::ref_ptr<Var> > varDefinition_ae;
         varDefinition_ae.push_back(var_a.get());
         varDefinition_ae.push_back(var_e.get());
         //
-        plotStats_ae_NEO_H18 = new PlotStats(varDefinition_ae);
-        plotStats_ae_PHO_H18 = new PlotStats(varDefinition_ae);
+        plotStats_ae_NEO_H18 = new PlotStats_WS(varDefinition_ae);
+        plotStats_ae_PHO_H18 = new PlotStats_WS(varDefinition_ae);
         // a,i
-        std::vector< osg::ref_ptr<PlotStats::Var> > varDefinition_ai;
+        std::vector< osg::ref_ptr<Var> > varDefinition_ai;
         varDefinition_ai.push_back(var_a.get());
         varDefinition_ai.push_back(var_i.get());
         //
-        osg::ref_ptr<PlotStats> plotStats_ai_NEO_H18 = new PlotStats(varDefinition_ai);
-        osg::ref_ptr<PlotStats> plotStats_ai_PHO_H18 = new PlotStats(varDefinition_ai);
+        plotStats_ai_NEO_H18 = new PlotStats_WS(varDefinition_ai);
+        plotStats_ai_PHO_H18 = new PlotStats_WS(varDefinition_ai);
         // a,L
-        std::vector< osg::ref_ptr<PlotStats::Var> > varDefinition_aL;
+        std::vector< osg::ref_ptr<Var> > varDefinition_aL;
         varDefinition_aL.push_back(var_a.get());
         varDefinition_aL.push_back(var_L.get());
-        osg::ref_ptr<PlotStats> plotStats_aL_NEO_H18 = new PlotStats(varDefinition_aL);
-        osg::ref_ptr<PlotStats> plotStats_aL_PHO_H18 = new PlotStats(varDefinition_aL);
+        plotStats_aL_NEO_H18 = new PlotStats_WS(varDefinition_aL);
+        plotStats_aL_PHO_H18 = new PlotStats_WS(varDefinition_aL);
         
         {
             char sql_line[1024];
