@@ -7,14 +7,36 @@
 #include <orsaSolarSystem/datetime.h>
 #include <orsaSolarSystem/print.h>
 
+#include "binomial.h"
 #include "grain.h"
 #include "fit.h"
 
 // SQLite3
 #include "sqlite3.h"
 
-class PlotStatsElement : public orsa::WeightedStatistic<double> {
-    
+// class PlotStatsElement : public orsa::WeightedStatistic<double> { };
+// this version stores the sum...
+class PlotStatsElement : public osg::Referenced {
+public:
+    PlotStatsElement() : osg::Referenced(), _s(0.0), _n(0) { }
+protected:
+    virtual ~PlotStatsElement() { }
+public:
+    void insert(const double & x) {
+        _s += x;
+        ++_n;
+    }
+public:
+    const double & sum() const {
+        return _s;
+    }
+public:
+    const mpz_class & entries() const {
+        return _n;
+    }
+protected:
+    double _s;
+    mpz_class _n;
 };
 
 class PlotStats : public BinStats<PlotStatsElement> {
@@ -23,8 +45,7 @@ public:
         BinStats<PlotStatsElement>(varDefinition) { }
 public:
     bool insert(const std::vector<double> & xVector,
-                const double & val,
-                const double & sigma) {
+                const double & val) {
         if (xVector.size() != var.size()) {
             ORSA_DEBUG("dimension mismatch");
             return false;
@@ -38,7 +59,7 @@ public:
             // lazy allocation
             data[idx] = new PlotStatsElement;
         }
-        data[idx]->insert(val,orsa::square(1.0/sigma));
+        data[idx]->insert(val);
         // ORSA_DEBUG("xV: %g %g bV: %i %i",xVector[0],xVector[1],binVector[0],binVector[1]);
         return true;         
     }
@@ -71,8 +92,8 @@ void writeOutputFile(const std::string & filename,
                                 "%8g %8g %8.6f %8.6f %6Zi\n",
                                 xVector[0],
                                 xVector[1],
-                                e->average(),
-                                e->average()*e->entries().get_d()/Nsub, // divide by Nsub to account for missing zero entries
+                                e->sum(),
+                                e->sum()*e->entries().get_d()/Nsub, // divide by Nsub to account for missing zero entries
                                 e->entries().get_mpz_t());
 #warning the two should be the same for a complete analysis, because over several years, each a,e bin has been observed at least once!
                 }
@@ -83,7 +104,110 @@ void writeOutputFile(const std::string & filename,
     fclose(fp);
 }
 
+// global vars, for use in the callbacks
+osg::ref_ptr<PlotStats> plotStats_ae_NEO_H18;
+osg::ref_ptr<PlotStats> plotStats_ae_PHO_H18;
+//
+osg::ref_ptr<PlotStats> plotStats_ai_NEO_H18;
+osg::ref_ptr<PlotStats> plotStats_ai_PHO_H18;
+//
+osg::ref_ptr<PlotStats> plotStats_aL_NEO_H18;
+osg::ref_ptr<PlotStats> plotStats_aL_PHO_H18;
+
+int inspectCallback(void  * /* unused */,
+                    int     /* ncols  */,
+                    char ** col,
+                    char ** /* colName */) {
+    
+    const int z_a_min          = atoi(col[0]);
+    const int z_a_max          = atoi(col[1]);
+    const int z_e_min          = atoi(col[2]);
+    const int z_e_max          = atoi(col[3]);
+    const int z_i_min          = atoi(col[4]);
+    const int z_i_max          = atoi(col[5]);
+    const int z_node_min       = atoi(col[6]);
+    const int z_node_max       = atoi(col[7]);
+    const int z_peri_min       = atoi(col[8]);
+    const int z_peri_max       = atoi(col[9]);
+    const int z_M_min          = atoi(col[10]);
+    const int z_M_max          = atoi(col[11]);
+    //
+    const int z_H              = atoi(col[12]);
+    //
+    const int N_NEO            = atoi(col[13]);
+    const int N_PHO            = atoi(col[14]);
+    const int NEO_in_field     = atoi(col[15]);
+    const int PHO_in_field     = atoi(col[16]);
+    //
+    const double eta_NEO       = atof(col[17]);
+    // const double sigma_eta_NEO = atof(col[18]);
+    const double eta_PHO       = atof(col[19]);
+    // const double sigma_eta_PHO = atof(col[20]);
+    
+    // local center bin
+    const double center_a = 0.5*(z_a_max+z_a_min)*grain_a_AU;
+    const double center_e = 0.5*(z_e_max+z_e_min)*grain_e;
+    const double center_i = 0.5*(z_i_max+z_i_min)*grain_i_DEG;
+
+    // size=2 should work for most cases
+    std::vector<double> xVector; xVector.resize(2);
+    // xVector.resize(varDefinition.size());
+    
+    if (z_H == 180) {
+        xVector[0] = center_a;
+        xVector[1] = center_e;
+        plotStats_ae_NEO_H18->insert(xVector, eta_NEO);
+        plotStats_ae_PHO_H18->insert(xVector, eta_PHO);
+        //
+        xVector[0] = center_a;
+        xVector[1] = center_i;
+        plotStats_ai_NEO_H18->insert(xVector, eta_NEO);
+        plotStats_ai_PHO_H18->insert(xVector, eta_PHO);
+    }
+    
+    // L
+    std::vector<int> z_L_vec;
+    {
+        // assume step is the same for node,peri,M
+        // #warning this is grain-size dependent!
+        z_L_vec.push_back(((z_node_min+z_peri_min+z_M_min)%360000)/30000);
+        z_L_vec.push_back(((z_node_max+z_peri_min+z_M_min)%360000)/30000);
+        z_L_vec.push_back(((z_node_max+z_peri_max+z_M_min)%360000)/30000);
+    }
+    //
+    for (unsigned int l=0; l<z_L_vec.size(); ++l) {
+        const int index_L = z_L_vec[l]; // 0-11
+        
+        // assuming grain size for node=peri=M=L
+        const double center_L = (0.5+index_L)*30.0;
+        
+        if (z_H == 180) {
+            xVector[0] = center_a;
+            xVector[1] = center_L;
+            plotStats_aL_NEO_H18->insert(xVector, eta_NEO);
+            plotStats_aL_PHO_H18->insert(xVector, eta_PHO);
+        }
+    }
+    
+    return 0;
+}
+
 int main(int argc, char ** argv) {
+    
+    /* 
+       {
+       // testing only
+       unsigned int N_low, N_mean, N_high;
+       const double      CL = 0.95;
+       const unsigned int R = 15;
+       const double       p = 0.75;
+       const bool     cache = true; // use cache table in factorial (may use too much memory)
+       if (!BinomialConfidenceInterval(N_low, N_mean, N_high, CL, R, p, cache)) {
+       ORSA_DEBUG("problems with BinomialConfidenceInterval...");
+       }
+       exit(0);
+       }
+    */
     
     if (argc != 2) {
         ORSA_DEBUG("Usage: %s <sqlite-merged-db>",argv[0]);
@@ -152,27 +276,6 @@ int main(int argc, char ** argv) {
     {
         // now the real work
         
-        char **sql_result;
-        int nrows, ncols;
-        char sql_line[1024];
-        sprintf(sql_line,"SELECT * FROM grid");
-        do {
-            rc = sqlite3_get_table(db,sql_line,&sql_result,&nrows,&ncols,&zErr);
-            if (rc==SQLITE_BUSY) {
-                ORSA_DEBUG("database busy, retrying...");
-                usleep(100000);
-            }
-        } while (rc==SQLITE_BUSY);
-        if (rc != SQLITE_OK) {
-            if (zErr != NULL) {
-                ORSA_DEBUG("SQL error: %s\n",zErr);
-                sqlite3_free(zErr);
-                sqlite3_close(db);
-                exit(0);
-            }
-        }
-
-
         // vars
         const double a_min  = 1.90;
         const double a_max  = 2.30;
@@ -199,8 +302,8 @@ int main(int argc, char ** argv) {
         varDefinition_ae.push_back(var_a.get());
         varDefinition_ae.push_back(var_e.get());
         //
-        osg::ref_ptr<PlotStats> plotStats_ae_NEO_H18 = new PlotStats(varDefinition_ae);
-        osg::ref_ptr<PlotStats> plotStats_ae_PHO_H18 = new PlotStats(varDefinition_ae);
+        plotStats_ae_NEO_H18 = new PlotStats(varDefinition_ae);
+        plotStats_ae_PHO_H18 = new PlotStats(varDefinition_ae);
         // a,i
         std::vector< osg::ref_ptr<PlotStats::Var> > varDefinition_ai;
         varDefinition_ai.push_back(var_a.get());
@@ -215,81 +318,24 @@ int main(int argc, char ** argv) {
         osg::ref_ptr<PlotStats> plotStats_aL_NEO_H18 = new PlotStats(varDefinition_aL);
         osg::ref_ptr<PlotStats> plotStats_aL_PHO_H18 = new PlotStats(varDefinition_aL);
         
-        // size=2 should work for most cases
-        std::vector<double> xVector; xVector.resize(2);
-        // xVector.resize(varDefinition.size());
-        
-        for (int row=1; row<=nrows; ++row) {
-            
-            if (row%10000==0) ORSA_DEBUG("progress: %i/%i (%6.3f\%)",row,nrows,100*(double)row/(double)nrows);
-            
-            const int z_a_min          = atoi(sql_result[row*ncols+0]);
-            const int z_a_max          = atoi(sql_result[row*ncols+1]);
-            const int z_e_min          = atoi(sql_result[row*ncols+2]);
-            const int z_e_max          = atoi(sql_result[row*ncols+3]);
-            const int z_i_min          = atoi(sql_result[row*ncols+4]);
-            const int z_i_max          = atoi(sql_result[row*ncols+5]);
-            const int z_node_min       = atoi(sql_result[row*ncols+6]);
-            const int z_node_max       = atoi(sql_result[row*ncols+7]);
-            const int z_peri_min       = atoi(sql_result[row*ncols+8]);
-            const int z_peri_max       = atoi(sql_result[row*ncols+9]);
-            const int z_M_min          = atoi(sql_result[row*ncols+10]);
-            const int z_M_max          = atoi(sql_result[row*ncols+11]);
-            //
-            const int z_H              = atoi(sql_result[row*ncols+12]);
-            //
-            const int N_NEO            = atoi(sql_result[row*ncols+13]);
-            const int N_PHO            = atoi(sql_result[row*ncols+14]);
-            const int NEO_in_field     = atoi(sql_result[row*ncols+15]);
-            const int PHO_in_field     = atoi(sql_result[row*ncols+16]);
-            //
-            const double eta_NEO       = atof(sql_result[row*ncols+17]);
-            const double sigma_eta_NEO = atof(sql_result[row*ncols+18]);
-            const double eta_PHO       = atof(sql_result[row*ncols+19]);
-            const double sigma_eta_PHO = atof(sql_result[row*ncols+20]);
-            
-            // local center bin
-            const double center_a = 0.5*(z_a_max+z_a_min)*grain_a_AU;
-            const double center_e = 0.5*(z_e_max+z_e_min)*grain_e;
-            const double center_i = 0.5*(z_i_max+z_i_min)*grain_i_DEG;
-            
-            if (z_H == 180) {
-                xVector[0] = center_a;
-                xVector[1] = center_e;
-                plotStats_ae_NEO_H18->insert(xVector, eta_NEO, 1.0);
-                plotStats_ae_PHO_H18->insert(xVector, eta_PHO, 1.0);
-                //
-                xVector[0] = center_a;
-                xVector[1] = center_i;
-                plotStats_ai_NEO_H18->insert(xVector, eta_NEO, 1.0);
-                plotStats_ai_PHO_H18->insert(xVector, eta_PHO, 1.0);
-            }
-            
-            // L
-            std::vector<int> z_L_vec;
-            {
-                // assume step is the same for node,peri,M
-                // #warning this is grain-size dependent!
-                z_L_vec.push_back(((z_node_min+z_peri_min+z_M_min)%360000)/30000);
-                z_L_vec.push_back(((z_node_max+z_peri_min+z_M_min)%360000)/30000);
-                z_L_vec.push_back(((z_node_max+z_peri_max+z_M_min)%360000)/30000);
-            }
-            //
-            for (unsigned int l=0; l<z_L_vec.size(); ++l) {
-                const int index_L = z_L_vec[l]; // 0-11
-                
-                // assuming grain size for node=peri=M=L
-                const double center_L = (0.5+index_L)*30.0;
-                
-                if (z_H == 180) {
-                    xVector[0] = center_a;
-                    xVector[1] = center_L;
-                    plotStats_aL_NEO_H18->insert(xVector, eta_NEO, 1.0);
-                    plotStats_aL_PHO_H18->insert(xVector, eta_PHO, 1.0);
+        {
+            char sql_line[1024];
+            sprintf(sql_line,"SELECT * FROM grid");
+            do {
+                rc = sqlite3_exec(db,sql_line,(&inspectCallback),NULL,NULL);
+                if (rc==SQLITE_BUSY) {
+                    ORSA_DEBUG("database busy, retrying...");
+                    usleep(100000);
+                }
+            } while (rc==SQLITE_BUSY);
+            if (rc != SQLITE_OK) {
+                if (zErr != NULL) {
+                    ORSA_DEBUG("SQL error: %s\n",zErr);
+                    sqlite3_free(zErr);
+                    sqlite3_close(db);
+                    exit(0);
                 }
             }
-            
-            
         }
         
         // numbers for Nsub
@@ -321,9 +367,6 @@ int main(int argc, char ** argv) {
         //
         sprintf(filename,"%s_inspect_aL_PHO_H18.dat",argv[1]);
         writeOutputFile(filename, plotStats_aL_PHO_H18, var_a, var_L, sub_e*sub_i*sub_node*sub_peri*3);
-        
-        
-        sqlite3_free_table(sql_result);
     }
     
     sqlite3_close(db);
