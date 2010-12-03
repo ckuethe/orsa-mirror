@@ -71,7 +71,7 @@ bool bisectionSearch(unsigned int & N_minus,
         if (N_middle==N_minus) break;
         if (N_middle==N_plus)  break;
         p_middle = cumulativeProbability(p, N_middle, R, cache);
-        // ORSA_DEBUG("N: %i  cP: %g",N_middle,p_middle);
+        // ORSA_DEBUG("N: %i  cP: %g  pN: %g",N_middle,p_middle,singleProbabilityTerm(p,N_middle,R,cache));
         if (p_middle <= probThreshold) {
             N_minus = N_middle;
             p_minus = p_middle;
@@ -123,7 +123,9 @@ bool BinomialConfidenceInterval(unsigned int & N_low,
         // ORSA_DEBUG("searching N_high...");
         const double probThreshold = (R==0 ? CL : (1.0+CL)/2);
         unsigned int N_minus = N_mean;
-        unsigned int N_plus  = 5*(N_mean+1);
+        double factor = 5.0+fabs(log10(1.0-CL)); // gets larger as CL gets closer to 1.0 
+        // ORSA_DEBUG("suggested factor: %g",factor);
+        unsigned int N_plus  = factor*(N_mean+1);
         if (bisectionSearch(N_minus,N_plus,R,p,probThreshold,cache)) {
             N_high = N_plus;
         } else {
@@ -139,6 +141,22 @@ bool BinomialConfidenceInterval(unsigned int & N_low,
        N_mean,
        N_high,
        100*CL);
+    */
+
+    /* 
+       {
+       // test
+       unsigned int Q=0;
+       double sum_Qp=0.0;
+       double sum_p=0.0;
+       while (Q<1000) {
+       const double ppp = singleProbabilityTerm(p,Q,R,cache);
+       sum_Qp+=Q*ppp;
+       sum_p += ppp;
+       ORSA_DEBUG("Q: %i   average: %g",Q,sum_Qp);
+       ++Q;
+       }
+       }
     */
     
     return true;
