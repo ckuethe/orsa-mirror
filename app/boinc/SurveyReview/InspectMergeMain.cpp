@@ -152,6 +152,18 @@ void writeOutputFile(const std::string & filename,
 }
 
 // global vars, for use in the callbacks
+
+// H16
+osg::ref_ptr< PlotStats_WS > plotStats_ae_NEO_H16;
+osg::ref_ptr< PlotStats_WS > plotStats_ae_PHO_H16;
+//
+osg::ref_ptr< PlotStats_WS > plotStats_ai_NEO_H16;
+osg::ref_ptr< PlotStats_WS > plotStats_ai_PHO_H16;
+//
+osg::ref_ptr< PlotStats_WS > plotStats_aL_NEO_H16;
+osg::ref_ptr< PlotStats_WS > plotStats_aL_PHO_H16;
+
+// H18
 osg::ref_ptr< PlotStats_WS > plotStats_ae_NEO_H18;
 osg::ref_ptr< PlotStats_WS > plotStats_ae_PHO_H18;
 //
@@ -200,6 +212,18 @@ int inspectCallback(void  * /* unused */,
     std::vector<double> xVector; xVector.resize(2);
     // xVector.resize(varDefinition.size());
     
+    if (z_H == 160) {
+        xVector[0] = center_a;
+        xVector[1] = center_e;
+        plotStats_ae_NEO_H16->insert(xVector, eta_NEO);
+        plotStats_ae_PHO_H16->insert(xVector, eta_PHO);
+        //
+        xVector[0] = center_a;
+        xVector[1] = center_i;
+        plotStats_ai_NEO_H16->insert(xVector, eta_NEO);
+        plotStats_ai_PHO_H16->insert(xVector, eta_PHO);
+    }
+    
     if (z_H == 180) {
         xVector[0] = center_a;
         xVector[1] = center_e;
@@ -227,6 +251,13 @@ int inspectCallback(void  * /* unused */,
         
         // assuming grain size for node=peri=M=L
         const double center_L = (0.5+index_L)*30.0;
+        
+        if (z_H == 160) {
+            xVector[0] = center_a;
+            xVector[1] = center_L;
+            plotStats_aL_NEO_H16->insert(xVector, eta_NEO);
+            plotStats_aL_PHO_H16->insert(xVector, eta_PHO);
+        }
         
         if (z_H == 180) {
             xVector[0] = center_a;
@@ -349,6 +380,9 @@ int main(int argc, char ** argv) {
         varDefinition_ae.push_back(var_a.get());
         varDefinition_ae.push_back(var_e.get());
         //
+        plotStats_ae_NEO_H16 = new PlotStats_WS(varDefinition_ae);
+        plotStats_ae_PHO_H16 = new PlotStats_WS(varDefinition_ae);
+        //
         plotStats_ae_NEO_H18 = new PlotStats_WS(varDefinition_ae);
         plotStats_ae_PHO_H18 = new PlotStats_WS(varDefinition_ae);
         // a,i
@@ -356,12 +390,19 @@ int main(int argc, char ** argv) {
         varDefinition_ai.push_back(var_a.get());
         varDefinition_ai.push_back(var_i.get());
         //
+        plotStats_ai_NEO_H16 = new PlotStats_WS(varDefinition_ai);
+        plotStats_ai_PHO_H16 = new PlotStats_WS(varDefinition_ai);
+        //
         plotStats_ai_NEO_H18 = new PlotStats_WS(varDefinition_ai);
         plotStats_ai_PHO_H18 = new PlotStats_WS(varDefinition_ai);
         // a,L
         std::vector< osg::ref_ptr<Var> > varDefinition_aL;
         varDefinition_aL.push_back(var_a.get());
         varDefinition_aL.push_back(var_L.get());
+        //
+        plotStats_aL_NEO_H16 = new PlotStats_WS(varDefinition_aL);
+        plotStats_aL_PHO_H16 = new PlotStats_WS(varDefinition_aL);
+        //
         plotStats_aL_NEO_H18 = new PlotStats_WS(varDefinition_aL);
         plotStats_aL_PHO_H18 = new PlotStats_WS(varDefinition_aL);
         
@@ -396,7 +437,27 @@ int main(int argc, char ** argv) {
         
         // time to write output files
         char filename[1024];
+        
+        // H16
+        sprintf(filename,"%s_inspect_ae_NEO_H16.dat",argv[1]);
+        writeOutputFile(filename, plotStats_ae_NEO_H16, var_a, var_e, sub_i*sub_node*sub_peri*sub_M);
         //
+        sprintf(filename,"%s_inspect_ae_PHO_H16.dat",argv[1]);
+        writeOutputFile(filename, plotStats_ae_PHO_H16, var_a, var_e, sub_i*sub_node*sub_peri*sub_M);
+        //
+        sprintf(filename,"%s_inspect_ai_NEO_H16.dat",argv[1]);
+        writeOutputFile(filename, plotStats_ai_NEO_H16, var_a, var_i, sub_e*sub_node*sub_peri*sub_M);
+        //
+        sprintf(filename,"%s_inspect_ai_PHO_H16.dat",argv[1]);
+        writeOutputFile(filename, plotStats_ai_PHO_H16, var_a, var_i, sub_e*sub_node*sub_peri*sub_M);
+        //
+        sprintf(filename,"%s_inspect_aL_NEO_H16.dat",argv[1]);
+        writeOutputFile(filename, plotStats_aL_NEO_H16, var_a, var_L, sub_e*sub_i*sub_node*sub_peri*3);
+        //
+        sprintf(filename,"%s_inspect_aL_PHO_H16.dat",argv[1]);
+        writeOutputFile(filename, plotStats_aL_PHO_H16, var_a, var_L, sub_e*sub_i*sub_node*sub_peri*3);
+
+        // H18        
         sprintf(filename,"%s_inspect_ae_NEO_H18.dat",argv[1]);
         writeOutputFile(filename, plotStats_ae_NEO_H18, var_a, var_e, sub_i*sub_node*sub_peri*sub_M);
         //
