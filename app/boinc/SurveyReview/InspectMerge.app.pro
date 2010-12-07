@@ -26,7 +26,7 @@ unix:!macx {
 	LIBS += -L../../../lib/$${PLATFORM_NAME} -lorsa -lorsaInputOutput -lorsaSolarSystem -lorsaSPICE -lorsaEssentialOSG -lOpenThreads -lorsaUtil -L/home/tricaric/sqlite -lsqlite3
 }
 
-HEADERS += grain.h   fit.h   binomial.h
-SOURCES += grain.cpp InspectMergeMain.cpp 
+HEADERS += grain.h fit.h binomial.h SurveyReview.h skycoverage.h eta.h
+SOURCES += grain.cpp skycoverage.cpp InspectMergeMain.cpp SurveyReview.cpp
 
 HEADERS += sqlite3.h sqlite3ext.h

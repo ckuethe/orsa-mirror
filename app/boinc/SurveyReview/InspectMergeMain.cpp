@@ -9,10 +9,26 @@
 
 #include "binomial.h"
 #include "grain.h"
+#include "SurveyReview.h"
+#include "skycoverage.h"
+#include "eta.h"
 #include "fit.h"
 
 // SQLite3
 #include "sqlite3.h"
+
+osg::ref_ptr<SkyCoverage> skyCoverage;
+
+osg::ref_ptr<orsa::RNG> rnd;
+
+osg::ref_ptr<orsa::BodyGroup> bg;
+osg::ref_ptr<orsa::Body> sun;
+osg::ref_ptr<orsa::Body> earth;
+osg::ref_ptr<orsa::Body> moon; 
+orsa::Orbit earthOrbit;
+
+// epoch for sky projection
+const orsa::Time epoch = orsaSolarSystem::now();
 
 class PlotStatsElement_WS : public orsa::WeightedStatistic<double> {
 public:
@@ -130,6 +146,11 @@ void writeOutputFile(const std::string & filename,
             
             xVector[0] = var_x->start+var_x->incr*(j+0.5);
             xVector[1] = var_y->start+var_y->incr*(k+0.5);
+
+#warning bin-by-bin normalization (divide by area), find better way to implement
+            const double area = fabs(var_x->incr*15.0*orsa::degToRad()*
+                                     (sin(orsa::degToRad()*(var_y->start+var_y->incr*(k))) -
+                                      sin(orsa::degToRad()*(var_y->start+var_y->incr*(k+1)))));
             
             std::vector<size_t> binVector;
             if (plotStats->bin(binVector,xVector)) {
@@ -139,8 +160,8 @@ void writeOutputFile(const std::string & filename,
                                 "%8g %8g %8.6f %8.6f %6Zi\n",
                                 xVector[0],
                                 xVector[1],
-                                e->sum(),
-                                e->sum()*e->entries().get_d()/Nsub, // divide by Nsub to account for missing zero entries
+                                (e->sum()/area),
+                                (e->sum()/area)*e->entries().get_d()/Nsub, // divide by Nsub to account for missing zero entries
                                 e->entries().get_mpz_t());
 #warning the two should be the same for a complete analysis, because over several years, each a,e bin has been observed at least once!
                 }
@@ -162,6 +183,9 @@ osg::ref_ptr< PlotStats_WS > plotStats_ai_PHO_H16;
 //
 osg::ref_ptr< PlotStats_WS > plotStats_aL_NEO_H16;
 osg::ref_ptr< PlotStats_WS > plotStats_aL_PHO_H16;
+//
+osg::ref_ptr< PlotStats_Sum > plotStats_sky_NEO_H16;
+osg::ref_ptr< PlotStats_Sum > plotStats_sky_PHO_H16;
 
 // H18
 osg::ref_ptr< PlotStats_WS > plotStats_ae_NEO_H18;
@@ -172,6 +196,9 @@ osg::ref_ptr< PlotStats_WS > plotStats_ai_PHO_H18;
 //
 osg::ref_ptr< PlotStats_WS > plotStats_aL_NEO_H18;
 osg::ref_ptr< PlotStats_WS > plotStats_aL_PHO_H18;
+//
+osg::ref_ptr< PlotStats_Sum > plotStats_sky_NEO_H18;
+osg::ref_ptr< PlotStats_Sum > plotStats_sky_PHO_H18;
 
 int inspectCallback(void  * /* unused */,
                     int     /* ncols  */,
@@ -202,6 +229,12 @@ int inspectCallback(void  * /* unused */,
     // const double sigma_eta_NEO = atof(col[18]);
     const double eta_PHO       = atof(col[19]);
     // const double sigma_eta_PHO = atof(col[20]);
+
+#warning keep this filter updated
+    if ( (z_H != 160) && (z_H != 180) ) {
+        // quick exit, since we're saving only these two for now...
+        return 0;
+    }
     
     // local center bin
     const double center_a = 0.5*(z_a_max+z_a_min)*grain_a_AU;
@@ -266,6 +299,275 @@ int inspectCallback(void  * /* unused */,
             plotStats_aL_PHO_H18->insert(xVector, eta_PHO);
         }
     }
+
+    // sky
+    {
+        // don't use all binomial code for now, just the average value
+        //
+        // no more than 1.0 for now...
+        // notice the "-NEO_in_field" at the end: missing pop = estimated pop - known pop
+        const unsigned int N_NEO_missing_pop_mean = lrint(std::min(1.0,fabs(((NEO_in_field+1)/eta_NEO)-1)-NEO_in_field));    
+#warning TODO: sample 100 objects from pop bin, and project them on the sky, each one with weight N_NEO_missing_pop_mean/100
+#warning also weight by eta_detection, computed for each object one by one
+        
+        const orsa::Time apparentMotion_dt_T = orsa::Time(0,0,1,0,0);
+        //
+        const double apparentMotion_dt = apparentMotion_dt_T.get_d();
+        
+        orsa::Vector observerPosition_epoch;
+        orsa::Vector observerPosition_epoch_plus_dt;
+        orsa::Vector sunPosition_epoch;
+        orsa::Vector sunPosition_epoch_plus_dt;
+        
+        // using geocentric observer, so obs-position = earth positon 
+        /* obsPosCB->getPosition(observerPosition_epoch,
+           skyCoverage->obscode.getRef(),
+           skyCoverage->epoch.getRef());
+           obsPosCB->getPosition(observerPosition_epoch_plus_dt,
+           skyCoverage->obscode.getRef(),
+           skyCoverage->epoch.getRef()+apparentMotion_dt_T);
+        */
+
+        /* bg->getInterpolatedPosition(observerPosition_epoch,
+           earth.get(),
+           skyCoverage->epoch.getRef());
+           
+           bg->getInterpolatedPosition(observerPosition_epoch_plus_dt,
+           earth.get(),
+           skyCoverage->epoch.getRef()+apparentMotion_dt_T);
+           
+           bg->getInterpolatedPosition(sunPosition_epoch,
+           sun.get(),
+           skyCoverage->epoch.getRef());
+           
+           bg->getInterpolatedPosition(sunPosition_epoch_plus_dt,
+           sun.get(),
+           skyCoverage->epoch.getRef()+apparentMotion_dt_T);
+        */
+        
+        // computed at skyCoverage->epoch
+        /* const orsa::Vector observerPosition_sk_epoch         = observerPosition_epoch;
+           const orsa::Vector observerPosition_sk_epoch_plus_dt = observerPosition_epoch_plus_dt;
+           const orsa::Vector sunPosition_sk_epoch              = sunPosition_epoch;
+           const orsa::Vector sunPosition_sk_epoch_plus_dt      = sunPosition_epoch_plus_dt;
+        */
+        
+        osg::ref_ptr<OrbitFactory> orbitFactory =
+            new OrbitFactory(grain_a_AU*z_a_min,
+                             grain_a_AU*z_a_max,
+                             grain_e*z_e_min,
+                             grain_e*z_e_max,
+                             grain_i_DEG*z_i_min,
+                             grain_i_DEG*z_i_max,
+                             grain_node_DEG*z_node_min,
+                             grain_node_DEG*z_node_max,
+                             grain_peri_DEG*z_peri_min,
+                             grain_peri_DEG*z_peri_max,
+                             grain_M_DEG*z_M_min,
+                             grain_M_DEG*z_M_max,
+                             // grain_H* z_H,
+                             // grain_H*(z_H+z_H_delta),
+                             rnd.get(),
+                             earthOrbit);
+        
+        unsigned int sky_N_NEO=0;
+        unsigned int sky_N_PHO=0;
+        
+#warning this JD depends on the run, shoud be fixed in one file
+        // JD from SRMJS...
+        const double JD = 2455650; // epoch of orbits
+        const orsa::Time orbitEpoch = orsaSolarSystem::julianToTime(JD);
+        
+        // for (unsigned int j=0; j<100; ++j) {
+        while (1) {
+            
+            osg::ref_ptr<OrbitID> orbit = orbitFactory->sample();
+			
+            if (!orbit->isNEO()) {
+                continue;
+            }
+            ++sky_N_NEO;
+            
+            const bool isPHO = orbit->isPHO();
+            if (isPHO) {
+                ++sky_N_PHO;
+            }
+            
+            const double orbitPeriod = orbit->period();
+            
+            /* obsPosCB->getPosition(observerPosition_epoch,
+               skyCoverage->obscode.getRef(),
+               epoch);
+               
+               obsPosCB->getPosition(observerPosition_epoch_plus_dt,
+               skyCoverage->obscode.getRef(),
+               epoch+apparentMotion_dt_T);
+            */
+            
+            bg->getInterpolatedPosition(observerPosition_epoch,
+                                        earth.get(),
+                                        epoch);
+            
+            bg->getInterpolatedPosition(observerPosition_epoch_plus_dt,
+                                        earth.get(),
+                                        epoch+apparentMotion_dt_T);
+            
+            bg->getInterpolatedPosition(sunPosition_epoch,
+                                        sun.get(),
+                                        epoch);
+            
+            bg->getInterpolatedPosition(sunPosition_epoch_plus_dt,
+                                        sun.get(),
+                                        epoch+apparentMotion_dt_T);
+            
+            orsa::Vector earthPosition_epoch;
+            bg->getInterpolatedPosition(earthPosition_epoch,
+                                        earth.get(),
+                                        epoch);
+            
+            orsa::Vector moonPosition_epoch;
+            bg->getInterpolatedPosition(moonPosition_epoch,
+                                        moon.get(),
+                                        epoch);
+            
+            // earth north pole
+            const orsa::Vector northPole = (orsaSolarSystem::equatorialToEcliptic()*orsa::Vector(0,0,1)).normalized();
+                
+            orsa::Vector r;
+            
+            const double original_M  = orbit->M;
+            // 
+            orbit->M = original_M + fmod(orsa::twopi() * (epoch-orbitEpoch).get_d() / orbitPeriod, orsa::twopi());
+            orbit->relativePosition(r);
+            orsa::Vector orbitPosition_epoch = r + sunPosition_epoch;
+            //
+            orbit->M = original_M + fmod(orsa::twopi() * (epoch+apparentMotion_dt_T-orbitEpoch).get_d() / orbitPeriod, orsa::twopi());
+            orbit->relativePosition(r);
+            orsa::Vector orbitPosition_epoch_plus_dt = r + sunPosition_epoch_plus_dt;
+            //
+            orbit->M = original_M;
+            
+            orsa::Vector dr_epoch          = (orbitPosition_epoch         - observerPosition_epoch);
+            orsa::Vector dr_epoch_plus_dt  = (orbitPosition_epoch_plus_dt - observerPosition_epoch_plus_dt);
+            
+            // ++inField;
+            
+            const orsa::Vector orb2obs    = observerPosition_epoch - orbitPosition_epoch;
+            const orsa::Vector obs2orb    = -orb2obs;
+            const orsa::Vector orb2sun    = sunPosition_epoch      - orbitPosition_epoch;
+            const orsa::Vector obs2sun    = sunPosition_epoch      - observerPosition_epoch;
+            const orsa::Vector obs2moon   = moonPosition_epoch     - observerPosition_epoch;
+            const double       phaseAngle = acos((orb2obs.normalized())*(orb2sun.normalized()));
+            
+            const orsa::Vector moon2obs = observerPosition_epoch - moonPosition_epoch;
+            const orsa::Vector moon2sun =      sunPosition_epoch - moonPosition_epoch;
+            
+            // apparent magnitude V moved later, in H loop
+            
+            // apparent velocity
+            const double U = acos(dr_epoch_plus_dt.normalized()*dr_epoch.normalized())/apparentMotion_dt;
+            
+            // airmass
+            //
+            // aliases
+            // const orsa::Vector & earthPosition = earthPosition_epoch;
+            // const orsa::Vector &   obsPosition = observerPosition_epoch;
+            // const orsa::Vector     zenith = (obsPosition - earthPosition).normalized();
+            // const orsa::Vector localEast  = orsa::externalProduct(northPole,zenith).normalized();
+            //  const orsa::Vector localNorth = orsa::externalProduct(zenith,localEast).normalized();
+            // const double obs2orb_zenith     =     zenith*obs2orb.normalized();
+            // const double obs2orb_localEast  =  localEast*obs2orb.normalized();
+            // const double obs2orb_localNorth = localNorth*obs2orb.normalized();
+            // const double zenithAngle = acos(obs2orb_zenith);
+            // const double airMass = ((observed||epochFromField)&&(zenithAngle<orsa::halfpi())?(1.0/cos(zenithAngle)):-1.0);
+            // const double azimuth = fmod(orsa::twopi()+atan2(obs2orb_localEast,obs2orb_localNorth),orsa::twopi());
+            // const double AM = ((epochFromField)&&(zenithAngle<orsa::halfpi())?(1.0/cos(zenithAngle)):100.0);
+#warning NOTE: using airmass=1.0 because using generic geocentric observatory for now
+            const double AM = 1.0;
+            
+            // const double solarAltitude = orsa::halfpi()-acos(zenith*obs2sun.normalized());
+            // const double lunarAltitude = orsa::halfpi()-acos(zenith*obs2moon.normalized());
+            // const double lunarElongation = acos(obs2moon.normalized()*obs2orb.normalized());
+            // const double lunarPhase = acos(moon2obs.normalized()*moon2sun.normalized());
+            //
+            // const double SA = solarAltitude;
+            // const double LA = lunarAltitude;
+            // const double LE = lunarElongation;
+            // const double LP = lunarPhase;
+            
+            // galactic latitude
+            const orsa::Vector obs2orb_Equatorial = orsaSolarSystem::eclipticToEquatorial()*obs2orb;
+            const orsa::Vector dr_equatorial = obs2orb_Equatorial.normalized();
+            const double  ra = fmod(atan2(dr_equatorial.getY(),dr_equatorial.getX())+orsa::twopi(),orsa::twopi());
+            const double dec = asin(dr_equatorial.getZ()/dr_equatorial.length());
+            double l,b;
+            orsaSolarSystem::equatorialToGalactic(l,b,ra,dec);
+            // format longitude between -180 and +180 deg
+            l = fmod(l+2*orsa::twopi(),orsa::twopi());
+            if (l > orsa::pi()) l -= orsa::twopi();
+            // const double galacticLongitude = l;
+            // const double galacticLatitude  = b;
+            const double GB = b;
+            const double GL = l;
+            // ecliptic coordinates
+            /* const orsa::Vector dr = obs2orb.normalized();
+               const double phi      = fmod(atan2(dr.getY(),dr.getX())+orsa::twopi(),orsa::twopi());
+               const double theta    = asin(dr.getZ()/dr.length());
+               const orsa::Vector dr_sun = obs2sun.normalized();
+               const double phi_sun      = fmod(atan2(dr_sun.getY(),dr_sun.getX())+orsa::twopi(),orsa::twopi());
+               const double theta_sun    = asin(dr_sun.getZ()/dr_sun.length());
+               const double tmp_eclipticLongitude = fmod(phi-phi_sun+orsa::twopi(),orsa::twopi());
+               const double eclipticLongitude = (tmp_eclipticLongitude>orsa::pi()) ? (tmp_eclipticLongitude-orsa::twopi()) : (tmp_eclipticLongitude);
+               const double eclipticLatitude  = theta-theta_sun;
+               const double EL = eclipticLongitude;
+               const double EB = eclipticLatitude;
+            */
+            
+            if ( (z_H == 160) ||
+                 (z_H == 180) ) {
+                const double H = z_H*grain_H;
+                const double G = 0.15;
+                // apparent magnitude
+                const double V = apparentMagnitude(H,
+                                                   G,
+                                                   phaseAngle,
+                                                   orb2obs.length(),
+                                                   orb2sun.length());
+                // detection efficiency
+                const double eta = skyCoverage->eta(V,U,AM,GB,GL);
+                
+                xVector[0] = ra*orsa::radToDeg();
+                xVector[1] = dec*orsa::radToDeg()/15.0;
+
+                if (z_H == 160) {
+                    
+                    /* ORSA_DEBUG("inserting: eta=%.6f V=%4.1f U=%5.1f weight=%.6f",
+                       eta,
+                       V,
+                       orsa::FromUnits(U*orsa::radToArcsec(),orsa::Unit::HOUR),
+                       N_NEO_missing_pop_mean*eta);
+                    */
+                    
+                    plotStats_sky_NEO_H16->insert(xVector, N_NEO_missing_pop_mean*eta);
+                    // include PHO later...
+                    // plotStats_sky_PHO_H16->insert(xVector, eta_PHO);
+                }
+                
+                if (z_H == 180) {
+                    plotStats_sky_NEO_H18->insert(xVector, N_NEO_missing_pop_mean*eta);
+                    // include PHO later...
+                    // plotStats_sky_PHO_H18->insert(xVector, eta_PHO);
+                }
+            }
+            
+#warning use more general break for NEO and PHO?
+            if (sky_N_NEO == 100) {
+                // some output, then break iteration
+                
+                break;
+            }
+        }
+    }
     
     return 0;
 }
@@ -296,6 +598,60 @@ int main(int argc, char ** argv) {
     
     ORSA_DEBUG("process ID: %i",getpid());
     
+    orsaSPICE::SPICE::instance()->loadKernel("de405.bsp");
+    
+    bg = new orsa::BodyGroup;
+    
+    // SUN
+    sun   = SPICEBody("SUN",orsaSolarSystem::Data::MSun());
+    bg->addBody(sun.get());
+    
+    // EARTH
+    earth = SPICEBody("EARTH",orsaSolarSystem::Data::MEarth());
+    bg->addBody(earth.get());
+    
+    // MOON
+    moon  = SPICEBody("MOON",orsaSolarSystem::Data::MMoon());
+    bg->addBody(moon.get());
+    
+    earthOrbit.compute(earth.get(),sun.get(),bg.get(),epoch);
+    
+#warning change random seed
+    rnd = new orsa::RNG(2352351);
+    
+    {
+        FitFileDataElement e;
+        if (!readFitFile(e,"fit.dat")) {
+            ORSA_DEBUG("cannot open file [fit.dat]");
+            exit(0); 
+        }
+        
+        skyCoverage = new SkyCoverage;
+        
+        skyCoverage->obscode  = "500"; // 500=Geocentric
+        skyCoverage->epoch    = epoch;
+        //
+        skyCoverage->V_limit  = e.V_limit;
+        skyCoverage->eta0_V   = e.eta0_V;
+        skyCoverage->c_V      = e.c_V;
+        skyCoverage->w_V      = e.w_V;
+        //
+        skyCoverage->U_limit  = e.U_limit;
+        skyCoverage->w_U      = e.w_U;
+        //
+        skyCoverage->peak_AM  = e.peak_AM;
+        skyCoverage->scale_AM = e.scale_AM;
+        skyCoverage->shape_AM = e.shape_AM;
+        //
+        skyCoverage->drop_GB   = e.drop_GB;
+        skyCoverage->scale_GB  = e.scale_GB;
+        //
+        skyCoverage->scale_GL = e.scale_GL;
+        skyCoverage->shape_GL = e.shape_GL;
+        //
+        skyCoverage->V0       = e.V0;
+    }
+    
     // needed to work with SQLite database
     sqlite3     * db;
     char        * zErr;
@@ -314,7 +670,8 @@ int main(int argc, char ** argv) {
         }
     }
     
-    {
+#warning remember to enable integrity check again
+    if (0) {
         // integrity_check
         
         int nrows, ncols;
@@ -375,6 +732,10 @@ int main(int argc, char ** argv) {
         const double L_step =  30.00;
         osg::ref_ptr<LinearVar> var_L = new LinearVar(L_min,L_max,L_step);
         
+        // sky ra,dec
+        osg::ref_ptr<LinearVar> var_ra  = new LinearVar(  0.0,24.0,0.25);
+        osg::ref_ptr<LinearVar> var_dec = new LinearVar(-90.0,90.0,5.0);
+        
         // a,e
         std::vector< osg::ref_ptr<Var> > varDefinition_ae;
         varDefinition_ae.push_back(var_a.get());
@@ -385,6 +746,7 @@ int main(int argc, char ** argv) {
         //
         plotStats_ae_NEO_H18 = new PlotStats_WS(varDefinition_ae);
         plotStats_ae_PHO_H18 = new PlotStats_WS(varDefinition_ae);
+        
         // a,i
         std::vector< osg::ref_ptr<Var> > varDefinition_ai;
         varDefinition_ai.push_back(var_a.get());
@@ -395,6 +757,7 @@ int main(int argc, char ** argv) {
         //
         plotStats_ai_NEO_H18 = new PlotStats_WS(varDefinition_ai);
         plotStats_ai_PHO_H18 = new PlotStats_WS(varDefinition_ai);
+        
         // a,L
         std::vector< osg::ref_ptr<Var> > varDefinition_aL;
         varDefinition_aL.push_back(var_a.get());
@@ -405,6 +768,17 @@ int main(int argc, char ** argv) {
         //
         plotStats_aL_NEO_H18 = new PlotStats_WS(varDefinition_aL);
         plotStats_aL_PHO_H18 = new PlotStats_WS(varDefinition_aL);
+        
+        // sky
+        std::vector< osg::ref_ptr<Var> > varDefinition_sky;
+        varDefinition_sky.push_back(var_ra.get());
+        varDefinition_sky.push_back(var_dec.get());
+        //
+        plotStats_sky_NEO_H16 = new PlotStats_Sum(varDefinition_sky);
+        plotStats_sky_PHO_H16 = new PlotStats_Sum(varDefinition_sky);
+        //
+        plotStats_sky_NEO_H18 = new PlotStats_Sum(varDefinition_sky);
+        plotStats_sky_PHO_H18 = new PlotStats_Sum(varDefinition_sky);
         
         {
             char sql_line[1024];
@@ -435,6 +809,10 @@ int main(int argc, char ** argv) {
         const unsigned int sub_peri = 12;
         const unsigned int sub_M    = 12;
         
+        // normalize plotStats_sky_* counts by the area of each bin
+        // #warning THIS IS NEEDED!!!
+        // normalization moved into writeoutput... functions
+        
         // time to write output files
         char filename[1024];
         
@@ -456,7 +834,13 @@ int main(int argc, char ** argv) {
         //
         sprintf(filename,"%s_inspect_aL_PHO_H16.dat",argv[1]);
         writeOutputFile(filename, plotStats_aL_PHO_H16, var_a, var_L, sub_e*sub_i*sub_node*sub_peri*3);
-
+        //
+        sprintf(filename,"%s_inspect_sky_NEO_H16.dat",argv[1]);
+        writeOutputFile(filename, plotStats_sky_NEO_H16, var_ra, var_dec, 1);
+        //
+        sprintf(filename,"%s_inspect_sky_PHO_H16.dat",argv[1]);
+        writeOutputFile(filename, plotStats_sky_PHO_H16, var_ra, var_dec, 1);
+        
         // H18        
         sprintf(filename,"%s_inspect_ae_NEO_H18.dat",argv[1]);
         writeOutputFile(filename, plotStats_ae_NEO_H18, var_a, var_e, sub_i*sub_node*sub_peri*sub_M);
@@ -475,6 +859,12 @@ int main(int argc, char ** argv) {
         //
         sprintf(filename,"%s_inspect_aL_PHO_H18.dat",argv[1]);
         writeOutputFile(filename, plotStats_aL_PHO_H18, var_a, var_L, sub_e*sub_i*sub_node*sub_peri*3);
+        //
+        sprintf(filename,"%s_inspect_sky_NEO_H18.dat",argv[1]);
+        writeOutputFile(filename, plotStats_sky_NEO_H18, var_ra, var_dec, 1);
+        //
+        sprintf(filename,"%s_inspect_sky_PHO_H18.dat",argv[1]);
+        writeOutputFile(filename, plotStats_sky_PHO_H18, var_ra, var_dec, 1);
     }
     
     sqlite3_close(db);
