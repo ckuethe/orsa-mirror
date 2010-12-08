@@ -210,6 +210,8 @@ int inspectCallback(void  * /* unused */,
                     char ** col,
                     char ** /* colName */) {
     
+    static mpz_class callID=0;
+    
     const int z_a_min          = atoi(col[0]);
     const int z_a_max          = atoi(col[1]);
     const int z_e_min          = atoi(col[2]);
@@ -383,6 +385,35 @@ int inspectCallback(void  * /* unused */,
         const double JD = 2455650; // epoch of orbits
         const orsa::Time orbitEpoch = orsaSolarSystem::julianToTime(JD);
         
+        bg->getInterpolatedPosition(observerPosition_epoch,
+                                    earth.get(),
+                                    epoch);
+        
+        bg->getInterpolatedPosition(observerPosition_epoch_plus_dt,
+                                    earth.get(),
+                                    epoch+apparentMotion_dt_T);
+        
+        bg->getInterpolatedPosition(sunPosition_epoch,
+                                    sun.get(),
+                                    epoch);
+        
+        bg->getInterpolatedPosition(sunPosition_epoch_plus_dt,
+                                    sun.get(),
+                                    epoch+apparentMotion_dt_T);
+        
+        orsa::Vector earthPosition_epoch;
+        bg->getInterpolatedPosition(earthPosition_epoch,
+                                    earth.get(),
+                                    epoch);
+        
+        orsa::Vector moonPosition_epoch;
+        bg->getInterpolatedPosition(moonPosition_epoch,
+                                    moon.get(),
+                                    epoch);
+        
+        // earth north pole
+        const orsa::Vector northPole = (orsaSolarSystem::equatorialToEcliptic()*orsa::Vector(0,0,1)).normalized();
+        
         // for (unsigned int j=0; j<100; ++j) {
         while (1) {
             
@@ -408,36 +439,7 @@ int inspectCallback(void  * /* unused */,
                skyCoverage->obscode.getRef(),
                epoch+apparentMotion_dt_T);
             */
-            
-            bg->getInterpolatedPosition(observerPosition_epoch,
-                                        earth.get(),
-                                        epoch);
-            
-            bg->getInterpolatedPosition(observerPosition_epoch_plus_dt,
-                                        earth.get(),
-                                        epoch+apparentMotion_dt_T);
-            
-            bg->getInterpolatedPosition(sunPosition_epoch,
-                                        sun.get(),
-                                        epoch);
-            
-            bg->getInterpolatedPosition(sunPosition_epoch_plus_dt,
-                                        sun.get(),
-                                        epoch+apparentMotion_dt_T);
-            
-            orsa::Vector earthPosition_epoch;
-            bg->getInterpolatedPosition(earthPosition_epoch,
-                                        earth.get(),
-                                        epoch);
-            
-            orsa::Vector moonPosition_epoch;
-            bg->getInterpolatedPosition(moonPosition_epoch,
-                                        moon.get(),
-                                        epoch);
-            
-            // earth north pole
-            const orsa::Vector northPole = (orsaSolarSystem::equatorialToEcliptic()*orsa::Vector(0,0,1)).normalized();
-                
+
             orsa::Vector r;
             
             const double original_M  = orbit->M;
@@ -566,19 +568,17 @@ int inspectCallback(void  * /* unused */,
             }
             
 #warning use more general break for NEO and PHO?
-            if (sky_N_NEO == 100) {
+            if (sky_N_NEO == 16) {
                 // some output, then break iteration
                 
                 break;
             }
         }
-
+        
         {
             // frequent, intermediate output
-            static mpz_class callID=0;
-            ++callID;
-            if ((callID%10)==0) {
-                ORSA_DEBUG("callID: %Zi -- writing output...",callID.get_mpz_t());
+            if ((callID%100)==0) {
+                // ORSA_DEBUG("callID: %Zi -- writing output...",callID.get_mpz_t());
                 char filename[1024];
                 // 
                 sprintf(filename,"tmp_inspect_sky_NEO_H16.dat");
@@ -590,6 +590,8 @@ int inspectCallback(void  * /* unused */,
         }
         
     }
+    
+    ++callID;
     
     return 0;
 }
