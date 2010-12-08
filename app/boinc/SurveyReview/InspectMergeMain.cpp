@@ -27,6 +27,9 @@ osg::ref_ptr<orsa::Body> earth;
 osg::ref_ptr<orsa::Body> moon; 
 orsa::Orbit earthOrbit;
 
+osg::ref_ptr<LinearVar> var_ra;
+osg::ref_ptr<LinearVar> var_dec;
+
 // epoch for sky projection
 const orsa::Time epoch = orsaSolarSystem::now();
 
@@ -151,6 +154,8 @@ void writeOutputFile(const std::string & filename,
             const double area = fabs(var_x->incr*15.0*orsa::degToRad()*
                                      (sin(orsa::degToRad()*(var_y->start+var_y->incr*(k))) -
                                       sin(orsa::degToRad()*(var_y->start+var_y->incr*(k+1)))));
+            
+            // ORSA_DEBUG("xV: %g %g  area: %g",xVector[0],xVector[1],area);
             
             std::vector<size_t> binVector;
             if (plotStats->bin(binVector,xVector)) {
@@ -536,9 +541,9 @@ int inspectCallback(void  * /* unused */,
                 // detection efficiency
                 const double eta = skyCoverage->eta(V,U,AM,GB,GL);
                 
-                xVector[0] = ra*orsa::radToDeg();
-                xVector[1] = dec*orsa::radToDeg()/15.0;
-
+                xVector[0] = ra*orsa::radToDeg()/15.0;
+                xVector[1] = dec*orsa::radToDeg();
+                
                 if (z_H == 160) {
                     
                     /* ORSA_DEBUG("inserting: eta=%.6f V=%4.1f U=%5.1f weight=%.6f",
@@ -567,6 +572,23 @@ int inspectCallback(void  * /* unused */,
                 break;
             }
         }
+
+        {
+            // frequent, intermediate output
+            static mpz_class callID=0;
+            ++callID;
+            if ((callID%10)==0) {
+                ORSA_DEBUG("callID: %Zi -- writing output...",callID.get_mpz_t());
+                char filename[1024];
+                // 
+                sprintf(filename,"tmp_inspect_sky_NEO_H16.dat");
+                writeOutputFile(filename, plotStats_sky_NEO_H16, var_ra, var_dec, 1);   
+                //
+                sprintf(filename,"tmp_inspect_sky_NEO_H18.dat");
+                writeOutputFile(filename, plotStats_sky_NEO_H18, var_ra, var_dec, 1);
+            }
+        }
+        
     }
     
     return 0;
@@ -732,9 +754,9 @@ int main(int argc, char ** argv) {
         const double L_step =  30.00;
         osg::ref_ptr<LinearVar> var_L = new LinearVar(L_min,L_max,L_step);
         
-        // sky ra,dec
-        osg::ref_ptr<LinearVar> var_ra  = new LinearVar(  0.0,24.0,0.25);
-        osg::ref_ptr<LinearVar> var_dec = new LinearVar(-90.0,90.0,5.0);
+        // sky ra,dec [global]
+        var_ra  = new LinearVar(  0.0,24.0,0.25);
+        var_dec = new LinearVar(-90.0,90.0,5.0);
         
         // a,e
         std::vector< osg::ref_ptr<Var> > varDefinition_ae;
