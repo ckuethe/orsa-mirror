@@ -313,7 +313,11 @@ int inspectCallback(void  * /* unused */,
         //
         // no more than 1.0 for now...
         // notice the "-NEO_in_field" at the end: missing pop = estimated pop - known pop
-        const unsigned int N_NEO_missing_pop_mean = lrint(std::min(1.0,fabs(((NEO_in_field+1)/eta_NEO)-1)-NEO_in_field));    
+        double zpop=1.0;
+        if ((eta_NEO > 0.01) && (eta_NEO <= 1.0)) {
+            zpop=(((NEO_in_field+1)/eta_NEO)-1)-NEO_in_field; 
+        }
+        const unsigned int N_NEO_missing_pop_mean = lrint(std::min(1.0,zpop));    
 #warning TODO: sample 100 objects from pop bin, and project them on the sky, each one with weight N_NEO_missing_pop_mean/100
 #warning also weight by eta_detection, computed for each object one by one
         
