@@ -30,6 +30,8 @@ orsa::Orbit earthOrbit;
 osg::ref_ptr<LinearVar> var_ra;
 osg::ref_ptr<LinearVar> var_dec;
 
+osg::ref_ptr<LinearVar> var_xy; // same var used twice for xy (ecliptic plane)
+
 // epoch for sky projection
 const orsa::Time epoch = orsaSolarSystem::now();
 
@@ -137,12 +139,15 @@ void writeOutputFile(const std::string & filename,
                      PlotStats_Sum * plotStats,
                      const LinearVar * var_x,
                      const LinearVar * var_y,
-                     const unsigned int Nsub) {
+                     const unsigned int Nsub,
+                     const bool sky_norm=false) {
     
     FILE * fp = fopen(filename.c_str(),"w");    
     
     std::vector<double> xVector;
     xVector.resize(2);
+    
+    double area=1.0;
     
     for (unsigned j=0; j<var_x->size(); ++j) {
         for (unsigned k=0; k<var_y->size(); ++k) {
@@ -151,9 +156,11 @@ void writeOutputFile(const std::string & filename,
             xVector[1] = var_y->start+var_y->incr*(k+0.5);
 
 #warning bin-by-bin normalization (divide by area), find better way to implement
-            const double area = fabs(var_x->incr*15.0*orsa::degToRad()*
-                                     (sin(orsa::degToRad()*(var_y->start+var_y->incr*(k))) -
-                                      sin(orsa::degToRad()*(var_y->start+var_y->incr*(k+1)))));
+            if (sky_norm) {
+                area = fabs(var_x->incr*15.0*orsa::degToRad()*
+                            (sin(orsa::degToRad()*(var_y->start+var_y->incr*(k))) -
+                             sin(orsa::degToRad()*(var_y->start+var_y->incr*(k+1)))));
+            }
             
             // ORSA_DEBUG("xV: %g %g  area: %g",xVector[0],xVector[1],area);
             
@@ -191,6 +198,9 @@ osg::ref_ptr< PlotStats_WS > plotStats_aL_PHO_H16;
 //
 osg::ref_ptr< PlotStats_Sum > plotStats_sky_NEO_H16;
 osg::ref_ptr< PlotStats_Sum > plotStats_sky_PHO_H16;
+//
+osg::ref_ptr< PlotStats_Sum > plotStats_xy_NEO_H16;
+osg::ref_ptr< PlotStats_Sum > plotStats_xy_PHO_H16;
 
 // H18
 osg::ref_ptr< PlotStats_WS > plotStats_ae_NEO_H18;
@@ -204,6 +214,9 @@ osg::ref_ptr< PlotStats_WS > plotStats_aL_PHO_H18;
 //
 osg::ref_ptr< PlotStats_Sum > plotStats_sky_NEO_H18;
 osg::ref_ptr< PlotStats_Sum > plotStats_sky_PHO_H18;
+//
+osg::ref_ptr< PlotStats_Sum > plotStats_xy_NEO_H18;
+osg::ref_ptr< PlotStats_Sum > plotStats_xy_PHO_H18;
 
 int inspectCallback(void  * /* unused */,
                     int     /* ncols  */,
@@ -307,7 +320,7 @@ int inspectCallback(void  * /* unused */,
         }
     }
 
-    // sky
+    // sky + xy
     {
         // don't use all binomial code for now, just the average value
         //
@@ -551,14 +564,6 @@ int inspectCallback(void  * /* unused */,
                 xVector[1] = dec*orsa::radToDeg();
                 
                 if (z_H == 160) {
-                    
-                    /* ORSA_DEBUG("inserting: eta=%.6f V=%4.1f U=%5.1f weight=%.6f",
-                       eta,
-                       V,
-                       orsa::FromUnits(U*orsa::radToArcsec(),orsa::Unit::HOUR),
-                       N_NEO_missing_pop_mean*eta);
-                    */
-                    
                     plotStats_sky_NEO_H16->insert(xVector, N_NEO_missing_pop_mean*eta);
                     // include PHO later...
                     // plotStats_sky_PHO_H16->insert(xVector, eta_PHO);
@@ -569,6 +574,25 @@ int inspectCallback(void  * /* unused */,
                     // include PHO later...
                     // plotStats_sky_PHO_H18->insert(xVector, eta_PHO);
                 }
+
+                // now xy (ecliptic plane)
+                
+                xVector[0] = orsa::FromUnits(orbitPosition_epoch.getX(),orsa::Unit::AU,-1);
+                xVector[1] = orsa::FromUnits(orbitPosition_epoch.getY(),orsa::Unit::AU,-1);
+                
+                if (z_H == 160) {
+                    plotStats_xy_NEO_H16->insert(xVector, N_NEO_missing_pop_mean*eta);
+                    // include PHO later...
+                    // plotStats_xy_PHO_H16->insert(xVector, eta_PHO);
+                }
+                
+                if (z_H == 180) {
+                    plotStats_xy_NEO_H18->insert(xVector, N_NEO_missing_pop_mean*eta);
+                    // include PHO later...
+                    // plotStats_xy_PHO_H18->insert(xVector, eta_PHO);
+                }
+                
+                
             }
             
 #warning use more general break for NEO and PHO?
@@ -586,10 +610,16 @@ int inspectCallback(void  * /* unused */,
                 char filename[1024];
                 // 
                 sprintf(filename,"tmp_inspect_sky_NEO_H16.dat");
-                writeOutputFile(filename, plotStats_sky_NEO_H16, var_ra, var_dec, 1);   
+                writeOutputFile(filename, plotStats_sky_NEO_H16, var_ra, var_dec, 1, true);   
                 //
                 sprintf(filename,"tmp_inspect_sky_NEO_H18.dat");
-                writeOutputFile(filename, plotStats_sky_NEO_H18, var_ra, var_dec, 1);
+                writeOutputFile(filename, plotStats_sky_NEO_H18, var_ra, var_dec, 1, true);
+                // 
+                sprintf(filename,"tmp_inspect_xy_NEO_H16.dat");
+                writeOutputFile(filename, plotStats_xy_NEO_H16, var_xy, var_xy, 1);   
+                //
+                sprintf(filename,"tmp_inspect_xy_NEO_H18.dat");
+                writeOutputFile(filename, plotStats_xy_NEO_H18, var_xy, var_xy, 1);
             }
         }
         
@@ -764,6 +794,9 @@ int main(int argc, char ** argv) {
         var_ra  = new LinearVar(  0.0,24.0,0.25);
         var_dec = new LinearVar(-90.0,90.0,5.0);
         
+        // xy, in AU
+        var_xy  = new LinearVar(-10.0, 10.0, 0.1);
+        
         // a,e
         std::vector< osg::ref_ptr<Var> > varDefinition_ae;
         varDefinition_ae.push_back(var_a.get());
@@ -807,6 +840,17 @@ int main(int argc, char ** argv) {
         //
         plotStats_sky_NEO_H18 = new PlotStats_Sum(varDefinition_sky);
         plotStats_sky_PHO_H18 = new PlotStats_Sum(varDefinition_sky);
+
+        // xy (ecliptic plane)
+        std::vector< osg::ref_ptr<Var> > varDefinition_xy;
+        varDefinition_xy.push_back(var_xy.get());
+        varDefinition_xy.push_back(var_xy.get());
+        //
+        plotStats_xy_NEO_H16 = new PlotStats_Sum(varDefinition_xy);
+        plotStats_xy_PHO_H16 = new PlotStats_Sum(varDefinition_xy);
+        //
+        plotStats_xy_NEO_H18 = new PlotStats_Sum(varDefinition_xy);
+        plotStats_xy_PHO_H18 = new PlotStats_Sum(varDefinition_xy);
         
         {
             char sql_line[1024];
@@ -864,10 +908,16 @@ int main(int argc, char ** argv) {
         writeOutputFile(filename, plotStats_aL_PHO_H16, var_a, var_L, sub_e*sub_i*sub_node*sub_peri*3);
         //
         sprintf(filename,"%s_inspect_sky_NEO_H16.dat",argv[1]);
-        writeOutputFile(filename, plotStats_sky_NEO_H16, var_ra, var_dec, 1);
+        writeOutputFile(filename, plotStats_sky_NEO_H16, var_ra, var_dec, 1, true);
         //
         sprintf(filename,"%s_inspect_sky_PHO_H16.dat",argv[1]);
-        writeOutputFile(filename, plotStats_sky_PHO_H16, var_ra, var_dec, 1);
+        writeOutputFile(filename, plotStats_sky_PHO_H16, var_ra, var_dec, 1, true);
+        //
+        sprintf(filename,"%s_inspect_xy_NEO_H16.dat",argv[1]);
+        writeOutputFile(filename, plotStats_xy_NEO_H16, var_ra, var_dec, 1);
+        //
+        sprintf(filename,"%s_inspect_xy_PHO_H16.dat",argv[1]);
+        writeOutputFile(filename, plotStats_xy_PHO_H16, var_ra, var_dec, 1);
         
         // H18        
         sprintf(filename,"%s_inspect_ae_NEO_H18.dat",argv[1]);
@@ -889,10 +939,16 @@ int main(int argc, char ** argv) {
         writeOutputFile(filename, plotStats_aL_PHO_H18, var_a, var_L, sub_e*sub_i*sub_node*sub_peri*3);
         //
         sprintf(filename,"%s_inspect_sky_NEO_H18.dat",argv[1]);
-        writeOutputFile(filename, plotStats_sky_NEO_H18, var_ra, var_dec, 1);
+        writeOutputFile(filename, plotStats_sky_NEO_H18, var_ra, var_dec, 1, true);
         //
         sprintf(filename,"%s_inspect_sky_PHO_H18.dat",argv[1]);
-        writeOutputFile(filename, plotStats_sky_PHO_H18, var_ra, var_dec, 1);
+        writeOutputFile(filename, plotStats_sky_PHO_H18, var_ra, var_dec, 1, true);
+        //
+        sprintf(filename,"%s_inspect_xy_NEO_H18.dat",argv[1]);
+        writeOutputFile(filename, plotStats_xy_NEO_H18, var_ra, var_dec, 1);
+        //
+        sprintf(filename,"%s_inspect_xy_PHO_H18.dat",argv[1]);
+        writeOutputFile(filename, plotStats_xy_PHO_H18, var_ra, var_dec, 1);
     }
     
     sqlite3_close(db);
