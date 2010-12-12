@@ -319,20 +319,22 @@ int inspectCallback(void  * /* unused */,
             plotStats_aL_PHO_H18->insert(xVector, eta_PHO);
         }
     }
-
+    
     // sky + xy
     {
         // don't use all binomial code for now, just the average value
         //
         // no more than 1.0 for now...
         // notice the "-NEO_in_field" at the end: missing pop = estimated pop - known pop
-        double zpop=1.0;
-        if ((eta_NEO > 0.01) && (eta_NEO <= 1.0)) {
-            zpop=(((NEO_in_field+1)/eta_NEO)-1)-NEO_in_field; 
-        }
-        const unsigned int N_NEO_missing_pop_mean = lrint(std::min(1.0,zpop));    
-#warning TODO: sample 100 objects from pop bin, and project them on the sky, each one with weight N_NEO_missing_pop_mean/100
-#warning also weight by eta_detection, computed for each object one by one
+        /* double zpop=1.0;
+           if ((eta_NEO > 0.01) && (eta_NEO <= 1.0)) {
+           zpop=(((NEO_in_field+1)/eta_NEO)-1)-NEO_in_field; 
+           }
+           const unsigned int N_NEO_missing_pop_mean = lrint(std::min(1.0,zpop));    
+           #warning TODO: sample 100 objects from pop bin, and project them on the sky, each one with weight N_NEO_missing_pop_mean/100
+           #warning also weight by eta_detection, computed for each object one by one
+        */
+        const double prob_one_more = probabilityToFindOneMore(eta_NEO,NEO_in_field,true);
         
         const orsa::Time apparentMotion_dt_T = orsa::Time(0,0,1,0,0);
         //
@@ -422,6 +424,12 @@ int inspectCallback(void  * /* unused */,
         bg->getInterpolatedPosition(earthPosition_epoch,
                                     earth.get(),
                                     epoch);
+        
+        /* ORSA_DEBUG("earth position: %g %g %g",
+           orsa::FromUnits(earthPosition_epoch.getX(),orsa::Unit::AU,-1),
+           orsa::FromUnits(earthPosition_epoch.getY(),orsa::Unit::AU,-1),
+           orsa::FromUnits(earthPosition_epoch.getZ(),orsa::Unit::AU,-1));
+        */
         
         orsa::Vector moonPosition_epoch;
         bg->getInterpolatedPosition(moonPosition_epoch,
@@ -560,17 +568,22 @@ int inspectCallback(void  * /* unused */,
                 // detection efficiency
                 const double eta = skyCoverage->eta(V,U,AM,GB,GL);
                 
+                if (!finite(prob_one_more*eta)) {
+                    ORSA_DEBUG("detected non-finite value, skipping...");
+                    continue;
+                }
+                
                 xVector[0] = ra*orsa::radToDeg()/15.0;
                 xVector[1] = dec*orsa::radToDeg();
                 
                 if (z_H == 160) {
-                    plotStats_sky_NEO_H16->insert(xVector, N_NEO_missing_pop_mean*eta);
+                    plotStats_sky_NEO_H16->insert(xVector, prob_one_more*eta);
                     // include PHO later...
                     // plotStats_sky_PHO_H16->insert(xVector, eta_PHO);
                 }
                 
                 if (z_H == 180) {
-                    plotStats_sky_NEO_H18->insert(xVector, N_NEO_missing_pop_mean*eta);
+                    plotStats_sky_NEO_H18->insert(xVector, prob_one_more*eta);
                     // include PHO later...
                     // plotStats_sky_PHO_H18->insert(xVector, eta_PHO);
                 }
@@ -581,13 +594,13 @@ int inspectCallback(void  * /* unused */,
                 xVector[1] = orsa::FromUnits(orbitPosition_epoch.getY(),orsa::Unit::AU,-1);
                 
                 if (z_H == 160) {
-                    plotStats_xy_NEO_H16->insert(xVector, N_NEO_missing_pop_mean*eta);
+                    plotStats_xy_NEO_H16->insert(xVector, prob_one_more*eta);
                     // include PHO later...
                     // plotStats_xy_PHO_H16->insert(xVector, eta_PHO);
                 }
                 
                 if (z_H == 180) {
-                    plotStats_xy_NEO_H18->insert(xVector, N_NEO_missing_pop_mean*eta);
+                    plotStats_xy_NEO_H18->insert(xVector, prob_one_more*eta);
                     // include PHO later...
                     // plotStats_xy_PHO_H18->insert(xVector, eta_PHO);
                 }

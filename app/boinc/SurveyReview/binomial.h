@@ -5,6 +5,9 @@ double singleProbabilityTerm(const double & p,
                              const unsigned int & N,
                              const unsigned int & R,
                              const bool & cache=true) {
+    if (N<R) {
+        return 0.0;
+    }
     double sPT = (p * orsa::binomial(N,R,cache).get_d() * orsa::int_pow(p,R) * orsa::int_pow(1-p,N-R));
     if (!finite(sPT)) {
         // need MPF
@@ -34,6 +37,12 @@ double cumulativeProbability(const double & p,
         runningProb += sPT;
     }
     return runningProb;
+}
+
+double probabilityToFindOneMore(const double & p,
+                                const unsigned int & R,
+                                const bool & cache=true) {
+    return (1.0-singleProbabilityTerm(p,R,R,cache));
 }
 
 bool bisectionSearch(unsigned int & N_minus,
