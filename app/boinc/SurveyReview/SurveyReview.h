@@ -307,8 +307,12 @@ public:
                  const orsa::Orbit & earthOrbit_in) :
         osg::Referenced(),
         a_AU_min(a_AU_min_in),
-        a_AU_max(std::min(OrbitID::NEO_max_q/(1.0-e_max_in),FromUnits(a_AU_max_in,orsa::Unit::AU))), // NEOs optimization, old: a_AU_max(a_AU_max_in),
-        e_min(std::max(e_min_in,1.0-OrbitID::NEO_max_q/FromUnits(a_AU_min_in,orsa::Unit::AU))), // NEOs optimization, old: e_min(e_min_in),
+        a_AU_max(e_max_in>0.99 ? a_AU_max_in : std::max(std::min(orsa::FromUnits(OrbitID::NEO_max_q,orsa::Unit::AU,-1)/(1.0-e_max_in),
+                                                                 a_AU_max_in),
+                                                        a_AU_min_in)), // NEOs optimization, old: a_AU_max(a_AU_max_in),
+        e_min(std::min(e_max_in,
+                       std::max(e_min_in,
+                                1.0-OrbitID::NEO_max_q/FromUnits(a_AU_min_in,orsa::Unit::AU)))), // NEOs optimization, old: e_min(e_min_in),
         e_max(e_max_in),
         i_DEG_min(i_DEG_min_in),
         i_DEG_max(i_DEG_max_in),
@@ -324,9 +328,9 @@ public:
         earthOrbit(earthOrbit_in),
         GMSun(orsaSolarSystem::Data::GMSun()) {
         idCounter = 0;
-    
+        
         // debug
-        /* ORSA_DEBUG("new factory object: %g-%g %g-%g %g-%g %g-%g %g-%g %g-%g %g-%g",
+        /* ORSA_DEBUG("new factory object: %g-%g %g-%g %g-%g %g-%g %g-%g %g-%g",
            a_AU_min,
            a_AU_max,
            e_min,
@@ -338,14 +342,12 @@ public:
            peri_DEG_min,
            peri_DEG_max,
            M_DEG_min,
-           M_DEG_max,
-           H_min,
-           H_max);
+           M_DEG_max);
         */
     }
 protected:
     virtual ~OrbitFactory() { }
-  
+    
 public:
     virtual OrbitID * sample() const;
   
