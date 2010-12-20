@@ -195,8 +195,6 @@ int mergeCallback(void  * /* unused */,
     return 0;
 }
 
-
-
 int main(int argc, char ** argv) {
     
 #warning just converted to callbacks, needs more testing
