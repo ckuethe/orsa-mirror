@@ -570,7 +570,7 @@ int inspectCallback(void  * /* unused */,
                 const double eta = skyCoverage->eta(V,U,AM,GB,GL);
                 
                 if (!finite(prob_one_more*eta)) {
-                    ORSA_DEBUG("detected non-finite value, skipping...");
+                    ORSA_DEBUG("skipping: detected non-finite value (prob_one_more: %g   eta: %g   prob_one_more*eta: %g)",prob_one_more,eta,prob_one_more*eta);
                     continue;
                 }
                 
