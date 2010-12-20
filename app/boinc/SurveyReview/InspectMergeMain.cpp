@@ -438,7 +438,8 @@ int inspectCallback(void  * /* unused */,
         
         // earth north pole
         const orsa::Vector northPole = (orsaSolarSystem::equatorialToEcliptic()*orsa::Vector(0,0,1)).normalized();
-        
+
+        const unsigned int target_num=16;
         for (unsigned int j=0; j<100; ++j) {
             // while (1) {
             
@@ -609,11 +610,13 @@ int inspectCallback(void  * /* unused */,
             }
             
 #warning use more general break for NEO and PHO?
-            if (sky_N_NEO == 16) {
+            if (sky_N_NEO == target_num) {
                 // some output, then break iteration
-                
                 break;
             }
+        }
+        if (sky_N_NEO != target_num) {
+            ORSA_DEBUG("left before reaching %i objects",target_num);
         }
         
         {
