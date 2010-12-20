@@ -374,7 +374,7 @@ int main(int argc, char **argv) {
     // const double z_min=1e-6; const double z_max=1e-3;
     //
     // other... LINEAR 0->1
-    const double z_min=0.0; const double z_max=0.05;
+    const double z_min=0.0; const double z_max=0.25;
     //
     // a,i
     // const double z_min=1e-5; const double z_max=1e-3;
@@ -415,7 +415,7 @@ int main(int argc, char **argv) {
         digits(2,"Z");
         ticks(2,"X");
         ticks(2,"Y");
-        ticks(2,"Z");
+        ticks(5,"Z");
         // axsscl("log","z");
         // labels("log","z");
         frame(5); // frame thickness
@@ -425,7 +425,7 @@ int main(int argc, char **argv) {
         */
         graf3(x_min-0.5*x_step,x_max+0.5*x_step,x_min,0.1,
               y_min-0.5*y_step,y_max+0.5*y_step,y_min,0.1,
-              z_min,z_max,z_min,0.01);
+              z_min,z_max,z_min,0.05);
         crvmat(mesh,var_x->size(),var_y->size(),1,1);
 
         if (0) {
