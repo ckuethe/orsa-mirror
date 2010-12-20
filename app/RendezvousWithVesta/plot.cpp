@@ -18,24 +18,63 @@ PlotFillThread::PlotFillThread(orsa::BodyGroup  * bg,
     data->enableDataStoring();
 }
 
+void checkOrSet(orsa::Cache<orsa::Vector> & c, const orsa::Vector & v) {
+    static mpz_class callID=0;
+    static mpz_class notMatching=0;
+    ++callID;
+    if (c.isSet()) {
+        if (c.getRef()!=v) {
+            ++notMatching;
+            ORSA_DEBUG("vector changed! [delta: %g; ratio: %g] [callID: %Zi; errors: %Zi; ratio: %g] [old,new below]",
+                       (c.getRef()-v).length(),
+                       (c.getRef()-v).length()/(c.getRef().length()),
+                       callID.get_mpz_t(),
+                       notMatching.get_mpz_t(),
+                       notMatching.get_d()/callID.get_d());
+            orsa::print(c.getRef());
+            orsa::print(v);
+            // orsa::crash();
+        }
+    } else {
+        c=v;
+    }
+}
+
 void PlotFillThread::run() {
-  
+    
     dataMutex.lock();
     data->reset();
     dataMutex.unlock();
-  
+    
     doAbort = false;
-  
+    
     orsa::Time t_start, t_stop;
     _bg->getGlobalInterval(t_start,t_stop,false);
-  
+    
     osg::ref_ptr<const orsa::Body> vesta = _bg->getBody("VESTA");
     osg::ref_ptr<const orsa::Body> dawn  = _bg->getBody("DAWN");
-  
+    
+    if (0) {
+        // test: do I get always the same posvel?
+        // test useful to check for race conditions (this program is multi-thread)
+        orsa::Vector rV, vV, rD, vD;
+        orsa::Cache<orsa::Vector> rVc, vVc, rDc, vDc;
+        const orsa::Time t = (t_start+t_stop)/2;
+        while (1) {
+            if ( _bg->getInterpolatedPosVel(rV,vV,vesta.get(),t) && 
+                 _bg->getInterpolatedPosVel(rD,vD, dawn.get(),t) ) {
+                checkOrSet(rVc,rV); // problematic
+                checkOrSet(vVc,vV); // problematic
+                checkOrSet(rDc,rD); // OK
+                checkOrSet(vDc,vD); // OK
+            }
+        }
+    }
+    
     if (vesta.get() && dawn.get()) {
-    
+        
         osg::ref_ptr<const orsa::Shape> vesta_shape = vesta->getInitialConditions().inertial->localShape();
-    
+        
         /* 
            osg::ref_ptr<const orsa::Attitude> vesta_attitude = 
            new orsa::BodyAttitude(vesta.get(),
@@ -85,7 +124,7 @@ void PlotFillThread::run() {
                     */
                     //
                     const orsa::Vector dr_local = g2l*dr;
-	  
+                    
                     if (vesta_shape->rayIntersection(intersectionPoint,
                                                      normal,
                                                      dr_local,
@@ -109,9 +148,26 @@ void PlotFillThread::run() {
                                       vesta.get(),
                                       _bg.get(),
                                       t)) {
-                        tmpData.q = orbit.a * (1-orbit.e);
+                        tmpData.q = orbit.a * (1.0-orbit.e);
                         tmpData.a = orbit.a;
-                        tmpData.Q = orbit.a * (1+orbit.e);
+                        tmpData.Q = orbit.a * (1.0+orbit.e);
+
+                        {
+                            // debug
+                            ORSA_DEBUG("t: %f  q: %f  a: %f  Q: %f  e: %f  i: %f [deg]",(t-t_start).get_d(),tmpData.q,tmpData.a,tmpData.Q,orbit.e,orsa::radToDeg()*orbit.i);
+                            orsa::Vector rV, vV, rD, vD;
+                            _bg->getInterpolatedPosVel(rV,vV,vesta.get(),t);
+                            _bg->getInterpolatedPosVel(rD,vD,dawn.get(),t);
+                            orsa::print(rV);
+                            orsa::print(rD);
+                            orsa::print(rD-rV);
+                            orsa::print(vV);
+                            orsa::print(vD);
+                            orsa::print(vD-vV);
+                        }
+
+                        
+                        
                     } else {
                         tmpData.q = 0;
                         tmpData.a = 0;
@@ -281,16 +337,16 @@ VestaPlot::VestaPlot(orsa::BodyGroup        * bg,
     // marker_altitude->setLineStyle(QwtPlotMarker::VLine);
     marker_altitude->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
     marker_altitude->attach(this);
-  
+    
     {
         const orsa::Time dt(0,0,15,0,0);
-        plotFillThread = new PlotFillThread(_bg.get(),
-                                            dt);
+        // const orsa::Time dt(0,0,0,5,0);
+        plotFillThread = new PlotFillThread(_bg.get(),dt);
         //
         // this returns instantly!
         plotFillThread->start(QThread::LowestPriority);
     }
-  
+    
     plotFillTimer.start(500);
   
     connect(&plotFillTimer,
