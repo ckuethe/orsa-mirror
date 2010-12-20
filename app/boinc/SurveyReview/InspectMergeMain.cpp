@@ -439,8 +439,8 @@ int inspectCallback(void  * /* unused */,
         // earth north pole
         const orsa::Vector northPole = (orsaSolarSystem::equatorialToEcliptic()*orsa::Vector(0,0,1)).normalized();
         
-        // for (unsigned int j=0; j<100; ++j) {
-        while (1) {
+        for (unsigned int j=0; j<100; ++j) {
+            // while (1) {
             
             osg::ref_ptr<OrbitID> orbit = orbitFactory->sample();
 			
