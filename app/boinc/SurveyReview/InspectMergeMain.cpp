@@ -33,7 +33,7 @@ osg::ref_ptr<LinearVar> var_dec;
 osg::ref_ptr<LinearVar> var_xy; // same var used twice for xy (ecliptic plane)
 
 // epoch for sky projection
-const orsa::Time epoch = orsaSolarSystem::now();
+orsa::Cache<orsa::Time> epoch;
 
 class PlotStatsElement_WS : public orsa::WeightedStatistic<double> {
 public:
@@ -401,29 +401,32 @@ int inspectCallback(void  * /* unused */,
         
 #warning this JD depends on the run, shoud be fixed in one file
         // JD from SRMJS...
+#warning check for timescale info?
         const double JD = 2455650; // epoch of orbits
-        const orsa::Time orbitEpoch = orsaSolarSystem::julianToTime(JD);
+        const orsa::Time orbitEpoch = orsaSolarSystem::julianToTime(JD); 
+        // ORSA_DEBUG("orbit epoch [below]");
+        // orsaSolarSystem::print(orbitEpoch);
         
         bg->getInterpolatedPosition(observerPosition_epoch,
                                     earth.get(),
-                                    epoch);
+                                    epoch.getRef());
         
         bg->getInterpolatedPosition(observerPosition_epoch_plus_dt,
                                     earth.get(),
-                                    epoch+apparentMotion_dt_T);
+                                    epoch.getRef()+apparentMotion_dt_T);
         
         bg->getInterpolatedPosition(sunPosition_epoch,
                                     sun.get(),
-                                    epoch);
+                                    epoch.getRef());
         
         bg->getInterpolatedPosition(sunPosition_epoch_plus_dt,
                                     sun.get(),
-                                    epoch+apparentMotion_dt_T);
+                                    epoch.getRef()+apparentMotion_dt_T);
         
         orsa::Vector earthPosition_epoch;
         bg->getInterpolatedPosition(earthPosition_epoch,
                                     earth.get(),
-                                    epoch);
+                                    epoch.getRef());
         
         /* ORSA_DEBUG("earth position: %g %g %g",
            orsa::FromUnits(earthPosition_epoch.getX(),orsa::Unit::AU,-1),
@@ -434,7 +437,7 @@ int inspectCallback(void  * /* unused */,
         orsa::Vector moonPosition_epoch;
         bg->getInterpolatedPosition(moonPosition_epoch,
                                     moon.get(),
-                                    epoch);
+                                    epoch.getRef());
         
         // earth north pole
         const orsa::Vector northPole = (orsaSolarSystem::equatorialToEcliptic()*orsa::Vector(0,0,1)).normalized();
@@ -459,22 +462,22 @@ int inspectCallback(void  * /* unused */,
             
             /* obsPosCB->getPosition(observerPosition_epoch,
                skyCoverage->obscode.getRef(),
-               epoch);
+               epoch.getRef());
                
                obsPosCB->getPosition(observerPosition_epoch_plus_dt,
                skyCoverage->obscode.getRef(),
-               epoch+apparentMotion_dt_T);
+               epoch.getRef()+apparentMotion_dt_T);
             */
 
             orsa::Vector r;
             
             const double original_M  = orbit->M;
             // 
-            orbit->M = original_M + fmod(orsa::twopi() * (epoch-orbitEpoch).get_d() / orbitPeriod, orsa::twopi());
+            orbit->M = original_M + fmod(orsa::twopi() * (epoch.getRef()-orbitEpoch).get_d() / orbitPeriod, orsa::twopi());
             orbit->relativePosition(r);
             orsa::Vector orbitPosition_epoch = r + sunPosition_epoch;
             //
-            orbit->M = original_M + fmod(orsa::twopi() * (epoch+apparentMotion_dt_T-orbitEpoch).get_d() / orbitPeriod, orsa::twopi());
+            orbit->M = original_M + fmod(orsa::twopi() * (epoch.getRef()+apparentMotion_dt_T-orbitEpoch).get_d() / orbitPeriod, orsa::twopi());
             orbit->relativePosition(r);
             orsa::Vector orbitPosition_epoch_plus_dt = r + sunPosition_epoch_plus_dt;
             //
@@ -663,14 +666,21 @@ int main(int argc, char ** argv) {
        }
     */
     
-    if (argc != 2) {
-        ORSA_DEBUG("Usage: %s <sqlite-merged-db>",argv[0]);
+    if (argc != 3) {
+        ORSA_DEBUG("Usage: %s <sqlite-merged-db> <JD>",argv[0]);
         exit(0);
     }
     
     orsa::Debug::instance()->initTimer();
     
     ORSA_DEBUG("process ID: %i",getpid());
+    
+    // epoch for sky projection
+    // global var
+    epoch = orsaSolarSystem::FromTimeScale(orsaSolarSystem::julianToTime(atof(argv[2])),
+                                           orsaSolarSystem::TS_UTC);
+    ORSA_DEBUG("inspect at epoch [below]");
+    orsaSolarSystem::print(epoch.getRef());
     
     orsaSPICE::SPICE::instance()->loadKernel("de405.bsp");
     
@@ -688,7 +698,7 @@ int main(int argc, char ** argv) {
     moon  = SPICEBody("MOON",orsaSolarSystem::Data::MMoon());
     bg->addBody(moon.get());
     
-    earthOrbit.compute(earth.get(),sun.get(),bg.get(),epoch);
+    earthOrbit.compute(earth.get(),sun.get(),bg.get(),epoch.getRef());
     
 #warning change random seed
     rnd = new orsa::RNG(2352351);
@@ -703,7 +713,7 @@ int main(int argc, char ** argv) {
         skyCoverage = new SkyCoverage;
         
         skyCoverage->obscode  = "500"; // 500=Geocentric
-        skyCoverage->epoch    = epoch;
+        skyCoverage->epoch    = epoch.getRef();
         //
         skyCoverage->V_limit  = e.V_limit;
         skyCoverage->eta0_V   = e.eta0_V;
