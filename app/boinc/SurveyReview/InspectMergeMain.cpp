@@ -249,7 +249,13 @@ int inspectCallback(void  * /* unused */,
     // const double sigma_eta_NEO = atof(col[18]);
     const double eta_PHO       = atof(col[19]);
     // const double sigma_eta_PHO = atof(col[20]);
-
+    
+    if ( (NEO_in_field < 0) ||
+         (PHO_in_field < 0) ) {
+        ORSA_DEBUG("skipping negative entry... is this a merged db?");
+        return 0;
+    }
+    
 #warning keep this filter updated
     if ( (z_H != 160) && (z_H != 180) ) {
         // quick exit, since we're saving only these two for now...

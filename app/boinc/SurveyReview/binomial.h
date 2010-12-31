@@ -42,6 +42,7 @@ double cumulativeProbability(const double & p,
 double probabilityToFindOneMore(const double & p,
                                 const unsigned int & R,
                                 const bool & cache=true) {
+    // ORSA_DEBUG("R: %i",R);
     return (1.0-singleProbabilityTerm(p,R,R,cache));
 }
 

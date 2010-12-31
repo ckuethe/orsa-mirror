@@ -7,6 +7,7 @@ using namespace orsa;
 
 mpz_class orsa::factorial(const mpz_class & i,
                           const bool & cache) {
+    // ORSA_DEBUG("i: %Zi  cache: %i",i.get_mpz_t(),cache);
     if (cache) {
         static std::vector< orsa::Cache<mpz_class> > _factorial_table;
         const unsigned long int index = i.get_ui();
@@ -62,6 +63,7 @@ mpz_class orsa::bi_factorial(const mpz_class & i,
 mpz_class orsa::binomial(const mpz_class & n,
                          const mpz_class & k,
                          const bool & cache) {
+    // ORSA_DEBUG("n: %Zi   k: %Zi   cache: %i",n.get_mpz_t(),k.get_mpz_t(),cache);
     if ((k<0) || (k>n)) return 0;
     return factorial(n,cache)/(factorial(k,cache)*factorial(n-k,cache));
 }
