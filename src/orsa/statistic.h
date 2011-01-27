@@ -67,6 +67,14 @@ namespace orsa {
             return sqrt(variance()/_n.get_d());
         }
     public:
+        T RMS() const {
+            if (_n > 0) {
+                return (sqrt(_s2/_n.get_d()));
+            } else {
+                return 0;
+            }
+        }
+    public:
         const mpz_class & entries() const {
             return _n;
         }
