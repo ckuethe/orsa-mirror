@@ -27,6 +27,6 @@ win32 {
         LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa 
 }
 
-HEADERS = 
+HEADERS = RadioScienceGravity.h
 
-SOURCES = 
+SOURCES = RadioScienceGravity.cpp
