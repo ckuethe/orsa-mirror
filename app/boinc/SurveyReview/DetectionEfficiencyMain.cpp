@@ -605,9 +605,15 @@ int main(int argc, char ** argv) {
                 obs = dynamic_cast<orsaSolarSystem::OpticalObservation *> (obsFile->_data[k].get());
                 if (obs) {
                     if (obs->number.isSet()) {
-                        ORSA_DEBUG("[SKY-obs] (%i) %.6f %.6f",obs->number.getRef(),obs->ra.getRef().getRad(),obs->dec.getRef().getRad());
+                        ORSA_DEBUG("[SKY-obs] (%i) %.6f %.6f",
+                                   obs->number.getRef(),
+                                   obs->ra.getRef().getRad()*orsa::radToDeg()/15.0,
+                                   obs->dec.getRef().getRad()*orsa::radToDeg());
                     } else if (obs->designation.isSet()) {
-                        ORSA_DEBUG("[SKY-obs] [%s] %.6f %.6f",obs->designation.getRef().c_str(),obs->ra.getRef().getRad(),obs->dec.getRef().getRad());
+                        ORSA_DEBUG("[SKY-obs] [%s] %g %g",
+                                   obs->designation.getRef().c_str(),
+                                   obs->ra.getRef().getRad()*orsa::radToDeg()/15.0,
+                                   obs->dec.getRef().getRad()*orsa::radToDeg());
                     }
                 }
             }
@@ -833,7 +839,15 @@ int main(int argc, char ** argv) {
         const double eclipticLongitude = (tmp_eclipticLongitude>orsa::pi()) ? (tmp_eclipticLongitude-orsa::twopi()) : (tmp_eclipticLongitude);
         const double eclipticLatitude  = theta-theta_sun;
         
-        // ORSA_DEBUG("ra: %g  dec: %g",ra*orsa::radToDeg()/15.0,dec*orsa::radToDeg());
+        if (observed) {
+            ORSA_DEBUG("[RADEC] %g %g [observed]",
+                       ra*orsa::radToDeg()/15.0,
+                       dec*orsa::radToDeg());
+        } else {
+            ORSA_DEBUG("[RADEC] %g %g [missed]",
+                       ra*orsa::radToDeg()/15.0,
+                       dec*orsa::radToDeg());
+        }
         
         EfficiencyData ed;
         ed.H = orbitFile->_data[korb].H.getRef();
