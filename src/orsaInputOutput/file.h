@@ -360,13 +360,17 @@ namespace orsaInputOutput {
                     // ORSA_DEBUG("accepted line: [%s]",line);
                     // first, try to process a single line
                     // ORSA_DEBUG("calling processLine, line: [%s]",line);
-                    if (!processLine(line)) {
+                    if (processLine(line)) {
+                        processedLine();
+                    } else {
                         // if unsuccessful, try processing two lines together
                         // this is necessary as sometimes files have mixed 1-line, 2-line data
                         if (goodLine(lineAbove)) {
                             // ORSA_DEBUG("calling processLines, line1: [%s]",lineAbove);
                             // ORSA_DEBUG("calling processLines, line2: [%s]",line);
-                            if (!processLines(lineAbove,line)) {
+                            if (processLines(lineAbove,line)) {
+                                processedLines();
+                            } else {
                                 // ORSA_DEBUG("processLines failed");
                             }
                         } else {
@@ -401,7 +405,14 @@ namespace orsaInputOutput {
         //! extract data from two good lines,
         //! defaults to empty method returning false
         virtual bool processLines(const char * /* line_1 */ , const char * /* line_2 */ ) { return false; }
-    
+        
+    public:
+        //! called each time a good line has been processed successfully
+        virtual void processedLine() const { }
+    public:
+        //! called each time two good lines have been processed successfully
+        virtual void processedLines() const { }
+        
     public:
         orsa::Cache<unsigned int> _lineLength;
     private:

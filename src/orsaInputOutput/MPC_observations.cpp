@@ -193,7 +193,7 @@ bool MPCObservationsFile::processLine(const char * line) {
             }
         }
     }
-  
+    
     if ( ((MPC_packedNumber(s_number) != 0) || (s_designation != "")) && 
          (s_obsCode != "") &&
          (strlen(s_obsCode.c_str())) == 3) {
@@ -209,7 +209,7 @@ bool MPCObservationsFile::processLine(const char * line) {
         // ORSA_DEBUG("--OUT--");
         return false;
     }
-  
+    
     return true;
 }
 

@@ -99,8 +99,8 @@ bool MPCAsteroidFile::processLine(const char * line) {
     if (strlen(s_designation.c_str()) != 0) {
         element.designation = s_designation;
     }
-  
+    
     _data.push_back(element);
-  
+    
     return true;
 }
