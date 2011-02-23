@@ -44,6 +44,7 @@ namespace orsaInputOutput {
     public:
         orsa::Cache<orsa::Time>  select_startEpoch, select_stopEpoch;
         orsa::Cache<std::string> select_obsCode;
+        orsa::Cache<bool>        select_discovery;
     };
     
 }; // orsaInputOutput

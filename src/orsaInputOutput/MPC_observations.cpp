@@ -40,9 +40,17 @@ bool MPCObservationsFile::processLine(const char * line) {
     std::string s_mag;
     char        c_band;
     std::string s_obsCode;
-  
+    
     // first, fields affected by select_* code
-  
+    
+    s_discovery.assign(line,12,1); 
+    removeAllSpaces(s_discovery);
+    if (select_discovery.isSet()) {
+        if ((strlen(s_discovery.c_str()) == 0) && (select_discovery.getRef()==true)) {
+            return false;
+        }
+    }
+    
     s_obsCode.assign(line,77,3);
     removeLeadingAndTrailingSpaces(s_obsCode);
     if (select_obsCode.isSet()) {
@@ -83,10 +91,11 @@ bool MPCObservationsFile::processLine(const char * line) {
   
     s_designation.assign(line,5,7); 
     removeLeadingAndTrailingSpaces(s_designation);
-  
-    s_discovery.assign(line,12,1); 
-    removeAllSpaces(s_discovery);
-  
+    
+    // moved earlier, for faster select_* code
+    // s_discovery.assign(line,12,1); 
+    // removeAllSpaces(s_discovery);
+    
     s_note1.assign(line,13,1);
     s_note2.assign(line,14,1);
   
