@@ -53,9 +53,10 @@ int main(int argc, char ** argv) {
             }
         }
         if (found) {
-            ORSA_DEBUG("%f %12.6f %5.2f %10.6f %10.6f %10.6f %9i %12s %s",
+            ORSA_DEBUG("%f %12.6f %12.6f %5.2f %10.6f %10.6f %10.6f %9i %12s %s",
                        orsaSolarSystem::timeToJulian(observation->epoch.getRef()),
                        orsaSolarSystem::fractionalYear(observation->epoch.getRef()),
+                       orsaSolarSystem::fractionalLunation(observation->epoch.getRef()),
                        asteroid.H.getRef(),
                        orsa::FromUnits(asteroid.orbit.getRef().a,orsa::Unit::AU,-1),
                        asteroid.orbit.getRef().e,
