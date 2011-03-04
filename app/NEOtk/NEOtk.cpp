@@ -616,11 +616,12 @@ int main(int argc, char **argv) {
             }
             
             // O_v2sn_l orbit is in local ref. sys.
-            tmpOrbit.compute(R_s2an[z1],
-                             V_s2an[z1],
-                             orsaSolarSystem::Data::GMSun());
-            tmpOrbit.epoch = allOpticalObs[z1]->epoch.getRef();
-            const orsaSolarSystem::OrbitWithEpoch O_s2an_l = tmpOrbit;
+            /* tmpOrbit.compute(R_s2an[z1],
+               V_s2an[z1],
+               orsaSolarSystem::Data::GMSun());
+               tmpOrbit.epoch = allOpticalObs[z1]->epoch.getRef();
+               const orsaSolarSystem::OrbitWithEpoch O_s2an_l = tmpOrbit;
+            */
             
             // feedback x Range class
             // from smaller RMS to largest
@@ -725,13 +726,31 @@ int main(int argc, char **argv) {
                     }
                     H = stat_H->average();
                 }
+
+                // Earth MOID
+                double EarthMOID;
+                {
+                    orsa::Orbit EarthOrbit;
+                    EarthOrbit.compute(earth.get(),sun.get(),bg.get(),O_s2an_g.epoch.getRef());
+                    double M1, M2;
+                    orsa::MOID(EarthMOID,
+                               M1,
+                               M2,
+                               EarthOrbit,
+                               O_s2an_g,
+                               randomSeed+88,
+                               16,
+                               1.0e-6);
+                }
                 
-                ORSA_DEBUG("SAMPLE: %6.2f %9.3f %8.6f %7.3f %5.2f %s %s %s",
+                
+                ORSA_DEBUG("SAMPLE: %6.2f %9.3f %8.6f %7.3f %5.2f %5.3f %s %s %s",
                            stat_residual->RMS(),
-                           orsa::FromUnits(O_s2an_l.a,orsa::Unit::AU,-1),
-                           O_s2an_l.e,
-                           O_s2an_l.i*orsa::radToDeg(),
+                           orsa::FromUnits(O_s2an_g.a,orsa::Unit::AU,-1),
+                           O_s2an_g.e,
+                           O_s2an_g.i*orsa::radToDeg(),
                            H,
+                           orsa::FromUnits(EarthMOID,orsa::Unit::AU,-1),
                            line_eachResidual,
                            line_eachDistance,
                            line_eachVelocity);
@@ -762,7 +781,7 @@ int main(int argc, char **argv) {
                 }
             }
             
-            if (bg->size()>=100) break;
+            // if (bg->size()>=100) break;
             
         }
     }
