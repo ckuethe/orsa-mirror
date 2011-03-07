@@ -4,12 +4,22 @@
 #include <QStringListModel>
 #include <QListView>
 #include <orsaQt/debug.h>
+#include <QFont>
 
 #include <curl/curl.h>
 
 int main(int argc, char ** argv) {
     
     QApplication app(argc, argv);
+    
+    {
+#warning does this work on winxp and macosx
+        // app font, try to set it to "fixed font"
+        QFont font;
+        font.setStyleHint(QFont::TypeWriter);
+        font.setFamily("FreeMono");
+        app.setFont(font);
+    }
     
     // orsaQt::Debug::instance()->initTimer();
     //
