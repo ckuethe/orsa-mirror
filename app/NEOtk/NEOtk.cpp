@@ -223,7 +223,7 @@ int main(int argc, char **argv) {
     orsaSPICE::SPICE::instance()->loadKernel("de421.bsp");
     
     // read the file obsRMS.dat...
-    std::map< std::string, double > obsRMS; // in arcsec
+    std::map< std::string, double > obsRMS; // nominal RMS of residuals, in arcsec
     {
         FILE * fp = fopen("obsRMS.dat","r");
         if (!fp) {
@@ -345,9 +345,9 @@ int main(int argc, char **argv) {
         for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
             double RMS = obsRMS[allOpticalObs[k]->obsCode.getRef()];
             if (RMS==0.0) {
-                // if not set (equal to 0.0), use default of 1.0
+                // if not set (that is, equal to 0.0), use default of 0.7
                 ORSA_DEBUG("cannot find nominal accuracy for observatory code [%s], please update file obsRMS.dat",allOpticalObs[k]->obsCode.getRef().c_str());
-                RMS=1.0;
+                RMS=0.7;
             }
             //
             /* allOpticalObs[k]->sigma_ra  = RMS*arcsecToRad();
@@ -357,6 +357,12 @@ int main(int argc, char **argv) {
             vecRMS[k] = RMS; // in arcsec
         }
     }
+    
+    const double chisq_90 = gsl_cdf_chisq_Pinv(0.90,allOpticalObs.size());
+    const double chisq_95 = gsl_cdf_chisq_Pinv(0.95,allOpticalObs.size());
+    const double chisq_99 = gsl_cdf_chisq_Pinv(0.99,allOpticalObs.size());
+    // 
+    ORSA_DEBUG("chisq 90\%: %.2f  95\%: %.2f  99\%: %.2f",chisq_90,chisq_95,chisq_99);
     
     if (1) {
         
@@ -384,9 +390,9 @@ int main(int argc, char **argv) {
         
         // astrometric uncertainty
         // const double astrometricSigma =   1.0*orsa::arcsecToRad(); // for "noise"
-#warning replace with chisq values... which depend on the confidence level set...
-        const double successThreshold =   1.0;
-        const double outputThreshold  =   3.0;
+        // #warning replace with chisq values... which depend on the confidence level set...
+        // const double successThreshold =   1.0;
+        // const double outputThreshold  =   3.0;
         
         // distance of object from observer
         // const double R_min = orsa::FromUnits(100.0,orsa::Unit::KM);
@@ -522,6 +528,7 @@ int main(int argc, char **argv) {
         // for (unsigned int zzz=0; zzz<10000; ++zzz) {
         //
         // test counts
+#warning need to improve this! (one for each value of chisq confidence level?)
         unsigned int ct_tot=0;
         unsigned int ct_NEO=0;
         // 
@@ -690,7 +697,8 @@ int main(int argc, char **argv) {
                }
             */
             
-            if (stat_residual->RMS() < successThreshold) {
+            // if (stat_residual->RMS() < successThreshold) {
+            if (chisq < chisq_99) {
                 // stats
                 ++ct_tot;
                 if (O_s2an_g.a*(1.0-O_s2an_g.e) < FromUnits(1.3,orsa::Unit::AU)) {
@@ -699,8 +707,9 @@ int main(int argc, char **argv) {
             }
             
             // add body to bg
-#warning fix threshold
-            if (stat_residual->RMS() < successThreshold) {
+            // #warning fix threshold
+            // if (stat_residual->RMS() < successThreshold) {
+            if (chisq < chisq_99) {
                 osg::ref_ptr<Body> b = new Body;
                 char bodyName[1024];
                 sprintf(bodyName,"b%i",iter); // fix...
@@ -736,7 +745,8 @@ int main(int argc, char **argv) {
             // ORSA_DEBUG("RMS: %8.3f",stat_residual->RMS());
             
             // main output
-            if (stat_residual->RMS() < outputThreshold) {
+            // if (stat_residual->RMS() < outputThreshold) {
+            if (chisq < chisq_99) {
                 
                 // a string to write all the single residuals
                 char line_eachResidual[1024];
@@ -829,7 +839,7 @@ int main(int argc, char **argv) {
                }
             */
             
-            if (1) {
+            if (0) {
                 // debug output
                 if (iter%10==0) {
                     if (ct_tot!=0) {
