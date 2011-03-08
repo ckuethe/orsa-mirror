@@ -1,6 +1,8 @@
+#include <QAction>
 #include <QApplication>
 #include <QTabWidget>
 #include <QMainWindow>
+#include <QMenuBar>
 #include <QStringListModel>
 #include <QListView>
 #include <orsaQt/debug.h>
@@ -27,8 +29,17 @@ int main(int argc, char ** argv) {
     
     QMainWindow * mainWindow = new QMainWindow;
     
-    QTabWidget * mainTab = new QTabWidget(mainWindow);
-
+    {
+        QMenu * objectMenu = mainWindow->menuBar()->addMenu("Object");
+        objectMenu->addAction("Reload NEOCP");
+        
+        mainWindow->menuBar()->addAction("Preferences");
+        
+        mainWindow->menuBar()->addAction("About");
+    }
+    
+    QTabWidget * mainTab = new QTabWidget(mainWindow);    
+    
     mainWindow->setCentralWidget(mainTab);
     
     QStringList NEOCPlist;
@@ -82,12 +93,18 @@ int main(int argc, char ** argv) {
     
     {
         QStringListModel *model = new QStringListModel();
-      
         model->setStringList(NEOCPlist);
+
+        
         
         QListView * listView = new QListView(mainTab);
         listView->setModel(model);
+        
         mainTab->addTab(listView,"NEOCP");
+        
+        mainTab->addTab(new QListView(mainTab),"MPEC"); // maybe use obscode?
+        
+        mainTab->addTab(new QListView(mainTab),"local"); // maybe use obscode?
     }
     
     mainWindow->show();
