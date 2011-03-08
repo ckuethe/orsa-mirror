@@ -30,6 +30,8 @@
 
 #include <osgGA/NodeTrackerManipulator>
 
+#include <gsl/gsl_cdf.h>
+
 #include "vestaViz.h"
 
 #include <algorithm>
@@ -216,8 +218,32 @@ int main(int argc, char **argv) {
     orsa::Debug::instance()->initTimer();
   
     orsaSPICE::SPICE::instance()->setDefaultObserver("SSB");
-  
-    orsaSPICE::SPICE::instance()->loadKernel("de405.bsp");
+    
+    // orsaSPICE::SPICE::instance()->loadKernel("de405.bsp");
+    orsaSPICE::SPICE::instance()->loadKernel("de421.bsp");
+    
+    // read the file obsRMS.dat...
+    std::map< std::string, double > obsRMS; // in arcsec
+    {
+        FILE * fp = fopen("obsRMS.dat","r");
+        if (!fp) {
+            ORSA_DEBUG("problem: cannot open file [obsRMS.dat]");
+        }
+        char line[1024];
+        char obsCode[1024];
+        double RMS;
+        while (fgets(line,1024,fp)) {
+            sscanf(line,"%s %lf",obsCode,&RMS);
+            obsRMS[obsCode] = RMS;
+        }        
+        fclose(fp);
+    }
+    // test
+    /* ORSA_DEBUG("RMS[703] = %g",obsRMS["703"]);
+       ORSA_DEBUG("RMS[XYZ] = %g",obsRMS["XYZ"]);
+    */
+    //
+    std::vector<double> vecRMS; // same index as observations
     
     osg::ref_ptr<BodyGroup> bg = new BodyGroup;
     
@@ -313,6 +339,23 @@ int main(int argc, char **argv) {
         }
         
         ORSA_DEBUG("total optical observations read: %i",allOpticalObs.size());
+        
+        // assign RMS values
+        vecRMS.resize(allOpticalObs.size());
+        for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+            double RMS = obsRMS[allOpticalObs[k]->obsCode.getRef()];
+            if (RMS==0.0) {
+                // if not set (equal to 0.0), use default of 1.0
+                ORSA_DEBUG("cannot find nominal accuracy for observatory code [%s], please update file obsRMS.dat",allOpticalObs[k]->obsCode.getRef().c_str());
+                RMS=1.0;
+            }
+            //
+            /* allOpticalObs[k]->sigma_ra  = RMS*arcsecToRad();
+               allOpticalObs[k]->sigma_dec = RMS*arcsecToRad();
+            */
+            //
+            vecRMS[k] = RMS; // in arcsec
+        }
     }
     
     if (1) {
@@ -340,9 +383,10 @@ int main(int argc, char **argv) {
         */
         
         // astrometric uncertainty
-        const double astrometricSigma =   1.0*orsa::arcsecToRad(); // for "noise"
+        // const double astrometricSigma =   1.0*orsa::arcsecToRad(); // for "noise"
+#warning replace with chisq values... which depend on the confidence level set...
         const double successThreshold =   1.0;
-        const double outputThreshold  =  20.0;
+        const double outputThreshold  =   3.0;
         
         // distance of object from observer
         // const double R_min = orsa::FromUnits(100.0,orsa::Unit::KM);
@@ -476,6 +520,11 @@ int main(int argc, char **argv) {
         osg::ref_ptr<MultiminOrbitalVelocity> mov = new MultiminOrbitalVelocity;
         unsigned int iter=-1;
         // for (unsigned int zzz=0; zzz<10000; ++zzz) {
+        //
+        // test counts
+        unsigned int ct_tot=0;
+        unsigned int ct_NEO=0;
+        // 
         while (1) {
             ++iter;
             // ORSA_DEBUG("ITER: %i",iter);
@@ -497,7 +546,8 @@ int main(int argc, char **argv) {
                     if (j==z1) {
                         // normal sampling on z1
                         rng->gsl_ran_dir_2d(&dx,&dy);
-                        u_o2an[j] = (u_o2a[j]+rng->gsl_ran_gaussian(astrometricSigma)*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
+                        // u_o2an[j] = (u_o2a[j]+rng->gsl_ran_gaussian(astrometricSigma)*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
+                        u_o2an[j] = (u_o2a[j]+rng->gsl_ran_gaussian(vecRMS[j]*orsa::arcsecToRad())*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
                         R_o2an[j] = range->sample()*u_o2an[j];
                         R_an[j] = R_o[j] + R_o2an[j];
                         R_s2an[j] = R_an[j] - R_s[j];
@@ -509,7 +559,8 @@ int main(int argc, char **argv) {
                         const double maxDistance = escapeVelocity*dt;
                         //
                         rng->gsl_ran_dir_2d(&dx,&dy);
-                        u_o2an[j] = (u_o2a[j]+rng->gsl_ran_gaussian(astrometricSigma)*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
+                        // u_o2an[j] = (u_o2a[j]+rng->gsl_ran_gaussian(astrometricSigma)*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
+                        u_o2an[j] = (u_o2a[j]+rng->gsl_ran_gaussian(vecRMS[j]*orsa::arcsecToRad())*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
                         //
                         const orsa::Vector diffVector = R_s2an[z1]-R_o[z2]+R_s[z2];
                         const double rangeCenter = u_o2an[j]*diffVector; // range of min distance to R...z1
@@ -592,6 +643,7 @@ int main(int argc, char **argv) {
             
             // compute astrometric offset
             stat_residual->reset();
+            double chisq=0.0;
             orsa::Vector rOrbit, vOrbit;
             for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
                 const orsa::Time t = allOpticalObs[j]->epoch.getRef();
@@ -612,6 +664,7 @@ int main(int argc, char **argv) {
                 const double residual = acos(std::min(1.0,u_o2an[j]*u_o2a[j]))*orsa::radToArcsec();
                 vec_residual[j] = residual;
                 stat_residual->insert(residual);
+                chisq+=orsa::square(residual/vecRMS[j]);
                 // ORSA_DEBUG("OFFSET[%i]: %5.1f",j,residual);
             }
             
@@ -625,17 +678,26 @@ int main(int argc, char **argv) {
             
             // feedback x Range class
             // from smaller RMS to largest
-            for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                const double sampledRange = R_o2an[j].length();
-                if (stat_residual->RMS() < astrometricSigma) {
-                    range->feedback(sampledRange, 2.000);
-                } else if (stat_residual->RMS() < successThreshold) {
-                    range->feedback(sampledRange, 1.100);
-                } else {
-                    // range->feedback(sampledRange, 1.000);
+            /* for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+               const double sampledRange = R_o2an[j].length();
+               if (stat_residual->RMS() < astrometricSigma) {
+               range->feedback(sampledRange, 2.000);
+               } else if (stat_residual->RMS() < successThreshold) {
+               range->feedback(sampledRange, 1.100);
+               } else {
+               // range->feedback(sampledRange, 1.000);
+               }
+               }
+            */
+            
+            if (stat_residual->RMS() < successThreshold) {
+                // stats
+                ++ct_tot;
+                if (O_s2an_g.a*(1.0-O_s2an_g.e) < FromUnits(1.3,orsa::Unit::AU)) {
+                    ++ct_NEO;
                 }
             }
-
+            
             // add body to bg
 #warning fix threshold
             if (stat_residual->RMS() < successThreshold) {
@@ -744,8 +806,9 @@ int main(int argc, char **argv) {
                 }
                 
                 
-                ORSA_DEBUG("SAMPLE: %6.2f %9.3f %8.6f %7.3f %5.2f %5.3f %s %s %s",
+                ORSA_DEBUG("SAMPLE: %6.2f %7.3f %9.3f %8.6f %7.3f %5.2f %6.4f %s %s %s",
                            stat_residual->RMS(),
+                           chisq,
                            orsa::FromUnits(O_s2an_g.a,orsa::Unit::AU,-1),
                            O_s2an_g.e,
                            O_s2an_g.i*orsa::radToDeg(),
@@ -765,6 +828,15 @@ int main(int argc, char **argv) {
                break;
                }
             */
+            
+            if (1) {
+                // debug output
+                if (iter%10==0) {
+                    if (ct_tot!=0) {
+                        ORSA_DEBUG("prob. NEO: %7.3f (%i/%i)",(double)ct_NEO/(double)ct_tot,ct_NEO,ct_tot);
+                    }
+                }
+            }
             
             if (0) {
                 // debug output
