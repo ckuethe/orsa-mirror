@@ -40,7 +40,10 @@
 
 #include <orsaQt/debug.h>
 
-#include "splitRange.h"
+// #include "splitRange.h"
+// #include "movingWindowRange.h"
+#include "AdaptiveInterval.h"
+
 
 using namespace orsa;
 
@@ -368,7 +371,7 @@ int main(int argc, char **argv) {
         
         /***** INPUT *****/
         
-        const int randomSeed = 717559;
+        const int randomSeed = 7175590;
         
         // const double satelliteOrbit_a = orsa::FromUnits(5000.0,orsa::Unit::KM);
         // const double satelliteOrbit_e = 0.05;
@@ -404,10 +407,33 @@ int main(int argc, char **argv) {
            60,
            randomSeed+33);
         */
-        osg::ref_ptr<Range> range = new Range(orsa::FromUnits(0.00,orsa::Unit::AU),
-                                              orsa::FromUnits(3.00,orsa::Unit::AU),
-                                              100,
-                                              randomSeed+33);
+        //
+        /* osg::ref_ptr<Range> range = new Range(orsa::FromUnits(0.00,orsa::Unit::AU),
+           orsa::FromUnits(3.00,orsa::Unit::AU),
+           100,
+           randomSeed+33);
+        */
+        //
+        /* osg::ref_ptr<MovingWindowRange> range_99 = new  MovingWindowRange(orsa::FromUnits(0.00,orsa::Unit::AU),
+           orsa::FromUnits(3.00,orsa::Unit::AU),
+           0.50,
+           1000,
+           chisq_99,
+           true,
+           randomSeed+44);
+        */
+        //
+        // keep these in sync!
+        typedef double AdaptiveIntervalTemplateType;
+        typedef AdaptiveInterval<AdaptiveIntervalTemplateType> AdaptiveIntervalType;
+        typedef AdaptiveIntervalElement<AdaptiveIntervalTemplateType> AdaptiveIntervalElementType;
+        osg::ref_ptr<AdaptiveIntervalType> range_99 =
+            new AdaptiveIntervalType(orsa::FromUnits(0.00,orsa::Unit::AU),
+                                     orsa::FromUnits(3.00,orsa::Unit::AU),
+                                     0.95,
+                                     chisq_99,
+                                     true,
+                                     randomSeed+234);
         
         // const double targetSuccessRate = 0.001;
         // const unsigned int targetSuccessCount = 100000;
@@ -555,7 +581,9 @@ int main(int argc, char **argv) {
                         rng->gsl_ran_dir_2d(&dx,&dy);
                         // u_o2an[j] = (u_o2a[j]+rng->gsl_ran_gaussian(astrometricSigma)*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
                         u_o2an[j] = (u_o2a[j]+rng->gsl_ran_gaussian(vecRMS[j]*orsa::arcsecToRad())*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
-                        R_o2an[j] = range->sample()*u_o2an[j];
+                        // R_o2an[j] = range->sample()*u_o2an[j];
+#warning which range to use?
+                        R_o2an[j] = range_99->sample()*u_o2an[j];
                         R_an[j] = R_o[j] + R_o2an[j];
                         R_s2an[j] = R_an[j] - R_s[j];
                     }
@@ -696,6 +724,35 @@ int main(int argc, char **argv) {
                }
                }
             */
+            //
+            /*
+               {
+               // feedback
+               #warning create a range for each observation, and cycle on them with the for loop
+               for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+               MovingWindowRange::MovingWindowRangeElement e;
+               e.value = R_o2an[j].length();
+               // e.value = R_o2an[0].length();  // use [j] !!!
+               e.level = chisq;
+               range_99->insert(e);
+               }
+               if (iter%1000==0) range_99->print();
+               }
+            */
+            //
+            {
+                // feedback
+#warning create a range for each observation, and cycle on them with the for loop
+#warning cannot insert more than 1 in same range! it will bias too much, so need a range for each data point
+                // for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+                AdaptiveIntervalElementType e;
+                // e.position = R_o2an[j].length();
+                e.position = R_o2an[0].length();  // use [j] !!!
+                e.level = chisq;
+                range_99->insert(e);
+                // }
+                // if (iter%1000==0) range_99->print();
+            }
             
             // if (stat_residual->RMS() < successThreshold) {
             if (chisq < chisq_99) {
@@ -738,9 +795,10 @@ int main(int argc, char **argv) {
             }
             
             // test: slowly decrement all...
-            {
-                range->feedbackAll(0.9999);
-            }
+            /* {
+               range->feedbackAll(0.9999);
+               }
+            */
             
             // ORSA_DEBUG("RMS: %8.3f",stat_residual->RMS());
             
@@ -848,20 +906,22 @@ int main(int argc, char **argv) {
                 }
             }
             
-            if (0) {
-                // debug output
-                if (iter%10==0) {
-                    const Range::DataType & data = range->getData();
-                    for (unsigned int k=0; k<data.size(); ++k) {
-                        if (data[k].weight > 1.00) {
-                            ORSA_DEBUG("%5.3f - %5.3f   w = %5.3f",
-                                       orsa::FromUnits(data[k].min,orsa::Unit::AU,-1),
-                                       orsa::FromUnits(data[k].max,orsa::Unit::AU,-1),
-                                       data[k].weight);
-                        }
-                    }
-                }
-            }
+            /* 
+               if (0) {
+               // debug output
+               if (iter%10==0) {
+               const Range::DataType & data = range->getData();
+               for (unsigned int k=0; k<data.size(); ++k) {
+               if (data[k].weight > 1.00) {
+               ORSA_DEBUG("%5.3f - %5.3f   w = %5.3f",
+               orsa::FromUnits(data[k].min,orsa::Unit::AU,-1),
+               orsa::FromUnits(data[k].max,orsa::Unit::AU,-1),
+               data[k].weight);
+               }
+               }
+               }
+               }
+            */
             
             // if (bg->size()>=100) break;
             
