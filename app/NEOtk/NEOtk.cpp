@@ -229,15 +229,16 @@ int main(int argc, char **argv) {
         FILE * fp = fopen("obsRMS.dat","r");
         if (!fp) {
             ORSA_DEBUG("problem: cannot open file [obsRMS.dat]");
+        } else {
+            char line[1024];
+            char obsCode[1024];
+            double RMS;
+            while (fgets(line,1024,fp)) {
+                sscanf(line,"%s %lf",obsCode,&RMS);
+                obsRMS[obsCode] = RMS;
+            }        
+            fclose(fp);
         }
-        char line[1024];
-        char obsCode[1024];
-        double RMS;
-        while (fgets(line,1024,fp)) {
-            sscanf(line,"%s %lf",obsCode,&RMS);
-            obsRMS[obsCode] = RMS;
-        }        
-        fclose(fp);
     }
     // test
     /* ORSA_DEBUG("RMS[703] = %g",obsRMS["703"]);
@@ -346,9 +347,10 @@ int main(int argc, char **argv) {
         for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
             double RMS = obsRMS[allOpticalObs[k]->obsCode.getRef()];
             if (RMS==0.0) {
-                // if not set (that is, equal to 0.0), use default of 0.7
+                // if not set (that is, equal to 0.0), use default
                 ORSA_DEBUG("cannot find nominal accuracy for observatory code [%s], please update file obsRMS.dat",allOpticalObs[k]->obsCode.getRef().c_str());
-                RMS=0.7;
+#warning default RMS=?   (use automatic, floating RMS?)
+                RMS=5.0;
             }
             //
             /* allOpticalObs[k]->sigma_ra  = RMS*arcsecToRad();
@@ -369,19 +371,40 @@ int main(int argc, char **argv) {
         
         /***** INPUT *****/
         
-        const int randomSeed = 7175590;
+        const int randomSeed = 71790;
         
         // keep these in sync!
         typedef double AdaptiveIntervalTemplateType;
         typedef AdaptiveInterval<AdaptiveIntervalTemplateType> AdaptiveIntervalType;
         typedef AdaptiveIntervalElement<AdaptiveIntervalTemplateType> AdaptiveIntervalElementType;
-        osg::ref_ptr<AdaptiveIntervalType> range_99 =
-            new AdaptiveIntervalType(orsa::FromUnits(0.00,orsa::Unit::AU),
-                                     orsa::FromUnits(3.00,orsa::Unit::AU),
-                                     0.95,
-                                     chisq_99,
-                                     true,
-                                     randomSeed+234);
+        /* osg::ref_ptr<AdaptiveIntervalType> range_99 =
+           new AdaptiveIntervalType(orsa::FromUnits(0.00,orsa::Unit::AU),
+           orsa::FromUnits(3.00,orsa::Unit::AU),
+           0.95,
+           chisq_99,
+           true,
+           randomSeed+234);
+        */
+        std::vector< osg::ref_ptr<AdaptiveIntervalType> > range_99;
+        range_99.resize(allOpticalObs.size());
+        for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+            range_99[k] = new AdaptiveIntervalType(orsa::FromUnits( 0.000,orsa::Unit::AU),
+                                                   orsa::FromUnits( 2.000,orsa::Unit::AU),
+                                                   0.95,
+                                                   chisq_99,
+                                                   randomSeed+234);
+        }
+        //
+        /* std::vector< osg::ref_ptr<AdaptiveIntervalType> > rate_99;
+           rate_99.resize(allOpticalObs.size());
+           for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+           rate_99[k] = new AdaptiveIntervalType(orsa::FromUnits(0.10,orsa::Unit::AU),
+           orsa::FromUnits(0.12,orsa::Unit::AU),
+           0.95,
+           chisq_99,
+           randomSeed+234);
+           }
+        */
         
         /***** END INPUT *****/
         
@@ -402,11 +425,11 @@ int main(int argc, char **argv) {
         }
         
         // s = sun, o = observer, a = asteroid
-        std::vector<orsa::Vector> R_s, V_s, R_o; // R_a;
+        std::vector<orsa::Vector> R_s, V_s, R_o, V_o;
         R_s.resize(allOpticalObs.size());
         V_s.resize(allOpticalObs.size());
         R_o.resize(allOpticalObs.size());
-        // R_a.resize(allOpticalObs.size());
+        V_o.resize(allOpticalObs.size());
         
         // std::vector<orsa::Vector> u_d2v; // unit vectors, from Dawn to Vesta
         // u_d2v.resize(allOpticalObs.size());
@@ -425,8 +448,9 @@ int main(int argc, char **argv) {
         u_o2an.resize(allOpticalObs.size());
         
         // old R_d2sn
-        std::vector<orsa::Vector> R_o2an; // real length vectors, from Dawn to Satellite, with "noise" (astrometric uncertainty)
+        std::vector<orsa::Vector> R_o2an, V_o2an; // real length vectors, from Dawn to Satellite, with "noise" (astrometric uncertainty)
         R_o2an.resize(allOpticalObs.size());
+        V_o2an.resize(allOpticalObs.size());
         
         // std::vector<orsa::Vector> R_v; // position of Vesta
         // R_v.resize(allOpticalObs.size());
@@ -480,7 +504,7 @@ int main(int argc, char **argv) {
                 orsa::print(t);
             }
             
-            if (!obsPosCB->getPosition(R_o[j],allOpticalObs[j].get())) { 
+            if (!obsPosCB->getPosVel(R_o[j],V_o[j],allOpticalObs[j].get())) { 
                 ORSA_DEBUG("problems... t:");
                 orsa::print(t);
             }
@@ -518,18 +542,20 @@ int main(int argc, char **argv) {
                 double dx,dy;
                 for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
                     if ((j!=z1) && (j!=z2)) continue;
-                    if (j==z1) {
+                    if ( (j==z1) ||
+                         (j==z2 && range_99[z2]->size()>=2) ) {
+                        // if (j==z2) ORSA_DEBUG("speed-up...");
                         // normal sampling on z1
                         rng->gsl_ran_dir_2d(&dx,&dy);
                         // u_o2an[j] = (u_o2a[j]+rng->gsl_ran_gaussian(astrometricSigma)*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
                         u_o2an[j] = (u_o2a[j]+rng->gsl_ran_gaussian(vecRMS[j]*orsa::arcsecToRad())*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
                         // R_o2an[j] = range->sample()*u_o2an[j];
 #warning which range to use?
-                        R_o2an[j] = range_99->sample()*u_o2an[j];
+                        R_o2an[j] = range_99[j]->sample()*u_o2an[j];
                         R_an[j] = R_o[j] + R_o2an[j];
                         R_s2an[j] = R_an[j] - R_s[j];
                     }
-                    if (j==z2) {
+                    if (j==z2 && range_99[z2]->size()<2) {
                         // enforce bound orbit on z2
                         const double escapeVelocity = sqrt(2*orsaSolarSystem::Data::GMSun()/R_s2an[z1].length());
                         const double dt = (allOpticalObs[z2]->epoch.getRef()-allOpticalObs[z1]->epoch.getRef()).get_d();
@@ -597,6 +623,7 @@ int main(int argc, char **argv) {
                 R_an[j] = rOrbit;
                 V_an[j] = vOrbit;
                 R_o2an[j] = (R_an[j]-R_o[j]);
+                V_o2an[j] = (V_an[j]-V_o[j]);
                 u_o2an[j] = (R_an[j]-R_o[j]).normalized();
                 const double residual = acos(std::min(1.0,u_o2an[j]*u_o2a[j]))*orsa::radToArcsec();
                 vec_residual[j] = residual;
@@ -607,15 +634,23 @@ int main(int argc, char **argv) {
             
             {
                 // feedback
-#warning create a range for each observation, and cycle on them with the for loop
-#warning cannot insert more than 1 in same range! it will bias too much, so need a range for each data point
-                // for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                AdaptiveIntervalElementType e;
-                // e.position = R_o2an[j].length();
-                e.position = R_o2an[0].length();  // use [j] !!!
-                e.level = chisq;
-                range_99->insert(e);
-                // }
+                // #warning create a range for each observation, and cycle on them with the for loop
+                // #warning cannot insert more than 1 in same range! it will bias too much, so need a range for each data point
+                for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+                    AdaptiveIntervalElementType e;
+                    e.position = R_o2an[j].length();
+                    // e.position = R_o2an[0].length();  // use [j] !!!
+                    e.level = chisq;
+                    range_99[j]->insert(e);
+                }
+                /* for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+                   AdaptiveIntervalElementType e;
+                   e.position = V_o2an[j].length();
+                   // e.position = R_o2an[0].length();  // use [j] !!!
+                   e.level = chisq;
+                   rate_99[j]->insert(e);
+                   }
+                */
                 // if (iter%1000==0) range_99->print();
             }
             
@@ -706,7 +741,7 @@ int main(int argc, char **argv) {
                 
 #warning improve here
                 // absolute magnitude (rough way, is there a better approach?)
-                // filter/band correction?
+#warning filter/band correction?
                 double H;
                 {
                     osg::ref_ptr< orsa::Statistic<double> > stat_H = new orsa::Statistic<double>;

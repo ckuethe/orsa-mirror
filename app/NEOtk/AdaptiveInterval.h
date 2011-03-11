@@ -45,19 +45,15 @@ public:
                      const double & max,
                      const double & confidenceLevel,
                      const double & thresholdLevel,
-#warning remove forcePositive? it is not needed if we constantly check to be within initial range...
-                     const   bool & forcePositiveRange,
                      const    int & randomSeed) :
         osg::Referenced(),
         initialMin(std::min(min,max)),
         initialMax(std::max(min,max)),
         probability(1.0-confidenceLevel),
         threshold(thresholdLevel),
-        forcePositive(forcePositiveRange),
         rnd(new orsa::RNG(randomSeed))
         {
-            if ( (forcePositive && initialMin<0.0) ||
-                 (probability < 0.0) ||
+            if ( (probability < 0.0) ||
                  (probability > 1.0) ) {
                 ORSA_DEBUG("problems");
                 exit(0);
@@ -68,31 +64,22 @@ public:
 protected:
     ~AdaptiveInterval() { }
     
-      
 public:
     double sample() const {
+#warning minimim number of points to use (at least 2...)
         if (data->size()>=2) {
-#warning cache values, to speed-up this part 
-            // const double    tmpMin = forcePositive ? std::max(0.0,data->min().position.getRef()) : data->min().position.getRef();
-            // forcePositive test is not needed, because of the stronger check below agains the intial min and max
-            const double    tmpMin = data->min().position.getRef();
-            const double    tmpMax = data->max().position.getRef();
-            /* ORSA_DEBUG("tmpMin: %g  tmpMax: %g",
-               orsa::FromUnits(tmpMin,orsa::Unit::AU,-1),
-               orsa::FromUnits(tmpMax,orsa::Unit::AU,-1));
+            /*
+               #warning cache values, to speed-up this part 
+               // const double    tmpMin = forcePositive ? std::max(0.0,data->min().position.getRef()) : data->min().position.getRef();
+               // forcePositive test is not needed, because of the stronger check below agains the intial min and max
+               const double    tmpMin = data->min().position.getRef();
+               const double    tmpMax = data->max().position.getRef();
+               const double        mu = 0.5*(tmpMin+tmpMax);
+               const double     delta = (tmpMax-tmpMin)/(2*pow(probability,1.0/data->size()));
+               const double sampleMin = std::max(mu-delta,initialMin);
+               const double sampleMax = std::min(mu+delta,initialMax);
             */
-            const double        mu = 0.5*(tmpMin+tmpMax);
-            const double     delta = (tmpMax-tmpMin)/(2*pow(probability,1.0/data->size()));
-            const double sampleMin = std::max(mu-delta,initialMin);
-            const double sampleMax = std::min(mu+delta,initialMax);
-            /* ORSA_DEBUG("sampleMin: %g  sampleMax: %g  mu: %g  delta: %g  probability: %g",
-               orsa::FromUnits(sampleMin,orsa::Unit::AU,-1),
-               orsa::FromUnits(sampleMax,orsa::Unit::AU,-1),
-               orsa::FromUnits(mu,orsa::Unit::AU,-1),
-               orsa::FromUnits(delta,orsa::Unit::AU,-1),
-               probability);
-            */
-            return (sampleMin+(sampleMax-sampleMin)*rnd->gsl_rng_uniform());
+            return (sampleMin.getRef()+(sampleMax.getRef()-sampleMin.getRef())*rnd->gsl_rng_uniform());
         } else {
             return (initialMin+(initialMax-initialMin)*rnd->gsl_rng_uniform());
         }
@@ -105,8 +92,24 @@ public:
                e.level.getRef());
             */
             data->insert(e,false,false);
+            update();
         }
     }
+public:
+    void update() {
+        const double    tmpMin = data->min().position.getRef();
+        const double    tmpMax = data->max().position.getRef();
+        //
+        const double        mu = 0.5*(tmpMin+tmpMax);
+        const double     delta = (tmpMax-tmpMin)/(2*pow(probability,1.0/data->size()));
+        //
+        sampleMin = std::max(mu-delta,initialMin);
+        sampleMax = std::min(mu+delta,initialMax);
+    }
+protected:
+    orsa::Cache<double> sampleMin, sampleMax;
+public:
+    size_t size() const { return data->size(); }
 public:
     typedef typename orsa::Interval< AdaptiveIntervalElement<T> > DataType;
 protected:
@@ -119,7 +122,6 @@ protected:
     const double initialMax;
     const double probability;
     const double threshold;
-    const   bool forcePositive;
 protected:
     osg::ref_ptr<orsa::RNG> rnd;
 };
