@@ -40,8 +40,6 @@
 
 #include <orsaQt/debug.h>
 
-// #include "splitRange.h"
-// #include "movingWindowRange.h"
 #include "AdaptiveInterval.h"
 
 
@@ -373,56 +371,6 @@ int main(int argc, char **argv) {
         
         const int randomSeed = 7175590;
         
-        // const double satelliteOrbit_a = orsa::FromUnits(5000.0,orsa::Unit::KM);
-        // const double satelliteOrbit_e = 0.05;
-        // const double satelliteOrbit_i = 5.0*orsa::degToRad();
-        
-        // const orsa::Time satelliteOrbit_epoch = orsaSolarSystem::gregorTime(2011,7,1,0,0,0,0);
-        
-        // observation times (sample times for search field #1)
-        /* std::vector<orsa::Time> obsTime;
-           obsTime.push_back(orsaSolarSystem::gregorTime(2011,7,12, 7,56,0,0));
-           obsTime.push_back(orsaSolarSystem::gregorTime(2011,7,12, 8, 6,0,0));
-           obsTime.push_back(orsaSolarSystem::gregorTime(2011,7,12,10, 0,0,0));
-           obsTime.push_back(orsaSolarSystem::gregorTime(2011,7,12,10,11,0,0));
-           obsTime.push_back(orsaSolarSystem::gregorTime(2011,7,12,18,17,0,0));
-           obsTime.push_back(orsaSolarSystem::gregorTime(2011,7,12,18,28,0,0));
-           obsTime.push_back(orsaSolarSystem::gregorTime(2011,7,12,20,21,0,0));
-           obsTime.push_back(orsaSolarSystem::gregorTime(2011,7,12,20,32,0,0));
-        */
-        
-        // astrometric uncertainty
-        // const double astrometricSigma =   1.0*orsa::arcsecToRad(); // for "noise"
-        // #warning replace with chisq values... which depend on the confidence level set...
-        // const double successThreshold =   1.0;
-        // const double outputThreshold  =   3.0;
-        
-        // distance of object from observer
-        // const double R_min = orsa::FromUnits(100.0,orsa::Unit::KM);
-        // const double R_max = orsa::FromUnits(  3.0,orsa::Unit::AU);
-        
-        // double sampledRange; // save it for feedback
-        /* osg::ref_ptr<Range> range = new Range(orsa::FromUnits(100.0,orsa::Unit::KM),
-           orsa::FromUnits( 3.0,orsa::Unit::AU),
-           60,
-           randomSeed+33);
-        */
-        //
-        /* osg::ref_ptr<Range> range = new Range(orsa::FromUnits(0.00,orsa::Unit::AU),
-           orsa::FromUnits(3.00,orsa::Unit::AU),
-           100,
-           randomSeed+33);
-        */
-        //
-        /* osg::ref_ptr<MovingWindowRange> range_99 = new  MovingWindowRange(orsa::FromUnits(0.00,orsa::Unit::AU),
-           orsa::FromUnits(3.00,orsa::Unit::AU),
-           0.50,
-           1000,
-           chisq_99,
-           true,
-           randomSeed+44);
-        */
-        //
         // keep these in sync!
         typedef double AdaptiveIntervalTemplateType;
         typedef AdaptiveInterval<AdaptiveIntervalTemplateType> AdaptiveIntervalType;
@@ -435,16 +383,10 @@ int main(int argc, char **argv) {
                                      true,
                                      randomSeed+234);
         
-        // const double targetSuccessRate = 0.001;
-        // const unsigned int targetSuccessCount = 100000;
-        
         /***** END INPUT *****/
         
         ORSA_DEBUG("randomSeed: %i",randomSeed);
         osg::ref_ptr<orsa::RNG> rng = new orsa::RNG(randomSeed);
-        
-        // orsa::Vector rObj,   vObj,   rVesta,   vVesta,   rSun,   vSun,   rOrbit,   vOrbit;
-        // orsa::Vector rSun, rObs, rObj;
         
         if (allOpticalObs.size() < 2) {
             ORSA_DEBUG("problem: not enough observations");
@@ -618,50 +560,10 @@ int main(int argc, char **argv) {
                 if (!bound) continue;
             }
             
-            /* 
-               if (firstIter) {
-               // force nominal solution
-               ORSA_DEBUG("first iter!");
-               V_v2sn[0] = V_v2s_0;
-               for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-               // "remove noise"....
-               u_d2sn[j] = u_d2s[j];
-               R_d2sn[j] = R_s[j]-R_d[j];
-               R_sn[j]   = R_s[j];
-               R_v2sn[j] = R_s[j]-R_v[j];
-               }
-               } else {
-            */
-            // solve for a velocity that goes trough the first two points
-            // osg::ref_ptr<MultiminOrbitalVelocity> mov = new MultiminOrbitalVelocity;
-            /* V_v2sn[0] = mov->getOrbitalVelocity(R_v2sn[0],obsTime[0],
-               R_v2sn[1],obsTime[1],
-               muVesta);
-            */
-            // test: using first and last observation
-            /* V_v2sn[0] = mov->getOrbitalVelocity(R_v2sn[0],obsTime[0],
-               R_v2sn[allOpticalObs.size()-1],obsTime[allOpticalObs.size()-1],
-               muVesta);
-            */
-            // even better: choose two randomly!
-
-            /* unsigned int z1 = rng->gsl_rng_uniform_int(allOpticalObs.size());
-               unsigned int z2;
-               do { z2 = rng->gsl_rng_uniform_int(allOpticalObs.size()); }
-               while (z1 == z2);
-            */
-            //
-            
             V_s2an[z1] = mov->getOrbitalVelocity(R_s2an[z1],allOpticalObs[z1]->epoch.getRef(),
                                                  R_s2an[z2],allOpticalObs[z2]->epoch.getRef(),
                                                  orsaSolarSystem::Data::GMSun());
-            // ORSA_DEBUG("%i-%i",z1,z2);
-            // }
             
-            // check that velocity gives a "bound" orbit
-            
-            // O_v2sn_g orbit is Vesta-centered and in global ref system
-            // all orbits defined at t=obsTime[0];
             orsaSolarSystem::OrbitWithEpoch tmpOrbit;
             tmpOrbit.compute(R_s2an[z1],
                              V_s2an[z1],
@@ -703,43 +605,6 @@ int main(int argc, char **argv) {
                 // ORSA_DEBUG("OFFSET[%i]: %5.1f",j,residual);
             }
             
-            // O_v2sn_l orbit is in local ref. sys.
-            /* tmpOrbit.compute(R_s2an[z1],
-               V_s2an[z1],
-               orsaSolarSystem::Data::GMSun());
-               tmpOrbit.epoch = allOpticalObs[z1]->epoch.getRef();
-               const orsaSolarSystem::OrbitWithEpoch O_s2an_l = tmpOrbit;
-            */
-            
-            // feedback x Range class
-            // from smaller RMS to largest
-            /* for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-               const double sampledRange = R_o2an[j].length();
-               if (stat_residual->RMS() < astrometricSigma) {
-               range->feedback(sampledRange, 2.000);
-               } else if (stat_residual->RMS() < successThreshold) {
-               range->feedback(sampledRange, 1.100);
-               } else {
-               // range->feedback(sampledRange, 1.000);
-               }
-               }
-            */
-            //
-            /*
-               {
-               // feedback
-               #warning create a range for each observation, and cycle on them with the for loop
-               for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-               MovingWindowRange::MovingWindowRangeElement e;
-               e.value = R_o2an[j].length();
-               // e.value = R_o2an[0].length();  // use [j] !!!
-               e.level = chisq;
-               range_99->insert(e);
-               }
-               if (iter%1000==0) range_99->print();
-               }
-            */
-            //
             {
                 // feedback
 #warning create a range for each observation, and cycle on them with the for loop
