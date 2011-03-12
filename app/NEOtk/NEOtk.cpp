@@ -554,6 +554,16 @@ int main(int argc, char **argv) {
                         R_o2an[j] = range_99[j]->sample()*u_o2an[j];
                         R_an[j] = R_o[j] + R_o2an[j];
                         R_s2an[j] = R_an[j] - R_s[j];
+                        if (j==z2 && range_99[z2]->size()>=2) {
+                            const double escapeVelocity = sqrt(2*orsaSolarSystem::Data::GMSun()/R_s2an[z1].length());
+                            const double dt = (allOpticalObs[z2]->epoch.getRef()-allOpticalObs[z1]->epoch.getRef()).get_d();
+                            const double maxDistance = escapeVelocity*dt;
+                            if ((R_s2an[z2]-R_s2an[z1]).length() > maxDistance) {
+                                // no possible bound solutions here
+                                bound=false;
+                                continue;
+                            }
+                        }
                     }
                     if (j==z2 && range_99[z2]->size()<2) {
                         // enforce bound orbit on z2
