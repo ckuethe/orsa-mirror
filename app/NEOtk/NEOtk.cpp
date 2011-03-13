@@ -116,7 +116,7 @@ inline orsa::Vector observationDirection(const orsaSolarSystem::OpticalObservati
                      s_dec);
 }
 
-// multimin
+// multimin orbital velocity
 
 class MultiminOrbitalVelocity : public orsa::Multimin {
 public:
@@ -199,6 +199,98 @@ protected:
     orsa::Cache<double> mu;
     orsa::Cache<double> dt;
     orsa::Cache<orsa::Vector> u_R, u_N, u_L; // R=Radial; N=Normal to {L,R}; L=Angular momentum
+};
+
+// multimin maximum range
+
+#warning CONTINUE FROM HERE!!
+class MultiminMaximumRange : public orsa::Multimin {
+public:
+    double fun(const orsa::MultiminParameters * par) const {
+        
+        if (0) {
+            // debug output 
+            for (unsigned int k=0; k<par->size(); ++k) {
+                ORSA_DEBUG("par[%02i] = [%20s] = %18.8g   step: %18.8g",
+                           k,
+                           par->name(k).c_str(),
+                           par->get(k),
+                           par->getStep(k));
+            }
+        }
+
+        const orsa::Vector   R_a_1 = R_o_1.getRef() + u_o2a_1.getRef()*par->get("R_o2a_1");
+        const orsa::Vector R_s2a_1 = R_a_1 - R_s_1.getRef();
+        //
+        const double escapeVelocity = sqrt(2*GM_s.getRef()/R_s2a_1.length());
+        const double             dt = (epoch_2.getRef()-epoch_1.getRef()).get_d();
+        const double    maxDistance = escapeVelocity*dt;
+        //
+        const orsa::Vector u_L = (R_a_1 - R_o_2.getRef()).normalized();
+        const double         L = (R_a_1 - R_o_2.getRef()).length();
+        const double     gamma = asin(maxDistance/L);
+        const double      beta = acos(u_o2a_2.getRef()*u_L);
+        //
+        const double sigma_corrected_beta = beta - sigma_factor.getRef()*(sigma_1_arcsec.getRef()+sigma_2_arcsec.getRef())*orsa::arcsecToRad();
+        const double delta = L*sin(sigma_corrected_beta);
+        // const double delta = L*sin(beta);
+#warning add check on beta smaller than factor simga...
+        return orsa::square(delta-maxDistance);
+    }
+public:
+    double getMaximumRange(const orsa::Vector & R_s_1_,
+                           const orsa::Vector & R_o_1_,
+                           const orsa::Vector & u_o2a_1_,
+                           const double       & sigma_1_arcsec_,
+                           const orsa::Time   & epoch_1_,
+                           const orsa::Vector & R_s_2_,
+                           const orsa::Vector & R_o_2_,
+                           const orsa::Vector & u_o2a_2_,
+                           const double       & sigma_2_arcsec_,
+                           const orsa::Time   & epoch_2_,
+                           const double       & GM_s_,
+                           const double       & sigma_factor_) {
+        R_s_1   = R_s_1_;
+        R_o_1   = R_o_1_;
+        u_o2a_1 = u_o2a_1_;
+        sigma_1_arcsec = sigma_1_arcsec_;
+        epoch_1 = epoch_1_;
+        //
+        R_s_2   = R_s_2_;
+        R_o_2   = R_o_2_;
+        u_o2a_2 = u_o2a_2_;
+        sigma_2_arcsec = sigma_2_arcsec_;
+        epoch_2 = epoch_2_;
+        //
+        GM_s    = GM_s_;
+        sigma_factor = sigma_factor_;
+        
+        osg::ref_ptr<orsa::MultiminParameters> par = new orsa::MultiminParameters;
+        par->insert("R_o2a_1",orsa::FromUnits(1.00,orsa::Unit::AU),orsa::FromUnits(1.0e-6,orsa::Unit::AU));
+        par->setRangeMin("R_o2a_1",0.0);
+        //
+        setMultiminParameters(par.get());
+        
+#warning tune pars here
+        if (!run_nmsimplex(1024,1.0e-3)) {
+            // ORSA_WARNING("the search did not converge.");
+        }
+        
+        osg::ref_ptr<const orsa::MultiminParameters> parFinal = getMultiminParameters();
+        //
+        return par->get("R_o2a_1");
+    }
+protected:
+    orsa::Cache<orsa::Vector> R_s_1, R_o_1, u_o2a_1;
+    orsa::Cache<double>       sigma_1_arcsec;
+    orsa::Cache<orsa::Time>   epoch_1;
+protected:
+    orsa::Cache<orsa::Vector> R_s_2, R_o_2, u_o2a_2;
+    orsa::Cache<double>       sigma_2_arcsec;
+    orsa::Cache<orsa::Time>   epoch_2;
+protected:
+    orsa::Cache<double>       GM_s;
+    orsa::Cache<double>       sigma_factor;
 };
 
 //
@@ -514,7 +606,48 @@ int main(int argc, char **argv) {
             xS_o2a[j] = orsa::externalProduct(orsa::Vector(0,0,1),u_o2a[j]).normalized();
             yS_o2a[j] = orsa::externalProduct(u_o2a[j],xS_o2a[j]).normalized();
         } 
-
+        
+        {
+            // test
+            for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+                for (unsigned int k=j+1; k<allOpticalObs.size(); ++k) {
+                    const double angle = acos(u_o2a[j]*u_o2a[k]);
+                    const double dt = (allOpticalObs[k]->epoch.getRef()-allOpticalObs[j]->epoch.getRef()).get_d();
+                    if (k-j==1) {
+                        ORSA_DEBUG("angle between [%02i] and [%02i] obs. = %8.3f [arcsec]   dt = %8.1f [s]   rate = %8.3f [arcsec/s]",
+                                   j,
+                                   k,
+                                   angle*orsa::radToArcsec(),
+                                   orsa::FromUnits(dt,orsa::Unit::SECOND,-1),
+                                   orsa::FromUnits(angle/dt,orsa::Unit::SECOND)*orsa::radToArcsec());
+                    } else {
+                        ORSA_DEBUG("angle between [%02i] and [%02i] obs. = %8.3f [arcsec]   dt = %8.1f [s]",
+                                   j,
+                                   k,
+                                   angle*orsa::radToArcsec(),
+                                   orsa::FromUnits(dt,orsa::Unit::SECOND,-1));
+                    }   
+                }
+            }
+        }
+        
+        {
+            // test: determine the maximum range for each observation
+            osg::ref_ptr<MultiminMaximumRange> mmr = new MultiminMaximumRange;
+            for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+                for (unsigned int k=j+1; k<allOpticalObs.size(); ++k) {
+                    ORSA_DEBUG("max range distance for obs [%02i] and [%02i] = %8.3f [AU]",
+                               j,
+                               k,
+                               orsa::FromUnits(mmr->getMaximumRange(R_s[j],R_o[j],u_o2a[j],vecRMS[j],allOpticalObs[j]->epoch.getRef(),
+                                                                    R_s[k],R_o[k],u_o2a[k],vecRMS[k],allOpticalObs[k]->epoch.getRef(),
+                                                                    orsaSolarSystem::Data::GMSun(),
+                                                                    3.0),orsa::Unit::AU,-1));
+                    
+                }
+            }
+        }
+        
         osg::ref_ptr<MultiminOrbitalVelocity> mov = new MultiminOrbitalVelocity;
         unsigned int iter=-1;
         // for (unsigned int zzz=0; zzz<10000; ++zzz) {
