@@ -29,6 +29,21 @@ namespace orsa {
     public:
 #if ORSA_CACHE_GET_CHECK
     public:
+        /* operator T() const {
+           if (!_set) {
+           ORSA_ERROR("returning unset value");
+           orsa::crash();
+           }
+           return _val; 
+           }
+        */
+        operator T const & () const {
+            if (!_set) {
+                ORSA_ERROR("returning unset value");
+                orsa::crash();
+            }
+            return _val; 
+        }
         T get() const { 
             if (!_set) {
                 ORSA_ERROR("returning unset value");
@@ -52,6 +67,8 @@ namespace orsa {
         }
 #else  
     public:
+        // inline operator T() const { return _val; }
+        inline operator T const & () const { return _val; }
         inline T get() const { return _val; }
         inline const T & getRef() const { return _val; }
         inline const T * getPtr() const { return & _val; }
@@ -96,7 +113,7 @@ namespace orsa {
         T    _val;
         bool _set;
     };
-  
+    
     template <class T> class CachedVars {
     public:
         CachedVars() {
