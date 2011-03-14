@@ -12,7 +12,7 @@
 #include <orsa/crash.h>
 
 namespace orsa {
-  
+    
     //! Instead of Cache, this class should be called something like GetSetVariable...
     //
     template <typename T> class Cache {
@@ -95,6 +95,8 @@ namespace orsa {
             return (*this);
         }
     public:
+        const char * c_str ( ) const { return _val.c_str(); }
+    public:
         // set only if still not set
         bool conditionalSet(const T & val) {
             if (!_set) {
@@ -113,6 +115,84 @@ namespace orsa {
         T    _val;
         bool _set;
     };
+    
+    template <typename T> T operator + (const orsa::Cache<T> & c) {
+        T t = c;
+        return t;
+    }
+    
+    template <typename T> T operator - (const orsa::Cache<T> & c) {
+        T t = c;
+        return -t;
+    }
+
+    template <typename T> T operator + (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        T t = a;
+        t += b;
+        return t;
+    }
+    
+    template <typename T> T operator + (const orsa::Cache<T> & a, const T & b) {
+        T t = a;
+        t += b;
+        return t;
+    }
+    
+    template <typename T> T operator + (const T & a, const orsa::Cache<T> & b) {
+        T t = a;
+        t += b;
+        return t;
+    }
+    
+    template <typename T> T operator - (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        T t = a;
+        t -= b;
+        return t;
+    }
+    
+    template <typename T> T operator - (const orsa::Cache<T> & a, const T & b) {
+        T t = a;
+        t -= b;
+        return t;
+    }
+    
+    template <typename T> T operator - (const T & a, const orsa::Cache<T> & b) {
+        T t = a;
+        t -= b;
+        return t;
+    }
+    
+    template <typename T, typename P> P operator * (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        return (a.getRef() *  b.getRef());
+    }
+    
+    template <typename T, typename P> P operator / (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        return (a.getRef() /  b.getRef());
+    }
+    
+    template <typename T> bool operator == (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        return (a.getRef() == b.getRef());
+    }
+    
+    template <typename T> bool operator != (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        return (a.getRef() != b.getRef());
+    }
+    
+    template <typename T> bool operator <  (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        return (a.getRef() <  b.getRef());
+    }
+    
+    template <typename T> bool operator >  (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        return (a.getRef() >  b.getRef());
+    }
+    
+    template <typename T> bool operator <= (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        return (a.getRef() <= b.getRef());
+    }
+    
+    template <typename T> bool operator >= (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        return (a.getRef() >= b.getRef());
+    }
     
     template <class T> class CachedVars {
     public:

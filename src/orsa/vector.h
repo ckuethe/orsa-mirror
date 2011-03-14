@@ -216,7 +216,16 @@ namespace orsa {
         p *= f;
         return p;
     }
-  
+    
+    // template double operator * <orsa::Vector> (const orsa::Cache<orsa::Vector> & a, const orsa::Cache<orsa::Vector> & b) {
+    // return a.getRef()*b.getRef();
+    // }
+
+    inline double operator * (const orsa::Cache<orsa::Vector> & a, const orsa::Cache<orsa::Vector> & b) {
+        double p = a.getRef()*b.getRef();
+        return p;
+    }
+    
     inline Vector operator * (const Vector & v, const double & f) {
         Vector p(v);
         p *= f;
