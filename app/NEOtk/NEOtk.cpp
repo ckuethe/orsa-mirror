@@ -108,8 +108,8 @@ public:
 inline orsa::Vector observationDirection(const orsaSolarSystem::OpticalObservation * obs) {
     double s_ra,  c_ra;
     double s_dec, c_dec;
-    orsa::sincos(obs->ra.getRef(),  &s_ra,  &c_ra);
-    orsa::sincos(obs->dec.getRef(), &s_dec, &c_dec);
+    orsa::sincos(obs->ra,  &s_ra,  &c_ra);
+    orsa::sincos(obs->dec, &s_dec, &c_dec);
     return orsaSolarSystem::equatorialToEcliptic() *
         orsa::Vector(c_dec*c_ra,
                      c_dec*s_ra,
@@ -134,10 +134,10 @@ public:
         }
         
         orsa::Orbit orbit;
-        orbit.compute(R1.getRef(),
+        orbit.compute(R1,
                       getVel(par),
-                      mu.getRef());
-        orbit.M = fmod(orbit.M+dt.getRef()*orsa::twopi()/orbit.period(),orsa::twopi());
+                      mu);
+        orbit.M = fmod(orbit.M+dt*orsa::twopi()/orbit.period(),orsa::twopi());
         orsa::Vector Rx;
         if (!orbit.relativePosition(Rx)) {
             ORSA_DEBUG("problems...");
@@ -145,11 +145,11 @@ public:
         /* ORSA_DEBUG("a: %16.6f [AU]   e: %8.6f   dR: %16.6f [km]",
            orsa::FromUnits(orbit.a,orsa::Unit::AU,-1),
            orbit.e,
-           (Rx-R2.getRef()).length());
+           (Rx-R2).length());
         */
         // ORSA_DEBUG("i: %g",orbit.i*orsa::radToDeg());
         // orsa::print(orbit);
-        return (Rx-R2.getRef()).lengthSquared(); 
+        return (Rx-R2).lengthSquared(); 
     }
 public:
     orsa::Vector getOrbitalVelocity(
@@ -165,8 +165,8 @@ public:
         dt = (t2_-t1_).get_d();
         u_R = R1_.normalized();
         u_L = orsa::externalProduct(R1_,R2_).normalized();
-        if (t2_<t1_) u_L = -u_L.getRef();
-        u_N = orsa::externalProduct(u_L.getRef(),u_R.getRef()).normalized();
+        if (t2_<t1_) u_L = -u_L;
+        u_N = orsa::externalProduct(u_L,u_R).normalized();
         
         const double circularVelocity = sqrt(mu_/R1_.length());
         // const double velocityStep     = sqrt(2)*circularVelocity;
@@ -192,7 +192,7 @@ public:
 protected:
     // utility
     orsa::Vector getVel(const orsa::MultiminParameters * par) const {
-        return (par->get("Vr")*u_R.getRef()+par->get("Vn")*u_N.getRef());
+        return (par->get("Vr")*u_R+par->get("Vn")*u_N);
     }
 protected:
     orsa::Cache<orsa::Vector> R1, R2;
@@ -219,19 +219,19 @@ public:
             }
         }
 
-        const orsa::Vector   R_a_1 = R_o_1.getRef() + u_o2a_1.getRef()*par->get("R_o2a_1");
-        const orsa::Vector R_s2a_1 = R_a_1 - R_s_1.getRef();
+        const orsa::Vector   R_a_1 = R_o_1 + u_o2a_1*par->get("R_o2a_1");
+        const orsa::Vector R_s2a_1 = R_a_1 - R_s_1;
         //
-        const double escapeVelocity = sqrt(2*GM_s.getRef()/R_s2a_1.length());
-        const double             dt = (epoch_2.getRef()-epoch_1.getRef()).get_d();
+        const double escapeVelocity = sqrt(2*GM_s/R_s2a_1.length());
+        const double             dt = (epoch_2-epoch_1).get_d();
         const double    maxDistance = escapeVelocity*dt;
         //
-        const orsa::Vector u_L = (R_a_1 - R_o_2.getRef()).normalized();
-        const double         L = (R_a_1 - R_o_2.getRef()).length();
+        const orsa::Vector u_L = (R_a_1 - R_o_2).normalized();
+        const double         L = (R_a_1 - R_o_2).length();
         const double     gamma = asin(maxDistance/L);
-        const double      beta = acos(u_o2a_2.getRef()*u_L);
+        const double      beta = acos(u_o2a_2*u_L);
         //
-        const double sigma_corrected_beta = beta - sigma_factor.getRef()*(sigma_1_arcsec.getRef()+sigma_2_arcsec.getRef())*orsa::arcsecToRad();
+        const double sigma_corrected_beta = beta - sigma_factor*(sigma_1_arcsec+sigma_2_arcsec)*orsa::arcsecToRad();
         const double delta = L*sin(sigma_corrected_beta);
         // const double delta = L*sin(beta);
 #warning add check on beta smaller than factor simga...
@@ -437,10 +437,10 @@ int main(int argc, char **argv) {
         // assign RMS values
         vecRMS.resize(allOpticalObs.size());
         for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
-            double RMS = obsRMS[allOpticalObs[k]->obsCode.getRef()];
+            double RMS = obsRMS[allOpticalObs[k]->obsCode];
             if (RMS==0.0) {
                 // if not set (that is, equal to 0.0), use default
-                ORSA_DEBUG("cannot find nominal accuracy for observatory code [%s], please update file obsRMS.dat",allOpticalObs[k]->obsCode.getRef().c_str());
+                ORSA_DEBUG("cannot find nominal accuracy for observatory code [%s], please update file obsRMS.dat",allOpticalObs[k]->obsCode.c_str());
 #warning default RMS=?   (use automatic, floating RMS?)
                 RMS=5.0;
             }
@@ -510,7 +510,7 @@ int main(int argc, char **argv) {
         
         // observation times must be sorted
         for (unsigned int j=1; j<allOpticalObs.size(); ++j) {
-            if (allOpticalObs[j]->epoch.getRef() <= allOpticalObs[j-1]->epoch.getRef()) {
+            if (allOpticalObs[j]->epoch <= allOpticalObs[j-1]->epoch) {
                 ORSA_DEBUG("problem: observation times not sorted");
                 exit(0);
             }
@@ -589,7 +589,7 @@ int main(int argc, char **argv) {
         
         for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
             
-            const orsa::Time t = allOpticalObs[j]->epoch.getRef();
+            const orsa::Time t = allOpticalObs[j]->epoch;
             
             if (!bg->getInterpolatedPosVel(R_s[j],V_s[j],sun.get(),t)) {
                 ORSA_DEBUG("problems... t:");
@@ -612,7 +612,7 @@ int main(int argc, char **argv) {
             for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
                 for (unsigned int k=j+1; k<allOpticalObs.size(); ++k) {
                     const double angle = acos(u_o2a[j]*u_o2a[k]);
-                    const double dt = (allOpticalObs[k]->epoch.getRef()-allOpticalObs[j]->epoch.getRef()).get_d();
+                    const double dt = (allOpticalObs[k]->epoch-allOpticalObs[j]->epoch).get_d();
                     if (k-j==1) {
                         ORSA_DEBUG("angle between [%02i] and [%02i] obs. = %8.3f [arcsec]   dt = %8.1f [s]   rate = %8.3f [arcsec/s]",
                                    j,
@@ -639,8 +639,8 @@ int main(int argc, char **argv) {
                     ORSA_DEBUG("max range distance for obs [%02i] and [%02i] = %8.3f [AU]",
                                j,
                                k,
-                               orsa::FromUnits(mmr->getMaximumRange(R_s[j],R_o[j],u_o2a[j],vecRMS[j],allOpticalObs[j]->epoch.getRef(),
-                                                                    R_s[k],R_o[k],u_o2a[k],vecRMS[k],allOpticalObs[k]->epoch.getRef(),
+                               orsa::FromUnits(mmr->getMaximumRange(R_s[j],R_o[j],u_o2a[j],vecRMS[j],allOpticalObs[j]->epoch,
+                                                                    R_s[k],R_o[k],u_o2a[k],vecRMS[k],allOpticalObs[k]->epoch,
                                                                     orsaSolarSystem::Data::GMSun(),
                                                                     3.0),orsa::Unit::AU,-1));
                     
@@ -689,7 +689,7 @@ int main(int argc, char **argv) {
                         R_s2an[j] = R_an[j] - R_s[j];
                         if (j==z2 && range_99[z2]->size()>=2) {
                             const double escapeVelocity = sqrt(2*orsaSolarSystem::Data::GMSun()/R_s2an[z1].length());
-                            const double dt = (allOpticalObs[z2]->epoch.getRef()-allOpticalObs[z1]->epoch.getRef()).get_d();
+                            const double dt = (allOpticalObs[z2]->epoch-allOpticalObs[z1]->epoch).get_d();
                             const double maxDistance = escapeVelocity*dt;
                             if ((R_s2an[z2]-R_s2an[z1]).length() > maxDistance) {
                                 // no possible bound solutions here
@@ -701,7 +701,7 @@ int main(int argc, char **argv) {
                     if (j==z2 && range_99[z2]->size()<2) {
                         // enforce bound orbit on z2
                         const double escapeVelocity = sqrt(2*orsaSolarSystem::Data::GMSun()/R_s2an[z1].length());
-                        const double dt = (allOpticalObs[z2]->epoch.getRef()-allOpticalObs[z1]->epoch.getRef()).get_d();
+                        const double dt = (allOpticalObs[z2]->epoch-allOpticalObs[z1]->epoch).get_d();
                         const double maxDistance = escapeVelocity*dt;
                         //
                         rng->gsl_ran_dir_2d(&dx,&dy);
@@ -729,15 +729,15 @@ int main(int argc, char **argv) {
                 if (!bound) continue;
             }
             
-            V_s2an[z1] = mov->getOrbitalVelocity(R_s2an[z1],allOpticalObs[z1]->epoch.getRef(),
-                                                 R_s2an[z2],allOpticalObs[z2]->epoch.getRef(),
+            V_s2an[z1] = mov->getOrbitalVelocity(R_s2an[z1],allOpticalObs[z1]->epoch,
+                                                 R_s2an[z2],allOpticalObs[z2]->epoch,
                                                  orsaSolarSystem::Data::GMSun());
             
             orsaSolarSystem::OrbitWithEpoch tmpOrbit;
             tmpOrbit.compute(R_s2an[z1],
                              V_s2an[z1],
                              orsaSolarSystem::Data::GMSun());
-            tmpOrbit.epoch = allOpticalObs[z1]->epoch.getRef();
+            tmpOrbit.epoch = allOpticalObs[z1]->epoch;
             const orsaSolarSystem::OrbitWithEpoch O_s2an_g = tmpOrbit;
             
             // orsa::print(O_v2sn_g);
@@ -752,9 +752,9 @@ int main(int argc, char **argv) {
             double chisq=0.0;
             orsa::Vector rOrbit, vOrbit;
             for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                const orsa::Time t = allOpticalObs[j]->epoch.getRef();
+                const orsa::Time t = allOpticalObs[j]->epoch;
                 tmpOrbit = O_s2an_g;
-                tmpOrbit.M = fmod(O_s2an_g.M + twopi()*(t-O_s2an_g.epoch.getRef()).get_d()/O_s2an_g.period(),orsa::twopi());
+                tmpOrbit.M = fmod(O_s2an_g.M + twopi()*(t-O_s2an_g.epoch).get_d()/O_s2an_g.period(),orsa::twopi());
                 tmpOrbit.relativePosVel(rOrbit,vOrbit);
                 rOrbit += R_s[j];
                 vOrbit += V_s[j];
@@ -817,13 +817,13 @@ int main(int argc, char **argv) {
                 orsa::Vector rOrbit, vOrbit;
                 O_s2an_g.relativePosVel(rOrbit,vOrbit);
                 IBPS ibps;    
-                ibps.time = O_s2an_g.epoch.getRef();
+                ibps.time = O_s2an_g.epoch;
                 //
                 ibps.inertial = new PointLikeConstantInertialBodyProperty(0);
                 //
                 ibps.translational = new DynamicTranslationalBodyProperty;
 #warning make sure epoch(z1) == orbit epoch!
-                if (allOpticalObs[z1]->epoch.getRef() != ibps.time.getRef()) {
+                if (allOpticalObs[z1]->epoch != ibps.time) {
                     ORSA_DEBUG("problems!");
                 }
                 ibps.translational->setPosition(rOrbit+R_s[z1]);
@@ -890,7 +890,7 @@ int main(int argc, char **argv) {
                     osg::ref_ptr< orsa::Statistic<double> > stat_H = new orsa::Statistic<double>;
                     for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
                         if (allOpticalObs[j]->mag.isSet()) {
-                            stat_H->insert(absoluteMagnitude(allOpticalObs[j]->mag.getRef(),
+                            stat_H->insert(absoluteMagnitude(allOpticalObs[j]->mag,
                                                              0.15,
                                                              acos((R_o[j]-R_an[j]).normalized()*(R_s[j]-R_an[j]).normalized()),
                                                              R_o2an[j].length(),
@@ -904,7 +904,7 @@ int main(int argc, char **argv) {
                 double EarthMOID;
                 {
                     orsa::Orbit EarthOrbit;
-                    EarthOrbit.compute(earth.get(),sun.get(),bg.get(),O_s2an_g.epoch.getRef());
+                    EarthOrbit.compute(earth.get(),sun.get(),bg.get(),O_s2an_g.epoch);
                     double M1, M2;
                     orsa::MOID(EarthMOID,
                                M1,
@@ -977,8 +977,8 @@ int main(int argc, char **argv) {
     
     osg::ref_ptr<orsa::IntegratorRadau> radau = new orsa::IntegratorRadau;
     radau->integrate(bg.get(),
-                     allOpticalObs[0]->epoch.getRef(),
-                     allOpticalObs[allOpticalObs.size()-1]->epoch.getRef()+orsa::Time(0,0,0,0,0),
+                     allOpticalObs[0]->epoch,
+                     allOpticalObs[allOpticalObs.size()-1]->epoch+orsa::Time(0,0,0,0,0),
                      orsa::Time(0,0,5,0,0));
     
     {
