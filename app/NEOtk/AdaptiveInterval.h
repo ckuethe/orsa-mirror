@@ -20,22 +20,22 @@ public:
     T t;
 public:
     inline bool operator == (const AdaptiveIntervalElement & rhs) const {
-        return (position.getRef() == rhs.position.getRef());
+        return (position == rhs.position);
     }
     inline bool operator != (const AdaptiveIntervalElement & rhs) const {
-        return (position.getRef() != rhs.position.getRef());
+        return (position != rhs.position);
     }
     inline bool operator <  (const AdaptiveIntervalElement & rhs) const {
-        return (position.getRef() <  rhs.position.getRef());
+        return (position <  rhs.position);
     }
     inline bool operator >  (const AdaptiveIntervalElement & rhs) const {
-        return (position.getRef() >  rhs.position.getRef());
+        return (position >  rhs.position);
     }
     inline bool operator <= (const AdaptiveIntervalElement & rhs) const {
-        return (position.getRef() <= rhs.position.getRef());
+        return (position <= rhs.position);
     }
     inline bool operator >= (const AdaptiveIntervalElement & rhs) const {
-        return (position.getRef() >= rhs.position.getRef());
+        return (position >= rhs.position);
     }
 };
 
@@ -70,26 +70,26 @@ public:
         if (data->size()>=2) {
             /*
                #warning cache values, to speed-up this part 
-               // const double    tmpMin = forcePositive ? std::max(0.0,data->min().position.getRef()) : data->min().position.getRef();
+               // const double    tmpMin = forcePositive ? std::max(0.0,data->min().position) : data->min().position;
                // forcePositive test is not needed, because of the stronger check below agains the intial min and max
-               const double    tmpMin = data->min().position.getRef();
-               const double    tmpMax = data->max().position.getRef();
+               const double    tmpMin = data->min().position;
+               const double    tmpMax = data->max().position;
                const double        mu = 0.5*(tmpMin+tmpMax);
                const double     delta = (tmpMax-tmpMin)/(2*pow(probability,1.0/data->size()));
                const double sampleMin = std::max(mu-delta,initialMin);
                const double sampleMax = std::min(mu+delta,initialMax);
             */
-            return (sampleMin.getRef()+(sampleMax.getRef()-sampleMin.getRef())*rnd->gsl_rng_uniform());
+            return (sampleMin+(sampleMax-sampleMin)*rnd->gsl_rng_uniform());
         } else {
             return (initialMin+(initialMax-initialMin)*rnd->gsl_rng_uniform());
         }
     }
 public:
     void insert(const AdaptiveIntervalElement<T> & e) {
-        if (e.level.getRef() < threshold) {
+        if (e.level < threshold) {
             /* ORSA_DEBUG("inserting pos: %g  level: %g",
-               orsa::FromUnits(e.position.getRef(),orsa::Unit::AU,-1),
-               e.level.getRef());
+               orsa::FromUnits(e.position,orsa::Unit::AU,-1),
+               e.level);
             */
             data->insert(e,false,false);
             update();
@@ -97,8 +97,8 @@ public:
     }
 public:
     void update() {
-        const double    tmpMin = data->min().position.getRef();
-        const double    tmpMax = data->max().position.getRef();
+        const double    tmpMin = data->min().position;
+        const double    tmpMax = data->max().position;
         //
         const double        mu = 0.5*(tmpMin+tmpMax);
         const double     delta = (tmpMax-tmpMin)/(2*pow(probability,1.0/data->size()));
