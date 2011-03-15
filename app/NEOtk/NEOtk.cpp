@@ -179,8 +179,7 @@ public:
         par->insert("Vn",circularVelocity,velocityStep);
         //
         setMultiminParameters(par.get());
-
-#warning tune pars here
+        
         if (!run_nmsimplex(128,1.0e-2)) {
             // ORSA_WARNING("the search did not converge.");
         }
@@ -203,7 +202,6 @@ protected:
 
 // multimin maximum range
 
-#warning CONTINUE FROM HERE!!
 class MultiminMaximumRange : public orsa::Multimin {
 public:
     double fun(const orsa::MultiminParameters * par) const {
@@ -223,19 +221,62 @@ public:
         const orsa::Vector R_s2a_1 = R_a_1 - R_s_1;
         //
         const double escapeVelocity = sqrt(2*GM_s/R_s2a_1.length());
-        const double             dt = (epoch_2-epoch_1).get_d();
+        const double             dt = fabs((epoch_2-epoch_1).get_d());
         const double    maxDistance = escapeVelocity*dt;
         //
         const orsa::Vector u_L = (R_a_1 - R_o_2).normalized();
         const double         L = (R_a_1 - R_o_2).length();
-        const double     gamma = asin(maxDistance/L);
-        const double      beta = acos(u_o2a_2*u_L);
+
+
+        /* if (fabs(maxDistance/L) > 1.0) {
+           return 1.0e20;
+           }
+        */
+        // const double     gamma = asin(maxDistance/L);
+        const double gamma = (fabs(maxDistance/L)<1.0 ? asin(maxDistance/L) : orsa::pi());
+        
+        const double  beta = acos(u_o2a_2*u_L);
         //
-        const double sigma_corrected_beta = beta - sigma_factor*(sigma_1_arcsec+sigma_2_arcsec)*orsa::arcsecToRad();
-        const double delta = L*sin(sigma_corrected_beta);
-        // const double delta = L*sin(beta);
-#warning add check on beta smaller than factor simga...
-        return orsa::square(delta-maxDistance);
+        const double dBeta = sigma_factor*(sigma_1_arcsec+sigma_2_arcsec)*orsa::arcsecToRad();
+        //
+        /* if (dBeta > beta) {
+           return 1.0e20;
+           }
+        */
+        //
+        // const double   newBeta = beta - dBeta;
+        
+        /* ORSA_DEBUG("beta: %g [deg]   dBeta: %g [deg]   gamma: %g [deg]   R_o2a_1: %g [AU]   retVal: %g",
+           beta*orsa::radToDeg(),
+           dBeta*orsa::radToDeg(),
+           gamma*orsa::radToDeg(),
+           orsa::FromUnits(par->get("R_o2a_1"),orsa::Unit::AU,-1),
+           orsa::square((beta-dBeta-gamma)*orsa::radToDeg()));
+        */
+        
+        
+        /* 
+           const double dbg = fabs(beta-gamma);
+           if (dBeta > dbg) {
+           return orsa::square(dBeta-dbg);
+           } else {
+           return 
+           }
+        */
+        
+        return orsa::square(beta-dBeta-gamma);
+        
+        // return orsa::square(beta-dBeta-gamma);
+        
+        /* 
+           const double delta = L*fabs(sin(newBeta));
+           // const double delta = L*sin(beta);
+           
+           return orsa::square(delta-maxDistance);
+        */
+        
+        
+        
     }
 public:
     double getMaximumRange(const orsa::Vector & R_s_1_,
@@ -264,15 +305,29 @@ public:
         //
         GM_s    = GM_s_;
         sigma_factor = sigma_factor_;
+
+        if ( (sigma_1_arcsec <= 0.0) ||
+             (sigma_2_arcsec <= 0.0) ||
+             (sigma_factor   <= 0.0) ) {
+            ORSA_DEBUG("problems...");
+            exit(0);
+        }
+
+        // initial check
+        if (acos(u_o2a_1*u_o2a_2) < sigma_factor*(sigma_1_arcsec+sigma_2_arcsec)*orsa::arcsecToRad()) {
+            ORSA_DEBUG("obs. uncertainty is larger than their distance, skipping...");
+            return 0.0;
+        }
         
         osg::ref_ptr<orsa::MultiminParameters> par = new orsa::MultiminParameters;
-        par->insert("R_o2a_1",orsa::FromUnits(1.00,orsa::Unit::AU),orsa::FromUnits(1.0e-6,orsa::Unit::AU));
+        par->insert("R_o2a_1",
+                    orsa::FromUnits( 1.00,orsa::Unit::AU),
+                    orsa::FromUnits( 0.01,orsa::Unit::AU));
         par->setRangeMin("R_o2a_1",0.0);
         //
         setMultiminParameters(par.get());
         
-#warning tune pars here
-        if (!run_nmsimplex(1024,1.0e-3)) {
+        if (!run_nmsimplex(1024,1.0e-2)) {
             // ORSA_WARNING("the search did not converge.");
         }
         
@@ -463,40 +518,10 @@ int main(int argc, char **argv) {
         
         /***** INPUT *****/
         
-        const int randomSeed = 71790;
+        const double minAdaptiveRange = orsa::FromUnits( 0.0,orsa::Unit::AU);
+        const double maxAdaptiveRange = orsa::FromUnits(10.0,orsa::Unit::AU);
         
-        // keep these in sync!
-        typedef double AdaptiveIntervalTemplateType;
-        typedef AdaptiveInterval<AdaptiveIntervalTemplateType> AdaptiveIntervalType;
-        typedef AdaptiveIntervalElement<AdaptiveIntervalTemplateType> AdaptiveIntervalElementType;
-        /* osg::ref_ptr<AdaptiveIntervalType> range_99 =
-           new AdaptiveIntervalType(orsa::FromUnits(0.00,orsa::Unit::AU),
-           orsa::FromUnits(3.00,orsa::Unit::AU),
-           0.95,
-           chisq_99,
-           true,
-           randomSeed+234);
-        */
-        std::vector< osg::ref_ptr<AdaptiveIntervalType> > range_99;
-        range_99.resize(allOpticalObs.size());
-        for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
-            range_99[k] = new AdaptiveIntervalType(orsa::FromUnits( 0.000,orsa::Unit::AU),
-                                                   orsa::FromUnits( 2.000,orsa::Unit::AU),
-                                                   0.95,
-                                                   chisq_99,
-                                                   randomSeed+234);
-        }
-        //
-        /* std::vector< osg::ref_ptr<AdaptiveIntervalType> > rate_99;
-           rate_99.resize(allOpticalObs.size());
-           for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
-           rate_99[k] = new AdaptiveIntervalType(orsa::FromUnits(0.10,orsa::Unit::AU),
-           orsa::FromUnits(0.12,orsa::Unit::AU),
-           0.95,
-           chisq_99,
-           randomSeed+234);
-           }
-        */
+        const int randomSeed = 71790;
         
         /***** END INPUT *****/
         
@@ -631,21 +656,101 @@ int main(int argc, char **argv) {
             }
         }
         
+        std::vector< orsa::Cache<double> > vecMaxRange;
+        vecMaxRange.resize(allOpticalObs.size());
         {
             // test: determine the maximum range for each observation
             osg::ref_ptr<MultiminMaximumRange> mmr = new MultiminMaximumRange;
+            
             for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                for (unsigned int k=j+1; k<allOpticalObs.size(); ++k) {
-                    ORSA_DEBUG("max range distance for obs [%02i] and [%02i] = %8.3f [AU]",
-                               j,
-                               k,
-                               orsa::FromUnits(mmr->getMaximumRange(R_s[j],R_o[j],u_o2a[j],vecRMS[j],allOpticalObs[j]->epoch,
-                                                                    R_s[k],R_o[k],u_o2a[k],vecRMS[k],allOpticalObs[k]->epoch,
-                                                                    orsaSolarSystem::Data::GMSun(),
-                                                                    3.0),orsa::Unit::AU,-1));
+                for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+                    if (j==k) continue;
+                    const double maxRange = mmr->getMaximumRange(R_s[j],R_o[j],u_o2a[j],vecRMS[j],allOpticalObs[j]->epoch,
+                                                                 R_s[k],R_o[k],u_o2a[k],vecRMS[k],allOpticalObs[k]->epoch,
+                                                                 orsaSolarSystem::Data::GMSun(),
+                                                                 3.0);
+                    
+                    // maxRange is only for first set of arguments == [j]
+                    // vecMaxRange[j].setIfLarger(maxRange);
+                    if (maxRange > 0.0) {
+                        vecMaxRange[j].setIfLarger(maxRange);
+                    }
+                    
+                    /* ORSA_DEBUG("max range distance for obs [%02i] and [%02i] = %8.3g [AU]",
+                       j,
+                       k,
+                       orsa::FromUnits(maxRange,orsa::Unit::AU,-1));
+                    */
                     
                 }
+                // ORSA_DEBUG("set: %i",vecMaxRange[j].isSet());
+                if (vecMaxRange[j].isSet()) {
+                    ORSA_DEBUG("max range distance for obs [%02i] = %8.3f [AU]",
+                               j,
+                               orsa::FromUnits(vecMaxRange[j],orsa::Unit::AU,-1));
+                } else {
+                    ORSA_DEBUG("vecMaxRange[%i] not set??",j);
+                }
             }
+
+            // try to reduce vecMaxRange values:
+            // take the smallest, and reduce all others according to V_escape*dt....
+            unsigned int indexMin = 0;
+            for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+                if (vecMaxRange[k] < vecMaxRange[indexMin]) indexMin = k;
+            }
+            ORSA_DEBUG("SMALLEST max range distance for obs [%02i] = %8.3f [AU]",
+                       indexMin,
+                       orsa::FromUnits(vecMaxRange[indexMin],orsa::Unit::AU,-1));
+            
+            const orsa::Vector R_a = R_o[indexMin] + u_o2a[indexMin]*vecMaxRange[indexMin];
+            const double escapeVelocity = sqrt(2*orsaSolarSystem::Data::GMSun()/(R_a-R_s[indexMin]).length());
+            
+            for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+                if (j==indexMin) continue;
+                const double rangeCenter = (R_a-R_o[j])*u_o2a[j];
+                
+                const double minDistance = (R_o[j]+u_o2a[j]*rangeCenter-R_a).length();
+                const double dt = fabs((allOpticalObs[j]->epoch-allOpticalObs[indexMin]->epoch).get_d());
+                const double maxDistance = escapeVelocity*dt;
+                if (minDistance > maxDistance) {
+                    /* ORSA_DEBUG("------------- minD: %g   maxD: %g",
+                       FromUnits(minDistance,orsa::Unit::AU,-1),
+                       FromUnits(maxDistance,orsa::Unit::AU,-1));
+                    */
+                    if (rangeCenter > 0.0) {
+                        // now setting if SMALLER!
+                        vecMaxRange[j].setIfSmaller(rangeCenter);
+                    }
+                } else {
+                    const double rangeDelta  = sqrt(orsa::square(maxDistance)-orsa::square(minDistance));
+                    const double newRange = rangeCenter+rangeDelta;
+                    if (newRange > 0.0) {
+                        // now setting if SMALLER!
+                        vecMaxRange[j].setIfSmaller(rangeCenter+rangeDelta);
+                    }
+                }
+            }
+            
+            for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+                ORSA_DEBUG("REDUCED max range distance for obs [%02i] = %8.3f [AU]",
+                           j,
+                           orsa::FromUnits(vecMaxRange[j],orsa::Unit::AU,-1));
+            }                
+        }
+        
+        // keep these in sync!
+        typedef double AdaptiveIntervalTemplateType;
+        typedef AdaptiveInterval<AdaptiveIntervalTemplateType> AdaptiveIntervalType;
+        typedef AdaptiveIntervalElement<AdaptiveIntervalTemplateType> AdaptiveIntervalElementType;
+        std::vector< osg::ref_ptr<AdaptiveIntervalType> > range_99;
+        range_99.resize(allOpticalObs.size());
+        for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+            range_99[k] = new AdaptiveIntervalType(minAdaptiveRange,
+                                                   std::min(double(vecMaxRange[k]),maxAdaptiveRange),
+                                                   0.95,
+                                                   chisq_99,
+                                                   randomSeed+234);
         }
         
         osg::ref_ptr<MultiminOrbitalVelocity> mov = new MultiminOrbitalVelocity;
