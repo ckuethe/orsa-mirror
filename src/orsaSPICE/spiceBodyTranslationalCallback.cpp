@@ -14,20 +14,20 @@ SpiceBodyTranslationalCallback::SpiceBodyTranslationalCallback(const SpiceBodyTr
     orsa::PrecomputedTranslationalBodyProperty(),
     _name(sbtc._name) { 
     if (sbtc._previousTime.isSet()) {
-        _position     = sbtc._position.getRef();
-        _velocity     = sbtc._velocity.getRef();
-        _previousTime = sbtc._previousTime.getRef();
+        _position     = sbtc._position;
+        _velocity     = sbtc._velocity;
+        _previousTime = sbtc._previousTime;
     }
 }
 
-orsa::Vector SpiceBodyTranslationalCallback::position() const { return _position.getRef(); }
+orsa::Vector SpiceBodyTranslationalCallback::position() const { return _position; }
 
-orsa::Vector SpiceBodyTranslationalCallback::velocity() const { return _velocity.getRef(); }
+orsa::Vector SpiceBodyTranslationalCallback::velocity() const { return _velocity; }
 
 bool SpiceBodyTranslationalCallback::update(const orsa::Time & t) {
   
     if (_previousTime.isSet()) {
-        if (_previousTime.getRef() == t) {
+        if (_previousTime == t) {
             // ORSA_DEBUG("cached...");
             return true;
         }    

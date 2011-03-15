@@ -46,7 +46,7 @@ bool MPCObservationsFile::processLine(const char * line) {
     s_discovery.assign(line,12,1); 
     removeAllSpaces(s_discovery);
     if (select_discovery.isSet()) {
-        if ((strlen(s_discovery.c_str()) == 0) && (select_discovery.getRef()==true)) {
+        if ((strlen(s_discovery.c_str()) == 0) && (select_discovery==true)) {
             return false;
         }
     }
@@ -54,8 +54,8 @@ bool MPCObservationsFile::processLine(const char * line) {
     s_obsCode.assign(line,77,3);
     removeLeadingAndTrailingSpaces(s_obsCode);
     if (select_obsCode.isSet()) {
-        if (s_obsCode != select_obsCode.getRef()) {
-            // ORSA_DEBUG("--OUT--   select: [%s] read: [%s]",select_obsCode.getRef().c_str(),s_obsCode.c_str());
+        if (s_obsCode != select_obsCode) {
+            // ORSA_DEBUG("--OUT--   select: [%s] read: [%s]",select_obsCode.c_str(),s_obsCode.c_str());
             return false;
         }
     }
@@ -70,13 +70,13 @@ bool MPCObservationsFile::processLine(const char * line) {
                                                orsaSolarSystem::TS_UTC);
         // orsa::print(epoch);
         if (select_startEpoch.isSet()) {
-            if (epoch < select_startEpoch.getRef()) {
+            if (epoch < select_startEpoch) {
                 // ORSA_DEBUG("--OUT--");
                 return false;
             }
         }
         if (select_stopEpoch.isSet()) {
-            if (epoch > select_stopEpoch.getRef()) {
+            if (epoch > select_stopEpoch) {
                 // ORSA_DEBUG("--OUT--");
                 return false;
             }
@@ -165,7 +165,7 @@ bool MPCObservationsFile::processLine(const char * line) {
        workObs->epoch = 
        orsaSolarSystem::FromTimeScale(orsaSolarSystem::gregorTime(y,m,d),
        orsaSolarSystem::TS_UTC);
-       // orsa::print(workObs->epoch.getRef());
+       // orsa::print(workObs->epoch);
        }
     */
     //
@@ -183,7 +183,7 @@ bool MPCObservationsFile::processLine(const char * line) {
                 gmp_sscanf(s_ra.c_str(),"%d %d %lf",&h,&m,&s);
                 Angle tmp; tmp.setHMS(h,m,s);
                 opticalObservation->ra = tmp;
-                // orsa::print(workObs->ra.getRef());
+                // orsa::print(workObs->ra);
             }
       
             {
@@ -193,7 +193,7 @@ bool MPCObservationsFile::processLine(const char * line) {
                 gmp_sscanf(s_dec.c_str(),"%d %d %lf",&d,&p,&s);
                 Angle tmp; tmp.setDPS(d,p,s,sign);
                 opticalObservation->dec = tmp;
-                // orsa::print(workObs->dec.getRef());
+                // orsa::print(workObs->dec);
             }
       
             if (strlen(s_mag.c_str()) > 0) {
@@ -235,7 +235,7 @@ bool MPCObservationsFile::processLines(const char * line1, const char * line2) {
     s_number.assign(line2,0,5); 
     removeLeadingAndTrailingSpaces(s_number);
     if (_data[_data.size()-1]->number.isSet()) {
-        if (MPC_packedNumber(s_number) != _data[_data.size()-1]->number.getRef()) {
+        if (MPC_packedNumber(s_number) != _data[_data.size()-1]->number) {
             // ORSA_DEBUG("found data inconsistency");
             twoLinesCall=false;
             return false;
@@ -244,7 +244,7 @@ bool MPCObservationsFile::processLines(const char * line1, const char * line2) {
     s_designation.assign(line2,5,7); 
     removeLeadingAndTrailingSpaces(s_designation);
     if (_data[_data.size()-1]->designation.isSet()) {
-        if (s_designation != _data[_data.size()-1]->designation.getRef()) {
+        if (s_designation != _data[_data.size()-1]->designation) {
             // ORSA_DEBUG("found data inconsistency");
             twoLinesCall=false;
             return false;
@@ -260,10 +260,10 @@ bool MPCObservationsFile::processLines(const char * line1, const char * line2) {
         const orsa::Time epoch =
             orsaSolarSystem::FromTimeScale(orsaSolarSystem::gregorTime(y,m,d),
                                            orsaSolarSystem::TS_UTC);
-        if (epoch != _data[_data.size()-1]->epoch.getRef()) {
+        if (epoch != _data[_data.size()-1]->epoch) {
             // ORSA_DEBUG("found data inconsistency:");
             /* orsa::print(epoch);
-               orsa::print(_data[_data.size()-1]->epoch.getRef());
+               orsa::print(_data[_data.size()-1]->epoch);
                ORSA_DEBUG("line1: [%s]",line1);
                ORSA_DEBUG("line2: [%s]",line2);
             */
@@ -273,7 +273,7 @@ bool MPCObservationsFile::processLines(const char * line1, const char * line2) {
     }
     s_obsCode.assign(line2,77,3);
     removeLeadingAndTrailingSpaces(s_obsCode);
-    if (s_obsCode != _data[_data.size()-1]->obsCode.getRef()) {
+    if (s_obsCode != _data[_data.size()-1]->obsCode) {
         // ORSA_DEBUG("found data inconsistency");
         twoLinesCall=false;
         return false;

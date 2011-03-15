@@ -48,13 +48,13 @@ namespace orsa {
            // this could be more efficient...
            _data[p] = int_pow(_x,p);
            }
-           return _data[p].getRef();
+           return _data[p];
            }
         */
         //
         inline double get(const int p) const {      
             if (_data[p].isSet()) {
-                return _data[p].getRef();
+                return _data[p];
             } else {
                 if (p > 0) {
                     _data[p] = get(p-1) * _x;
@@ -63,7 +63,7 @@ namespace orsa {
                 } else {
                     _data[p] = 1;
                 }
-                return _data[p].getRef();
+                return _data[p];
             }
         }
     protected:
@@ -138,7 +138,7 @@ namespace orsa {
        if (!matrixToEulerAngles(psi,
        theta,
        phi,
-       _m.getRef())) {
+       _m)) {
        ORSA_DEBUG("problems...");
        }
      

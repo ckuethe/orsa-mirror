@@ -396,28 +396,28 @@ namespace orsa {
         void unlock() { }
     public:
         orsa::Vector position() const { 
-            // ORSA_DEBUG("_position: %.20e",_position.getRef().length());
-            // orsa::print(_position.getRef());
-            return _position.getRef();
+            // ORSA_DEBUG("_position: %.20e",_position.length());
+            // orsa::print(_position);
+            return _position;
         }
     public:
         orsa::Vector velocity() const {
-            // ORSA_DEBUG("_velocity: %.20e",_velocity.getRef().length());
-            // orsa::print(_velocity.getRef());
-            return _velocity.getRef();
+            // ORSA_DEBUG("_velocity: %.20e",_velocity.length());
+            // orsa::print(_velocity);
+            return _velocity;
         }
     public:
         bool setPosition(const orsa::Vector & r) { 
             _position = r;
-            // ORSA_DEBUG("_position: %.20e",_position.getRef().length());
-            // orsa::print(_position.getRef());
+            // ORSA_DEBUG("_position: %.20e",_position.length());
+            // orsa::print(_position);
             return true;
         }
     public: 
         bool setVelocity(const orsa::Vector & v) {
             _velocity = v;
-            // ORSA_DEBUG("_velocity: %.20e",_velocity.getRef().length());
-            // orsa::print(_velocity.getRef());
+            // ORSA_DEBUG("_velocity: %.20e",_velocity.length());
+            // orsa::print(_velocity);
             return true;
         }
     public:
@@ -511,19 +511,19 @@ namespace orsa {
     public:
         bool get(orsa::Quaternion & q,
                  orsa::Vector     & omega) const {
-            q     = _q.getRef();
-            omega = _omega.getRef();
+            q     = _q;
+            omega = _omega;
             return true;
         }
     public:
-        orsa::Quaternion getQ()     const { return _q.getRef(); }
-        orsa::Vector     getOmega() const { return _omega.getRef(); }
+        orsa::Quaternion getQ()     const { return _q; }
+        orsa::Vector     getOmega() const { return _omega; }
     public:
         bool set(const orsa::Quaternion & q,
                  const orsa::Vector     & omega) {
             _q     = q;
             _omega = omega;
-            // ORSA_DEBUG("omega: %Fg",_omega.getRef().length());
+            // ORSA_DEBUG("omega: %Fg",_omega.length());
             return true;
         }
     public:
@@ -615,27 +615,27 @@ namespace orsa {
         // time ordering, needed when used in orsa::Interval<>
     public:
         inline bool operator == (const IBPS & rhs) const {
-            return (time.getRef() == rhs.time.getRef());
+            return (time == rhs.time);
         }
     public:
         inline bool operator != (const IBPS & rhs) const {
-            return (time.getRef() != rhs.time.getRef());
+            return (time != rhs.time);
         }
     public:
         inline bool operator < (const IBPS & rhs) const {
-            return (time.getRef() < rhs.time.getRef());
+            return (time < rhs.time);
         }
     public:
         inline bool operator > (const IBPS & rhs) const {
-            return (time.getRef() > rhs.time.getRef());
+            return (time > rhs.time);
         }
     public:
         inline bool operator <= (const IBPS & rhs) const {
-            return (time.getRef() <= rhs.time.getRef());
+            return (time <= rhs.time);
         }
     public:
         inline bool operator >= (const IBPS & rhs) const {
-            return (time.getRef() >= rhs.time.getRef());
+            return (time >= rhs.time);
         }
     };
   
@@ -672,20 +672,20 @@ namespace orsa {
            public:
            virtual const double & getMass() const {
            if (_mass.isSet()) {
-           return _mass.getRef();
+           return _mass;
            } else {
            ORSA_ERROR("mass has never been set for this Body.");
            }
-           return _mass.getRef();
+           return _mass;
            }
            public:
            virtual const double & getMu() const {
            if (_mu.isSet()) {
-           return _mu.getRef();
+           return _mu;
            } else {
            ORSA_ERROR("mu has never been set for this Body.");
            }
-           return _mu.getRef(); 
+           return _mu; 
            }
            protected:
            orsa::Cache<double> _mass;
@@ -708,7 +708,7 @@ namespace orsa {
         }
     public:
         const orsa::IBPS & getInitialConditions() const {
-            return _ibps.getRef();
+            return _ibps;
         }
     protected:
         orsa::Cache<orsa::IBPS> _ibps;
@@ -729,7 +729,7 @@ namespace orsa {
            if (_shape.get()) {
            return _shape->boundingRadius();
            } else if (_radius.isSet()) {
-           return _radius.getRef();
+           return _radius;
            } else {
            return 0;
            }
@@ -799,10 +799,10 @@ namespace orsa {
     public:
         bool alive(const orsa::Time & t) const {
             if (birthTime.isSet()) {
-                if (t < birthTime.getRef()) return false;
+                if (t < birthTime) return false;
             }
             if (deathTime.isSet()) {
-                if (t > deathTime.getRef()) return false;
+                if (t > deathTime) return false;
             }
             return true;
         }

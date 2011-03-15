@@ -218,7 +218,7 @@ namespace orsa {
         }
     public:
         void insert(const T & val) {
-            _v[_loop_index].set(val);
+            _v[_loop_index] = val;
             _loop_index = ((_loop_index+1)%_v.size());
             _dirty = true;
         }

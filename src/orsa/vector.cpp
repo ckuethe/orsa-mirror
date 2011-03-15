@@ -25,7 +25,7 @@ void Vector::_update_l() const {
     if (!_l2.isSet()) {
         _update_l2();
     }
-    _l = sqrt(_l2.getRef());
+    _l = sqrt(_l2);
 }
 
 void Vector::_update_l2() const {
@@ -34,19 +34,19 @@ void Vector::_update_l2() const {
 
 const double & Vector::length() const {
     if (_l.isSet()) {
-        return _l.getRef();
+        return _l;
     } else {
         _update_l();
-        return _l.getRef();
+        return _l;
     }
 }
 
 const double & Vector::lengthSquared() const {
     if (_l2.isSet()) {
-        return _l2.getRef();
+        return _l2;
     } else {
         _update_l2();
-        return _l2.getRef();
+        return _l2;
     }
 }
 
@@ -83,8 +83,8 @@ void Vector::check() const {
     orsa::check(_x);
     orsa::check(_y);
     orsa::check(_z);
-    if ( _l.isSet()) orsa::check( _l.getRef());
-    if (_l2.isSet()) orsa::check(_l2.getRef());
+    if ( _l.isSet()) orsa::check( _l);
+    if (_l2.isSet()) orsa::check(_l2);
 }
 
 bool orsa::operator == (const Vector & v1, const Vector & v2) {

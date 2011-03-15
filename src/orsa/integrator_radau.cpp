@@ -62,7 +62,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
     }
   
     if (_lastCallRejected.isSet()) {
-        if (_lastCallRejected.get()) {
+        if (_lastCallRejected) {
             niter = 6;
         }
     }
@@ -169,7 +169,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
             /* 
                x1[k] = ibps.translational->position();
                v1[k] = ibps.translational->velocity();
-               a1[k] = acc[(*bl_it).get()].getRef();
+               a1[k] = acc[(*bl_it).get()];
             */
       
             // should this be here??
@@ -741,7 +741,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                     
                     ibps.time = start + orsa::Time(FromUnits(h[j]*timestep.get_d(),Unit::MICROSECOND,-1));
 	  
-                    if (!k->alive(ibps.time.getRef())) {
+                    if (!k->alive(ibps.time)) {
                         ++bl_it;
                         ibps.unlock();
                         continue;
@@ -795,20 +795,20 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
 	  
                     ibps.tmp = true;
                     
-                    // if (!bg->insertIBPS(ibps,k,onlyIfExtending.getRef(),true)) {
+                    // if (!bg->insertIBPS(ibps,k,onlyIfExtending,true)) {
                     // when ibps.tmp is true, the varialbe onlyIfExtending passed to insert must be "false"
                     if (!bg->insertIBPS(ibps,k,false,true)) {
                         /* ORSA_DEBUG("insert failed t: %.8f [interval: %.8f -> %.8f]",
-                           orsa::FromUnits(ibps.time.getRef().get_d(),orsa::Unit::DAY,-1),
-                           orsa::FromUnits(bg->getBodyInterval((*bl_it).get())->min().time.getRef().get_d(),orsa::Unit::DAY,-1),
-                           orsa::FromUnits(bg->getBodyInterval((*bl_it).get())->max().time.getRef().get_d(),orsa::Unit::DAY,-1));
+                           orsa::FromUnits(ibps.time.get_d(),orsa::Unit::DAY,-1),
+                           orsa::FromUnits(bg->getBodyInterval((*bl_it).get())->min().time.get_d(),orsa::Unit::DAY,-1),
+                           orsa::FromUnits(bg->getBodyInterval((*bl_it).get())->max().time.get_d(),orsa::Unit::DAY,-1));
                         */
                         /* ORSA_DEBUG("problem, body: [%s]",(*bl_it).get()->getName().c_str());
                            ORSA_DEBUG("insert failed, ibps.tmp: %i, ibps.time [below]",ibps.tmp);
-                           orsa::print(ibps.time.getRef());
+                           orsa::print(ibps.time);
                            ORSA_DEBUG("interval range: min,max [below]");
-                           orsa::print(bg->getBodyInterval((*bl_it).get())->min().time.getRef());
-                           orsa::print(bg->getBodyInterval((*bl_it).get())->max().time.getRef());
+                           orsa::print(bg->getBodyInterval((*bl_it).get())->min().time);
+                           orsa::print(bg->getBodyInterval((*bl_it).get())->max().time);
                            ORSA_DEBUG("call start, start+timestep [below]");
                            orsa::print(start);
                            orsa::print(start+timestep);
@@ -949,9 +949,9 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                                    inertiaMoment.getM11(),
                                    inertiaMoment.getM22(),
                                    inertiaMoment.getM33(),
-                                   torque[k].getRef().getX(),
-                                   torque[k].getRef().getY(),
-                                   torque[k].getRef().getZ());
+                                   torque[k].getX(),
+                                   torque[k].getY(),
+                                   torque[k].getZ());
 		   
                                    phiDotDot[k]   = localPhiDotDot;
                                    thetaDotDot[k] = localThetaDotDot;
@@ -1613,9 +1613,9 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
         // timestep = copysign(pow(accuracy/tmp,0.1111111111111111),timestep_done.Getdouble()); // 1/9=0.111...
         //
     
-        next_timestep = orsa::Time(FromUnits(copysign(pow(_accuracy.getRef()/tmp, 1.0/9.0), timestep.get_d()),Unit::MICROSECOND,-1)); // 1/9=0.111...
+        next_timestep = orsa::Time(FromUnits(copysign(pow(_accuracy/tmp, 1.0/9.0), timestep.get_d()),Unit::MICROSECOND,-1)); // 1/9=0.111...
     
-        // next_timestep = orsa::Time(copysign(pow(_accuracy.getRef()/tmp, 1/double("9.0")), FromUnits(timestep.get_d(),Unit::MICROSECOND,-1))); // 1/9=0.111...
+        // next_timestep = orsa::Time(copysign(pow(_accuracy/tmp, 1/double("9.0")), FromUnits(timestep.get_d(),Unit::MICROSECOND,-1))); // 1/9=0.111...
     }
   
     /* 
@@ -1923,13 +1923,13 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
             
             ibps.tmp = false;
             
-            if (!bg->insertIBPS(ibps,k,onlyIfExtending.getRef(),false)) {
+            if (!bg->insertIBPS(ibps,k,onlyIfExtending,false)) {
                 /* ORSA_DEBUG("problem, body: [%s]",(*bl_it).get()->getName().c_str());
                    ORSA_DEBUG("insert failed, ibps.tmp: %i, ibps.time [below]",ibps.tmp);
-                   orsa::print(ibps.time.getRef());
+                   orsa::print(ibps.time);
                    ORSA_DEBUG("interval range: min,max [below]");
-                   orsa::print(bg->getBodyInterval((*bl_it).get())->min().time.getRef());
-                   orsa::print(bg->getBodyInterval((*bl_it).get())->max().time.getRef());
+                   orsa::print(bg->getBodyInterval((*bl_it).get())->min().time);
+                   orsa::print(bg->getBodyInterval((*bl_it).get())->max().time);
                    ORSA_DEBUG("call start, start+timestep [below]");
                    orsa::print(start);
                    orsa::print(start+timestep);
@@ -2108,7 +2108,7 @@ void IntegratorRadau::_init() {
   
     progressiveCleaningSteps = 32;
   
-    _accuracy.set(1.0e-8);
+    _accuracy = 1.0e-8;
   
     // for h and xc should use higher accuracy, since the double class has arbitrary precision!
   

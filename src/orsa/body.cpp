@@ -102,7 +102,7 @@ IBPS::IBPS(const IBPS & ibps) {
        this,translational.get());
     */
   
-    if (ibps.time.isSet()) time = ibps.time.getRef();
+    if (ibps.time.isSet()) time = ibps.time;
   
     if (ibps.inertial.get()) {
         if (ibps.inertial->dynamic()) {
@@ -158,11 +158,11 @@ const IBPS & IBPS::operator = (const IBPS & ibps) {
        this,translational.get());
     */
   
-    if (ibps.time.isSet()) time = ibps.time.getRef();
+    if (ibps.time.isSet()) time = ibps.time;
     /* 
        if (ibps.dynamic()) {
-       // time = ibps.time.getRef();
-       // ORSA_DEBUG("copy operator, time: %.6f",time.getRef().get_d());
+       // time = ibps.time;
+       // ORSA_DEBUG("copy operator, time: %.6f",time.get_d());
        } 
     */
     if (ibps.inertial.get()) {

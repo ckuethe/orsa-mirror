@@ -27,13 +27,13 @@ namespace orsaSolarSystem {
     public:
         bool get(orsa::Quaternion & q,
                  orsa::Vector     & omega) const { 
-            q     = _q.getRef();
-            omega = _omegaVector.getRef();
+            q     = _q;
+            omega = _omegaVector;
             return true;
         }
     public:
-        orsa::Quaternion getQ()    const  { return _q.getRef(); } 
-        orsa::Vector     getOmega() const { return _omegaVector.getRef(); }
+        orsa::Quaternion getQ()    const  { return _q; } 
+        orsa::Vector     getOmega() const { return _omegaVector; }
     public:
         bool update(const orsa::Time &);
     public:
@@ -64,13 +64,13 @@ namespace orsaSolarSystem {
     public:
         bool get(orsa::Quaternion & q,
                  orsa::Vector     & omega) const { 
-            q     = _q.getRef();
-            omega = _omegaVector.getRef();
+            q     = _q;
+            omega = _omegaVector;
             return true;
         }
     public:
-        orsa::Quaternion getQ()    const  { return _q.getRef(); } 
-        orsa::Vector     getOmega() const { return _omegaVector.getRef(); }
+        orsa::Quaternion getQ()    const  { return _q; } 
+        orsa::Vector     getOmega() const { return _omegaVector; }
     public:
         bool update(const orsa::Time &);
     public:

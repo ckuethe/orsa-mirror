@@ -36,7 +36,7 @@ ConstantZRotationEcliptic_RotationalBodyProperty::ConstantZRotationEcliptic_Rota
 bool ConstantZRotationEcliptic_RotationalBodyProperty::update(const orsa::Time & t) {
   
     if (_previousTime.isSet()) {
-        if (_previousTime.getRef() == t) {
+        if (_previousTime == t) {
             // ORSA_DEBUG("cached...");
             return true;
         }    
@@ -86,7 +86,7 @@ ConstantZRotationEquatorial_RotationalBodyProperty::ConstantZRotationEquatorial_
 bool ConstantZRotationEquatorial_RotationalBodyProperty::update(const orsa::Time & t) {
   
     if (_previousTime.isSet()) {
-        if (_previousTime.getRef() == t) {
+        if (_previousTime == t) {
             // ORSA_DEBUG("cached...");
             return true;
         }    

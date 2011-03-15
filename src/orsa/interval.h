@@ -34,9 +34,9 @@ namespace orsa {
                 if (size() == 0) {
                     _data.push_front(val);
                 } else {
-                    if (val < _min.getRef()) {
+                    if (val < _min) {
                         _data.push_front(val);
-                    } else if (val > _max.getRef()) {
+                    } else if (val > _max) {
                         _data.push_back(val);
                     } else if (!onlyIfExtending) {
                         //
@@ -60,18 +60,18 @@ namespace orsa {
                 // ORSA_DEBUG("size: %i",size());
             } else {
                 if (_min.isSet()) {
-                    if (val < _min.getRef()) {
-                        _min.set(val);
+                    if (val < _min) {
+                        _min = val;
                     }
                 } else {
-                    _min.set(val);
+                    _min = val;
                 }
                 if (_max.isSet()) {
-                    if (val > _max.getRef()) {
-                        _max.set(val);
+                    if (val > _max) {
+                        _max = val;
                     }
                 } else {
-                    _max.set(val);
+                    _max = val;
                 }
             }
             return true;
@@ -101,8 +101,8 @@ namespace orsa {
     public:
         bool update() {
             if (_store_data && size()) {
-                _min.set(*(_data.begin()));
-                _max.set(*(--_data.end()));
+                _min = *(_data.begin());
+                _max = *(--_data.end());
             }  
             return true;
         }
@@ -125,12 +125,12 @@ namespace orsa {
     
     public:
         const T & min() const {
-            return _min.getRef();
+            return _min;
         }
     
     public:
         const T & max() const {
-            return _max.getRef();
+            return _max;
         }
     
     public:

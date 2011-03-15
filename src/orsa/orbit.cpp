@@ -57,7 +57,7 @@ double Orbit::eccentricAnomaly(const double & e, const double & M) {
             x = E;
 
             if (oldDelta.isSet()) {
-                if (fabs(E-old_E) >= oldDelta.getRef()) {
+                if (fabs(E-old_E) >= oldDelta) {
                     // ORSA_DEBUG("delta: %g   count: %i",fabs(E-old_E),count);
                     break;
                 }
@@ -111,7 +111,7 @@ double Orbit::eccentricAnomaly(const double & e, const double & M) {
             ++count;
 
             if (oldDelta.isSet()) {
-                if (fabs(E-old_E) >= oldDelta.getRef()) {
+                if (fabs(E-old_E) >= oldDelta) {
                     // ORSA_DEBUG("delta: %g   count: %i",fabs(E-old_E),count);
                     break;
                 }
@@ -178,7 +178,7 @@ bool Orbit::compute(const Body * b, const Body * ref_b, BodyGroup * bg, const Ti
         ORSA_DEBUG("beta-orbit...");
         // mu = (1 - b->beta.getRef())*b->getMu() + ref_b->getMu();
         mu = orsa::Unit::G() * 
-            ((1-b->beta.getRef())*m_b + m_ref_b);
+            ((1-b->beta)*m_b + m_ref_b);
     } else {
         // mu = b->getMu()+ref_b->getMu();
         mu = orsa::Unit::G() * 
@@ -372,8 +372,8 @@ bool Orbit::relativePosVel(Vector & relativePosition, Vector & relativeVelocity)
     // ORSA_DEBUG("-- speedup area --");
   
     if (_cached_omega_pericenter.isSet()) {
-        if (_cached_omega_pericenter.getRef() != omega_pericenter) {
-            _cached_omega_pericenter = omega_pericenter;
+        if (_cached_omega_pericenter != omega_pericenter) {
+            _cached_omega_pericenter  = omega_pericenter;
             orsa::sincos(omega_pericenter,&_sp,&_cp);
         } else {
             // ORSA_DEBUG("-- speedup --");
@@ -387,8 +387,8 @@ bool Orbit::relativePosVel(Vector & relativePosition, Vector & relativeVelocity)
     const double cp = _cp;
   
     if (_cached_omega_node.isSet()) {
-        if (_cached_omega_node.getRef() != omega_node) {
-            _cached_omega_node = omega_node;
+        if (_cached_omega_node != omega_node) {
+            _cached_omega_node  = omega_node;
             orsa::sincos(omega_node,&_so,&_co);
         } else {
             // ORSA_DEBUG("-- speedup --");
@@ -402,8 +402,8 @@ bool Orbit::relativePosVel(Vector & relativePosition, Vector & relativeVelocity)
     const double co = _co;
   
     if (_cached_i.isSet()) {
-        if (_cached_i.getRef() != i) {
-            _cached_i = i;
+        if (_cached_i != i) {
+            _cached_i  = i;
             orsa::sincos(i,&_si,&_ci);
         } else {
             // ORSA_DEBUG("-- speedup --");
@@ -460,8 +460,8 @@ bool Orbit::relativePosVel(Vector & relativePosition, Vector & relativeVelocity)
 #ifdef _ORBIT_RPV_SPEEDUP_
     
         if (_cached_e.isSet()) {
-            if (_cached_e.getRef() != e) {
-                _cached_e = e;
+            if (_cached_e != e) {
+                _cached_e  = e;
                 _sqe = sqrt(1 - e*e);
             } else {
                 // ORSA_DEBUG("-- speedup --");
@@ -474,7 +474,7 @@ bool Orbit::relativePosVel(Vector & relativePosition, Vector & relativeVelocity)
         const double sqe = _sqe;
     
         if (_cached_mu.isSet() && _cached_a.isSet()) {
-            if ((_cached_mu.getRef() != mu) || (_cached_a.getRef() != a)) {
+            if ((_cached_mu != mu) || (_cached_a.getRef() != a)) {
                 _cached_mu = mu;
                 _cached_a  = a;
                 _sqgma = sqrt(fabs(mu*a));

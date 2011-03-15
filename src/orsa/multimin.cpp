@@ -165,13 +165,13 @@ void MultiminParameters::setInRange(const std::string & name) {
 
 void MultiminParameters::setInRange(const unsigned int index) {
     if (_data[index].min.isSet()) {
-        if (_data[index].value < _data[index].min.getRef()) {
-            _data[index].value = _data[index].min.getRef();
+        if (_data[index].value < _data[index].min) {
+            _data[index].value = _data[index].min;
         }
     }
     if (_data[index].max.isSet()) {
-        if (_data[index].value > _data[index].max.getRef()) {
-            _data[index].value = _data[index].max.getRef();
+        if (_data[index].value > _data[index].max) {
+            _data[index].value = _data[index].max;
         }
     }
 }
@@ -525,9 +525,9 @@ bool Multimin::run_nmsimplex(const unsigned int maxIter,
         if (0) {
             if (logFile.isSet()) {
 	
-                FILE * fp = fopen(logFile.getRef().c_str(),"a");
+                FILE * fp = fopen(logFile.c_str(),"a");
                 if (fp == 0) {
-                    ORSA_ERROR("cannot open file %s",logFile.getRef().c_str());
+                    ORSA_ERROR("cannot open file %s",logFile.c_str());
                     return false;
                 }
 	
@@ -651,9 +651,9 @@ bool Multimin::run_conjugate_fr(const unsigned int maxIter,
         if (0) {
             if (logFile.isSet()) {
 	
-                FILE * fp = fopen(logFile.getRef().c_str(),"a");
+                FILE * fp = fopen(logFile.c_str(),"a");
                 if (fp == 0) {
-                    ORSA_ERROR("cannot open file %s",logFile.getRef().c_str());
+                    ORSA_ERROR("cannot open file %s",logFile.c_str());
                     return false;
                 }
 	

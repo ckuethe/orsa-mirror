@@ -89,7 +89,7 @@ namespace orsa {
         ORSA_DEBUG("cache set: %i   address: %x",c.isSet(),&c);
         if (c.isSet()) {
             ORSA_DEBUG("cache val: ");
-            orsa::print(c.getRef());
+            orsa::print(c);
         }
     }
   

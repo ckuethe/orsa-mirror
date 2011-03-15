@@ -84,7 +84,7 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
 	
                 ibps.tmp = true;
 	
-                // if (!(bg->getBodyInterval((*_b_it).get())->insert(ibps,onlyIfExtending.getRef(),false))) {
+                // if (!(bg->getBodyInterval((*_b_it).get())->insert(ibps,onlyIfExtending,false))) {
                 if (!(bg->getBodyInterval((*_b_it).get())->insert(ibps,false,false))) {
                     ORSA_DEBUG("problems with insert, body [%s]",
                                (*_b_it)->getName().c_str());
@@ -275,7 +275,7 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
       
             ibps.tmp = true;
       
-            // if (!(bg->getBodyInterval(b)->insert(ibps,onlyIfExtending.getRef(),true))) {
+            // if (!(bg->getBodyInterval(b)->insert(ibps,onlyIfExtending,true))) {
             if (!(bg->getBodyInterval(b)->insert(ibps,false,true))) {
                 ORSA_DEBUG("problems with insert, body [%s]",
                            b->getName().c_str());
@@ -344,7 +344,7 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
 	
                 ibps.tmp = false;
 	
-                if (!(bg->getBodyInterval((*_b_it).get())->insert(ibps,onlyIfExtending.getRef(),false))) {
+                if (!(bg->getBodyInterval((*_b_it).get())->insert(ibps,onlyIfExtending,false))) {
                     ORSA_DEBUG("problems with insert, body [%s]",
                                (*_b_it)->getName().c_str());
                 }

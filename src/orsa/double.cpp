@@ -16,13 +16,13 @@ mpz_class orsa::factorial(const mpz_class & i,
             return 1;
         } else if (_factorial_table.size() > i) {
             if (!_factorial_table[index].isSet()) {
-                _factorial_table[index].set(i*factorial(i-1,cache));
+                _factorial_table[index] = i*factorial(i-1,cache);
             }
-            return _factorial_table[index].get();
+            return _factorial_table[index];
         } else {
             _factorial_table.resize(index+1);
-            _factorial_table[index].set(i*factorial(i-1,cache));
-            return _factorial_table[index].get();
+            _factorial_table[index] = i*factorial(i-1,cache);
+            return _factorial_table[index];
         }
     } else {
         if (i <= 1) {
@@ -44,13 +44,13 @@ mpz_class orsa::bi_factorial(const mpz_class & i,
             return 1;
         } else if (_bi_factorial_table.size() > i) {
             if (!_bi_factorial_table[index].isSet()) {
-                _bi_factorial_table[index].set(i*bi_factorial(i-2,cache));
+                _bi_factorial_table[index] = i*bi_factorial(i-2,cache);
             }
-            return _bi_factorial_table[index].get();
+            return _bi_factorial_table[index];
         } else {
             _bi_factorial_table.resize(index+1);
-            _bi_factorial_table[index].set(i*bi_factorial(i-2,cache));
-            return _bi_factorial_table[index].get();
+            _bi_factorial_table[index] = i*bi_factorial(i-2,cache);
+            return _bi_factorial_table[index];
         }
     } else {
         if (i <= mpz_class("1")) {

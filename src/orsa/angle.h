@@ -36,7 +36,7 @@ namespace orsa {
         */
     public:
         void   setRad(const double & angle) { _rad = angle; }
-        double getRad() const { return _rad; }
+        const double & getRad() const { return _rad; }
         //
         void setDPS(const double & d, 
                     const double & p, 
