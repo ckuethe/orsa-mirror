@@ -495,7 +495,7 @@ int main(int argc, char **argv) {
             double RMS = obsRMS[allOpticalObs[k]->obsCode];
             if (RMS==0.0) {
                 // if not set (that is, equal to 0.0), use default
-                ORSA_DEBUG("cannot find nominal accuracy for observatory code [%s], please update file obsRMS.dat",allOpticalObs[k]->obsCode.c_str());
+                ORSA_DEBUG("cannot find nominal accuracy for observatory code [%s], please update file obsRMS.dat",(*allOpticalObs[k]->obsCode).c_str());
 #warning default RMS=?   (use automatic, floating RMS?)
                 RMS=5.0;
             }
