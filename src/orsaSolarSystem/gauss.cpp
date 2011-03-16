@@ -209,18 +209,18 @@ void orsaSolarSystem::GaussMethod(std::vector<orsaSolarSystem::OrbitWithEpoch> &
         }
     
         tau[2] = 
-            sqrtGM[1]*obs[1]->epoch.get_d() -
-            sqrtGM[0]*obs[0]->epoch.get_d();
-    
+            sqrtGM[1]*(*obs[1]->epoch).get_d() -
+            sqrtGM[0]*(*obs[0]->epoch).get_d();
+        
         tau[0] = 
-            sqrtGM[2]*obs[2]->epoch.get_d() -
-            sqrtGM[1]*obs[1]->epoch.get_d();
-    
+            sqrtGM[2]*(*obs[2]->epoch).get_d() -
+            sqrtGM[1]*(*obs[1]->epoch).get_d();
+        
         tau[1] = 
-            sqrtGM[2]*obs[2]->epoch.get_d() -
-            sqrtGM[0]*obs[0]->epoch.get_d();
+            sqrtGM[2]*(*obs[2]->epoch).get_d() -
+            sqrtGM[0]*(*obs[0]->epoch).get_d();
     }
-  
+    
     // debug
     /* 
        for (unsigned int k=0; k<3; ++k) {     
@@ -257,10 +257,10 @@ void orsaSolarSystem::GaussMethod(std::vector<orsaSolarSystem::OrbitWithEpoch> &
             if (!opticalObservation) {
                 ORSA_DEBUG("observation is not optical");
             }
-            orsa::sincos(opticalObservation->ra.getRad(), 
+            orsa::sincos((*opticalObservation->ra).getRad(), 
                          &s_ra, 
                          &c_ra);
-            orsa::sincos(opticalObservation->dec.getRad(),
+            orsa::sincos((*opticalObservation->dec).getRad(),
                          &s_dec,
                          &c_dec);
             u_rho[k].set(c_dec*c_ra,

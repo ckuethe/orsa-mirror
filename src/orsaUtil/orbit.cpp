@@ -165,14 +165,14 @@ void orsaUtil::ComputeResidual(std::vector<orsaUtil::Residual>   & residual,
         const double  ra_orbit = fmod(atan2(dr.getY(),dr.getX())+orsa::twopi(),orsa::twopi());
         const double dec_orbit = asin(dr.getZ()/dr.length());
     
-        double delta_ra = opticalObservation->ra.getRad()-ra_orbit;
-        if (fabs(opticalObservation->ra.getRad()-ra_orbit+orsa::twopi()) < fabs(delta_ra)) delta_ra = opticalObservation->ra.getRad()-ra_orbit+orsa::twopi();
-        if (fabs(opticalObservation->ra.getRad()-ra_orbit-orsa::twopi()) < fabs(delta_ra)) delta_ra = opticalObservation->ra.getRad()-ra_orbit-orsa::twopi();
-        const double cos_dec = cos(0.5*(opticalObservation->dec.getRad()+dec_orbit));
+        double delta_ra = (*opticalObservation->ra).getRad()-ra_orbit;
+        if (fabs((*opticalObservation->ra).getRad()-ra_orbit+orsa::twopi()) < fabs(delta_ra)) delta_ra = (*opticalObservation->ra).getRad()-ra_orbit+orsa::twopi();
+        if (fabs((*opticalObservation->ra).getRad()-ra_orbit-orsa::twopi()) < fabs(delta_ra)) delta_ra = (*opticalObservation->ra).getRad()-ra_orbit-orsa::twopi();
+        const double cos_dec = cos(0.5*((*opticalObservation->dec).getRad()+dec_orbit));
         delta_ra *= cos_dec;
-    
-        double delta_dec = opticalObservation->dec.getRad()-dec_orbit;
-    
+        
+        double delta_dec = (*opticalObservation->dec).getRad()-dec_orbit;
+        
         residual[k].delta_ra  = delta_ra;
         residual[k].delta_dec = delta_dec;
     }

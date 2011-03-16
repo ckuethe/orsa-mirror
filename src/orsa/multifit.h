@@ -330,9 +330,9 @@ namespace orsa {
         virtual void setLogFile(const std::string & lf) { 
             logFile = lf;
             // erase it
-            FILE * fp = fopen(logFile.c_str(),"w");
+            FILE * fp = fopen((*logFile).c_str(),"w");
             if (fp == 0) {
-                ORSA_ERROR("cannot open file %s",logFile.c_str());
+                ORSA_ERROR("cannot open file %s",(*logFile).c_str());
             }
             fclose(fp);
         }

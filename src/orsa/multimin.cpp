@@ -525,9 +525,9 @@ bool Multimin::run_nmsimplex(const unsigned int maxIter,
         if (0) {
             if (logFile.isSet()) {
 	
-                FILE * fp = fopen(logFile.c_str(),"a");
+                FILE * fp = fopen((*logFile).c_str(),"a");
                 if (fp == 0) {
-                    ORSA_ERROR("cannot open file %s",logFile.c_str());
+                    ORSA_ERROR("cannot open file %s",(*logFile).c_str());
                     return false;
                 }
 	
@@ -651,9 +651,9 @@ bool Multimin::run_conjugate_fr(const unsigned int maxIter,
         if (0) {
             if (logFile.isSet()) {
 	
-                FILE * fp = fopen(logFile.c_str(),"a");
+                FILE * fp = fopen((*logFile).c_str(),"a");
                 if (fp == 0) {
-                    ORSA_ERROR("cannot open file %s",logFile.c_str());
+                    ORSA_ERROR("cannot open file %s",(*logFile).c_str());
                     return false;
                 }
 	

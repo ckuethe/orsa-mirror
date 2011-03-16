@@ -26,17 +26,9 @@ namespace orsa {
         // virtual destructor is slow, and never needed so far...
         // virtual ~Cache() { }
         ~Cache() { }
-    public:
+        
 #if ORSA_CACHE_GET_CHECK
     public:
-        /* operator T() const {
-           if (!_set) {
-           ORSA_ERROR("returning unset value");
-           orsa::crash();
-           }
-           return _val; 
-           }
-        */
         operator T const & () const {
             if (!_set) {
                 ORSA_ERROR("returning unset value");
@@ -44,44 +36,27 @@ namespace orsa {
             }
             return _val; 
         }
-        /* T get() const { 
-           if (!_set) {
-           ORSA_ERROR("returning unset value");
-           orsa::crash();
-           }
-           return _val; 
-           }
-           const T & getRef() const {
-           if (!_set) {
-           ORSA_ERROR("returning unset value");
-           orsa::crash();
-           }
-           return _val;
-           } 
-           const T * getPtr() const {
-           if (!_set) {
-           ORSA_ERROR("returning unset value");
-           orsa::crash();
-           }
-           return & _val;
-           }
-        */
+        const T & operator * () const {
+            if (!_set) {
+                ORSA_ERROR("returning unset value");
+                orsa::crash();
+            }
+            return _val; 
+        }       
+        const T * operator -> () const {
+            if (!_set) {
+                ORSA_ERROR("returning unset value");
+                orsa::crash();
+            }
+            return &_val; 
+        }       
 #else  
     public:
-        // inline operator T() const { return _val; }
-        inline operator T const & () const { return _val; }
-        /* inline T get() const { return _val; }
-           inline const T & getRef() const { return _val; }
-           inline const T * getPtr() const { return & _val; }
-        */
+        operator T const & () const    { return  _val; }
+        const T & operator * () const  { return  _val; }
+        const T * operator -> () const { return &_val; }
 #endif
-    protected:
-        /* bool set(const T & val) { 
-           _val=val; 
-           _set=true; 
-           return _set;
-           }
-        */
+        
     public:
         Cache<T> & operator = (const T & val) {
             // set(val);
@@ -99,19 +74,6 @@ namespace orsa {
             _val -= val;
             return (*this);
         }
-
-
-        // some useful methods... could also be implemented using T(Cache<T>).fun()
-    public:
-        // useful when T is a std::string
-        const char * c_str ( ) const { return _val.c_str(); }
-    public:
-        // useful when T is a orsa::Time
-        double get_d() const { return _val.get_d(); }
-    public:
-        // useful when T is a orsa::Angle
-        const double & getRad() const { return _val.getRad(); }
-        
         
     public:
         // set only if still not set
@@ -123,6 +85,41 @@ namespace orsa {
                 return false;
             }
         }
+
+    public:
+        // set if not set, and
+        // set if smaller than what is already set
+        bool setIfSmaller(const T & val) {
+            if (!_set) {
+                (*this) = val;
+                return true;
+            } else {
+                if (val < _val) {
+                    (*this) = val;
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        }
+        
+    public:
+        // set if not set, and
+        // set if larger than what is already set
+        bool setIfLarger(const T & val) {
+            if (!_set) {
+                (*this) = val;
+                return true;
+            } else {
+                if (val > _val) {
+                    (*this) = val;
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        }
+        
     public:
         inline bool isSet() const { return _set; }
     public:
@@ -135,73 +132,59 @@ namespace orsa {
     };
     
     template <typename T> T operator + (const orsa::Cache<T> & c) {
-        T t = c;
-        return t;
+        return T(c);
     }
     
     template <typename T> T operator - (const orsa::Cache<T> & c) {
-        T t = c;
-        return -t;
+        return -T(c);
     }
-
+    
     template <typename T> T operator + (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
-        T t = a;
-        t += b;
-        return t;
+        return (T(a) + T(b));
     }
     
     template <typename T> T operator + (const orsa::Cache<T> & a, const T & b) {
-        T t = a;
-        t += b;
-        return t;
+        return (T(a) + b);
     }
     
     template <typename T> T operator + (const T & a, const orsa::Cache<T> & b) {
-        T t = a;
-        t += b;
-        return t;
+        return (a + T(b));
     }
     
     template <typename T> T operator - (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
-        T t = a;
-        t -= b;
-        return t;
+        return (T(a) - T(b));
     }
     
     template <typename T> T operator - (const orsa::Cache<T> & a, const T & b) {
-        T t = a;
-        t -= b;
-        return t;
+        return (T(a) - b);
     }
     
     template <typename T> T operator - (const T & a, const orsa::Cache<T> & b) {
-        T t = a;
-        t -= b;
-        return t;
+        return (a - T(b));
     }
     
     template <typename T, typename P> P operator * (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
-        return (T(a) *  T(b));
+        return (T(a) * T(b));
     }
     
     template <typename T, typename P> P operator * (const orsa::Cache<T> & a, const T & b) {
-        return (T(a) *  b);
+        return (T(a) * b);
     }
     
     template <typename T, typename P> P operator * (const T & a, const orsa::Cache<T> & b) {
-        return (a *  T(b));
+        return (a * T(b));
     }
     
     template <typename T, typename D> D operator / (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
-        return (T(a) /  T(b));
+        return (T(a) / T(b));
     }
     
     template <typename T, typename D> D operator / (const orsa::Cache<T> & a, const T & b) {
-        return (T(a) /  b);
+        return (T(a) / b);
     }
     
     template <typename T, typename D> D operator / (const T & a, const orsa::Cache<T> & b) {
-        return (a /  T(b));
+        return (a / T(b));
     }
     
     template <typename T> bool operator == (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
@@ -237,11 +220,11 @@ namespace orsa {
     }
     
     template <typename T> bool operator <  (const T & a, const orsa::Cache<T> & b) {
-        return (a <  T(b));
+        return (a < T(b));
     }
     
     template <typename T> bool operator >  (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
-        return (T(a) >  T(b));
+        return (T(a) > T(b));
     }
     
     template <typename T> bool operator >  (const orsa::Cache<T> & a, const T & b) {
@@ -249,7 +232,7 @@ namespace orsa {
     }
     
     template <typename T> bool operator >  (const T & a, const orsa::Cache<T> & b) {
-        return (a >  T(b));
+        return (a > T(b));
     }
     
     template <typename T> bool operator <= (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {

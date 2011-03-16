@@ -381,7 +381,7 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
                                counter,
                                (*_b_interval).size(),
                                (*_b_it)->getName().c_str(),
-                               (*_b_interval_data_it).time.get_d());
+                               (*(*_b_interval_data_it).time).get_d());
                     ++_b_interval_data_it;
                 }
                 ++_b_it;	

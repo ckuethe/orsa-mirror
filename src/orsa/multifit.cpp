@@ -863,9 +863,9 @@ bool Multifit::run() {
     
         if (logFile.isSet()) {
       
-            FILE * fp = fopen(logFile.c_str(),"a");
+            FILE * fp = fopen((*logFile).c_str(),"a");
             if (fp == 0) {
-                ORSA_ERROR("cannot open file %s",logFile.c_str());
+                ORSA_ERROR("cannot open file %s",(*logFile).c_str());
                 return false;
             }
       
@@ -887,7 +887,7 @@ bool Multifit::run() {
             // #define FIT(i) gsl_vector_get(s->x, i)
             // #define ERR(i) sqrt(gsl_matrix_get(covar,i,i))
       
-            ORSA_DEBUG("appending to file %s",logFile.c_str());
+            ORSA_DEBUG("appending to file %s",(*logFile).c_str());
       
             {
                 unsigned int gslIndex=0; 

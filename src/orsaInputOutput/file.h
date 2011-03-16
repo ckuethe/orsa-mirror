@@ -102,7 +102,7 @@ namespace orsaInputOutput {
             const char * err = gzerror(_file,&errnum);
             ORSA_ERROR("func: %s   file [%s]: %s   [_file: %x]",
                        func,
-                       _filename.c_str(),
+                       (*_filename).c_str(),
                        err,
                        _file);
         }
@@ -110,7 +110,7 @@ namespace orsaInputOutput {
     private:
         bool _open(const char * mode) {
             close();
-            _file = gzopen(_filename.c_str(),mode);
+            _file = gzopen((*_filename).c_str(),mode);
             if (_file == Z_NULL) {
                 printError(__func__);
                 return false;
@@ -224,10 +224,10 @@ namespace orsaInputOutput {
     private:
         bool _open(const char * mode) {
             close();
-            _file = fopen(_filename.c_str(),mode);
+            _file = fopen((*_filename).c_str(),mode);
             if (_file == 0) {
                 ORSA_ERROR("cannot open file [%s]: %s",
-                           _filename.c_str(),
+                           (*_filename).c_str(),
                            strerror(errno));
                 return false;
             } else {
@@ -269,7 +269,7 @@ namespace orsaInputOutput {
                     return 0;
                 } else {
                     ORSA_ERROR("cannot close file [%s]: %s",
-                               _filename.c_str(),
+                               (*_filename).c_str(),
                                strerror(errno));
                     return -1;
                 }
