@@ -986,16 +986,15 @@ int main(int argc, char **argv) {
                         strcat(line_eachVelocity,tmpStr);
                     }
                 }
-                
-#warning improve here
-                // absolute magnitude (rough way, is there a better approach?)
-#warning filter/band correction?
+
+                // absolute magnitude estimate
                 double H;
                 {
                     osg::ref_ptr< orsa::Statistic<double> > stat_H = new orsa::Statistic<double>;
                     for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
                         if (allOpticalObs[j]->mag.isSet()) {
-                            stat_H->insert(absoluteMagnitude(allOpticalObs[j]->mag,
+#warning see the correction here to the reported magnitude, depending on the filter 
+                            stat_H->insert(absoluteMagnitude(allOpticalObs[j]->mag+orsaSolarSystem::MPC_band_correction(allOpticalObs[j]->band),
                                                              0.15,
                                                              acos((R_o[j]-R_an[j]).normalized()*(R_s[j]-R_an[j]).normalized()),
                                                              R_o2an[j].length(),
