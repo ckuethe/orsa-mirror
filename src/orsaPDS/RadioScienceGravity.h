@@ -4,17 +4,32 @@
 #include <osg/Referenced>
 #include <osg/ref_ptr>
 
+#include <orsa/vector.h>
+
 #include <string>
+#include <vector>
+
+#include <QHash>
 
 namespace orsaPDS {
     
     class RadioScienceGravityData : public osg::Referenced {
     public:
         double R0, GM, sigmaGM;
-        int degree, order;
-        int normalizationState;
-        int numberOfCoefficients;
+        unsigned int degree, order;
+        unsigned int normalizationState;
+        unsigned int numberOfCoefficients;
         double referenceLongitude, referenceLatitude;
+    public:
+        // maps the coefficient name to its index
+        // keys are: GM, C002000, C002001, S002001, C002002, S002002, ...
+        QHash<QString, unsigned int> hash;
+    public:
+        static QString keyC(unsigned int l, unsigned int m);
+        static QString keyS(unsigned int l, unsigned int m);
+    public:
+        std::vector< orsa::Cache<double> >                coeff;
+        std::vector< std::vector< orsa::Cache<double> > > covar; // triangular
     };
     
     class RadioScienceGravityFile : public osg::Referenced {
@@ -25,11 +40,12 @@ namespace orsaPDS {
                                 const size_t & FILE_RECORDS_);
     public:
         const RadioScienceGravityData * getData() const { return data.get(); }
-    protected:
+    public:
         osg::ref_ptr<RadioScienceGravityData> data;
     protected:
         bool readD(double & d) const;
         bool readI(int & i) const;
+        bool readU(unsigned int & u) const;
         bool readS(std::string & s) const;
     protected:
         void skipToNextRow() const;

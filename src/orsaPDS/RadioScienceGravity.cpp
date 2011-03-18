@@ -4,14 +4,27 @@
 #include <cstdio>
 
 #include <orsa/print.h>
+#include <orsa/util.h>
 
 using namespace orsaPDS;
+
+QString RadioScienceGravityData::keyC(unsigned int l, unsigned int m) {
+    QString qs;
+    qs.sprintf("C%03i%03i",l,m);
+    return qs;
+}
+
+QString RadioScienceGravityData::keyS(unsigned int l, unsigned int m) {
+    QString qs;
+    qs.sprintf("S%03i%03i",l,m);
+    return qs;
+}
 
 RadioScienceGravityFile::RadioScienceGravityFile(const std::string & fileName,
                                                  const size_t & RECORD_BYTES_,
                                                  const size_t & FILE_RECORDS_) :
     RECORD_BYTES(RECORD_BYTES_),
-    FILE_RECORDS(FILE_RECORDS) {
+    FILE_RECORDS(FILE_RECORDS_) {
     
     data = new RadioScienceGravityData;
     
@@ -32,13 +45,13 @@ RadioScienceGravityFile::RadioScienceGravityFile(const std::string & fileName,
         readD(data->sigmaGM);
         orsa::FromUnits(orsa::FromUnits(data->sigmaGM,orsa::Unit::KM,3),orsa::Unit::SECOND,-2);
         
-        readI(data->degree);
+        readU(data->degree);
+        
+        readU(data->order);
+        
+        readU(data->normalizationState);
 
-        readI(data->order);
-
-        readI(data->normalizationState);
-
-        readI(data->numberOfCoefficients);
+        readU(data->numberOfCoefficients);
         
         readD(data->referenceLongitude);
         data->referenceLongitude *= orsa::degToRad();
@@ -48,15 +61,49 @@ RadioScienceGravityFile::RadioScienceGravityFile(const std::string & fileName,
         
         skipToNextRow();
     }
+    
+    // ORSA_DEBUG("n. coeff: %i",data->numberOfCoefficients);
+    
+    data->coeff.resize(data->numberOfCoefficients);
 
-    ORSA_DEBUG("n. coeff: %i",data->numberOfCoefficients);
+    data->covar.resize(data->numberOfCoefficients);
+    for (unsigned int k=0; k<data->numberOfCoefficients; ++k) {
+        data->covar[k].resize(k+1);
+    }
     
     // read SHBDR_NAMES_TABLE
     {
+        std::string s;
         for (unsigned int k=0; k<data->numberOfCoefficients; ++k) {
-            std::string s;
             readS(s);
-            ORSA_DEBUG("name: [%s]",s.c_str());
+            // ORSA_DEBUG("name: [%s]",s.c_str());
+            data->hash[QString(s.c_str())] = k;
+        }
+        
+        skipToNextRow();
+    }
+    
+    // read SHBDR_COEFFICIENTS_TABLE
+    {
+        double d;
+        for (unsigned int k=0; k<data->numberOfCoefficients; ++k) {
+            readD(d);
+            // ORSA_DEBUG("d: [%g]",d);
+            data->coeff[k] = d;
+        }
+        
+        skipToNextRow();
+    }
+    
+    // read SHBDR_COVARIANCE_TABLE
+    {
+        double d;
+        for (unsigned int k=0; k<data->numberOfCoefficients; ++k) {
+            for (unsigned int r=0; r<=k; ++r) {
+                readD(d);
+                // ORSA_DEBUG("d: [%g]",d);
+                data->covar[k][r] = d;
+            }
         }
         
         skipToNextRow();
@@ -82,6 +129,14 @@ bool RadioScienceGravityFile::readI(int & i) const {
     return retVal;
 }
 
+bool RadioScienceGravityFile::readU(unsigned int & u) const {
+    const bool retVal = (1 == fread(&u,sizeof(unsigned int),1,fp));
+    if (!retVal) {
+        ORSA_DEBUG("problems...");
+    }
+    return retVal;
+}
+
 bool RadioScienceGravityFile::readS(std::string & s) const {
     char line[8];
     const bool retVal = (8 == fread(&line,sizeof(char),8,fp));
@@ -89,15 +144,12 @@ bool RadioScienceGravityFile::readS(std::string & s) const {
         ORSA_DEBUG("problems...");
     }
     s = line;
+    orsa::removeLeadingAndTrailingSpaces(s);
     return retVal;
 }
 
 void RadioScienceGravityFile::skipToNextRow() const {
-    long pos = ftell(fp);
-    ORSA_DEBUG("pos before seek: %i",pos);
-    if ((pos%RECORD_BYTES) != 0) {
-        fseek(fp,RECORD_BYTES-(pos%RECORD_BYTES),SEEK_CUR);
+    if ((ftell(fp)%RECORD_BYTES) != 0) {
+        fseek(fp,RECORD_BYTES-(ftell(fp)%RECORD_BYTES),SEEK_CUR);
     }
-    pos = ftell(fp);
-    ORSA_DEBUG("pos after seek: %i",ftell(fp));
 }
