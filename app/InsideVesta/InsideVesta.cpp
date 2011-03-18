@@ -68,6 +68,25 @@ int main() {
     
     osg::ref_ptr<ModelMassDistribution> refMD = new ModelMassDistribution(refVal);
     
+    if (0) {
+        // write profile density, for y=0 plane
+        ORSA_DEBUG("writing profile.dat file...");
+        const Box boundingBox = shape->boundingBox();
+        FILE * fp = fopen("profile.dat","w");
+        for (unsigned int k=0; k<1000000; ++k) {
+            const orsa::Vector v =  Vector(boundingBox.getXMin()+(boundingBox.getXMax()-boundingBox.getXMin())*GlobalRNG::instance()->gsl_rng_uniform(),
+                                           0.0,
+                                           boundingBox.getZMin()+(boundingBox.getZMax()-boundingBox.getZMin())*GlobalRNG::instance()->gsl_rng_uniform());
+            if (shape->isInside(v)) {
+                fprintf(fp,"%g %g %g\n",v.getX(),v.getZ(),refMD->density(v));
+            } else {
+                fprintf(fp,"%g %g %g\n",v.getX(),v.getZ(),0.0);
+            }
+        }
+        fclose(fp);
+        ORSA_DEBUG("done writing profile.dat");
+    }
+    
     // double dummy_volume;
     orsa::Vector centerOfMass;
     orsa::Matrix shapeToLocal;
@@ -129,18 +148,18 @@ int main() {
                       FromUnits(300,orsa::Unit::KM));
         
         ORSA_DEBUG("$\\rho_{m}$ & $%9.3f$ \\\\",orsa::FromUnits(orsa::FromUnits(refMD->_mantleDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
-        ORSA_DEBUG("$\\rho_{c}$ & $%9.3f$ \\\\",orsa::FromUnits(orsa::FromUnits(refMD->_val.coreDensity.getRef(),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+        ORSA_DEBUG("$\\rho_{c}$ & $%9.3f$ \\\\",orsa::FromUnits(orsa::FromUnits(refMD->_val.coreDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
         ORSA_DEBUG("$\\V_{c}$   & $%9.3e$ \\\\",orsa::FromUnits(refMD->_coreVolume,orsa::Unit::KM,-3));
-        ORSA_DEBUG("$\\M_{c}$   & $%9.3e$ \\\\",orsa::FromUnits(refMD->_coreVolume*refMD->_val.coreDensity.getRef(),orsa::Unit::KG,-1));
+        ORSA_DEBUG("$\\M_{c}$   & $%9.3e$ \\\\",orsa::FromUnits(refMD->_coreVolume*refMD->_val.coreDensity,orsa::Unit::KG,-1));
         // ORSA_DEBUG("$R_{c}$    & $%9.3f$ \\\\", orsa::FromUnits(coreRadius,orsa::Unit::KM,-1));
         ORSA_DEBUG("\%\\hline");
-        ORSA_DEBUG("$x_{c}$    & $%+9.3f$ \\\\",orsa::FromUnits(refMD->_val.coreCenterX.getRef(),orsa::Unit::KM,-1));
-        ORSA_DEBUG("$y_{c}$    & $%+9.3f$ \\\\",orsa::FromUnits(refMD->_val.coreCenterY.getRef(),orsa::Unit::KM,-1));
-        ORSA_DEBUG("$z_{c}$    & $%+9.3f$ \\\\",orsa::FromUnits(refMD->_val.coreCenterZ.getRef(),orsa::Unit::KM,-1));
+        ORSA_DEBUG("$x_{c}$    & $%+9.3f$ \\\\",orsa::FromUnits(refMD->_val.coreCenterX,orsa::Unit::KM,-1));
+        ORSA_DEBUG("$y_{c}$    & $%+9.3f$ \\\\",orsa::FromUnits(refMD->_val.coreCenterY,orsa::Unit::KM,-1));
+        ORSA_DEBUG("$z_{c}$    & $%+9.3f$ \\\\",orsa::FromUnits(refMD->_val.coreCenterZ,orsa::Unit::KM,-1));
         ORSA_DEBUG("\%\\hline");
-        ORSA_DEBUG("$R_{x}$    & $%+9.3f$ \\\\",orsa::FromUnits(refMD->_val.coreRadiusX.getRef(),orsa::Unit::KM,-1));
-        ORSA_DEBUG("$R_{y}$    & $%+9.3f$ \\\\",orsa::FromUnits(refMD->_val.coreRadiusY.getRef(),orsa::Unit::KM,-1));
-        ORSA_DEBUG("$R_{z}$    & $%+9.3f$ \\\\",orsa::FromUnits(refMD->_val.coreRadiusZ.getRef(),orsa::Unit::KM,-1));
+        ORSA_DEBUG("$R_{x}$    & $%+9.3f$ \\\\",orsa::FromUnits(refMD->_val.coreRadiusX,orsa::Unit::KM,-1));
+        ORSA_DEBUG("$R_{y}$    & $%+9.3f$ \\\\",orsa::FromUnits(refMD->_val.coreRadiusY,orsa::Unit::KM,-1));
+        ORSA_DEBUG("$R_{z}$    & $%+9.3f$ \\\\",orsa::FromUnits(refMD->_val.coreRadiusZ,orsa::Unit::KM,-1));
         ORSA_DEBUG("\\hline");
         ORSA_DEBUG("$x_{0}$    & $%+9.3f$ \\\\",orsa::FromUnits(centerOfMass.getX(),orsa::Unit::KM,-1));
         ORSA_DEBUG("$y_{0}$    & $%+9.3f$ \\\\",orsa::FromUnits(centerOfMass.getY(),orsa::Unit::KM,-1));
@@ -231,15 +250,15 @@ int main() {
         
         // output
         ORSA_DEBUG("SAMPLE: %8.1f %10.3e %10.3e %+8.1f %+8.1f %+8.1f %10.1f %10.1f %10.1f %8.1f %10.3e %10.3e %10.3e %10.3e %8.1f %10.6f",
-                   val.coreDensity.getRef(),
+                   (*val.coreDensity),
                    orsa::FromUnits(md->_coreVolume,orsa::Unit::KM,-3),
-                   orsa::FromUnits(md->_coreVolume*val.coreDensity.getRef(),orsa::Unit::KG,-1),
-                   val.coreCenterX.getRef(),
-                   val.coreCenterY.getRef(),
-                   val.coreCenterZ.getRef(),
-                   val.coreRadiusX.getRef(),
-                   val.coreRadiusY.getRef(),
-                   val.coreRadiusZ.getRef(),
+                   orsa::FromUnits(md->_coreVolume*val.coreDensity,orsa::Unit::KG,-1),
+                   (*val.coreCenterX),
+                   (*val.coreCenterY),
+                   (*val.coreCenterZ),
+                   (*val.coreRadiusX),
+                   (*val.coreRadiusY),
+                   (*val.coreRadiusZ),
                    md->_mantleDensity,
                    deltaMax[2],
                    deltaMax[3],

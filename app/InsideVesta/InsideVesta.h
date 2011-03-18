@@ -108,12 +108,12 @@ public:
     ModelMassDistribution(const Model::Values & val) :
         orsa::MassDistribution(),
         _val(val),
-        _coreVolume((4.0/3.0)*orsa::pi()*_val.coreRadiusX.getRef()*_val.coreRadiusY.getRef()*_val.coreRadiusZ.getRef()),
-        _mantleDensity((_val.totalMass.getRef()-_coreVolume*_val.coreDensity.getRef())/(_val.totalVolume.getRef()-_coreVolume)) {
+        _coreVolume((4.0/3.0)*orsa::pi()*_val.coreRadiusX*_val.coreRadiusY*_val.coreRadiusZ),
+        _mantleDensity((_val.totalMass-_coreVolume*_val.coreDensity)/(_val.totalVolume-_coreVolume)) {
         if (_coreVolume > 0.0) {
-            _am2 = orsa::int_pow(_val.coreRadiusX.getRef(),-2);
-            _bm2 = orsa::int_pow(_val.coreRadiusY.getRef(),-2);
-            _cm2 = orsa::int_pow(_val.coreRadiusZ.getRef(),-2);
+            _am2 = orsa::int_pow((*_val.coreRadiusX),-2);
+            _bm2 = orsa::int_pow((*_val.coreRadiusY),-2);
+            _cm2 = orsa::int_pow((*_val.coreRadiusZ),-2);
         }
     }
 protected:
@@ -121,11 +121,11 @@ protected:
 public:    
     double density(const orsa::Vector & v) const {
         if (_coreVolume > 0.0) {
-            if ( (orsa::square(v.getX()-_val.coreCenterX.getRef())*_am2.getRef() +
-                  orsa::square(v.getY()-_val.coreCenterY.getRef())*_bm2.getRef() +
-                  orsa::square(v.getZ()-_val.coreCenterZ.getRef())*_cm2.getRef()) <= 1.0) {
+            if ( (orsa::square(v.getX()-_val.coreCenterX)*_am2 +
+                  orsa::square(v.getY()-_val.coreCenterY)*_bm2 +
+                  orsa::square(v.getZ()-_val.coreCenterZ)*_cm2) <= 1.0) {
                 // inside core
-                return _val.coreDensity.getRef();
+                return _val.coreDensity;
             } else {
                 return _mantleDensity;
             }
