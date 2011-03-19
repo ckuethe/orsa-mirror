@@ -267,7 +267,7 @@ namespace orsa {
                 _stat->reset();
                 for (unsigned int k=0; k<_v.size(); ++k) {
                     if (_v[k].isSet()) {
-                        _stat->insert(_v[k].getRef());
+                        _stat->insert(_v[k]);
                     }
                 }
             }
