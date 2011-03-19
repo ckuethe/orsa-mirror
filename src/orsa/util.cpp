@@ -39,18 +39,18 @@ std::string & orsa::removeLeadingPlusSign(std::string & s) {
    bg->getBodyInterval(ref_b);
    const orsa::Time dt = 
    std::min(orsa::Time(0,0,0,5,0),
-   std::min(bi->max().time.getRef()-t,
-   t-bi->min().time.getRef()));
+   std::min(bi->max().time-t,
+   t-bi->min().time));
    // REMEMBER: now thrust is in FrenetSerret components
    orsa::Vector T, N, B;
-   ORSA_DEBUG("bi->min().time.getRef().tmp: %i",bi->min().tmp);
-   ORSA_DEBUG("bi->max().time.getRef().tmp: %i",bi->max().tmp);
-   if (t > bi->min().time.getRef()) {
+   ORSA_DEBUG("bi->min().time.tmp: %i",bi->min().tmp);
+   ORSA_DEBUG("bi->max().time.tmp: %i",bi->max().tmp);
+   if (t > bi->min().time) {
    FrenetSerret(ref_b, bg,
    t,
    -dt,
    T, N, B);
-   } else if (t < bi->max().time.getRef()) {
+   } else if (t < bi->max().time) {
    FrenetSerret(ref_b, bg,
    t,
    dt,
@@ -58,8 +58,8 @@ std::string & orsa::removeLeadingPlusSign(std::string & s) {
    } else {
    ORSA_DEBUG("interval smaller than dt");
    ORSA_DEBUG("--BODY-INTERVAL-TIME-RANGE--");
-   print(bi->min().time.getRef());
-   print(bi->max().time.getRef());
+   print(bi->min().time);
+   print(bi->max().time);
    ORSA_DEBUG("call time:");
    print(t);
    //

@@ -176,7 +176,7 @@ bool Orbit::compute(const Body * b, const Body * ref_b, BodyGroup * bg, const Ti
     //
     if (b->betaSun == ref_b) {
         ORSA_DEBUG("beta-orbit...");
-        // mu = (1 - b->beta.getRef())*b->getMu() + ref_b->getMu();
+        // mu = (1 - b->beta)*b->getMu() + ref_b->getMu();
         mu = orsa::Unit::G() * 
             ((1-b->beta)*m_b + m_ref_b);
     } else {
@@ -474,7 +474,7 @@ bool Orbit::relativePosVel(Vector & relativePosition, Vector & relativeVelocity)
         const double sqe = _sqe;
     
         if (_cached_mu.isSet() && _cached_a.isSet()) {
-            if ((_cached_mu != mu) || (_cached_a.getRef() != a)) {
+            if ((_cached_mu != mu) || (_cached_a != a)) {
                 _cached_mu = mu;
                 _cached_a  = a;
                 _sqgma = sqrt(fabs(mu*a));
