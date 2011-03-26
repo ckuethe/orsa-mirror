@@ -94,6 +94,8 @@ public:
 typedef PlotStats<PlotStatsElement_WS,  BinStats<PlotStatsElement_WS>  > PlotStats_WS;
 typedef PlotStats<PlotStatsElement_Sum, BinStats<PlotStatsElement_Sum> > PlotStats_Sum;
 
+#warning UPDATE writeOutputFile... code with faster version in app/dawnorbit/postproc.cpp
+
 // Nsub is the number of sub-bins in each x,y bin -- to account for missing zero entries
 // i.e. if writing a,e then Nsub=Ni*Nnode*Nperi*Nm=18*12*12*12...
 void writeOutputFile(const std::string & filename,
@@ -353,28 +355,28 @@ int inspectCallback(void  * /* unused */,
         
         // using geocentric observer, so obs-position = earth positon 
         /* obsPosCB->getPosition(observerPosition_epoch,
-           skyCoverage->obscode.getRef(),
-           skyCoverage->epoch.getRef());
+           skyCoverage->obscode,
+           skyCoverage->epoch);
            obsPosCB->getPosition(observerPosition_epoch_plus_dt,
-           skyCoverage->obscode.getRef(),
-           skyCoverage->epoch.getRef()+apparentMotion_dt_T);
+           skyCoverage->obscode,
+           skyCoverage->epoch+apparentMotion_dt_T);
         */
 
         /* bg->getInterpolatedPosition(observerPosition_epoch,
            earth.get(),
-           skyCoverage->epoch.getRef());
+           skyCoverage->epoch);
            
            bg->getInterpolatedPosition(observerPosition_epoch_plus_dt,
            earth.get(),
-           skyCoverage->epoch.getRef()+apparentMotion_dt_T);
+           skyCoverage->epoch+apparentMotion_dt_T);
            
            bg->getInterpolatedPosition(sunPosition_epoch,
            sun.get(),
-           skyCoverage->epoch.getRef());
+           skyCoverage->epoch);
            
            bg->getInterpolatedPosition(sunPosition_epoch_plus_dt,
            sun.get(),
-           skyCoverage->epoch.getRef()+apparentMotion_dt_T);
+           skyCoverage->epoch+apparentMotion_dt_T);
         */
         
         // computed at skyCoverage->epoch
@@ -415,24 +417,24 @@ int inspectCallback(void  * /* unused */,
         
         bg->getInterpolatedPosition(observerPosition_epoch,
                                     earth.get(),
-                                    epoch.getRef());
+                                    epoch);
         
         bg->getInterpolatedPosition(observerPosition_epoch_plus_dt,
                                     earth.get(),
-                                    epoch.getRef()+apparentMotion_dt_T);
+                                    epoch+apparentMotion_dt_T);
         
         bg->getInterpolatedPosition(sunPosition_epoch,
                                     sun.get(),
-                                    epoch.getRef());
+                                    epoch);
         
         bg->getInterpolatedPosition(sunPosition_epoch_plus_dt,
                                     sun.get(),
-                                    epoch.getRef()+apparentMotion_dt_T);
+                                    epoch+apparentMotion_dt_T);
         
         orsa::Vector earthPosition_epoch;
         bg->getInterpolatedPosition(earthPosition_epoch,
                                     earth.get(),
-                                    epoch.getRef());
+                                    epoch);
         
         /* ORSA_DEBUG("earth position: %g %g %g",
            orsa::FromUnits(earthPosition_epoch.getX(),orsa::Unit::AU,-1),
@@ -443,7 +445,7 @@ int inspectCallback(void  * /* unused */,
         orsa::Vector moonPosition_epoch;
         bg->getInterpolatedPosition(moonPosition_epoch,
                                     moon.get(),
-                                    epoch.getRef());
+                                    epoch);
         
         // earth north pole
         const orsa::Vector northPole = (orsaSolarSystem::equatorialToEcliptic()*orsa::Vector(0,0,1)).normalized();
@@ -467,23 +469,23 @@ int inspectCallback(void  * /* unused */,
             const double orbitPeriod = orbit->period();
             
             /* obsPosCB->getPosition(observerPosition_epoch,
-               skyCoverage->obscode.getRef(),
-               epoch.getRef());
+               skyCoverage->obscode,
+               epoch);
                
                obsPosCB->getPosition(observerPosition_epoch_plus_dt,
-               skyCoverage->obscode.getRef(),
-               epoch.getRef()+apparentMotion_dt_T);
+               skyCoverage->obscode,
+               epoch+apparentMotion_dt_T);
             */
 
             orsa::Vector r;
             
             const double original_M  = orbit->M;
             // 
-            orbit->M = original_M + fmod(orsa::twopi() * (epoch.getRef()-orbitEpoch).get_d() / orbitPeriod, orsa::twopi());
+            orbit->M = original_M + fmod(orsa::twopi() * (epoch-orbitEpoch).get_d() / orbitPeriod, orsa::twopi());
             orbit->relativePosition(r);
             orsa::Vector orbitPosition_epoch = r + sunPosition_epoch;
             //
-            orbit->M = original_M + fmod(orsa::twopi() * (epoch.getRef()+apparentMotion_dt_T-orbitEpoch).get_d() / orbitPeriod, orsa::twopi());
+            orbit->M = original_M + fmod(orsa::twopi() * (epoch+apparentMotion_dt_T-orbitEpoch).get_d() / orbitPeriod, orsa::twopi());
             orbit->relativePosition(r);
             orsa::Vector orbitPosition_epoch_plus_dt = r + sunPosition_epoch_plus_dt;
             //
@@ -686,7 +688,7 @@ int main(int argc, char ** argv) {
     epoch = orsaSolarSystem::FromTimeScale(orsaSolarSystem::julianToTime(atof(argv[2])),
                                            orsaSolarSystem::TS_UTC);
     ORSA_DEBUG("inspect at epoch [below]");
-    orsaSolarSystem::print(epoch.getRef());
+    orsaSolarSystem::print(epoch);
     
     orsaSPICE::SPICE::instance()->loadKernel("de405.bsp");
     
@@ -704,7 +706,7 @@ int main(int argc, char ** argv) {
     moon  = SPICEBody("MOON",orsaSolarSystem::Data::MMoon());
     bg->addBody(moon.get());
     
-    earthOrbit.compute(earth.get(),sun.get(),bg.get(),epoch.getRef());
+    earthOrbit.compute(earth.get(),sun.get(),bg.get(),epoch);
     
 #warning change random seed
     rnd = new orsa::RNG(2352351);
@@ -719,7 +721,7 @@ int main(int argc, char ** argv) {
         skyCoverage = new SkyCoverage;
         
         skyCoverage->obscode  = "500"; // 500=Geocentric
-        skyCoverage->epoch    = epoch.getRef();
+        skyCoverage->epoch    = epoch;
         //
         skyCoverage->V_limit  = e.V_limit;
         skyCoverage->eta0_V   = e.eta0_V;

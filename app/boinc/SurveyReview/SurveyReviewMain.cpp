@@ -329,11 +329,12 @@ int main() {
         }
     }
     //
-    const orsa::Time orbitEpoch = orsaSolarSystem::julianToTime(JD);
+#warning include timescale info?
+    const orsa::Time orbitEpoch = orsaSolarSystem::julianToTime(JD); 
     // orsaSolarSystem::print(orbitEpoch);
     
     orsa::Orbit earthOrbit;
-    // earthOrbit.compute(earth.get(),sun.get(),bg.get(),skyCoverage->epoch.getRef());
+    // earthOrbit.compute(earth.get(),sun.get(),bg.get(),skyCoverage->epoch);
     earthOrbit.compute(earth.get(),sun.get(),bg.get(),orbitEpoch);
     
     const orsa::Time apparentMotion_dt_T = orsa::Time(0,0,1,0,0);
@@ -348,20 +349,20 @@ int main() {
     orsa::Vector sunPosition_epoch_plus_dt;
     
     obsPosCB->getPosition(observerPosition_epoch,
-                          skyCoverage->obscode.getRef(),
-                          skyCoverage->epoch.getRef());
+                          skyCoverage->obscode,
+                          skyCoverage->epoch);
     
     obsPosCB->getPosition(observerPosition_epoch_plus_dt,
-                          skyCoverage->obscode.getRef(),
-                          skyCoverage->epoch.getRef()+apparentMotion_dt_T);
+                          skyCoverage->obscode,
+                          skyCoverage->epoch+apparentMotion_dt_T);
     
     bg->getInterpolatedPosition(sunPosition_epoch,
                                 sun.get(),
-                                skyCoverage->epoch.getRef());
+                                skyCoverage->epoch);
     
     bg->getInterpolatedPosition(sunPosition_epoch_plus_dt,
                                 sun.get(),
-                                skyCoverage->epoch.getRef()+apparentMotion_dt_T);
+                                skyCoverage->epoch+apparentMotion_dt_T);
     
     // computed at skyCoverage->epoch
     const orsa::Vector observerPosition_sk_epoch         = observerPosition_epoch;
@@ -507,7 +508,7 @@ int main() {
                                 // minimum perihelion: q = a_min*(1-e_max), with min and max of this specific interval
                                 const double q_min = orsa::FromUnits(grain_a_AU*z_a*(1.0-grain_e*(z_e+z_e_delta)),orsa::Unit::AU);
                                 if (q_min > OrbitID::NEO_max_q) {
-                                    // ORSA_DEBUG("skipping, no NEOs in this interval");
+                                    ORSA_DEBUG("skipping, no NEOs in this interval");
                                     continue;
                                 }
                             }                                
@@ -634,11 +635,11 @@ int main() {
                                 
                                 const double original_M  = orbit->M;
                                 //
-                                orbit->M = original_M + fmod(orsa::twopi() * (skyCoverage->epoch.getRef()-orbitEpoch).get_d() / orbitPeriod, orsa::twopi());
+                                orbit->M = original_M + fmod(orsa::twopi() * (skyCoverage->epoch-orbitEpoch).get_d() / orbitPeriod, orsa::twopi());
                                 orbit->relativePosition(r);
                                 orsa::Vector orbitPosition_epoch = r + sunPosition_sk_epoch;
                                 //
-                                /* orbit->M = original_M + fmod(orsa::twopi() * (skyCoverage->epoch.getRef()+apparentMotion_dt_T-orbitEpoch).get_d() / orbitPeriod, orsa::twopi());
+                                /* orbit->M = original_M + fmod(orsa::twopi() * (skyCoverage->epoch+apparentMotion_dt_T-orbitEpoch).get_d() / orbitPeriod, orsa::twopi());
                                    orbit->relativePosition(r);
                                    orsa::Vector orbitPosition_epoch_plus_dt = r + sunPosition_sk_epoch_plus_dt;
                                 */
@@ -657,15 +658,15 @@ int main() {
                                     }
                                     
                                     // retrieve one accurate observation epoch from the field, and recompute the orbit position
-                                    orsa::Time epoch = skyCoverage->epoch.getRef();
+                                    orsa::Time epoch = skyCoverage->epoch;
                                     bool epochFromField = skyCoverage->pickFieldTime(epoch,dr_epoch.normalized(),rnd.get());
                                     
                                     obsPosCB->getPosition(observerPosition_epoch,
-                                                          skyCoverage->obscode.getRef(),
+                                                          skyCoverage->obscode,
                                                           epoch);
                                     
                                     obsPosCB->getPosition(observerPosition_epoch_plus_dt,
-                                                          skyCoverage->obscode.getRef(),
+                                                          skyCoverage->obscode,
                                                           epoch+apparentMotion_dt_T);
                                     
                                     bg->getInterpolatedPosition(sunPosition_epoch,
@@ -844,6 +845,8 @@ int main() {
                                 for (int z_H=z_H_min; z_H<=z_H_max; z_H+=z_H_delta) {
                                     
                                     const unsigned int pos = (z_H-z_H_min)/z_H_delta;
+                                    
+#warning sigma cannot be zero, so the formulas below need to be corrected... use counting statistics?
                                     
                                     // save values in db
                                     double       good_eta_NEO = (eta_NEO[pos]->entries() > 0) ? eta_NEO[pos]->average()           : 0;

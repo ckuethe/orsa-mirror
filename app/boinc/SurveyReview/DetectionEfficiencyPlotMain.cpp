@@ -352,35 +352,35 @@ int main(int argc, char ** argv) {
             unsigned int excluded=0;
             for (unsigned int k=0; k<etaData.size(); ++k) {
                 // keep vars aligned with varDefinition content
-                xVector[0]  = etaData[k].V.getRef();
-                xVector[1]  = etaData[k].apparentVelocity.getRef();
-                // xVector[ ]  = etaData[k].solarElongation.getRef();
-                // xVector[ ]  = etaData[k].lunarElongation.getRef();
-                xVector[2]  = etaData[k].airMass.getRef();
-                xVector[3]  = etaData[k].galacticLongitude.getRef();
-                xVector[4]  = etaData[k].galacticLatitude.getRef();
-                // xVector[ ]  = etaData[k].eclipticLongitude.getRef();
-                // xVector[ ]  = etaData[k].eclipticLatitude.getRef();
-                xVector[5]  = etaData[k].azimuth.getRef();
-                xVector[6]  = etaData[k].solarAltitude.getRef();
-                // xVector[ ] = etaData[k].lunarPhase.getRef();
-                xVector[7]  = etaData[k].lunarAltitude.getRef();
-                xVector[8]  = LP2LI(etaData[k].lunarPhase.getRef());
+                xVector[0]  = etaData[k].V;
+                xVector[1]  = etaData[k].apparentVelocity;
+                // xVector[ ]  = etaData[k].solarElongation;
+                // xVector[ ]  = etaData[k].lunarElongation;
+                xVector[2]  = etaData[k].airMass;
+                xVector[3]  = etaData[k].galacticLongitude;
+                xVector[4]  = etaData[k].galacticLatitude;
+                // xVector[ ]  = etaData[k].eclipticLongitude;
+                // xVector[ ]  = etaData[k].eclipticLatitude;
+                xVector[5]  = etaData[k].azimuth;
+                xVector[6]  = etaData[k].solarAltitude;
+                // xVector[ ] = etaData[k].lunarPhase;
+                xVector[7]  = etaData[k].lunarAltitude;
+                xVector[8]  = LP2LI(etaData[k].lunarPhase);
                 const bool goodInsert = countStats->insert(xVector,
-                                                           etaData[k].observed.getRef(),
-                                                           etaData[k].discovered.getRef());
+                                                           etaData[k].observed,
+                                                           etaData[k].discovered);
                 if (!goodInsert) {
                     // KEEP THIS!
                     ++excluded;
                     //
                     if (0) {
                         ORSA_DEBUG("excluded: V=%4.1f U=%5.1f AM=%5.2f GB=%+3.0f GL=%+4.0f obs: %i",
-                                   etaData[k].V.getRef(),
-                                   orsa::FromUnits(etaData[k].apparentVelocity.getRef()*orsa::radToArcsec(),orsa::Unit::HOUR),
-                                   etaData[k].airMass.getRef(),
-                                   orsa::radToDeg()*etaData[k].galacticLatitude.getRef(),
-                                   orsa::radToDeg()*etaData[k].galacticLongitude.getRef(),
-                                   etaData[k].observed.getRef());
+                                   (*etaData[k].V),
+                                   orsa::FromUnits(etaData[k].apparentVelocity*orsa::radToArcsec(),orsa::Unit::HOUR),
+                                   (*etaData[k].airMass),
+                                   orsa::radToDeg()*etaData[k].galacticLatitude,
+                                   orsa::radToDeg()*etaData[k].galacticLongitude,
+                                   (*etaData[k].observed));
                     }
                 }
             }
@@ -449,75 +449,75 @@ int main(int argc, char ** argv) {
             
             for (unsigned int k=0; k<data.size(); ++k) {
                 
-                /* const double eta = SkyCoverage::eta(data[k].V.getRef(),
+                /* const double eta = SkyCoverage::eta(data[k].V,
                    e.V_limit,
                    e.eta0_V,
                    e.V0,
                    e.c_V,
                    e.w_V,
-                   data[k].U.getRef(),
+                   data[k].U,
                    e.U_limit,
                    e.w_U,
-                   data[k].AM.getRef(),
+                   data[k].AM,
                    e.peak_AM,
                    e.scale_AM,
                    e.shape_AM,
-                   data[k].GB.getRef(),
+                   data[k].GB,
                    e.drop_GB,
                    e.scale_GB,
                    e.center_GB,
-                   data[k].GL.getRef(),
+                   data[k].GL,
                    e.scale_GL,
                    e.shape_GL,
-                   data[k].SA.getRef(),
+                   data[k].SA,
                    e.peak_SA,
                    e.scale_SA,
                    e.shape_SA,
-                   data[k].LA.getRef(),
-                   data[k].LI.getRef(),
+                   data[k].LA,
+                   data[k].LI,
                    e.LA_LI_limit_const,
                    e.LA_LI_limit_linear,
                    e.LA_LI_w_const,
                    e.LA_LI_w_linear);
                 */
                 //
-                const double eta = SkyCoverage::eta(data[k].V.getRef(),
+                const double eta = SkyCoverage::eta(data[k].V,
                                                     e.V_limit,
                                                     e.eta0_V,
                                                     e.V0,
                                                     e.c_V,
                                                     e.w_V,
-                                                    data[k].U.getRef(),
+                                                    data[k].U,
                                                     e.U_limit,
                                                     e.w_U,
-                                                    data[k].AM.getRef(),
+                                                    data[k].AM,
                                                     e.peak_AM,
                                                     e.scale_AM,
                                                     e.shape_AM,
-                                                    data[k].GB.getRef(),
+                                                    data[k].GB,
                                                     e.drop_GB,
                                                     e.scale_GB,
-                                                    data[k].GL.getRef(),
+                                                    data[k].GL,
                                                     e.scale_GL,
                                                     e.shape_GL);
                 
-                const double nominal_eta_V = SkyCoverage::nominal_eta_V(data[k].V.getRef(),
+                const double nominal_eta_V = SkyCoverage::nominal_eta_V(data[k].V,
                                                                         e.V_limit,
                                                                         e.eta0_V,
                                                                         e.V0,
                                                                         e.c_V,
                                                                         e.w_V);
                 
-                const double nominal_eta_U = SkyCoverage::nominal_eta_U(data[k].U.getRef(),
+                const double nominal_eta_U = SkyCoverage::nominal_eta_U(data[k].U,
                                                                         e.U_limit,
                                                                         e.w_U);
                 
-                const double nominal_eta_AM = SkyCoverage::nominal_eta_AM(data[k].AM.getRef(),
+                const double nominal_eta_AM = SkyCoverage::nominal_eta_AM(data[k].AM,
                                                                           e.peak_AM,
                                                                           e.scale_AM,
                                                                           e.shape_AM);
                 
-                const double nominal_eta_GB = SkyCoverage::nominal_eta_GB_GL(data[k].GB.getRef(),
+                const double nominal_eta_GB = SkyCoverage::nominal_eta_GB_GL(data[k].GB,
                                                                              e.drop_GB,
                                                                              e.scale_GB,
                                                                              0.0,
@@ -527,11 +527,11 @@ int main(int argc, char ** argv) {
                 const double nominal_eta_GL = SkyCoverage::nominal_eta_GB_GL(0.0,
                                                                              e.drop_GB,
                                                                              e.scale_GB,
-                                                                             data[k].GL.getRef(),
+                                                                             data[k].GL,
                                                                              e.scale_GL,
                                                                              e.shape_GL);
                 
-                /* const double nominal_eta_SA = SkyCoverage::nominal_eta_SA(data[k].SA.getRef(),
+                /* const double nominal_eta_SA = SkyCoverage::nominal_eta_SA(data[k].SA,
                    e.peak_SA,
                    e.scale_SA,
                    e.shape_SA);
@@ -540,64 +540,64 @@ int main(int argc, char ** argv) {
                 const double nominal_eta_SA = 1.0;
                     
                 // at this point, small sigmas can become very large because divided by a very small eta's
-                if (data[k].sigmaEta.getRef() > 0) {
+                if (data[k].sigmaEta > 0) {
                     if (eta != 0) {
                         if (nominal_eta_V != 0) {
-                            histo_V.insert(data[k].V.getRef(),
-                                           data[k].eta.getRef()*nominal_eta_V/eta,
-                                           orsa::square(eta/(nominal_eta_V*data[k].sigmaEta.getRef())));
+                            histo_V.insert(data[k].V,
+                                           data[k].eta*nominal_eta_V/eta,
+                                           orsa::square(eta/(nominal_eta_V*data[k].sigmaEta)));
                         }
                         if (nominal_eta_U != 0) {
-                            histo_U.insert(data[k].U.getRef(),
-                                           data[k].eta.getRef()*nominal_eta_U/eta,
-                                           orsa::square(eta/(nominal_eta_U*data[k].sigmaEta.getRef())));
-                            histo_U_more.insert(data[k].U.getRef(),
-                                                data[k].eta.getRef()*nominal_eta_U/eta,
-                                                orsa::square(eta/(nominal_eta_U*data[k].sigmaEta.getRef())));
+                            histo_U.insert(data[k].U,
+                                           data[k].eta*nominal_eta_U/eta,
+                                           orsa::square(eta/(nominal_eta_U*data[k].sigmaEta)));
+                            histo_U_more.insert(data[k].U,
+                                                data[k].eta*nominal_eta_U/eta,
+                                                orsa::square(eta/(nominal_eta_U*data[k].sigmaEta)));
                         }
-                        /* histo_SE.insert(data[k].SE.getRef(),
-                           data[k].eta.getRef()/eta,
-                           orsa::square(eta/(data[k].sigmaEta.getRef())));
+                        /* histo_SE.insert(data[k].SE,
+                           data[k].eta/eta,
+                           orsa::square(eta/(data[k].sigmaEta)));
                         */
                         if (nominal_eta_AM != 0) {
-                            histo_AM.insert(data[k].AM.getRef(),
-                                            data[k].eta.getRef()*nominal_eta_AM/eta,
-                                            orsa::square(eta/(nominal_eta_AM*data[k].sigmaEta.getRef())));
+                            histo_AM.insert(data[k].AM,
+                                            data[k].eta*nominal_eta_AM/eta,
+                                            orsa::square(eta/(nominal_eta_AM*data[k].sigmaEta)));
                         }
                         if (nominal_eta_GB != 0) {
-                            histo_GB.insert(data[k].GB.getRef(),
-                                            data[k].eta.getRef()*nominal_eta_GB/eta,
-                                            orsa::square(eta/(nominal_eta_GB*data[k].sigmaEta.getRef())));
+                            histo_GB.insert(data[k].GB,
+                                            data[k].eta*nominal_eta_GB/eta,
+                                            orsa::square(eta/(nominal_eta_GB*data[k].sigmaEta)));
                         }
                         if (nominal_eta_GL != 0) {
-                            histo_GL.insert(data[k].GL.getRef(),
-                                            data[k].eta.getRef()*nominal_eta_GL/eta,
-                                            orsa::square(eta/(nominal_eta_GL*data[k].sigmaEta.getRef())));
+                            histo_GL.insert(data[k].GL,
+                                            data[k].eta*nominal_eta_GL/eta,
+                                            orsa::square(eta/(nominal_eta_GL*data[k].sigmaEta)));
                         }
-                        histo_AZ.insert(data[k].AZ.getRef(),
-                                        data[k].eta.getRef()/eta,
-                                        orsa::square(eta/(data[k].sigmaEta.getRef())));
+                        histo_AZ.insert(data[k].AZ,
+                                        data[k].eta/eta,
+                                        orsa::square(eta/(data[k].sigmaEta)));
                         if (nominal_eta_SA != 0) {
-                            histo_SA.insert(data[k].SA.getRef(),
-                                            data[k].eta.getRef()*nominal_eta_SA/eta,
-                                            orsa::square(eta/(nominal_eta_SA*data[k].sigmaEta.getRef())));
+                            histo_SA.insert(data[k].SA,
+                                            data[k].eta*nominal_eta_SA/eta,
+                                            orsa::square(eta/(nominal_eta_SA*data[k].sigmaEta)));
                         }
                         {
                             const double nominal_eta_galactic =
-                                SkyCoverage::nominal_eta_GB_GL(data[k].GB.getRef(),
+                                SkyCoverage::nominal_eta_GB_GL(data[k].GB,
                                                                e.drop_GB,
                                                                e.scale_GB,
-                                                               data[k].GL.getRef(),
+                                                               data[k].GL,
                                                                e.scale_GL,
                                                                e.shape_GL);  
                             if (nominal_eta_galactic != 0) {
-                                histo2D_galactic.insert(data[k].GB.getRef(),
-                                                        data[k].GL.getRef(),
-                                                        data[k].eta.getRef()*nominal_eta_galactic/eta,
-                                                        orsa::square(eta/(nominal_eta_galactic*data[k].sigmaEta.getRef())));
+                                histo2D_galactic.insert(data[k].GB,
+                                                        data[k].GL,
+                                                        data[k].eta*nominal_eta_galactic/eta,
+                                                        orsa::square(eta/(nominal_eta_galactic*data[k].sigmaEta)));
                                 // this tracks the fitting function only, not the data!
-                                histo2D_galactic_eta.insert(data[k].GB.getRef(),
-                                                            data[k].GL.getRef(),
+                                histo2D_galactic_eta.insert(data[k].GB,
+                                                            data[k].GL,
                                                             nominal_eta_galactic,
                                                             1.0); // OK to use constant sigma for fitting function?
                             }
@@ -605,21 +605,21 @@ int main(int argc, char ** argv) {
                         
                         {
                             const double nominal_eta_lunar = 1.0;
-                            /* SkyCoverage::nominal_eta_LA_LI(data[k].LA.getRef(),
-                               data[k].LI.getRef(),
+                            /* SkyCoverage::nominal_eta_LA_LI(data[k].LA,
+                               data[k].LI,
                                e.LA_LI_limit_const,
                                e.LA_LI_limit_linear,
                                e.LA_LI_w_const,
                                e.LA_LI_w_linear);
                             */
                             if (nominal_eta_lunar != 0) {
-                                histo2D_lunar.insert(data[k].LA.getRef(),
-                                                     data[k].LI.getRef(),
-                                                     data[k].eta.getRef()*nominal_eta_lunar/eta,
-                                                     orsa::square(eta/(nominal_eta_lunar*data[k].sigmaEta.getRef())));
+                                histo2D_lunar.insert(data[k].LA,
+                                                     data[k].LI,
+                                                     data[k].eta*nominal_eta_lunar/eta,
+                                                     orsa::square(eta/(nominal_eta_lunar*data[k].sigmaEta)));
                                 // this tracks the fitting function only, not the data!
-                                histo2D_lunar_eta.insert(data[k].LA.getRef(),
-                                                         data[k].LI.getRef(),
+                                histo2D_lunar_eta.insert(data[k].LA,
+                                                         data[k].LI,
                                                          nominal_eta_lunar,
                                                          1.0); // OK to use constant sigma for fitting function?
                             }

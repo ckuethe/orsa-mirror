@@ -108,29 +108,29 @@ int main(int argc, char ** argv) {
         unsigned int excluded=0;
         for (unsigned int k=0; k<etaData[fileID].size(); ++k) {
             // keep vars aligned with varDefinition content
-            xVector[0] = etaData[fileID][k].V.getRef();
-            xVector[1] = etaData[fileID][k].apparentVelocity.getRef();
-            xVector[2] = etaData[fileID][k].airMass.getRef();
-            xVector[3] = etaData[fileID][k].galacticLatitude.getRef();
-            xVector[4] = etaData[fileID][k].galacticLongitude.getRef();
-            // xVector[ ] = etaData[fileID][k].solarAltitude.getRef();
-            // xVector[ ] = etaData[fileID][k].lunarAltitude.getRef();
-            // xVector[ ] = LP2LI(etaData[fileID][k].lunarPhase.getRef());
+            xVector[0] = etaData[fileID][k].V;
+            xVector[1] = etaData[fileID][k].apparentVelocity;
+            xVector[2] = etaData[fileID][k].airMass;
+            xVector[3] = etaData[fileID][k].galacticLatitude;
+            xVector[4] = etaData[fileID][k].galacticLongitude;
+            // xVector[ ] = etaData[fileID][k].solarAltitude;
+            // xVector[ ] = etaData[fileID][k].lunarAltitude;
+            // xVector[ ] = LP2LI(etaData[fileID][k].lunarPhase);
             const bool goodInsert = countStats[fileID]->insert(xVector,
-                                                               etaData[fileID][k].observed.getRef(),
-                                                               etaData[fileID][k].discovered.getRef());
+                                                               etaData[fileID][k].observed,
+                                                               etaData[fileID][k].discovered);
             if (!goodInsert) {
                 // KEEP THIS!
                 ++excluded;
                 //
                 if (0) {
                     ORSA_DEBUG("excluded: V=%4.1f U=%5.1f AM=%5.2f GB=%+3.0f GL=%+4.0f obs: %i",
-                               etaData[fileID][k].V.getRef(),
-                               orsa::FromUnits(etaData[fileID][k].apparentVelocity.getRef()*orsa::radToArcsec(),orsa::Unit::HOUR),
-                               etaData[fileID][k].airMass.getRef(),
-                               orsa::radToDeg()*etaData[fileID][k].galacticLatitude.getRef(),
-                               orsa::radToDeg()*etaData[fileID][k].galacticLongitude.getRef(),
-                               etaData[fileID][k].observed.getRef());
+                               (*etaData[fileID][k].V),
+                               orsa::FromUnits(etaData[fileID][k].apparentVelocity*orsa::radToArcsec(),orsa::Unit::HOUR),
+                               (*etaData[fileID][k].airMass),
+                               orsa::radToDeg()*etaData[fileID][k].galacticLatitude,
+                               orsa::radToDeg()*etaData[fileID][k].galacticLongitude,
+                               (*etaData[fileID][k].observed));
                 }
             }
         }
@@ -183,7 +183,7 @@ int main(int argc, char ** argv) {
                 el.Ntot=cs->Ntot;
                 //
                 data[fileID].push_back(el);
-                // ORSA_DEBUG("set el.AM to %g",el.AM.getRef());
+                // ORSA_DEBUG("set el.AM to %g",el.AM);
             }
             ++it;
         }
@@ -201,18 +201,18 @@ int main(int argc, char ** argv) {
     /* if (1) {
        for (unsigned int k=0; k<data.size(); ++k) {
        const EfficiencyMultifit::DataElement & el = data[k];
-       // if (el.Ntot.getRef()>2) {
+       // if (el.Ntot>2) {
        gmp_printf("%5.2f %6.2f %6.2f %6.2f %6.3f %5.3f %5.3f %5i %5i %5i\n",
-       el.V.getRef(),
-       orsa::FromUnits(el.U.getRef()*orsa::radToArcsec(),orsa::Unit::HOUR),
-       el.SE.getRef()*orsa::radToDeg(),
-       el.LE.getRef()*orsa::radToDeg(),
-       el.AM.getRef(),
-       el.eta.getRef(),
-       el.sigmaEta.getRef(),
-       el.Nobs.getRef(),
-       el.Ndsc.getRef(),
-       el.Ntot.getRef());
+       el.V,
+       orsa::FromUnits(el.U*orsa::radToArcsec(),orsa::Unit::HOUR),
+       el.SE*orsa::radToDeg(),
+       el.LE*orsa::radToDeg(),
+       el.AM,
+       el.eta,
+       el.sigmaEta,
+       el.Nobs,
+       el.Ndsc,
+       el.Ntot);
        }
        }
     */
@@ -376,7 +376,7 @@ int main(int argc, char ** argv) {
         V0 = 16.0;
         success = etaFit->fit(par.get(),
                               data,
-                              V0.getRef(),
+                              V0,
                               fitFilename,
                               basename,
                               obsCodeFile.get(),
@@ -387,7 +387,7 @@ int main(int argc, char ** argv) {
         } else {
             etaFit->fit(par.get(),
                         data,
-                        V0.getRef(),
+                        V0,
                         fitFilename,
                         basename,
                         obsCodeFile.get(),
@@ -422,7 +422,7 @@ int main(int argc, char ** argv) {
     {
         success = etaFit->fit(par.get(),
                               data,
-                              V0.getRef(),
+                              V0,
                               fitFilename,
                               basename,
                               obsCodeFile.get(),
@@ -434,7 +434,7 @@ int main(int argc, char ** argv) {
         } else {
             etaFit->fit(par.get(),
                         data,
-                        V0.getRef(),
+                        V0,
                         fitFilename,
                         basename,
                         obsCodeFile.get(),
@@ -458,7 +458,7 @@ int main(int argc, char ** argv) {
         (*par.get()) = (*lastGoodPar.get());
         etaFit->fit(par.get(),
                     data,
-                    V0.getRef(),
+                    V0,
                     fitFilename,
                     basename,
                     obsCodeFile.get(),
@@ -503,7 +503,7 @@ int main(int argc, char ** argv) {
     {
         etaFit->fit(par.get(),
                     data,
-                    V0.getRef(),
+                    V0,
                     fitFilename,
                     basename,
                     obsCodeFile.get(),
