@@ -23,15 +23,15 @@ void checkOrSet(orsa::Cache<orsa::Vector> & c, const orsa::Vector & v) {
     static mpz_class notMatching=0;
     ++callID;
     if (c.isSet()) {
-        if (c.getRef()!=v) {
+        if (c!=v) {
             ++notMatching;
             ORSA_DEBUG("vector changed! [delta: %g; ratio: %g] [callID: %Zi; errors: %Zi; ratio: %g] [old,new below]",
-                       (c.getRef()-v).length(),
-                       (c.getRef()-v).length()/(c.getRef().length()),
+                       (c-v).length(),
+                       (c-v).length()/(orsa::Vector(c).length()),
                        callID.get_mpz_t(),
                        notMatching.get_mpz_t(),
                        notMatching.get_d()/callID.get_d());
-            orsa::print(c.getRef());
+            orsa::print(c);
             orsa::print(v);
             // orsa::crash();
         }
@@ -390,7 +390,7 @@ VestaPlot::VestaPlot(orsa::BodyGroup        * bg,
    // ORSA_DEBUG("inside VestaPlot::moveMaker()...");
    
    if (_lastSimulationTime.isSet() &&
-   _lastSimulationTime.getRef() == t) {
+   _lastSimulationTime == t) {
    // nothing to do here...
    return; 
    }
@@ -412,7 +412,7 @@ void VestaPlot::moveAltitudeCurve(const orsa::Time & t) {
     // ORSA_DEBUG("inside VestaPlot::moveAltitudeCurve()...");
   
     if (_lastSimulationTime.isSet() &&
-        _lastSimulationTime.getRef() == t) {
+        _lastSimulationTime == t) {
         // nothing to do here...
         return; 
     }
