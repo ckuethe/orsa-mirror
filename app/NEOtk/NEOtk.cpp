@@ -497,7 +497,7 @@ int main(int argc, char **argv) {
                 // if not set (that is, equal to 0.0), use default
                 ORSA_DEBUG("cannot find nominal accuracy for observatory code [%s], please update file obsRMS.dat",(*allOpticalObs[k]->obsCode).c_str());
 #warning default RMS=?   (use automatic, floating RMS?)
-                RMS=5.0;
+                RMS=1.0;
             }
             //
             /* allOpticalObs[k]->sigma_ra  = RMS*arcsecToRad();
@@ -518,10 +518,12 @@ int main(int argc, char **argv) {
         
         /***** INPUT *****/
         
-        const double minAdaptiveRange = orsa::FromUnits( 0.0,orsa::Unit::AU);
-        const double maxAdaptiveRange = orsa::FromUnits(10.0,orsa::Unit::AU);
+        const double minAdaptiveRange = orsa::FromUnits(  0.0,orsa::Unit::AU);
+        const double maxAdaptiveRange = orsa::FromUnits(100.0,orsa::Unit::AU);
         
-        const int randomSeed = 71790;
+        const unsigned int minAdaptiveSize = 1000; // 2
+        
+        const int randomSeed = 717901;
         
         /***** END INPUT *****/
         
@@ -692,15 +694,27 @@ int main(int argc, char **argv) {
                     ORSA_DEBUG("vecMaxRange[%i] not set??",j);
                 }
             }
-
+            
             // try to reduce vecMaxRange values:
             // take the smallest, and reduce all others according to V_escape*dt....
-            unsigned int indexMin = 0;
+            orsa::Cache<unsigned int> indexMin;
+            // first, find one initial indexMin, any one works, the first that is set
             for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
-                if (vecMaxRange[k] < vecMaxRange[indexMin]) indexMin = k;
+                if (vecMaxRange[k].isSet()) {
+                    indexMin=k;
+                    break;
+                }
+            }
+            if (!indexMin.isSet()) {
+                ORSA_DEBUG("problems...");
+            }
+            for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+                if (vecMaxRange[k].isSet()) {
+                    if (vecMaxRange[k] < vecMaxRange[indexMin]) indexMin = k;
+                }
             }
             ORSA_DEBUG("SMALLEST max range distance for obs [%02i] = %8.3f [AU]",
-                       indexMin,
+                       (*indexMin),
                        orsa::FromUnits(vecMaxRange[indexMin],orsa::Unit::AU,-1));
             
             const orsa::Vector R_a = R_o[indexMin] + u_o2a[indexMin]*vecMaxRange[indexMin];
@@ -751,6 +765,13 @@ int main(int argc, char **argv) {
                                                    0.95,
                                                    chisq_99,
                                                    randomSeed+234);
+            // #warning RESTORE THIS!? USE vecMaxRange...
+            /* range_99[k] = new AdaptiveIntervalType(minAdaptiveRange,
+               maxAdaptiveRange,
+               0.95,
+               chisq_99,
+               randomSeed+234);
+            */
         }
         
         osg::ref_ptr<MultiminOrbitalVelocity> mov = new MultiminOrbitalVelocity;
@@ -781,7 +802,7 @@ int main(int argc, char **argv) {
                 for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
                     if ((j!=z1) && (j!=z2)) continue;
                     if ( (j==z1) ||
-                         (j==z2 && range_99[z2]->size()>=2) ) {
+                         (j==z2 && range_99[z2]->size()>=minAdaptiveSize) ) {
                         // if (j==z2) ORSA_DEBUG("speed-up...");
                         // normal sampling on z1
                         rng->gsl_ran_dir_2d(&dx,&dy);
@@ -792,7 +813,7 @@ int main(int argc, char **argv) {
                         R_o2an[j] = range_99[j]->sample()*u_o2an[j];
                         R_an[j] = R_o[j] + R_o2an[j];
                         R_s2an[j] = R_an[j] - R_s[j];
-                        if (j==z2 && range_99[z2]->size()>=2) {
+                        if (j==z2 && range_99[z2]->size()>=minAdaptiveSize) {
                             const double escapeVelocity = sqrt(2*orsaSolarSystem::Data::GMSun()/R_s2an[z1].length());
                             const double dt = (allOpticalObs[z2]->epoch-allOpticalObs[z1]->epoch).get_d();
                             const double maxDistance = escapeVelocity*dt;
@@ -803,7 +824,7 @@ int main(int argc, char **argv) {
                             }
                         }
                     }
-                    if (j==z2 && range_99[z2]->size()<2) {
+                    if (j==z2 && range_99[z2]->size()<minAdaptiveSize) {
                         // enforce bound orbit on z2
                         const double escapeVelocity = sqrt(2*orsaSolarSystem::Data::GMSun()/R_s2an[z1].length());
                         const double dt = (allOpticalObs[z2]->epoch-allOpticalObs[z1]->epoch).get_d();
@@ -813,8 +834,9 @@ int main(int argc, char **argv) {
                         // u_o2an[j] = (u_o2a[j]+rng->gsl_ran_gaussian(astrometricSigma)*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
                         u_o2an[j] = (u_o2a[j]+rng->gsl_ran_gaussian(vecRMS[j]*orsa::arcsecToRad())*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
                         //
-                        const orsa::Vector diffVector = R_s2an[z1]-R_o[z2]+R_s[z2];
-                        const double rangeCenter = u_o2an[j]*diffVector; // range of min distance to R...z1
+                        // const orsa::Vector diffVector = R_s2an[z1]-R_o[z2]+R_s[z2];
+                        const orsa::Vector diffVector = R_s2an[z1]+R_s[z1]-R_o[z2];
+                        const double rangeCenter = std::max(0.0,u_o2an[j]*diffVector); // range of min distance to R...z1
                         const double minDistance = (u_o2an[j]*rangeCenter-diffVector).length();
                         if (minDistance > maxDistance) {
                             // no possible bound solutions here
@@ -830,6 +852,7 @@ int main(int argc, char **argv) {
                         R_an[j] = R_o[j] + R_o2an[j];
                         R_s2an[j] = R_an[j] - R_s[j];
                     }
+                    if (j==z2) break; // done
                 }
                 if (!bound) continue;
             }
@@ -954,8 +977,10 @@ int main(int argc, char **argv) {
             // if (stat_residual->RMS() < outputThreshold) {
             if (chisq < chisq_99) {
                 
+#warning line length can be too short sometimes...,
+                
                 // a string to write all the single residuals
-                char line_eachResidual[1024];
+                char line_eachResidual[1024*1024];
                 {
                     char tmpStr[1024];
                     line_eachResidual[0] = '\0';
@@ -966,7 +991,7 @@ int main(int argc, char **argv) {
                 }
 
                 // this is relative to the observer
-                char line_eachDistance[1024];
+                char line_eachDistance[1024*1024];
                 {
                     char tmpStr[1024];
                     line_eachDistance[0] = '\0';
@@ -977,7 +1002,7 @@ int main(int argc, char **argv) {
                 }
                 
                 // this is relative to the Sun
-                char line_eachVelocity[1024];
+                char line_eachVelocity[1024*1024];
                 {
                     char tmpStr[1024];
                     line_eachVelocity[0] = '\0';
