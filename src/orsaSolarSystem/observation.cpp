@@ -22,7 +22,7 @@ double orsaSolarSystem::MPC_band_correction(const char band) {
         case 'J': c=+1.20; break;
         case 'i': c=+1.22; break;
         default:
-            ORSA_DEBUG("band not found: [%s]",band);
+            ORSA_DEBUG("band not found: [%c]",band);
     }
     // ORSA_DEBUG("band: [%c]   correction: %g",band,c);
     return c;
