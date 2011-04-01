@@ -173,7 +173,9 @@ void Debug::head(const DebugType type, const char * file, const int line, const 
     const time_t tt_now = time(0);
     struct tm * tm_struct = localtime(&tt_now);
 
-    char headString[1024];
+#warning need to check string lengths...
+    
+    char headString[1024*1024];
 
 #ifdef __ADVANCED_TIMER__
 
@@ -259,7 +261,7 @@ void Debug::trace(const char * fmt, ...) {
 */
 
 void Debug::vtrace(const char * fmt, std::va_list list) {
-    char traceString[1024];
+    char traceString[1024*1024];
     gmp_vsprintf(traceString,
                  fmt,
                  list);
