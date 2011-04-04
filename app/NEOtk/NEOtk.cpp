@@ -315,7 +315,7 @@ public:
 
         // initial check
         if (acos(u_o2a_1*u_o2a_2) < sigma_factor*(sigma_1_arcsec+sigma_2_arcsec)*orsa::arcsecToRad()) {
-            ORSA_DEBUG("obs. uncertainty is larger than their distance, skipping...");
+            ORSA_DEBUG("obs. uncertainty is larger than their angular separation, skipping...");
             return 0.0;
         }
         
@@ -496,7 +496,7 @@ int main(int argc, char **argv) {
             if (RMS==0.0) {
                 // if not set (that is, equal to 0.0), use default
                 ORSA_DEBUG("cannot find nominal accuracy for observatory code [%s], please update file obsRMS.dat",(*allOpticalObs[k]->obsCode).c_str());
-#warning default RMS=?   (use automatic, floating RMS?)
+                // #warning default RMS=?   (use automatic, floating RMS?)
                 RMS=1.0;
             }
             //
@@ -507,6 +507,15 @@ int main(int argc, char **argv) {
             vecRMS[k] = RMS; // in arcsec
         }
     }
+
+    /* {
+       #warning remove this
+       // test: force fixed vecRMS
+       for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+       vecRMS[k] = 0.2; // in arcsec
+       }
+       }
+    */
     
     const double chisq_90 = gsl_cdf_chisq_Pinv(0.90,allOpticalObs.size());
     const double chisq_95 = gsl_cdf_chisq_Pinv(0.95,allOpticalObs.size());
@@ -521,7 +530,7 @@ int main(int argc, char **argv) {
         const double minAdaptiveRange = orsa::FromUnits(  0.0,orsa::Unit::AU);
         const double maxAdaptiveRange = orsa::FromUnits(100.0,orsa::Unit::AU);
         
-        const unsigned int minAdaptiveSize = 1000; // 2
+        const unsigned int minAdaptiveSize = 2; // 2
         
         const int randomSeed = 717901;
         
@@ -695,6 +704,14 @@ int main(int argc, char **argv) {
                 }
             }
             
+            if (0) {
+#warning remove this
+                // test: force large maxRange...
+                for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+                    vecMaxRange[j] = orsa::FromUnits(1.00,orsa::Unit::AU);
+                }
+            }
+            
             // try to reduce vecMaxRange values:
             // take the smallest, and reduce all others according to V_escape*dt....
             orsa::Cache<unsigned int> indexMin;
@@ -762,13 +779,13 @@ int main(int argc, char **argv) {
         for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
             range_99[k] = new AdaptiveIntervalType(minAdaptiveRange,
                                                    std::min(double(vecMaxRange[k]),maxAdaptiveRange),
-                                                   0.95,
+                                                   0.99,
                                                    chisq_99,
                                                    randomSeed+234);
             // #warning RESTORE THIS!? USE vecMaxRange...
             /* range_99[k] = new AdaptiveIntervalType(minAdaptiveRange,
                maxAdaptiveRange,
-               0.95,
+               0.99,
                chisq_99,
                randomSeed+234);
             */
@@ -782,13 +799,14 @@ int main(int argc, char **argv) {
 #warning need to improve this! (one for each value of chisq confidence level?)
         unsigned int ct_tot=0;
         unsigned int ct_NEO=0;
+        unsigned int old_ct_tot=0;
         // 
         while (1) {
             ++iter;
             // ORSA_DEBUG("ITER: %i",iter);
             // first add noise to unit vectors
 
-            // don't use ___z1 and ___z2 in code below
+            // don't use ___z1 and ___z2 in code below, but z1 and z2 
             unsigned int ___z1 = rng->gsl_rng_uniform_int(allOpticalObs.size());
             unsigned int ___z2;
             do { ___z2 = rng->gsl_rng_uniform_int(allOpticalObs.size()); }
@@ -974,10 +992,7 @@ int main(int argc, char **argv) {
             // ORSA_DEBUG("RMS: %8.3f",stat_residual->RMS());
             
             // main output
-            // if (stat_residual->RMS() < outputThreshold) {
             if (chisq < chisq_99) {
-                
-#warning line length can be too short sometimes...,
                 
                 // a string to write all the single residuals
                 char line_eachResidual[1024*1024];
@@ -989,7 +1004,7 @@ int main(int argc, char **argv) {
                         strcat(line_eachResidual,tmpStr);
                     }
                 }
-
+                
                 // this is relative to the observer
                 char line_eachDistance[1024*1024];
                 {
@@ -1069,12 +1084,14 @@ int main(int argc, char **argv) {
                }
             */
             
-            if (0) {
+            if (1) {
                 // debug output
-                if (iter%10==0) {
+                // if (iter%10==0) {
+                if (ct_tot!=old_ct_tot) {
                     if (ct_tot!=0) {
                         ORSA_DEBUG("prob. NEO: %7.3f (%i/%i)",(double)ct_NEO/(double)ct_tot,ct_NEO,ct_tot);
                     }
+                    old_ct_tot=ct_tot;
                 }
             }
             
