@@ -96,15 +96,21 @@ public:
         }
     }
 public:
+    bool reset() {
+        return data->reset();
+    }
+public:
     void update() {
-        const double    tmpMin = data->min().position;
-        const double    tmpMax = data->max().position;
-        //
-        const double        mu = 0.5*(tmpMin+tmpMax);
-        const double     delta = (tmpMax-tmpMin)/(2*pow(probability,1.0/data->size()));
-        //
-        sampleMin = std::max(mu-delta,initialMin);
-        sampleMax = std::min(mu+delta,initialMax);
+        if (data->size()>=2) {
+            const double    tmpMin = data->min().position;
+            const double    tmpMax = data->max().position;
+            //
+            const double        mu = 0.5*(tmpMin+tmpMax);
+            const double     delta = (tmpMax-tmpMin)/(2*pow(probability,1.0/data->size()));
+            //
+            sampleMin = std::max(mu-delta,initialMin);
+            sampleMax = std::min(mu+delta,initialMax);
+        }
     }
 protected:
     orsa::Cache<double> sampleMin, sampleMax;

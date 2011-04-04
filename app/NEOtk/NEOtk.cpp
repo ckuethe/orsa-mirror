@@ -88,8 +88,6 @@ double absoluteMagnitude(const double & V,
     return H;
 }
 
-
-
 // main purpose: disable the rotation after the release of the mouse button
 class VestaNodeTrackerManipulator : public osgGA::NodeTrackerManipulator {
 public:
@@ -392,6 +390,7 @@ int main(int argc, char **argv) {
        ORSA_DEBUG("RMS[XYZ] = %g",obsRMS["XYZ"]);
     */
     //
+    std::vector<double> vecRMSnominal; // same index as observations
     std::vector<double> vecRMS; // same index as observations
     
     osg::ref_ptr<BodyGroup> bg = new BodyGroup;
@@ -490,6 +489,7 @@ int main(int argc, char **argv) {
         ORSA_DEBUG("total optical observations read: %i",allOpticalObs.size());
         
         // assign RMS values
+        vecRMSnominal.resize(allOpticalObs.size());
         vecRMS.resize(allOpticalObs.size());
         for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
             double RMS = obsRMS[allOpticalObs[k]->obsCode];
@@ -504,7 +504,8 @@ int main(int argc, char **argv) {
                allOpticalObs[k]->sigma_dec = RMS*arcsecToRad();
             */
             //
-            vecRMS[k] = RMS; // in arcsec
+            vecRMSnominal[k] = RMS; // in arcsec
+            vecRMS[k]        = RMS; // in arcsec
         }
     }
 
@@ -517,11 +518,12 @@ int main(int argc, char **argv) {
        }
     */
     
+    const double chisq_50 = gsl_cdf_chisq_Pinv(0.50,allOpticalObs.size());
     const double chisq_90 = gsl_cdf_chisq_Pinv(0.90,allOpticalObs.size());
     const double chisq_95 = gsl_cdf_chisq_Pinv(0.95,allOpticalObs.size());
     const double chisq_99 = gsl_cdf_chisq_Pinv(0.99,allOpticalObs.size());
     // 
-    ORSA_DEBUG("chisq 90\%: %.2f  95\%: %.2f  99\%: %.2f",chisq_90,chisq_95,chisq_99);
+    ORSA_DEBUG("chisq 50\%: %.2f  90\%: %.2f  95\%: %.2f  99\%: %.2f",chisq_50,chisq_90,chisq_95,chisq_99);
     
     if (1) {
         
@@ -779,7 +781,7 @@ int main(int argc, char **argv) {
         for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
             range_99[k] = new AdaptiveIntervalType(minAdaptiveRange,
                                                    std::min(double(vecMaxRange[k]),maxAdaptiveRange),
-                                                   0.99,
+                                                   0.999999, // confidence level for this interval, different from the chisq-level
                                                    chisq_99,
                                                    randomSeed+234);
             // #warning RESTORE THIS!? USE vecMaxRange...
@@ -800,7 +802,9 @@ int main(int argc, char **argv) {
         unsigned int ct_tot=0;
         unsigned int ct_NEO=0;
         unsigned int old_ct_tot=0;
-        // 
+        //
+        orsa::Cache<double> minRMS;
+        //
         while (1) {
             ++iter;
             // ORSA_DEBUG("ITER: %i",iter);
@@ -920,6 +924,31 @@ int main(int argc, char **argv) {
                 chisq+=orsa::square(residual/vecRMS[j]);
                 // ORSA_DEBUG("OFFSET[%i]: %5.1f",j,residual);
             }
+
+            {
+                bool newMinRMS=false;
+                if (!minRMS.isSet()) {
+                    minRMS = stat_residual->RMS();
+                    newMinRMS=true;
+                } else {
+                    if (stat_residual->RMS() < minRMS) {
+                        minRMS = stat_residual->RMS();
+                        newMinRMS=true;
+                    }
+                }
+                if (newMinRMS) {
+#warning this might be too drastic, should find a way to save earlier points...
+                    ORSA_DEBUG("RESET HERE...");
+#warning remember to reset all other counters around the code...
+                    for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+                        range_99[k]->reset();
+                        if (vec_residual[k]>vecRMSnominal[k]) {
+                            vecRMS[k] = vec_residual[k];
+                        }
+                    }
+                    continue;
+                }
+            }
             
             {
                 // feedback
@@ -1026,7 +1055,18 @@ int main(int argc, char **argv) {
                         strcat(line_eachVelocity,tmpStr);
                     }
                 }
-
+                
+                // a string to write all the single RMS values used
+                char line_eachRMS[1024*1024];
+                {
+                    char tmpStr[1024];
+                    line_eachRMS[0] = '\0';
+                    for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+                        sprintf(tmpStr,"%6.3f ",vecRMS[j]);
+                        strcat(line_eachRMS,tmpStr);
+                    }
+                }
+                
                 // absolute magnitude estimate
                 double H;
                 {
@@ -1061,7 +1101,8 @@ int main(int argc, char **argv) {
                 }
                 
                 
-                ORSA_DEBUG("SAMPLE: %6.2f %7.3f %9.3f %8.6f %7.3f %5.2f %6.4f %s %s %s",
+                ORSA_DEBUG("SAMPLE[minRMS=%.3f]: %6.3f %7.3f %9.3f %8.6f %7.3f %5.2f %6.4f %s %s %s %s",
+                           (*minRMS),
                            stat_residual->RMS(),
                            chisq,
                            orsa::FromUnits(O_s2an_g.a,orsa::Unit::AU,-1),
@@ -1071,7 +1112,8 @@ int main(int argc, char **argv) {
                            orsa::FromUnits(EarthMOID,orsa::Unit::AU,-1),
                            line_eachResidual,
                            line_eachDistance,
-                           line_eachVelocity);
+                           line_eachVelocity,
+                           line_eachRMS);
                 
             } else {
                 // ORSA_DEBUG("above threshold: %g",stat_residual->RMS());
