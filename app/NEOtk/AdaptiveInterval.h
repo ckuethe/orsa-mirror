@@ -66,9 +66,9 @@ protected:
     
 public:
     double sample() const {
-#warning minimim number of points to use (at least 2...)
+        // #warning minimum number of points to use (at least 2...)
         if (data->size()>=2) {
-            /*
+            /* 
                #warning cache values, to speed-up this part 
                // const double    tmpMin = forcePositive ? std::max(0.0,data->min().position) : data->min().position;
                // forcePositive test is not needed, because of the stronger check below agains the intial min and max
