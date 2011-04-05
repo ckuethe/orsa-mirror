@@ -348,9 +348,17 @@ protected:
 
 //
 
+class Entry {
+public:
+    orsaSolarSystem::OrbitWithEpoch O_s2an_g;
+    mutable double RMS;
+    mutable double chisq;
+    mutable bool tested;
+};
+
 int main(int argc, char **argv) {
     
-    QApplication app(argc, argv);
+    // QApplication app(argc, argv);
     
     // orsaQt::Debug::instance()->initTimer();
     //
@@ -497,7 +505,7 @@ int main(int argc, char **argv) {
                 // if not set (that is, equal to 0.0), use default
                 ORSA_DEBUG("cannot find nominal accuracy for observatory code [%s], please update file obsRMS.dat",(*allOpticalObs[k]->obsCode).c_str());
                 // #warning default RMS=?   (use automatic, floating RMS?)
-                RMS=1.0;
+                RMS=0.7;
             }
             //
             /* allOpticalObs[k]->sigma_ra  = RMS*arcsecToRad();
@@ -505,6 +513,7 @@ int main(int argc, char **argv) {
             */
             //
             vecRMSnominal[k] = RMS; // in arcsec
+#warning higher initial value of RMS?
             vecRMS[k]        = RMS; // in arcsec
         }
     }
@@ -522,8 +531,10 @@ int main(int argc, char **argv) {
     const double chisq_90 = gsl_cdf_chisq_Pinv(0.90,allOpticalObs.size());
     const double chisq_95 = gsl_cdf_chisq_Pinv(0.95,allOpticalObs.size());
     const double chisq_99 = gsl_cdf_chisq_Pinv(0.99,allOpticalObs.size());
+#warning add chisq_999 and range_999 ?
     // 
-    ORSA_DEBUG("chisq 50\%: %.2f  90\%: %.2f  95\%: %.2f  99\%: %.2f",chisq_50,chisq_90,chisq_95,chisq_99);
+    ORSA_DEBUG("chisq 50\%: %.2f  90\%: %.2f  95\%: %.2f  99\%: %.2f",
+               chisq_50,chisq_90,chisq_95,chisq_99);
     
     if (1) {
         
@@ -621,9 +632,10 @@ int main(int argc, char **argv) {
         // orsa::Vector V_v2s_0;
         
         // astrometric residuals
-        std::vector<double> vec_residual;
-        vec_residual.resize(allOpticalObs.size());
-        osg::ref_ptr< orsa::Statistic<double> > stat_residual = new orsa::Statistic<double>;
+        /* std::vector<double> vec_residual;
+           vec_residual.resize(allOpticalObs.size());
+        */
+        // osg::ref_ptr< orsa::Statistic<double> > stat_residual = new orsa::Statistic<double>;
         
         for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
             
@@ -702,7 +714,9 @@ int main(int argc, char **argv) {
                                j,
                                orsa::FromUnits(vecMaxRange[j],orsa::Unit::AU,-1));
                 } else {
-                    ORSA_DEBUG("vecMaxRange[%i] not set??",j);
+                    // ORSA_DEBUG("vecMaxRange[%i] not set??",j);
+#warning correct to force it here?
+                    vecMaxRange[j] = maxAdaptiveRange; 
                 }
             }
             
@@ -724,52 +738,52 @@ int main(int argc, char **argv) {
                     break;
                 }
             }
-            if (!indexMin.isSet()) {
-                ORSA_DEBUG("problems...");
-            }
-            for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
-                if (vecMaxRange[k].isSet()) {
-                    if (vecMaxRange[k] < vecMaxRange[indexMin]) indexMin = k;
-                }
-            }
-            ORSA_DEBUG("SMALLEST max range distance for obs [%02i] = %8.3f [AU]",
-                       (*indexMin),
-                       orsa::FromUnits(vecMaxRange[indexMin],orsa::Unit::AU,-1));
-            
-            const orsa::Vector R_a = R_o[indexMin] + u_o2a[indexMin]*vecMaxRange[indexMin];
-            const double escapeVelocity = sqrt(2*orsaSolarSystem::Data::GMSun()/(R_a-R_s[indexMin]).length());
-            
-            for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                if (j==indexMin) continue;
-                const double rangeCenter = (R_a-R_o[j])*u_o2a[j];
+            if (indexMin.isSet()) {
                 
-                const double minDistance = (R_o[j]+u_o2a[j]*rangeCenter-R_a).length();
-                const double dt = fabs((allOpticalObs[j]->epoch-allOpticalObs[indexMin]->epoch).get_d());
-                const double maxDistance = escapeVelocity*dt;
-                if (minDistance > maxDistance) {
-                    /* ORSA_DEBUG("------------- minD: %g   maxD: %g",
-                       FromUnits(minDistance,orsa::Unit::AU,-1),
-                       FromUnits(maxDistance,orsa::Unit::AU,-1));
-                    */
-                    if (rangeCenter > 0.0) {
-                        // now setting if SMALLER!
-                        vecMaxRange[j].setIfSmaller(rangeCenter);
-                    }
-                } else {
-                    const double rangeDelta  = sqrt(orsa::square(maxDistance)-orsa::square(minDistance));
-                    const double newRange = rangeCenter+rangeDelta;
-                    if (newRange > 0.0) {
-                        // now setting if SMALLER!
-                        vecMaxRange[j].setIfSmaller(rangeCenter+rangeDelta);
+                for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+                    if (vecMaxRange[k].isSet()) {
+                        if (vecMaxRange[k] < vecMaxRange[indexMin]) indexMin = k;
                     }
                 }
+                ORSA_DEBUG("SMALLEST max range distance for obs [%02i] = %8.3f [AU]",
+                           (*indexMin),
+                           orsa::FromUnits(vecMaxRange[indexMin],orsa::Unit::AU,-1));
+                
+                const orsa::Vector R_a = R_o[indexMin] + u_o2a[indexMin]*vecMaxRange[indexMin];
+                const double escapeVelocity = sqrt(2*orsaSolarSystem::Data::GMSun()/(R_a-R_s[indexMin]).length());
+                
+                for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+                    if (j==indexMin) continue;
+                    const double rangeCenter = (R_a-R_o[j])*u_o2a[j];
+                    
+                    const double minDistance = (R_o[j]+u_o2a[j]*rangeCenter-R_a).length();
+                    const double dt = fabs((allOpticalObs[j]->epoch-allOpticalObs[indexMin]->epoch).get_d());
+                    const double maxDistance = escapeVelocity*dt;
+                    if (minDistance > maxDistance) {
+                        /* ORSA_DEBUG("------------- minD: %g   maxD: %g",
+                           FromUnits(minDistance,orsa::Unit::AU,-1),
+                           FromUnits(maxDistance,orsa::Unit::AU,-1));
+                        */
+                        if (rangeCenter > 0.0) {
+                            // now setting if SMALLER!
+                            vecMaxRange[j].setIfSmaller(rangeCenter);
+                        }
+                    } else {
+                        const double rangeDelta  = sqrt(orsa::square(maxDistance)-orsa::square(minDistance));
+                        const double newRange = rangeCenter+rangeDelta;
+                        if (newRange > 0.0) {
+                            // now setting if SMALLER!
+                            vecMaxRange[j].setIfSmaller(rangeCenter+rangeDelta);
+                        }
+                    }
+                }
+                
+                for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+                    ORSA_DEBUG("REDUCED max range distance for obs [%02i] = %8.3f [AU]",
+                               j,
+                               orsa::FromUnits(vecMaxRange[j],orsa::Unit::AU,-1));
+                }
             }
-            
-            for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                ORSA_DEBUG("REDUCED max range distance for obs [%02i] = %8.3f [AU]",
-                           j,
-                           orsa::FromUnits(vecMaxRange[j],orsa::Unit::AU,-1));
-            }                
         }
         
         // keep these in sync!
@@ -781,7 +795,7 @@ int main(int argc, char **argv) {
         for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
             range_99[k] = new AdaptiveIntervalType(minAdaptiveRange,
                                                    std::min(double(vecMaxRange[k]),maxAdaptiveRange),
-                                                   0.999999, // confidence level for this interval, different from the chisq-level
+                                                   0.99, // confidence level for this interval, different from the chisq-level
                                                    chisq_99,
                                                    randomSeed+234);
             // #warning RESTORE THIS!? USE vecMaxRange...
@@ -794,7 +808,7 @@ int main(int argc, char **argv) {
         }
         
         osg::ref_ptr<MultiminOrbitalVelocity> mov = new MultiminOrbitalVelocity;
-        unsigned int iter=-1;
+        unsigned int iter=0;
         // for (unsigned int zzz=0; zzz<10000; ++zzz) {
         //
         // test counts
@@ -805,7 +819,9 @@ int main(int argc, char **argv) {
         //
         orsa::Cache<double> minRMS;
         //
-        while (1) {
+        std::list<Entry> entryList;
+        //
+        while (iter<100000000) {
             ++iter;
             // ORSA_DEBUG("ITER: %i",iter);
             // first add noise to unit vectors
@@ -882,13 +898,21 @@ int main(int argc, char **argv) {
             V_s2an[z1] = mov->getOrbitalVelocity(R_s2an[z1],allOpticalObs[z1]->epoch,
                                                  R_s2an[z2],allOpticalObs[z2]->epoch,
                                                  orsaSolarSystem::Data::GMSun());
-            
-            orsaSolarSystem::OrbitWithEpoch tmpOrbit;
-            tmpOrbit.compute(R_s2an[z1],
-                             V_s2an[z1],
-                             orsaSolarSystem::Data::GMSun());
-            tmpOrbit.epoch = allOpticalObs[z1]->epoch;
-            const orsaSolarSystem::OrbitWithEpoch O_s2an_g = tmpOrbit;
+
+            {
+                orsaSolarSystem::OrbitWithEpoch tmpOrbit;
+                tmpOrbit.compute(R_s2an[z1],
+                                 V_s2an[z1],
+                                 orsaSolarSystem::Data::GMSun());
+                tmpOrbit.epoch = allOpticalObs[z1]->epoch;
+                const orsaSolarSystem::OrbitWithEpoch O_s2an_g = tmpOrbit;
+                
+                Entry e;
+                e.O_s2an_g = O_s2an_g;
+                e.tested   = false;
+                entryList.push_back(e);
+            }
+
             
             // orsa::print(O_v2sn_g);
             
@@ -897,131 +921,214 @@ int main(int argc, char **argv) {
                O_v2sn_g.e);
             */
             
-            // compute astrometric offset
-            stat_residual->reset();
-            double chisq=0.0;
-            orsa::Vector rOrbit, vOrbit;
-            for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                const orsa::Time t = allOpticalObs[j]->epoch;
-                tmpOrbit = O_s2an_g;
-                tmpOrbit.M = fmod(O_s2an_g.M + twopi()*(t-O_s2an_g.epoch).get_d()/O_s2an_g.period(),orsa::twopi());
-                tmpOrbit.relativePosVel(rOrbit,vOrbit);
-                rOrbit += R_s[j];
-                vOrbit += V_s[j];
-                // debug: print R_sn[j] before changing it
-                /* ORSA_DEBUG("distance: %g [km]",
-                   orsa::FromUnits((R_sn[j]-rOrbit).length(),orsa::Unit::KM,-1));
-                */
-                // note how some vectors are getting redefined
-                R_an[j] = rOrbit;
-                V_an[j] = vOrbit;
-                R_o2an[j] = (R_an[j]-R_o[j]);
-                V_o2an[j] = (V_an[j]-V_o[j]);
-                u_o2an[j] = (R_an[j]-R_o[j]).normalized();
-                const double residual = acos(std::min(1.0,u_o2an[j]*u_o2a[j]))*orsa::radToArcsec();
-                vec_residual[j] = residual;
-                stat_residual->insert(residual);
-                chisq+=orsa::square(residual/vecRMS[j]);
-                // ORSA_DEBUG("OFFSET[%i]: %5.1f",j,residual);
-            }
-
-            {
-                bool newMinRMS=false;
-                if (!minRMS.isSet()) {
-                    minRMS = stat_residual->RMS();
-                    newMinRMS=true;
-                } else {
-                    if (stat_residual->RMS() < minRMS) {
-                        minRMS = stat_residual->RMS();
-                        newMinRMS=true;
-                    }
-                }
-                if (newMinRMS) {
-#warning this might be too drastic, should find a way to save earlier points...
-                    ORSA_DEBUG("RESET HERE...");
-#warning remember to reset all other counters around the code...
-                    for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
-                        range_99[k]->reset();
-                        if (vec_residual[k]>vecRMSnominal[k]) {
-                            vecRMS[k] = vec_residual[k];
-                        }
-                    }
+            std::list<Entry>::const_iterator it = entryList.begin();
+            while (it != entryList.end()) {
+                
+                const orsaSolarSystem::OrbitWithEpoch O_s2an_g = (*it).O_s2an_g;
+                if ((*it).tested) {
+                    ++it;
                     continue;
                 }
-            }
-            
-            {
-                // feedback
-                // #warning create a range for each observation, and cycle on them with the for loop
-                // #warning cannot insert more than 1 in same range! it will bias too much, so need a range for each data point
-                for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                    AdaptiveIntervalElementType e;
-                    e.position = R_o2an[j].length();
-                    // e.position = R_o2an[0].length();  // use [j] !!!
-                    e.level = chisq;
-                    range_99[j]->insert(e);
-                }
-                /* for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                   AdaptiveIntervalElementType e;
-                   e.position = V_o2an[j].length();
-                   // e.position = R_o2an[0].length();  // use [j] !!!
-                   e.level = chisq;
-                   rate_99[j]->insert(e);
-                   }
-                */
-                // if (iter%1000==0) range_99->print();
-            }
-            
-            // if (stat_residual->RMS() < successThreshold) {
-            if (chisq < chisq_99) {
-                // stats
-                ++ct_tot;
-                if (O_s2an_g.a*(1.0-O_s2an_g.e) < FromUnits(1.3,orsa::Unit::AU)) {
-                    ++ct_NEO;
-                }
-            }
-            
-            // add body to bg
-            // #warning fix threshold
-            // if (stat_residual->RMS() < successThreshold) {
-            if (chisq < chisq_99) {
-                osg::ref_ptr<Body> b = new Body;
-                char bodyName[1024];
-                sprintf(bodyName,"b%i",iter); // fix...
-                b->setName(bodyName);
+                
+                // compute astrometric offset
+                std::vector<double> vec_residual;
+                vec_residual.resize(allOpticalObs.size());
+                //
+                osg::ref_ptr< orsa::Statistic<double> > stat_residual =
+                    new orsa::Statistic<double>;
+                stat_residual->reset();
+                (*it).chisq=0.0;
                 orsa::Vector rOrbit, vOrbit;
-                O_s2an_g.relativePosVel(rOrbit,vOrbit);
-                IBPS ibps;    
-                ibps.time = O_s2an_g.epoch;
-                //
-                ibps.inertial = new PointLikeConstantInertialBodyProperty(0);
-                //
-                ibps.translational = new DynamicTranslationalBodyProperty;
-#warning make sure epoch(z1) == orbit epoch!
-                if (allOpticalObs[z1]->epoch != ibps.time) {
-                    ORSA_DEBUG("problems!");
+                for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+                    const orsa::Time t = allOpticalObs[j]->epoch;
+                    orsaSolarSystem::OrbitWithEpoch tmpOrbit = O_s2an_g;
+                    tmpOrbit.M = fmod(O_s2an_g.M + twopi()*(t-O_s2an_g.epoch).get_d()/O_s2an_g.period(),orsa::twopi());
+                    tmpOrbit.relativePosVel(rOrbit,vOrbit);
+                    rOrbit += R_s[j];
+                    vOrbit += V_s[j];
+                    // debug: print R_sn[j] before changing it
+                    /* ORSA_DEBUG("distance: %g [km]",
+                       orsa::FromUnits((R_sn[j]-rOrbit).length(),orsa::Unit::KM,-1));
+                    */
+                    // note how some vectors are getting redefined
+                    R_an[j] = rOrbit;
+                    V_an[j] = vOrbit;
+                    R_o2an[j] = (R_an[j]-R_o[j]);
+                    V_o2an[j] = (V_an[j]-V_o[j]);
+                    u_o2an[j] = (R_an[j]-R_o[j]).normalized();
+                    const double residual = acos(std::min(1.0,u_o2an[j]*u_o2a[j]))*orsa::radToArcsec();
+                    vec_residual[j] = residual;
+                    stat_residual->insert(residual);
+                    (*it).chisq+=orsa::square(residual/vecRMS[j]);
+                    // ORSA_DEBUG("OFFSET[%i]: %5.1f",j,residual);
                 }
-                ibps.translational->setPosition(rOrbit+R_s[z1]);
-                ibps.translational->setVelocity(vOrbit+V_s[z1]);
-                // orsa::print(ibps.translational->position());
-                // orsa::print(ibps.translational->velocity());
-                b->setInitialConditions(ibps);
+                (*it).RMS = stat_residual->RMS();
                 
-                bg->addBody(b.get());
+                // perform this check only if enought points are already available, to speed up things...
+#warning should replace this threshold (16) with a check that enough points are available with lower RMS value
+                if (range_99[0]->size() >= 16) {
+                    bool newMinRMS=false;
+                    if (!minRMS.isSet()) {
+                        minRMS = (*it).RMS;
+                        newMinRMS=true;
+                    } else {
+                        if ((*it).RMS < minRMS) {
+                            minRMS = (*it).RMS;
+                            newMinRMS=true;
+                        }
+                    }
+                    if (newMinRMS) {
+                        ORSA_DEBUG("RESET HERE...  new minRMS = %g   range_99[0]->size(): %i",(*minRMS),range_99[0]->size());
+#warning remember to reset all other counters around the code...
+                        for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+                            range_99[k]->reset();
+                            std::list<Entry>::const_iterator it = entryList.begin();
+                            while (it != entryList.end()) {
+                                (*it).tested=false;
+                                ++it;
+                            }
+                            // reset counters...
+                            ct_tot=0;
+                            ct_NEO=0;
+                            old_ct_tot=0;
+                            //
+                            if (vec_residual[k]>vecRMSnominal[k]) {
+#warning MAXIMUM RMS value set here, with min(...,3.0)...
+                                vecRMS[k] = std::min(vec_residual[k],3.0);
+                                ORSA_DEBUG("RMS[%02i] = %5.2f (updated)",k,vecRMS[k]);
+                            } else {
+                                ORSA_DEBUG("RMS[%02i] = %5.2f",k,vecRMS[k]);
+                            }
+                        }
+                        // continue;
+                        break;
+                    }
+                }
                 
-                ORSA_DEBUG("bg->size(): %i",bg->size());
+                {
+                    // feedback
+                    // #warning create a range for each observation, and cycle on them with the for loop
+                    // #warning cannot insert more than 1 in same range! it will bias too much, so need a range for each data point
+                    for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+                        AdaptiveIntervalElementType e;
+                        e.position = R_o2an[j].length();
+                        // e.position = R_o2an[0].length();  // use [j] !!!
+                        e.level = (*it).chisq;
+                        range_99[j]->insert(e);
+                    }
+                    /* for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+                       AdaptiveIntervalElementType e;
+                       e.position = V_o2an[j].length();
+                       // e.position = R_o2an[0].length();  // use [j] !!!
+                       e.level = chisq;
+                       rate_99[j]->insert(e);
+                       }
+                    */
+                    // if (iter%1000==0) range_99->print();
+                }
+                
+                {
+                    // debug
+                    static unsigned int old_range99_0_size=0;
+                    if (range_99[0]->size()!=old_range99_0_size) {
+                        ORSA_DEBUG("range_99[0]->size(): %i",range_99[0]->size());
+                        old_range99_0_size = range_99[0]->size();
+                    }
+                }
+                
+                // if (stat_residual->RMS() < successThreshold) {
+                if ((*it).chisq < chisq_99) {
+                    // stats
+                    ++ct_tot;
+                    if (O_s2an_g.a*(1.0-O_s2an_g.e) < FromUnits(1.3,orsa::Unit::AU)) {
+                        ++ct_NEO;
+                    }
+                }
+                
+                (*it).tested=true;
+                
+                ++it;
             }
             
-            // test: slowly decrement all...
-            /* {
-               range->feedbackAll(0.9999);
-               }
-            */
+#warning test only first?
+            if (range_99[0]->size() >= 1000) break;
+        }
+
+        ORSA_DEBUG("iter: %i",iter);
+        
+        // add body to bg
+        // #warning fix threshold
+        // if (stat_residual->RMS() < successThreshold) {
+        /*         if (chisq < chisq_99) {
+                   osg::ref_ptr<Body> b = new Body;
+                   char bodyName[1024];
+                   sprintf(bodyName,"b%i",iter); // fix...
+                   b->setName(bodyName);
+                   orsa::Vector rOrbit, vOrbit;
+                   O_s2an_g.relativePosVel(rOrbit,vOrbit);
+                   IBPS ibps;    
+                   ibps.time = O_s2an_g.epoch;
+                   //
+                   ibps.inertial = new PointLikeConstantInertialBodyProperty(0);
+                   //
+                   ibps.translational = new DynamicTranslationalBodyProperty;
+                   #warning make sure epoch(z1) == orbit epoch!
+                   if (allOpticalObs[z1]->epoch != ibps.time) {
+                   ORSA_DEBUG("problems!");
+                   }
+                   ibps.translational->setPosition(rOrbit+R_s[z1]);
+                   ibps.translational->setVelocity(vOrbit+V_s[z1]);
+                   // orsa::print(ibps.translational->position());
+                   // orsa::print(ibps.translational->velocity());
+                   b->setInitialConditions(ibps);
+                   
+                   bg->addBody(b.get());
+                   
+                   ORSA_DEBUG("bg->size(): %i",bg->size());
+                   }
+        */
+        
+        // test: slowly decrement all...
+        /* {
+           range->feedbackAll(0.9999);
+           }
+        */
             
-            // ORSA_DEBUG("RMS: %8.3f",stat_residual->RMS());
+        // ORSA_DEBUG("RMS: %8.3f",stat_residual->RMS());
+        
+        std::list<Entry>::const_iterator it = entryList.begin();
+        while (it != entryList.end()) {
             
             // main output
-            if (chisq < chisq_99) {
+            if ((*it).chisq < chisq_99) {
+
+                const orsaSolarSystem::OrbitWithEpoch O_s2an_g = (*it).O_s2an_g;
+                
+                // compute astrometric offset
+#warning this code is repeated many times, should write a function...
+                std::vector<double> vec_residual;
+                vec_residual.resize(allOpticalObs.size());
+                orsa::Vector rOrbit, vOrbit;
+                for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+                    const orsa::Time t = allOpticalObs[j]->epoch;
+                    orsaSolarSystem::OrbitWithEpoch tmpOrbit = O_s2an_g;
+                    tmpOrbit.M = fmod(O_s2an_g.M + twopi()*(t-O_s2an_g.epoch).get_d()/O_s2an_g.period(),orsa::twopi());
+                    tmpOrbit.relativePosVel(rOrbit,vOrbit);
+                    rOrbit += R_s[j];
+                    vOrbit += V_s[j];
+                    // debug: print R_sn[j] before changing it
+                    /* ORSA_DEBUG("distance: %g [km]",
+                       orsa::FromUnits((R_sn[j]-rOrbit).length(),orsa::Unit::KM,-1));
+                    */
+                    // note how some vectors are getting redefined
+                    R_an[j] = rOrbit;
+                    V_an[j] = vOrbit;
+                    R_o2an[j] = (R_an[j]-R_o[j]);
+                    V_o2an[j] = (V_an[j]-V_o[j]);
+                    u_o2an[j] = (R_an[j]-R_o[j]).normalized();
+                    const double residual = acos(std::min(1.0,u_o2an[j]*u_o2a[j]))*orsa::radToArcsec();
+                    vec_residual[j] = residual;
+                }
                 
                 // a string to write all the single residuals
                 char line_eachResidual[1024*1024];
@@ -1103,8 +1210,8 @@ int main(int argc, char **argv) {
                 
                 ORSA_DEBUG("SAMPLE[minRMS=%.3f]: %6.3f %7.3f %9.3f %8.6f %7.3f %5.2f %6.4f %s %s %s %s",
                            (*minRMS),
-                           stat_residual->RMS(),
-                           chisq,
+                           (*it).RMS,
+                           (*it).chisq,
                            orsa::FromUnits(O_s2an_g.a,orsa::Unit::AU,-1),
                            O_s2an_g.e,
                            O_s2an_g.i*orsa::radToDeg(),
@@ -1119,12 +1226,6 @@ int main(int argc, char **argv) {
                 // ORSA_DEBUG("above threshold: %g",stat_residual->RMS());
             }
             
-            // firstIter=false;
-            
-            /* if (adapt_success >= targetSuccessCount){
-               break;
-               }
-            */
             
             if (1) {
                 // debug output
@@ -1137,71 +1238,11 @@ int main(int argc, char **argv) {
                 }
             }
             
-            /* 
-               if (0) {
-               // debug output
-               if (iter%10==0) {
-               const Range::DataType & data = range->getData();
-               for (unsigned int k=0; k<data.size(); ++k) {
-               if (data[k].weight > 1.00) {
-               ORSA_DEBUG("%5.3f - %5.3f   w = %5.3f",
-               orsa::FromUnits(data[k].min,orsa::Unit::AU,-1),
-               orsa::FromUnits(data[k].max,orsa::Unit::AU,-1),
-               data[k].weight);
-               }
-               }
-               }
-               }
-            */
-            
-            // if (bg->size()>=100) break;
-            
+            ++it;
         }
     }
     
     ORSA_DEBUG("done.");
-
-    ORSA_DEBUG("bg->size(): %i",bg->size());
     
-    osg::ref_ptr<orsa::IntegratorRadau> radau = new orsa::IntegratorRadau;
-    radau->integrate(bg.get(),
-                     allOpticalObs[0]->epoch,
-                     allOpticalObs[allOpticalObs.size()-1]->epoch+orsa::Time(0,0,0,0,0),
-                     orsa::Time(0,0,5,0,0));
-    
-    {
-        // viz
-        osg::ref_ptr<orsaOSG::Viz> viz = new orsaOSG::Viz(bg.get(),
-                                                          3600.0);
-        ViewerQT * viewerWindow = new ViewerQT(0);
-        osg::DisplaySettings::instance()->setNumMultiSamples(4);
-        osg::Group * rootNode = viz->createRoot();
-        viz->_at->setCentralBody(bg->getBody("EARTH"));
-        osg::ref_ptr<DepthPartitionNode> dpn = new DepthPartitionNode;
-        dpn->addChild(rootNode);
-        dpn->setActive(true);
-        viewerWindow->setSceneData(dpn.get());
-        // depth partion node only supports single window/single threaded at present.
-        viewerWindow->setThreadingModel(osgViewer::Viewer::SingleThreaded);
-        orsaOSG::FindNamedNodeVisitor fnnv("EARTH");
-        rootNode->accept(fnnv);
-        if (!fnnv._foundNodes.empty()) {
-            // set up the node tracker.
-            // osgGA::NodeTrackerManipulator * tm = new osgGA::NodeTrackerManipulator;
-            VestaNodeTrackerManipulator * tm = new VestaNodeTrackerManipulator;
-            osgGA::NodeTrackerManipulator::TrackerMode   trackerMode =
-                osgGA::NodeTrackerManipulator::NODE_CENTER; // NODE_CENTER_AND_ROTATION
-            osgGA::NodeTrackerManipulator::RotationMode rotationMode =
-                osgGA::NodeTrackerManipulator::TRACKBALL;   // TRACKBALL ELEVATION_AZIM
-            tm->setTrackerMode(  trackerMode);
-            tm->setRotationMode(rotationMode);
-            tm->setTrackNode(fnnv._foundNodes.front().get());
-            viewerWindow->setCameraManipulator(tm);
-        }
-        viewerWindow->show();
-        // viewerWindow->showMaximized();
-        ORSA_DEBUG("viewer visible: %i",viewerWindow->isVisible());
-    }
-    
-    return app.exec();
+    return 0;
 }
