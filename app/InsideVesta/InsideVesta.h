@@ -43,8 +43,8 @@ public:
     ModelParameter(const double & min_,
                    const double & max_) :
         osg::Referenced(),
-        min(min_),
-        range(max_-min_) { }
+        min(std::min(min_,max_)),
+        range(fabs(max_-min_)) { }
 protected:
     virtual ~ModelParameter() { }
 public:
