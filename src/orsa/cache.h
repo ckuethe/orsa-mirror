@@ -17,11 +17,11 @@ namespace orsa {
     //
     template <typename T> class Cache {
     public:
-        Cache() : _val(), _set(false) { }
+        Cache() : _val(), _set(false), _locked(false) { }
     public:
-        Cache(const T & val) : _val(val), _set(true) { }
+        Cache(const T & val) : _val(val), _set(true), _locked(false) { }
     public:
-        Cache(const Cache<T> & c) : _val(c._val), _set(c._set) { }
+        Cache(const Cache<T> & c) : _val(c._val), _set(c._set), _locked(c._locked) { }
     public:
         // virtual destructor is slow, and never needed so far...
         // virtual ~Cache() { }
@@ -59,47 +59,60 @@ namespace orsa {
         
     public:
         Cache<T> & operator = (const T & val) {
-            // set(val);
-            _val = val;
-            _set = true;
+            if (canChange()) {
+                _val = val;
+                _set = true;
+            }
             return (*this);
         }
     public:
         Cache<T> & operator += (const T & val) {
-            _val += val;
+            if (canChange()) {
+                _val += val;
+            }
             return (*this);
         }
     public:
         Cache<T> & operator -= (const T & val) {
-            _val -= val;
+            if (canChange()) {
+                _val -= val;
+            }
             return (*this);
         }
         
     public:
         // set only if still not set
         bool conditionalSet(const T & val) {
-            if (!_set) {
-                (*this) = val;
-                return true;
-            } else {
-                return false;
-            }
-        }
-
-    public:
-        // set if not set, and
-        // set if smaller than what is already set
-        bool setIfSmaller(const T & val) {
-            if (!_set) {
-                (*this) = val;
-                return true;
-            } else {
-                if (val < _val) {
+            if (canChange()) {
+                if (!_set) {
                     (*this) = val;
                     return true;
                 } else {
                     return false;
                 }
+            } else {
+                return false;
+            }
+        }
+        
+    public:
+        // set if not set, and
+        // set if smaller than what is already set
+        bool setIfSmaller(const T & val) {
+            if (canChange()) {
+                if (!_set) {
+                    (*this) = val;
+                    return true;
+                } else {
+                    if (val < _val) {
+                        (*this) = val;
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+            } else {
+                return false;
             }
         }
         
@@ -107,17 +120,36 @@ namespace orsa {
         // set if not set, and
         // set if larger than what is already set
         bool setIfLarger(const T & val) {
-            if (!_set) {
-                (*this) = val;
-                return true;
-            } else {
-                if (val > _val) {
+            if (canChange()) {
+                if (!_set) {
                     (*this) = val;
                     return true;
                 } else {
-                    return false;
+                    if (val > _val) {
+                        (*this) = val;
+                        return true;
+                    } else {
+                        return false;
+                    }
                 }
+            } else {
+                return false;
             }
+        }
+        
+    public:
+        // use this to prevent changes to the variable
+        // this has nothing to do with multi-threading locks...
+        inline void lock()     const { _locked=true;   }
+        inline void unlock()   const { _locked=false;  }
+        inline bool isLocked() const { return _locked; }
+    protected:
+        inline bool canChange() const {
+            if (_locked) {
+                ORSA_ERROR("this variable is locked and cannot be changed");
+                orsa::crash();
+            }
+            return (!_locked);
         }
         
     public:
@@ -129,6 +161,7 @@ namespace orsa {
     private:
         T    _val;
         bool _set;
+        mutable bool _locked;
     };
     
     template <typename T> T operator + (const orsa::Cache<T> & c) {
