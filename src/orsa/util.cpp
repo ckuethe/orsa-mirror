@@ -283,6 +283,48 @@ orsa::Matrix orsa::globalToLocal(const orsa::Body       * b,
     }
 }
 
+// magnitude function
+// alpha = solar phase angle = angle Sun-Asteroid-Observer
+// G = slope parameter (G ~= 0.15)
+double orsa::P (const double & alpha, 
+                const double & G) {
+    // ORSA_DEBUG("P:   alpha = %f",alpha.get_mpf_t());
+    const double phi_1 = exp(-3.33*pow(tan(0.5*alpha),0.63));
+    const double phi_2 = exp(-1.87*pow(tan(0.5*alpha),1.22));
+    /* 
+       ORSA_DEBUG("P = %f   alpha: %f   p1: %f   p2: %f",
+       -2.5*log10((1.0-G)*phi_1+G*phi_2),
+       alpha.get_mpf_t(),
+       phi_1,
+       phi_2);
+    */
+    return (-2.5*log10((1.0-G)*phi_1+G*phi_2));
+}
+
+double orsa::apparentMagnitude(const double & H,
+                               const double & G,
+                               const double & phaseAngle,
+                               const double & neo2obs,
+                               const double & neo2sun) {
+    
+    const double V = H + P(phaseAngle,G) + 
+        5*log10(FromUnits(neo2obs,orsa::Unit::AU,-1)*FromUnits(neo2sun,orsa::Unit::AU,-1));
+    
+    return V;
+}
+
+double orsa::absoluteMagnitude(const double & V,
+                               const double & G,
+                               const double & phaseAngle,
+                               const double & neo2obs,
+                               const double & neo2sun) {
+    
+    const double H = V - P(phaseAngle,G) - 
+        5*log10(FromUnits(neo2obs,orsa::Unit::AU,-1)*FromUnits(neo2sun,orsa::Unit::AU,-1));
+    
+    return H;
+}
+
 double orsa::asteroidDiameter(const double & p, 
                               const double & H) {
     if (p<0) {

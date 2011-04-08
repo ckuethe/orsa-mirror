@@ -111,80 +111,29 @@ namespace orsa {
     orsa::Matrix globalToLocal(const orsa::Body       * b,
                                const orsa::BodyGroup  * bg,
                                const orsa::Time       & t);
-  
+    
+    // magnitude function
+    // alpha = solar phase angle = angle Sun-Asteroid-Observer
+    // G = slope parameter (G ~= 0.15)
+    double P (const double & alpha, 
+              const double & G);
+    
+    double apparentMagnitude(const double & H,
+                             const double & G,
+                             const double & phaseAngle,
+                             const double & neo2obs,
+                             const double & neo2sun);
+    
+    double absoluteMagnitude(const double & V,
+                             const double & G,
+                             const double & phaseAngle,
+                             const double & neo2obs,
+                             const double & neo2sun);
+    
     // p = albedo, H = absolute magnitude
     double asteroidDiameter(const double & p, 
                             const double & H);
-  
-    /* 
-       class ConstantZRotation : public PrecomputedRotationalBodyProperty {
-       public:	
-       ConstantZRotation(const orsa::Time   & t0,
-       const double & phi0,
-       const double & omega) : 
-       PrecomputedRotationalBodyProperty(),
-       _t0(t0), 
-       _phi0(phi0),
-       _omega(omega) { }
-       public:    
-       bool update(const orsa::Time & t);
-       public:
-       bool get(double & phi,
-       double & theta,
-       double & psi,
-       double & phiDot,
-       double & thetaDot,
-       double & psiDot) const {
-       if (!matrixToEulerAngles(psi,
-       theta,
-       phi,
-       _m)) {
-       ORSA_DEBUG("problems...");
-       }
-     
-       // ORSA_DEBUG("implement dot section...");
-       #warning "implement dot section..."
-     
-       return true;
-       }
-       public:
-       double getPhi() const { 
-       double phi,theta,psi,phiDot,thetaDot,psiDot;
-       if (!get(phi, theta, psi, phiDot, thetaDot, psiDot)) {
-       ORSA_DEBUG("problems...");
-       }
-       return phi;
-       }
-       double getTheta() const { 
-       double phi,theta,psi,phiDot,thetaDot,psiDot;
-       if (!get(phi, theta, psi, phiDot, thetaDot, psiDot)) {
-       ORSA_DEBUG("problems...");
-       }
-       return theta;
-       }
-       double getPsi() const { 
-       double phi,theta,psi,phiDot,thetaDot,psiDot;
-       if (!get(phi, theta, psi, phiDot, thetaDot, psiDot)) {
-       ORSA_DEBUG("problems...");
-       }
-       return psi;
-       }
-       double getPhiDot()   const { ORSA_DEBUG("implement dot section..."); return 0; }
-       double getThetaDot() const { ORSA_DEBUG("implement dot section..."); return 0; }
-       double getPsiDot()   const { ORSA_DEBUG("implement dot section..."); return 0; }
-       public:
-       RotationalBodyProperty * clone() const {
-       return new ConstantZRotation(*this);
-       }	
-       private:
-       const orsa::Time   _t0;
-       const double _phi0;
-       const double _omega;
-       private:
-       orsa::Cache<orsa::Matrix> _m;
-       };
-    */
-  
+    
     void principalAxis(orsa::Matrix & genericToPrincipal,
                        orsa::Matrix & principalInertiaMatrix,
                        const orsa::Matrix & inertiaMatrix);
