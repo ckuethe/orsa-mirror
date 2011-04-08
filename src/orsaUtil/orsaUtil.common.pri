@@ -28,8 +28,10 @@ win32 {
 }
 
 HEADERS = adaptiveInterval.h \
+	  multimin.h \
           observatory.h \
 	  orbit.h
 
-SOURCES = observatory.cpp \
+SOURCES = multimin.cpp \
+	  observatory.cpp \
 	  orbit.cpp
