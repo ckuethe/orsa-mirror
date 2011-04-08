@@ -1,5 +1,7 @@
 #include <orsaSolarSystem/observation.h>
 
+#include <orsaSolarSystem/obleq.h>
+
 using namespace orsa;
 using namespace orsaSolarSystem;
 
@@ -28,3 +30,13 @@ double orsaSolarSystem::MPC_band_correction(const char band) {
     return c;
 }
 
+orsa::Vector orsaSolarSystem::observationDirection(const orsaSolarSystem::OpticalObservation * obs) {
+    double s_ra,  c_ra;
+    double s_dec, c_dec;
+    orsa::sincos(obs->ra,  &s_ra,  &c_ra);
+    orsa::sincos(obs->dec, &s_dec, &c_dec);
+    return orsaSolarSystem::equatorialToEcliptic() *
+        orsa::Vector(c_dec*c_ra,
+                     c_dec*s_ra,
+                     s_dec);
+}

@@ -59,17 +59,6 @@ public:
     }
 };
 
-inline orsa::Vector observationDirection(const orsaSolarSystem::OpticalObservation * obs) {
-    double s_ra,  c_ra;
-    double s_dec, c_dec;
-    orsa::sincos(obs->ra,  &s_ra,  &c_ra);
-    orsa::sincos(obs->dec, &s_dec, &c_dec);
-    return orsaSolarSystem::equatorialToEcliptic() *
-        orsa::Vector(c_dec*c_ra,
-                     c_dec*s_ra,
-                     s_dec);
-}
-
 // multimin orbital velocity
 
 class MultiminOrbitalVelocity : public orsa::Multimin {
