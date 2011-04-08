@@ -857,11 +857,11 @@ int main(int argc, char ** argv) {
         if (orbitFile->_data[korb].designation.isSet()) {
             ed.designation = orbitFile->_data[korb].designation;
         }
-        ed.V = apparentMagnitude(orbitFile->_data[korb].H,
-                                 orbitFile->_data[korb].G,
-                                 phaseAngle,
-                                 orb2obs.length(),
-                                 orb2sun.length()); 
+        ed.V = orsa::apparentMagnitude(orbitFile->_data[korb].H,
+                                       orbitFile->_data[korb].G,
+                                       phaseAngle,
+                                       orb2obs.length(),
+                                       orb2sun.length()); 
         ed.apparentVelocity = acos(obs2orb_dt.normalized()*obs2orb.normalized())/fabs((epoch_dt-epoch).get_d());
         ed.solarElongation = solarElongation;
         ed.lunarElongation = lunarElongation;

@@ -572,11 +572,11 @@ int inspectCallback(void  * /* unused */,
                 const double H = z_H*grain_H;
                 const double G = 0.15;
                 // apparent magnitude
-                const double V = apparentMagnitude(H,
-                                                   G,
-                                                   phaseAngle,
-                                                   orb2obs.length(),
-                                                   orb2sun.length());
+                const double V = orsa::apparentMagnitude(H,
+                                                         G,
+                                                         phaseAngle,
+                                                         orb2obs.length(),
+                                                         orb2sun.length());
                 // detection efficiency
                 const double eta = skyCoverage->eta(V,U,AM,GB,GL);
                 
