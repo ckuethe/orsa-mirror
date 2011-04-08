@@ -19,5 +19,5 @@ DESTDIR     = ../../bin/$${PLATFORM_NAME}
 unix:LIBS += -L ../../lib/$${PLATFORM_NAME} -lorsa -lorsaOSG -lorsaQt -losgViewer -losgDB -losgdb_freetype -losgText -losgUtil -losgGA -losg -lOpenThreads -lgmp -lgmpxx -lorsaInputOutput -lorsaSolarSystem -lorsaSPICE -lorsaEssentialOSG -lOpenThreads -lorsaUtil -losgDB -losg -lOpenThreads
 
 SOURCES = NEOtk.cpp
-HEADERS = AdaptiveInterval.h vestaViz.h
+HEADERS = vestaViz.h
 

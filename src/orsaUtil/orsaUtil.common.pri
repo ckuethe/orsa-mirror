@@ -27,7 +27,8 @@ win32 {
         LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaSolarSystem -lorsaSPICE 
 }
 
-HEADERS = observatory.h \
+HEADERS = adaptiveInterval.h \
+          observatory.h \
 	  orbit.h
 
 SOURCES = observatory.cpp \

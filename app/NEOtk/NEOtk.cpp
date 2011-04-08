@@ -40,7 +40,7 @@
 
 #include <orsaQt/debug.h>
 
-#include "AdaptiveInterval.h"
+#include <orsaUtil/adaptiveInterval.h>
 
 
 using namespace orsa;
@@ -505,7 +505,7 @@ int main(int argc, char **argv) {
                 // if not set (that is, equal to 0.0), use default
                 ORSA_DEBUG("cannot find nominal accuracy for observatory code [%s], please update file obsRMS.dat",(*allOpticalObs[k]->obsCode).c_str());
                 // #warning default RMS=?   (use automatic, floating RMS?)
-                RMS=0.7;
+                RMS=1.0;
             }
             //
             /* allOpticalObs[k]->sigma_ra  = RMS*arcsecToRad();
@@ -527,14 +527,14 @@ int main(int argc, char **argv) {
        }
     */
     
-    const double chisq_50 = gsl_cdf_chisq_Pinv(0.50,allOpticalObs.size());
-    const double chisq_90 = gsl_cdf_chisq_Pinv(0.90,allOpticalObs.size());
-    const double chisq_95 = gsl_cdf_chisq_Pinv(0.95,allOpticalObs.size());
-    const double chisq_99 = gsl_cdf_chisq_Pinv(0.99,allOpticalObs.size());
-#warning add chisq_999 and range_999 ?
+    const double chisq_50  = gsl_cdf_chisq_Pinv(0.50,allOpticalObs.size());
+    const double chisq_90  = gsl_cdf_chisq_Pinv(0.90,allOpticalObs.size());
+    const double chisq_95  = gsl_cdf_chisq_Pinv(0.95,allOpticalObs.size());
+    const double chisq_99  = gsl_cdf_chisq_Pinv(0.99,allOpticalObs.size());
+    const double chisq_999 = gsl_cdf_chisq_Pinv(0.999999,allOpticalObs.size());
     // 
-    ORSA_DEBUG("chisq 50\%: %.2f  90\%: %.2f  95\%: %.2f  99\%: %.2f",
-               chisq_50,chisq_90,chisq_95,chisq_99);
+    ORSA_DEBUG("chisq 50\%: %.2f  90\%: %.2f  95\%: %.2f  99\%: %.2f  99.9...\%: %.2f",
+               chisq_50,chisq_90,chisq_95,chisq_99,chisq_999);
     
     if (1) {
         
@@ -545,7 +545,7 @@ int main(int argc, char **argv) {
         
         const unsigned int minAdaptiveSize = 2; // 2
         
-        const int randomSeed = 717901;
+        const int randomSeed = getpid(); // 717901;
         
         /***** END INPUT *****/
         
@@ -788,8 +788,8 @@ int main(int argc, char **argv) {
         
         // keep these in sync!
         typedef double AdaptiveIntervalTemplateType;
-        typedef AdaptiveInterval<AdaptiveIntervalTemplateType> AdaptiveIntervalType;
-        typedef AdaptiveIntervalElement<AdaptiveIntervalTemplateType> AdaptiveIntervalElementType;
+        typedef orsaUtil::AdaptiveInterval<AdaptiveIntervalTemplateType> AdaptiveIntervalType;
+        typedef orsaUtil::AdaptiveIntervalElement<AdaptiveIntervalTemplateType> AdaptiveIntervalElementType;
         std::vector< osg::ref_ptr<AdaptiveIntervalType> > range_99;
         range_99.resize(allOpticalObs.size());
         for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
@@ -977,6 +977,9 @@ int main(int argc, char **argv) {
                             newMinRMS=true;
                         }
                     }
+
+
+                    
                     if (newMinRMS) {
                         ORSA_DEBUG("RESET HERE...  new minRMS = %g   range_99[0]->size(): %i",(*minRMS),range_99[0]->size());
 #warning remember to reset all other counters around the code...
