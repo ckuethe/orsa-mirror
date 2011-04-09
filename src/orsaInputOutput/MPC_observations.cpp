@@ -68,6 +68,7 @@ bool MPCObservationsFile::processLine(const char * line) {
         gmp_sscanf(s_epoch.c_str(),"%d %d %lf",&y,&m,&d);
         epoch = orsaSolarSystem::FromTimeScale(orsaSolarSystem::gregorTime(y,m,d),
                                                orsaSolarSystem::TS_UTC);
+        // ORSA_DEBUG("[%s] -> %i %i %.8f",s_epoch.c_str(),y,m,d);
         // orsa::print(epoch);
         if (select_startEpoch.isSet()) {
             if (epoch < select_startEpoch) {

@@ -69,7 +69,7 @@ void Debug::flush() {
         ++it;
     }
     if (queueReady) {
-        char message[2048];
+        char message[1024*1024];
         QueueType::const_iterator it = queue.begin();
         while (it != queue.end()) {
             gmp_sprintf(message,
