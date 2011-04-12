@@ -10,16 +10,14 @@
 
 namespace orsaUtil {
     
-    template <typename T> class AdaptiveIntervalElement {
+    template <typename T> class AdaptiveIntervalElement : public T {
         // position in the interval
         // level such as chi-squared
     public:
         AdaptiveIntervalElement() { }
     public:
         orsa::Cache<double> position;
-        orsa::Cache<double> level;
-    public:
-        T t;
+        mutable orsa::Cache<double> level;
     public:
         inline bool operator == (const AdaptiveIntervalElement & rhs) const {
             return (position == rhs.position);
@@ -86,8 +84,13 @@ namespace orsaUtil {
                 return (initialMin+(initialMax-initialMin)*rnd->gsl_rng_uniform());
             }
         }
+    protected:
+        virtual void updateLevel(const AdaptiveIntervalElement<T> & e) = 0;
     public:
         void insert(const AdaptiveIntervalElement<T> & e) {
+            if (!e.level.isSet()) {
+                updateLevel(e);
+            }
             if (e.level < threshold) {
                 /* ORSA_DEBUG("inserting pos: %g  level: %g",
                    orsa::FromUnits(e.position,orsa::Unit::AU,-1),
