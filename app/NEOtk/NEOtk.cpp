@@ -62,6 +62,7 @@ public:
 
 //
 
+#warning improve this with something better than a bunch of global vars...
 // some global vars (bad!)
 // all resized and initialized early in main, before main loop
 // s = sun, o = observer, a = asteroid
@@ -83,8 +84,6 @@ public:
     orsaSolarSystem::OrbitWithEpoch O_s2an_g;
     // std::vector<double> vec_residual;
     mutable orsa::Cache<double> RMS;
-    // mutable double chisq;
-    // mutable bool tested;
 };
 
 typedef Entry AdaptiveIntervalTemplateType;
@@ -106,7 +105,7 @@ protected:
     const orsaSolarSystem::OpticalObservationVector & allOpticalObs;
 protected:
     void updateLevel(const orsaUtil::AdaptiveIntervalElement<Entry> & e) {
-#warning CODE NEEDED HERE to set e.level to the chisq level
+        
         if (e.level.isSet()) return;
         
         // compute astrometric offset
@@ -143,6 +142,7 @@ protected:
         }
         e.level = chisq;
         e.RMS = stat_residual->RMS();
+        // ORSA_DEBUG("chisq: %g  RMS: %g",(*e.level),(*e.RMS));
     }    
 };
 
@@ -578,7 +578,8 @@ int main(int argc, char **argv) {
         unsigned int ct_NEO=0;
         unsigned int old_ct_tot=0;
         //
-        orsa::Cache<double> minRMS;
+#warning remove this initial value of 99999;
+        orsa::Cache<double> minRMS = 99999;
         //
         // std::list<Entry> entryList;
         //
@@ -670,10 +671,11 @@ int main(int argc, char **argv) {
                 
                 AdaptiveIntervalElementType e;
                 e.O_s2an_g = O_s2an_g;
-                // e.tested   = false;
+                 // e.tested   = false;
                 // entryList.push_back(e);
 #warning CORRECT?
                 for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+                    e.position = R_o2an[k].length();
                     range_99[k]->insert(e);
                 }
             }
