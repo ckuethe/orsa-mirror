@@ -43,13 +43,13 @@ namespace orsaUtil {
     public:
         AdaptiveInterval(const double & min,
                          const double & max,
-                         const double & confidenceLevel,
+                         const double & residualProbability, // 1-confidenceLevel
                          const double & thresholdLevel,
                          const    int & randomSeed) :
             osg::Referenced(),
             initialMin(std::min(min,max)),
             initialMax(std::max(min,max)),
-            probability(1.0-confidenceLevel),
+            probability(residualProbability),
             threshold(thresholdLevel),
             rnd(new orsa::RNG(randomSeed)) {
             if ( (probability < 0.0) ||
