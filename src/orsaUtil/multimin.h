@@ -33,33 +33,42 @@ namespace orsaUtil {
 
     // multimin maximum range
 
-    class MultiminMaximumRange : public orsa::Multimin {
+    class MultiminMinMaxRange : public orsa::Multimin {
     public:
+        void fun_plain(double & minDistance,
+                       double & sigmaDistance,
+                       double & maxDistance,
+                       const orsa::MultiminParameters * par) const;
         double fun(const orsa::MultiminParameters * par) const;
     public:
-        double getMaximumRange(const orsa::Vector & R_s_1_,
-                               const orsa::Vector & R_o_1_,
-                               const orsa::Vector & u_o2a_1_,
-                               const double       & sigma_1_arcsec_,
-                               const orsa::Time   & epoch_1_,
-                               const orsa::Vector & R_s_2_,
-                               const orsa::Vector & R_o_2_,
-                               const orsa::Vector & u_o2a_2_,
-                               const double       & sigma_2_arcsec_,
-                               const orsa::Time   & epoch_2_,
-                               const double       & GM_s_,
-                               const double       & sigma_factor_);
+        void getMinMaxRange(orsa::Cache<double> & minRange,
+                            orsa::Cache<double> & maxRange,
+                            const double & minBoundary,
+                            const double & maxBoundary,
+                            const orsa::Vector & R_s_1_,
+                            const orsa::Vector & R_o_1_,
+                            const orsa::Vector & u_o2a_1_,
+                            const double       & sigma_1_arcsec_,
+                            const orsa::Time   & epoch_1_,
+                            const orsa::Vector & R_s_2_,
+                            const orsa::Vector & R_o_2_,
+                            const orsa::Vector & u_o2a_2_,
+                            const double       & sigma_2_arcsec_,
+                            const orsa::Time   & epoch_2_,
+                            const double       & GM_s_,
+                            const double       & sigma_factor_);
     protected:
         orsa::Cache<orsa::Vector> R_s_1, R_o_1, u_o2a_1;
-        orsa::Cache<double>       sigma_1_arcsec;
+        // orsa::Cache<double>       sigma_1_arcsec;
         orsa::Cache<orsa::Time>   epoch_1;
     protected:
         orsa::Cache<orsa::Vector> R_s_2, R_o_2, u_o2a_2;
-        orsa::Cache<double>       sigma_2_arcsec;
+        // orsa::Cache<double>       sigma_2_arcsec;
         orsa::Cache<orsa::Time>   epoch_2;
     protected:
         orsa::Cache<double>       GM_s;
-        orsa::Cache<double>       sigma_factor;
+        // orsa::Cache<double>       sigma_factor;
+        orsa::Cache<double>       totalSigma;
     };
     
 }; // namespace orsaUtil
