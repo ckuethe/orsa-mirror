@@ -80,7 +80,9 @@ std::vector<double> vecRMSnominal; // same index as observations
 std::vector<double> vecRMS; // same index as observations
 
 
-class Entry {
+class Entry : public osg::Referenced {
+protected:
+    ~Entry() { }
 public:
     orsaSolarSystem::OrbitWithEpoch O_s2an_g;
 public:
@@ -108,7 +110,7 @@ public:
 protected:
     const orsaSolarSystem::OpticalObservationVector & allOpticalObs;
 protected:
-    void updateLevel(const orsaUtil::AdaptiveIntervalElement<Entry> & e) const {
+    void updateLevel(const orsaUtil::AdaptiveIntervalElement<AdaptiveIntervalTemplateType> & e) const {
         
         if (e.level.isSet()) return;
         
@@ -118,8 +120,8 @@ protected:
         
         // compute astrometric offset
         // std::vector<double> vec_residual;
-        e.vec_residual.resize(allOpticalObs.size());
-        e.vec_R_o2an.resize(allOpticalObs.size());
+        e.data->vec_residual.resize(allOpticalObs.size());
+        e.data->vec_R_o2an.resize(allOpticalObs.size());
         //
         osg::ref_ptr< orsa::Statistic<double> > stat_residual =
             new orsa::Statistic<double>;
@@ -128,8 +130,8 @@ protected:
         orsa::Vector rOrbit, vOrbit;
         for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
             const orsa::Time t = allOpticalObs[j]->epoch;
-            orsaSolarSystem::OrbitWithEpoch tmpOrbit = e.O_s2an_g;
-            tmpOrbit.M = fmod(e.O_s2an_g.M + twopi()*(t-e.O_s2an_g.epoch).get_d()/e.O_s2an_g.period(),orsa::twopi());
+            orsaSolarSystem::OrbitWithEpoch tmpOrbit = e.data->O_s2an_g;
+            tmpOrbit.M = fmod(e.data->O_s2an_g.M + twopi()*(t-e.data->O_s2an_g.epoch).get_d()/e.data->O_s2an_g.period(),orsa::twopi());
             tmpOrbit.relativePosVel(rOrbit,vOrbit);
             rOrbit += R_s[j];
             vOrbit += V_s[j];
@@ -140,18 +142,18 @@ protected:
             // note how some vectors are getting redefined
             R_an[j] = rOrbit;
             V_an[j] = vOrbit;
-            e.vec_R_o2an[j] = (R_an[j]-R_o[j]);
+            e.data->vec_R_o2an[j] = (R_an[j]-R_o[j]);
             V_o2an[j] = (V_an[j]-V_o[j]);
             u_o2an[j] = (R_an[j]-R_o[j]).normalized();
             const double residual = acos(std::min(1.0,u_o2an[j]*u_o2a[j]))*orsa::radToArcsec();
-            e.vec_residual[j] = residual;
+            e.data->vec_residual[j] = residual;
             stat_residual->insert(residual);
             chisq+=orsa::square(residual/vecRMS[j]);
             // ORSA_DEBUG("OFFSET[%i]: %5.1f",j,residual);
         }
         e.level = chisq;
-        e.RMS = stat_residual->RMS();
-        // ORSA_DEBUG("chisq: %g  RMS: %g",(*e.level),(*e.RMS));
+        e.data->RMS = stat_residual->RMS();
+        // ORSA_DEBUG("chisq: %g  RMS: %g",(*e.level),(*e.data->RMS));
     }    
 };
 
@@ -739,15 +741,15 @@ int main(int argc, char **argv) {
                 const orsaSolarSystem::OrbitWithEpoch O_s2an_g = tmpOrbit;
                 
                 AdaptiveIntervalElementType e;
-                e.O_s2an_g = O_s2an_g;
+                e.data->O_s2an_g = O_s2an_g;
                 // e.tested   = false;
                 // entryList.push_back(e);
 #warning CORRECT?
                 for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
                     if ((k!=z1) && (k!=z2)) continue; // R_o2an was set only for z1 and z2
                     e.position = R_o2an[k].length();
-                    e.vec_R_o2an.resize(allOpticalObs.size());
-                    e.vec_R_o2an[k] = R_o2an[k];
+                    e.data->vec_R_o2an.resize(allOpticalObs.size());
+                    e.data->vec_R_o2an[k] = R_o2an[k];
                     range_99[k]->insert(e);
                 }
             }
@@ -767,16 +769,17 @@ int main(int argc, char **argv) {
 #warning should replace this threshold (16) with a check that enough points are available with lower RMS value
                 if (range_99[0]->size() >= 16) {
                     
-                    orsa::Cache<Entry> newMinRMSEntry;
+                    // orsa::Cache<Entry> newMinRMSEntry;
+                    AdaptiveIntervalElementType newMinRMSEntry;
                     bool newMinRMS=false;
                     
                     if (!minRMS.isSet()) {
-                        minRMS = (*it).RMS;
+                        minRMS = (*it).data->RMS;
                         newMinRMSEntry=(*it);
                         newMinRMS=true;
                     } else {
-                        if ((*it).RMS < minRMS) {
-                            minRMS = (*it).RMS;
+                        if ((*it).data->RMS < minRMS) {
+                            minRMS = (*it).data->RMS;
                             newMinRMSEntry=(*it);
                             newMinRMS=true;
                         }
@@ -786,9 +789,8 @@ int main(int argc, char **argv) {
                         ORSA_DEBUG("RESET HERE...  new minRMS = %g   range_99[0]->size(): %i",(*minRMS),range_99[0]->size());
 #warning remember to reset all other counters around the code...
                         for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
-
-                            range_99[k]->refresh();
                             
+                            range_99[k]->refresh();
                             
                             // reset counters...
                             ct_tot=0;
@@ -798,9 +800,9 @@ int main(int argc, char **argv) {
                             //
                             
 #warning RE-INCLUDE THIS!
-                            if ((*newMinRMSEntry).vec_residual[k] > vecRMSnominal[k]) {
+                            if (newMinRMSEntry.data->vec_residual[k] > vecRMSnominal[k]) {
 #warning MAXIMUM RMS value set here, with min(...,3.0)...
-                                vecRMS[k] = std::min((*newMinRMSEntry).vec_residual[k],2.5);
+                                vecRMS[k] = std::min(newMinRMSEntry.data->vec_residual[k],2.5);
                                 ORSA_DEBUG("RMS[%02i] = %5.2f (updated)",k,vecRMS[k]);
                             } else {
                                 ORSA_DEBUG("RMS[%02i] = %5.2f",k,vecRMS[k]);
@@ -826,7 +828,7 @@ int main(int argc, char **argv) {
                 if ((*it).level < chisq_99) {
                     // stats
                     ++ct_tot;
-                    if ((*it).O_s2an_g.a*(1.0-(*it).O_s2an_g.e) < FromUnits(1.3,orsa::Unit::AU)) {
+                    if ((*it).data->O_s2an_g.a*(1.0-(*it).data->O_s2an_g.e) < FromUnits(1.3,orsa::Unit::AU)) {
                         ++ct_NEO;
                     }
                 }
@@ -886,7 +888,7 @@ int main(int argc, char **argv) {
             // main output
             if ((*it).level < chisq_99) {
                 
-                const orsaSolarSystem::OrbitWithEpoch O_s2an_g = (*it).O_s2an_g;
+                const orsaSolarSystem::OrbitWithEpoch O_s2an_g = (*it).data->O_s2an_g;
                 
                 // a string to write all the single residuals
                 char line_eachResidual[1024*1024];
@@ -894,7 +896,7 @@ int main(int argc, char **argv) {
                     char tmpStr[1024];
                     line_eachResidual[0] = '\0';
                     for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                        sprintf(tmpStr,"%6.2f ",(*it).vec_residual[j]);
+                        sprintf(tmpStr,"%6.2f ",(*it).data->vec_residual[j]);
                         strcat(line_eachResidual,tmpStr);
                     }
                 }
@@ -905,7 +907,7 @@ int main(int argc, char **argv) {
                     char tmpStr[1024];
                     line_eachDistance[0] = '\0';
                     for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                        orsa::Cache<orsa::Vector> & cv = (*it).vec_R_o2an[j];
+                        orsa::Cache<orsa::Vector> & cv = (*it).data->vec_R_o2an[j];
                         if (cv.isSet()) {
                             sprintf(tmpStr,"%6.3f ",orsa::FromUnits((*cv).length(),orsa::Unit::AU,-1));
                             strcat(line_eachDistance,tmpStr);
@@ -942,7 +944,7 @@ int main(int argc, char **argv) {
                 {
                     osg::ref_ptr< orsa::Statistic<double> > stat_H = new orsa::Statistic<double>;
                     for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                        orsa::Cache<orsa::Vector> & cv = (*it).vec_R_o2an[j];
+                        orsa::Cache<orsa::Vector> & cv = (*it).data->vec_R_o2an[j];
                         if (cv.isSet()) {
                             if (allOpticalObs[j]->mag.isSet()) {
 #warning see the correction here to the reported magnitude, depending on the filter 
@@ -983,7 +985,7 @@ int main(int argc, char **argv) {
                 
                 ORSA_DEBUG("SAMPLE[minRMS=%.3f]: %6.3f %7.3f %9.3f %8.6f %7.3f %5.2f %6.4f %s %s %s",
                            (*minRMS),
-                           (*(*it).RMS),
+                           (*(*it).data->RMS),
                            (*(*it).level),
                            orsa::FromUnits(O_s2an_g.a,orsa::Unit::AU,-1),
                            O_s2an_g.e,

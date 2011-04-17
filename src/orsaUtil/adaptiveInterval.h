@@ -10,14 +10,37 @@
 
 namespace orsaUtil {
     
-    template <typename T> class AdaptiveIntervalElement : public T {
+    // template <typename T> class AdaptiveIntervalElement : public T {
+    template <typename T> class AdaptiveIntervalElement {
         // position in the interval
         // level such as chi-squared
     public:
-        AdaptiveIntervalElement() { }
+        AdaptiveIntervalElement() {
+            data = new T;
+        }
+    public:
+        AdaptiveIntervalElement(const AdaptiveIntervalElement & aie) {
+            if (aie.position.isSet()) position = aie.position;
+            if (aie.level.isSet()) level = aie.level;
+            data = aie.data;
+        }
+    public:
+        const AdaptiveIntervalElement & operator = (const AdaptiveIntervalElement & aie) {
+            if (aie.position.isSet()) position = aie.position;
+            if (aie.level.isSet()) level = aie.level;
+            data = aie.data;
+            return (*this);
+        }
+    public:
+        /* AdaptiveIntervalElement(const T * t) {
+           data = t;
+           }
+        */
     public:
         orsa::Cache<double> position;
         mutable orsa::Cache<double> level;
+    public:
+        mutable osg::ref_ptr<T> data;
     public:
         inline bool operator == (const AdaptiveIntervalElement & rhs) const {
             return (position == rhs.position);
@@ -92,10 +115,6 @@ namespace orsaUtil {
                 updateLevel(e);
             }
             if (e.level < threshold) {
-                /* ORSA_DEBUG("inserting pos: %g  level: %g",
-                   orsa::FromUnits(e.position,orsa::Unit::AU,-1),
-                   e.level);
-                */
                 data->insert(e,false,false);
                 data->update();
                 update();
