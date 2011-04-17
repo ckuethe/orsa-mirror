@@ -86,7 +86,7 @@ protected:
 public:
     orsaSolarSystem::OrbitWithEpoch O_s2an_g;
 public:
-    mutable std::vector<double> vec_residual;
+    mutable std::vector< orsa::Cache<double> > vec_residual;
     mutable orsa::Cache<double> RMS;
 public:
     mutable std::vector< orsa::Cache<orsa::Vector> > vec_R_o2an;
@@ -116,8 +116,6 @@ protected:
         
 #warning can speed-up by computing vec_residual only once! and check HERE if it is already computed...
         
-#warning also, need to make the Element/Entry a pointer, shared across different ranges/intervals...
-        
         // compute astrometric offset
         // std::vector<double> vec_residual;
         e.data->vec_residual.resize(allOpticalObs.size());
@@ -142,11 +140,15 @@ protected:
             // note how some vectors are getting redefined
             R_an[j] = rOrbit;
             V_an[j] = vOrbit;
+            //
             e.data->vec_R_o2an[j] = (R_an[j]-R_o[j]);
+            //
             V_o2an[j] = (V_an[j]-V_o[j]);
             u_o2an[j] = (R_an[j]-R_o[j]).normalized();
             const double residual = acos(std::min(1.0,u_o2an[j]*u_o2a[j]))*orsa::radToArcsec();
+            //
             e.data->vec_residual[j] = residual;
+            //
             stat_residual->insert(residual);
             chisq+=orsa::square(residual/vecRMS[j]);
             // ORSA_DEBUG("OFFSET[%i]: %5.1f",j,residual);
@@ -308,7 +310,7 @@ int main(int argc, char **argv) {
             if (RMS==0.0) {
                 // if not set (that is, equal to 0.0), use default
                 ORSA_DEBUG("cannot find nominal accuracy for observatory code [%s], please update file obsRMS.dat",(*allOpticalObs[k]->obsCode).c_str());
-                // #warning default RMS=?   (use automatic, floating RMS?)
+#warning default RMS=? input parameter?
                 RMS=0.9;
             }
             //
@@ -335,13 +337,10 @@ int main(int argc, char **argv) {
     const double chisq_50  = gsl_cdf_chisq_Pinv(0.50,allOpticalObs.size());
     const double chisq_90  = gsl_cdf_chisq_Pinv(0.90,allOpticalObs.size());
     const double chisq_95  = gsl_cdf_chisq_Pinv(0.95,allOpticalObs.size());
-    // const double chisq_99  = gsl_cdf_chisq_Pinv(0.99,allOpticalObs.size());
-#warning TEST!
     const double chisq_99  = gsl_cdf_chisq_Pinv(0.99,allOpticalObs.size());
-    const double chisq_999 = gsl_cdf_chisq_Pinv(0.999999,allOpticalObs.size());
-    // 
-    ORSA_DEBUG("chisq 50\%: %.2f  90\%: %.2f  95\%: %.2f  99\%: %.2f  99.9...\%: %.2f",
-               chisq_50,chisq_90,chisq_95,chisq_99,chisq_999);
+    //
+    ORSA_DEBUG("chisq 50\%: %.2f  90\%: %.2f  95\%: %.2f  99\%: %.2f",
+               chisq_50,chisq_90,chisq_95,chisq_99);
     
     if (1) {
         
@@ -366,7 +365,6 @@ int main(int argc, char **argv) {
         
         // observation times must be sorted
         for (unsigned int j=1; j<allOpticalObs.size(); ++j) {
-#warning are equal time allowed? that can happen...
             if (allOpticalObs[j]->epoch < allOpticalObs[j-1]->epoch) {
                 ORSA_DEBUG("problem: observation times not sorted");
                 exit(0);
@@ -430,29 +428,30 @@ int main(int argc, char **argv) {
             yS_o2a[j] = orsa::externalProduct(u_o2a[j],xS_o2a[j]).normalized();
         } 
         
-        {
-            // test
-            for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                for (unsigned int k=j+1; k<allOpticalObs.size(); ++k) {
-                    const double angle = acos(u_o2a[j]*u_o2a[k]);
-                    const double dt = (allOpticalObs[k]->epoch-allOpticalObs[j]->epoch).get_d();
-                    if (k-j==1) {
-                        ORSA_DEBUG("angle between [%02i] and [%02i] obs. = %8.3f [arcsec]   dt = %8.1f [s]   rate = %8.3f [arcsec/s]",
-                                   j,
-                                   k,
-                                   angle*orsa::radToArcsec(),
-                                   orsa::FromUnits(dt,orsa::Unit::SECOND,-1),
-                                   orsa::FromUnits(angle/dt,orsa::Unit::SECOND)*orsa::radToArcsec());
-                    } else {
-                        ORSA_DEBUG("angle between [%02i] and [%02i] obs. = %8.3f [arcsec]   dt = %8.1f [s]",
-                                   j,
-                                   k,
-                                   angle*orsa::radToArcsec(),
-                                   orsa::FromUnits(dt,orsa::Unit::SECOND,-1));
-                    }   
-                }
-            }
+        /* {
+        // test
+        for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+        for (unsigned int k=j+1; k<allOpticalObs.size(); ++k) {
+        const double angle = acos(u_o2a[j]*u_o2a[k]);
+        const double dt = (allOpticalObs[k]->epoch-allOpticalObs[j]->epoch).get_d();
+        if (k-j==1) {
+        ORSA_DEBUG("angle between [%02i] and [%02i] obs. = %8.3f [arcsec]   dt = %8.1f [s]   rate = %8.3f [arcsec/s]",
+        j,
+        k,
+        angle*orsa::radToArcsec(),
+        orsa::FromUnits(dt,orsa::Unit::SECOND,-1),
+        orsa::FromUnits(angle/dt,orsa::Unit::SECOND)*orsa::radToArcsec());
+        } else {
+        ORSA_DEBUG("angle between [%02i] and [%02i] obs. = %8.3f [arcsec]   dt = %8.1f [s]",
+        j,
+        k,
+        angle*orsa::radToArcsec(),
+        orsa::FromUnits(dt,orsa::Unit::SECOND,-1));
+        }   
         }
+        }
+        }
+        */
         
         std::vector< orsa::Cache<double> > vecMinRange;
         vecMinRange.resize(allOpticalObs.size());
@@ -802,7 +801,7 @@ int main(int argc, char **argv) {
 #warning RE-INCLUDE THIS!
                             if (newMinRMSEntry.data->vec_residual[k] > vecRMSnominal[k]) {
 #warning MAXIMUM RMS value set here, with min(...,3.0)...
-                                vecRMS[k] = std::min(newMinRMSEntry.data->vec_residual[k],2.5);
+                                vecRMS[k] = std::min((*newMinRMSEntry.data->vec_residual[k]),2.5);
                                 ORSA_DEBUG("RMS[%02i] = %5.2f (updated)",k,vecRMS[k]);
                             } else {
                                 ORSA_DEBUG("RMS[%02i] = %5.2f",k,vecRMS[k]);
@@ -896,8 +895,10 @@ int main(int argc, char **argv) {
                     char tmpStr[1024];
                     line_eachResidual[0] = '\0';
                     for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                        sprintf(tmpStr,"%6.2f ",(*it).data->vec_residual[j]);
-                        strcat(line_eachResidual,tmpStr);
+                        if ((*it).data->vec_residual[j].isSet()) {
+                            sprintf(tmpStr,"%6.2f ",(*(*it).data->vec_residual[j]));
+                            strcat(line_eachResidual,tmpStr);
+                        }
                     }
                 }
                 
