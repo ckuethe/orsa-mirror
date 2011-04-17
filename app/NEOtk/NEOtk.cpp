@@ -69,6 +69,7 @@ public:
 std::vector<orsa::Vector> R_s, V_s, R_o, V_o;
 std::vector<orsa::Vector> u_o2a; // unit vectors, from Dawn to Satellite
 std::vector<orsa::Vector> xS_o2a, yS_o2a; // unit vectors, orthogonal to u_d2s, to model astrometric accuacy
+//
 std::vector<orsa::Vector> u_o2an; // unit vectors, from Dawn to Satellite, with "noise" (astrometric uncertainty)
 std::vector<orsa::Vector> R_o2an, V_o2an; // real length vectors, from Dawn to Satellite, with "noise" (astrometric uncertainty)
 std::vector<orsa::Vector> R_an, V_an; //
@@ -85,6 +86,8 @@ public:
 public:
     mutable std::vector<double> vec_residual;
     mutable orsa::Cache<double> RMS;
+public:
+    mutable std::vector< orsa::Cache<orsa::Vector> > vec_R_o2an;
 };
 
 typedef Entry AdaptiveIntervalTemplateType;
@@ -109,13 +112,14 @@ protected:
         
         if (e.level.isSet()) return;
         
-#warning can speed-up by computing vec_residual onle once! and check HERE if it is already computed...
+#warning can speed-up by computing vec_residual only once! and check HERE if it is already computed...
         
 #warning also, need to make the Element/Entry a pointer, shared across different ranges/intervals...
         
         // compute astrometric offset
         // std::vector<double> vec_residual;
         e.vec_residual.resize(allOpticalObs.size());
+        e.vec_R_o2an.resize(allOpticalObs.size());
         //
         osg::ref_ptr< orsa::Statistic<double> > stat_residual =
             new orsa::Statistic<double>;
@@ -136,7 +140,7 @@ protected:
             // note how some vectors are getting redefined
             R_an[j] = rOrbit;
             V_an[j] = vOrbit;
-            R_o2an[j] = (R_an[j]-R_o[j]);
+            e.vec_R_o2an[j] = (R_an[j]-R_o[j]);
             V_o2an[j] = (V_an[j]-V_o[j]);
             u_o2an[j] = (R_an[j]-R_o[j]).normalized();
             const double residual = acos(std::min(1.0,u_o2an[j]*u_o2a[j]))*orsa::radToArcsec();
@@ -736,11 +740,14 @@ int main(int argc, char **argv) {
                 
                 AdaptiveIntervalElementType e;
                 e.O_s2an_g = O_s2an_g;
-                 // e.tested   = false;
+                // e.tested   = false;
                 // entryList.push_back(e);
 #warning CORRECT?
                 for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+                    if ((k!=z1) && (k!=z2)) continue; // R_o2an was set only for z1 and z2
                     e.position = R_o2an[k].length();
+                    e.vec_R_o2an.resize(allOpticalObs.size());
+                    e.vec_R_o2an[k] = R_o2an[k];
                     range_99[k]->insert(e);
                 }
             }
@@ -828,7 +835,7 @@ int main(int argc, char **argv) {
             }
             
 #warning test only first?
-            if (range_99[0]->size() >= 1000) break;
+            if (range_99[0]->size() >= 100) break;
         }
         
         ORSA_DEBUG("iter: %i",iter);
@@ -878,34 +885,8 @@ int main(int argc, char **argv) {
             
             // main output
             if ((*it).level < chisq_99) {
-
-                const orsaSolarSystem::OrbitWithEpoch O_s2an_g = (*it).O_s2an_g;
                 
-#warning REMOVE THIS CODE, vec_residual is now part of Entry...
-
-                /* 
-                   // compute astrometric offset
-                   #warning this code is repeated many times, should write a function...
-                   std::vector<double> vec_residual;
-                   vec_residual.resize(allOpticalObs.size());
-                   orsa::Vector rOrbit, vOrbit;
-                   for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                   const orsa::Time t = allOpticalObs[j]->epoch;
-                   orsaSolarSystem::OrbitWithEpoch tmpOrbit = O_s2an_g;
-                   tmpOrbit.M = fmod(O_s2an_g.M + twopi()*(t-O_s2an_g.epoch).get_d()/O_s2an_g.period(),orsa::twopi());
-                   tmpOrbit.relativePosVel(rOrbit,vOrbit);
-                   rOrbit += R_s[j];
-                   vOrbit += V_s[j];
-                   // note how some vectors are getting redefined
-                   R_an[j] = rOrbit;
-                   V_an[j] = vOrbit;
-                   R_o2an[j] = (R_an[j]-R_o[j]);
-                   V_o2an[j] = (V_an[j]-V_o[j]);
-                   u_o2an[j] = (R_an[j]-R_o[j]).normalized();
-                   const double residual = acos(std::min(1.0,u_o2an[j]*u_o2a[j]))*orsa::radToArcsec();
-                   vec_residual[j] = residual;
-                   }
-                */
+                const orsaSolarSystem::OrbitWithEpoch O_s2an_g = (*it).O_s2an_g;
                 
                 // a string to write all the single residuals
                 char line_eachResidual[1024*1024];
@@ -924,23 +905,26 @@ int main(int argc, char **argv) {
                     char tmpStr[1024];
                     line_eachDistance[0] = '\0';
                     for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-#warning FIX use of [j] here, should be (*it)...
-                        sprintf(tmpStr,"%6.3f ",orsa::FromUnits(R_o2an[j].length(),orsa::Unit::AU,-1));
-                        strcat(line_eachDistance,tmpStr);
+                        orsa::Cache<orsa::Vector> & cv = (*it).vec_R_o2an[j];
+                        if (cv.isSet()) {
+                            sprintf(tmpStr,"%6.3f ",orsa::FromUnits((*cv).length(),orsa::Unit::AU,-1));
+                            strcat(line_eachDistance,tmpStr);
+                        }
                     }
                 }
                 
                 // this is relative to the Sun
-                char line_eachVelocity[1024*1024];
-                {
-                    char tmpStr[1024];
-                    line_eachVelocity[0] = '\0';
-                    for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-#warning FIX use of [j] here, should be (*it)...
-                        sprintf(tmpStr,"%4.1f ",orsa::FromUnits(orsa::FromUnits((V_an[j]-V_s[j]).length(),orsa::Unit::KM,-1),orsa::Unit::SECOND));
-                        strcat(line_eachVelocity,tmpStr);
-                    }
-                }
+                /* char line_eachVelocity[1024*1024];
+                   {
+                   char tmpStr[1024];
+                   line_eachVelocity[0] = '\0';
+                   for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+                   #warning FIX use of [j] here, should be (*it)...
+                   sprintf(tmpStr,"%4.1f ",orsa::FromUnits(orsa::FromUnits((V_an[j]-V_s[j]).length(),orsa::Unit::KM,-1),orsa::Unit::SECOND));
+                   strcat(line_eachVelocity,tmpStr);
+                   }
+                   }
+                */
                 
                 // a string to write all the single RMS values used
                 char line_eachRMS[1024*1024];
@@ -948,7 +932,6 @@ int main(int argc, char **argv) {
                     char tmpStr[1024];
                     line_eachRMS[0] = '\0';
                     for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-#warning FIX use of [j] here, should be (*it)...
                         sprintf(tmpStr,"%6.3f ",vecRMS[j]);
                         strcat(line_eachRMS,tmpStr);
                     }
@@ -959,19 +942,28 @@ int main(int argc, char **argv) {
                 {
                     osg::ref_ptr< orsa::Statistic<double> > stat_H = new orsa::Statistic<double>;
                     for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-#warning FIX use of [j] here, should be (*it)...
-                        if (allOpticalObs[j]->mag.isSet()) {
+                        orsa::Cache<orsa::Vector> & cv = (*it).vec_R_o2an[j];
+                        if (cv.isSet()) {
+                            if (allOpticalObs[j]->mag.isSet()) {
 #warning see the correction here to the reported magnitude, depending on the filter 
-                            stat_H->insert(absoluteMagnitude(allOpticalObs[j]->mag+orsaSolarSystem::MPC_band_correction(allOpticalObs[j]->band),
-                                                             0.15,
-                                                             acos((R_o[j]-R_an[j]).normalized()*(R_s[j]-R_an[j]).normalized()),
-                                                             R_o2an[j].length(),
-                                                             (R_an[j]-R_s[j]).length()));
+                                /* stat_H->insert(absoluteMagnitude(allOpticalObs[j]->mag+orsaSolarSystem::MPC_band_correction(allOpticalObs[j]->band),
+                                   0.15,
+                                   acos((R_o[j]-R_an[j]).normalized()*(R_s[j]-R_an[j]).normalized()),
+                                   R_o2an[j].length(),
+                                   (R_an[j]-R_s[j]).length()));
+                                */
+                                const orsa::Vector R_an = cv + R_o[j];
+                                stat_H->insert(absoluteMagnitude(allOpticalObs[j]->mag+orsaSolarSystem::MPC_band_correction(allOpticalObs[j]->band),
+                                                                 0.15,
+                                                                 acos((R_o[j]-R_an).normalized()*(R_s[j]-R_an).normalized()),
+                                                                 R_o2an[j].length(),
+                                                                 (R_an-R_s[j]).length()));
+                            }
                         }
                     }
                     H = stat_H->average();
                 }
-
+                
                 // Earth MOID
                 double EarthMOID;
                 {
@@ -989,7 +981,7 @@ int main(int argc, char **argv) {
                 }
                 
                 
-                ORSA_DEBUG("SAMPLE[minRMS=%.3f]: %6.3f %7.3f %9.3f %8.6f %7.3f %5.2f %6.4f %s %s %s %s",
+                ORSA_DEBUG("SAMPLE[minRMS=%.3f]: %6.3f %7.3f %9.3f %8.6f %7.3f %5.2f %6.4f %s %s %s",
                            (*minRMS),
                            (*(*it).RMS),
                            (*(*it).level),
@@ -1000,7 +992,7 @@ int main(int argc, char **argv) {
                            orsa::FromUnits(EarthMOID,orsa::Unit::AU,-1),
                            line_eachResidual,
                            line_eachDistance,
-                           line_eachVelocity,
+                           // line_eachVelocity,
                            line_eachRMS);
                 
             } else {
