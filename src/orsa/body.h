@@ -88,7 +88,7 @@ namespace orsa {
             s2l           = data.s2l;
         }
     public:
-        const LocalShapeData & operator = (const LocalShapeData & data) {
+        LocalShapeData & operator = (const LocalShapeData & data) {
             localShape    = data.localShape;
             originalShape = data.originalShape;
             cm            = data.cm;
@@ -113,7 +113,7 @@ namespace orsa {
             data = cache.data;
         }
     public:
-        const LocalShapeCache & operator = (const LocalShapeCache & cache) {
+        LocalShapeCache & operator = (const LocalShapeCache & cache) {
             data = cache.data;
             return (*this);
         }
@@ -137,7 +137,7 @@ namespace orsa {
             // ORSA_DEBUG("ls_cache: %x",ls_cache.get());
         }
     public:
-        const InertialBodyProperty & operator = (const InertialBodyProperty & ibp) {
+        InertialBodyProperty & operator = (const InertialBodyProperty & ibp) {
             ls_cache = ibp.ls_cache;
             // ORSA_DEBUG("ls_cache: %x",ls_cache.get());
             return (*this);
@@ -186,7 +186,7 @@ namespace orsa {
         virtual InertialBodyProperty * clone() const = 0;
     };
   
-    // NOTE: in general, copy operators "operator =" of non-const IBP must copy "ls_cache" along. 
+    // NOTE: in general "operator =" of non-const IBP must copy "ls_cache" along. 
   
     class PointLikeConstantInertialBodyProperty : public InertialBodyProperty {
     public:
@@ -198,7 +198,7 @@ namespace orsa {
             InertialBodyProperty(ibp),
             _m(ibp._m) { }
     public:
-        const PointLikeConstantInertialBodyProperty & operator = (const PointLikeConstantInertialBodyProperty &) {
+        PointLikeConstantInertialBodyProperty & operator = (const PointLikeConstantInertialBodyProperty &) {
             ORSA_ERROR("this class is not supposed to change...");
             return (*this);
         }
@@ -554,8 +554,8 @@ namespace orsa {
         osg::ref_ptr<RotationalBodyProperty> rotational;
     
     public:
-        const IBPS & operator = (const IBPS &);
-    
+        IBPS & operator = (const IBPS &);
+        
     public:
         virtual bool update(const orsa::Time & t) {
             if (inertial.get()) {

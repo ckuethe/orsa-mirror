@@ -149,8 +149,8 @@ IBPS::~IBPS() {
     */
 }
 
-const IBPS & IBPS::operator = (const IBPS & ibps) {
-  
+IBPS & IBPS::operator = (const IBPS & ibps) {
+    
     /* 
        ORSA_DEBUG("copying IBPS, from address: %x   to address %x",&ibps,this);
        ORSA_DEBUG("%x.translational.get(): %x   %x.translational.get(): %x",
