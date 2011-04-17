@@ -836,7 +836,7 @@ int main(int argc, char **argv) {
             }
             
 #warning test only first?
-            if (range_99[0]->size() >= 100) break;
+            if (range_99[0]->size() >= 1000) break;
         }
         
         ORSA_DEBUG("iter: %i",iter);
@@ -959,11 +959,12 @@ int main(int argc, char **argv) {
                                 stat_H->insert(absoluteMagnitude(allOpticalObs[j]->mag+orsaSolarSystem::MPC_band_correction(allOpticalObs[j]->band),
                                                                  0.15,
                                                                  acos((R_o[j]-R_an).normalized()*(R_s[j]-R_an).normalized()),
-                                                                 R_o2an[j].length(),
+                                                                 (*cv).length(),
                                                                  (R_an-R_s[j]).length()));
                             }
                         }
                     }
+                    // ORSA_DEBUG("entries: %Zi",stat_H->entries().get_mpz_t());
                     H = stat_H->average();
                 }
                 
