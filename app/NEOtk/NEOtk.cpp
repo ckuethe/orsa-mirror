@@ -112,10 +112,11 @@ public:
     AdaptiveIntervalType(const double & min,
                          const double & max,
                          const double & confidenceLevel,
-                         const double & thresholdLevel,
+                         const double & initialThresholdLevel,
+                         const double & targetThresholdLevel,
                          const    int & randomSeed,
                          const orsaSolarSystem::OpticalObservationVector & allOpticalObs_) :
-        orsaUtil::AdaptiveInterval<AdaptiveIntervalTemplateType> (min,max,confidenceLevel,thresholdLevel,randomSeed),
+        orsaUtil::AdaptiveInterval<AdaptiveIntervalTemplateType> (min,max,confidenceLevel,initialThresholdLevel,targetThresholdLevel,randomSeed),
         allOpticalObs(allOpticalObs_)
         { }
 protected:
@@ -368,7 +369,7 @@ int main(int argc, char **argv) {
         const double minAdaptiveRange = orsa::FromUnits(100.0,orsa::Unit::KM); // important: not zero...
         const double maxAdaptiveRange = orsa::FromUnits(100.0,orsa::Unit::AU);
         
-        const unsigned int minAdaptiveSize = 2; // 2
+        // const unsigned int minAdaptiveSize = 2; // 2
         
         const int randomSeed = getpid(); // 717901;
         
@@ -628,12 +629,8 @@ int main(int argc, char **argv) {
 
             
         }
-        
-        // keep these in sync!
-        // typedef double AdaptiveIntervalTemplateType;
-        // typedef Entry AdaptiveIntervalTemplateType;
-        // typedef orsaUtil::AdaptiveInterval<AdaptiveIntervalTemplateType> AdaptiveIntervalType;
-        // typedef orsaUtil::AdaptiveIntervalElement<AdaptiveIntervalTemplateType> AdaptiveIntervalElementType;
+
+
         std::vector< osg::ref_ptr<AdaptiveIntervalType> > range_99;
         range_99.resize(allOpticalObs.size());
         for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
@@ -641,15 +638,30 @@ int main(int argc, char **argv) {
                                                    std::min((*vecMaxRange[k]),maxAdaptiveRange),
                                                    1.0e-10, // "1-confidence level" for this interval, different from the chisq-level
                                                    chisq_99,
+                                                   chisq_99,
                                                    randomSeed+234,
                                                    allOpticalObs);
-            // #warning RESTORE THIS!? USE vecMaxRange...
-            /* range_99[k] = new AdaptiveIntervalType(minAdaptiveRange,
-               maxAdaptiveRange,
-               0.99,
-               chisq_99,
-               randomSeed+234);
-            */
+        }
+        
+        std::vector< osg::ref_ptr<AdaptiveIntervalType> > range_XY;
+        range_XY.resize(allOpticalObs.size());
+        for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+            range_XY[k] = new AdaptiveIntervalType(std::max(minAdaptiveRange,(*vecMinRange[k])),
+                                                   std::min((*vecMaxRange[k]),maxAdaptiveRange),
+                                                   1.0e-10, // "1-confidence level" for this interval, different from the chisq-level
+#warning this level should depend on the success, i.e. start with low level and increase it if no points get inserted...
+                                                   100*chisq_99,
+                                                   chisq_99, // this should be the lowest possible level we work with
+                                                   randomSeed+234,
+                                                   allOpticalObs);
+        }
+        
+        std::vector< osg::ref_ptr<AdaptiveIntervalType> > activeRange = range_XY;
+        
+        std::vector<size_t> activeRangeOldSize;
+        activeRangeOldSize.resize(vecSize);
+        for (unsigned int k=0; k<vecSize; ++k) {
+            activeRangeOldSize[k] = 0;
         }
         
         osg::ref_ptr<orsaUtil::MultiminOrbitalVelocity> mov = new orsaUtil::MultiminOrbitalVelocity;
@@ -703,7 +715,7 @@ int main(int argc, char **argv) {
                     if ((j!=z1) && (j!=z2)) continue;
 
                     /* if ( (j==z1) ||
-                       (j==z2 && range_99[z2]->size()>=minAdaptiveSize) ) {
+                       (j==z2 && activeRange[z2]->size()>=minAdaptiveSize) ) {
                     */
                     if (j==z1) {
                         // if (j==z2) ORSA_DEBUG("speed-up...");
@@ -714,14 +726,14 @@ int main(int argc, char **argv) {
                         const orsa::Vector u_o2an_j = (u_o2a[j]+rng->gsl_ran_gaussian(vecRMS[j]*orsa::arcsecToRad())*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
                         // R_o2an[j] = range->sample()*u_o2an[j];
 #warning which range to use?
-                        // R_o2an[j] = range_99[j]->sample()*u_o2an[j];
-                        // R_o2an[j] = range_99[j]->sample()*u_o2an[j];
-                        const orsa::Vector R_o2an_j = range_99[j]->sample()*u_o2an_j;
+                        // R_o2an[j] = activeRange[j]->sample()*u_o2an[j];
+                        // R_o2an[j] = activeRange[j]->sample()*u_o2an[j];
+                        const orsa::Vector R_o2an_j = activeRange[j]->sample()*u_o2an_j;
                         // R_an[j] = R_o[j] + R_o2an[j];
                         const orsa::Vector R_an_j = R_o[j] + R_o2an_j;
                         // R_s2an[j] = R_an[j] - R_s[j];
                         R_s2an[j] = R_an_j - R_s[j];
-                        /* if (j==z2 && range_99[z2]->size()>=minAdaptiveSize) {
+                        /* if (j==z2 && activeRange[z2]->size()>=minAdaptiveSize) {
                         // const double escapeVelocity = sqrt(2*orsaSolarSystem::Data::GMSun()/R_s2an[z1].length());
                         const double escapeVelocity = sqrt(2*orsaSolarSystem::Data::GMSun()/R_s2an[z1].length());
                         const double dt = (allOpticalObs[z2]->epoch-allOpticalObs[z1]->epoch).get_d();
@@ -735,7 +747,7 @@ int main(int argc, char **argv) {
                         */
                     }
                     
-                    // if (j==z2 && range_99[z2]->size()<minAdaptiveSize) {
+                    // if (j==z2 && activeRange[z2]->size()<minAdaptiveSize) {
                     if (j==z2) {
                         // enforce bound orbit on z2
                         const double escapeVelocity = sqrt(2*orsaSolarSystem::Data::GMSun()/R_s2an[z1].length());
@@ -798,7 +810,7 @@ int main(int argc, char **argv) {
                     const orsa::Vector R_o2an_k = R_s2an[k]+R_s[k]-R_o[k];
                     e.position = R_o2an_k.length();
                     e.data->R_o2an[k] = R_o2an_k;
-                    range_99[k]->insert(e);
+                    activeRange[k]->insert(e);
                 }
             }
             
@@ -810,70 +822,73 @@ int main(int argc, char **argv) {
                O_v2sn_g.e);
             */
             
-            AdaptiveIntervalType::DataType::DataType::const_iterator it = range_99[0]->getData()->getData().begin();
-            while (it != range_99[0]->getData()->getData().end()) {
+            AdaptiveIntervalType::DataType::DataType::const_iterator it = activeRange[0]->getData()->getData().begin();
+            while (it != activeRange[0]->getData()->getData().end()) {
                 
                 // perform this check only if enought points are already available, to speed up things...
 #warning should replace this threshold (16) with a check that enough points are available with lower RMS value
-                if (range_99[0]->size() >= 16) {
-                    
-                    // orsa::Cache<Entry> newMinRMSEntry;
-                    AdaptiveIntervalElementType newMinRMSEntry;
-                    bool newMinRMS=false;
-                    
-                    if (!minRMS.isSet()) {
-                        minRMS = (*it).data->RMS;
-                        newMinRMSEntry=(*it);
-                        newMinRMS=true;
-                    } else {
-                        if ((*it).data->RMS < minRMS) {
+                if (iter%100==0) {
+                    if (activeRange[0]->size() >= 50) {
+                        
+                        // orsa::Cache<Entry> newMinRMSEntry;
+                        AdaptiveIntervalElementType newMinRMSEntry;
+                        bool newMinRMS=false;
+                        
+                        if (!minRMS.isSet()) {
                             minRMS = (*it).data->RMS;
                             newMinRMSEntry=(*it);
                             newMinRMS=true;
-                        }
-                    }
-                    
-                    if (newMinRMS) {
-                        ORSA_DEBUG("RESET HERE...  new minRMS = %g   range_99[0]->size(): %i",(*minRMS),range_99[0]->size());
-#warning remember to reset all other counters around the code...
-                        for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
-                            
-                            range_99[k]->refresh();
-                            
-                            // reset counters...
-                            ct_tot=0;
-                            ct_NEO=0;
-                            old_ct_tot=0;
-                            
-                            //
-                            
-#warning RE-INCLUDE THIS!
-                            if (newMinRMSEntry.data->vec_residual[k] > vecRMSnominal[k]) {
-#warning MAXIMUM RMS value set here, with min(...,3.0)...
-                                vecRMS[k] = std::min((*newMinRMSEntry.data->vec_residual[k]),2.5);
-                                ORSA_DEBUG("RMS[%02i] = %5.2f (updated)",k,vecRMS[k]);
-                            } else {
-                                ORSA_DEBUG("RMS[%02i] = %5.2f",k,vecRMS[k]);
+                        } else {
+                            if ((*it).data->RMS < minRMS) {
+                                minRMS = (*it).data->RMS;
+                                newMinRMSEntry=(*it);
+                                newMinRMS=true;
                             }
-                            
                         }
-                        // continue;
-                        break;
+                        
+                        if (newMinRMS) {
+                            ORSA_DEBUG("RESET HERE...  new minRMS = %g   activeRange[0]->size(): %i",(*minRMS),activeRange[0]->size());
+#warning remember to reset all other counters around the code...
+                            for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+                                
+                                activeRange[k]->refresh();
+                                
+                                // reset counters...
+                                ct_tot=0;
+                                ct_NEO=0;
+                                old_ct_tot=0;
+                                
+                                //
+                                
+#warning RE-INCLUDE THIS!
+                                if (newMinRMSEntry.data->vec_residual[k] > vecRMSnominal[k]) {
+#warning MAXIMUM RMS value set here, with min(...,3.0)...
+                                    vecRMS[k] = std::min((*newMinRMSEntry.data->vec_residual[k]),2.5);
+                                    ORSA_DEBUG("RMS[%02i] = %5.2f (updated)",k,vecRMS[k]);
+                                } else {
+                                    ORSA_DEBUG("RMS[%02i] = %5.2f",k,vecRMS[k]);
+                                }
+                                
+                            }
+                            // continue;
+                            break;
+                        }
                     }
                 }
-                
                 
                 {
                     // debug
                     static unsigned int old_range99_0_size=0;
-                    if (range_99[0]->size()!=old_range99_0_size) {
-                        ORSA_DEBUG("range_99[0]->size(): %i",range_99[0]->size());
-                        old_range99_0_size = range_99[0]->size();
+                    if (activeRange[0]->size()!=old_range99_0_size) {
+                        ORSA_DEBUG("activeRange[0]->size(): %i",activeRange[0]->size());
+                        old_range99_0_size = activeRange[0]->size();
                     }
                 }
-                
+
+#warning which level to use?
                 // if (stat_residual->RMS() < successThreshold) {
-                if ((*it).level < chisq_99) {
+                // if ((*it).level < chisq_99) {
+                if ((*it).level < activeRange[0]->getThreshold()) {
                     // stats
                     ++ct_tot;
                     if ((*it).data->O_s2an_g.a*(1.0-(*it).data->O_s2an_g.e) < FromUnits(1.3,orsa::Unit::AU)) {
@@ -884,8 +899,42 @@ int main(int argc, char **argv) {
                 ++it;
             }
             
+#warning should test this only if there has been an insert...       
+            // another test: can decreast threshold level?
+            if (iter%100==0) {
+                for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+#warning should test if the adaptive interval actually shrinks when reducing level and at the same time reducing the number of points...
+                    if (activeRange[k]->size()==activeRangeOldSize[k]) continue;
+                    activeRangeOldSize[k]=activeRange[k]->size();
+                    if (activeRange[k]->getThreshold() == activeRange[k]->getTargetThreshold()) continue;
+#warning parameters...
+                    const size_t minSize = 50;
+                    const double thresholdIncreaseFactor = 1.2;
+                    if (activeRange[k]->size()<minSize) continue;
+                    double testThreshold = activeRange[k]->getTargetThreshold();
+                    size_t testSize = 0;
+                    while (1) {
+                        if (testThreshold>=activeRange[k]->getThreshold()) break;
+                        testSize = 0;
+                        AdaptiveIntervalType::DataType::DataType::const_iterator it = activeRange[k]->getData()->getData().begin();
+                        while (it != activeRange[k]->getData()->getData().end()) {
+                            if ((*it).level < testThreshold) ++testSize;
+                            ++it;
+                        }
+                        if (testSize>=minSize) break; // done
+                        testThreshold *= thresholdIncreaseFactor;
+                    }
+                    if ( (testSize>=minSize) &&
+                         (testThreshold<activeRange[k]->getThreshold()) ) {
+                        ORSA_DEBUG("reducing threshold for range %i to %g",k,testThreshold);
+                        activeRange[k]->updateThresholdLevel(testThreshold);
+                    }
+                }
+            }
+            
+            
 #warning test only first?
-            if (range_99[0]->size() >= 1000) break;
+            if (activeRange[0]->size() >= 1000) break;
         }
         
         ORSA_DEBUG("iter: %i",iter);
@@ -930,11 +979,13 @@ int main(int argc, char **argv) {
             
         // ORSA_DEBUG("RMS: %8.3f",stat_residual->RMS());
         
-        AdaptiveIntervalType::DataType::DataType::const_iterator it = range_99[0]->getData()->getData().begin();
-        while (it != range_99[0]->getData()->getData().end()) {
+        AdaptiveIntervalType::DataType::DataType::const_iterator it = activeRange[0]->getData()->getData().begin();
+        while (it != activeRange[0]->getData()->getData().end()) {
             
             // main output
-            if ((*it).level < chisq_99) {
+#warning which level to use?
+            // if ((*it).level < chisq_99) {
+            if ((*it).level < activeRange[0]->getThreshold()) {
                 
                 const orsaSolarSystem::OrbitWithEpoch O_s2an_g = (*it).data->O_s2an_g;
                 

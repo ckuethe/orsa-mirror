@@ -67,16 +67,19 @@ namespace orsaUtil {
         AdaptiveInterval(const double & min,
                          const double & max,
                          const double & residualProbability, // 1-confidenceLevel
-                         const double & thresholdLevel,
+                         const double & initialThresholdLevel,
+                         const double & targetThresholdLevel,
                          const    int & randomSeed) :
             osg::Referenced(),
             initialMin(std::min(min,max)),
             initialMax(std::max(min,max)),
             probability(residualProbability),
-            threshold(thresholdLevel),
+            threshold(initialThresholdLevel),
+            targetThreshold(targetThresholdLevel),
             rnd(new orsa::RNG(randomSeed)) {
             if ( (probability < 0.0) ||
-                 (probability > 1.0) ) {
+                 (probability > 1.0) ||
+                 (threshold < targetThreshold)) {
                 ORSA_DEBUG("problems");
                 exit(0);
             }
@@ -109,6 +112,28 @@ namespace orsaUtil {
         }
     protected:
         virtual void updateLevel(const AdaptiveIntervalElement<T> & e) const = 0;
+    public:
+        virtual void updateThresholdLevel(const double & newThreshold) {
+            // ORSA_DEBUG("NEW threshold: %g",newThreshold);
+            threshold = newThreshold;
+            ORSA_DEBUG("size BEFORE refresh: %i",data->size());
+            typename DataType::DataType::iterator it = data->getData().begin();
+            while (it != data->getData().end()) {
+                // (*it).level.reset();
+                // updateLevel(*it);
+                if ((*it).level < threshold) {
+                    ++it;
+                } else {
+                    it = data->getData().erase(it);
+                }
+            }
+            data->update();
+            update();
+            ORSA_DEBUG("size AFTER refresh: %i",data->size());
+        }
+    public:
+        double getThreshold() const { return threshold; } 
+        double getTargetThreshold() const { return targetThreshold; } 
     public:
         void insert(const AdaptiveIntervalElement<T> & e) {
             if (!e.level.isSet()) {
@@ -170,7 +195,9 @@ namespace orsaUtil {
         const double initialMin;
         const double initialMax;
         const double probability;
-        const double threshold;
+    protected:
+        double threshold;
+        const double targetThreshold;
     protected:
         osg::ref_ptr<orsa::RNG> rnd;
     };
