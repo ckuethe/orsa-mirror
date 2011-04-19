@@ -682,7 +682,7 @@ int main(int argc, char **argv) {
             
             // only one really needed across this loop iteration?
             std::vector<orsa::Vector> R_s2an; R_s2an.resize(allOpticalObs.size());
-            std::vector<orsa::Vector> V_s2an; V_s2an.resize(allOpticalObs.size());
+            // std::vector<orsa::Vector> V_s2an; V_s2an.resize(allOpticalObs.size());
             
             // don't use ___z1 and ___z2 in code below, but z1 and z2 
             unsigned int ___z1 = rng->gsl_rng_uniform_int(allOpticalObs.size());
