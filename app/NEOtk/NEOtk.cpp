@@ -123,56 +123,31 @@ protected:
     const orsaSolarSystem::OpticalObservationVector & allOpticalObs;
 protected:
     void updateLevel(const orsaUtil::AdaptiveIntervalElement<AdaptiveIntervalTemplateType> & e) const {
-        
-        // std::vector<orsa::Vector> R_an; R_an.resize(vecSize);
-        
         if (e.level.isSet()) return;
-        
-#warning can speed-up by computing vec_residual only once! and check HERE if it is already computed...
-        
-        // compute astrometric offset
-        // std::vector<double> vec_residual;
-        // e.data->vec_residual.resize(allOpticalObs.size());
-        // e.data->R_o2an.resize(allOpticalObs.size());
-        //
         osg::ref_ptr< orsa::Statistic<double> > stat_residual =
             new orsa::Statistic<double>;
-        stat_residual->reset();
         double chisq=0.0; // chisq
         orsa::Vector rOrbit, vOrbit;
         for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-            const orsa::Time t = allOpticalObs[j]->epoch;
-            orsaSolarSystem::OrbitWithEpoch tmpOrbit = e.data->O_s2an_g;
-            tmpOrbit.M = fmod(e.data->O_s2an_g.M + twopi()*(t-e.data->O_s2an_g.epoch).get_d()/e.data->O_s2an_g.period(),orsa::twopi());
-            tmpOrbit.relativePosVel(rOrbit,vOrbit);
-            rOrbit += R_s[j];
-            vOrbit += V_s[j];
-            // debug: print R_sn[j] before changing it
-            /* ORSA_DEBUG("distance: %g [km]",
-               orsa::FromUnits((R_sn[j]-rOrbit).length(),orsa::Unit::KM,-1));
-            */
-            // note how some vectors are getting redefined
-            // R_an[j] = rOrbit;
-            const orsa::Vector R_an_j = rOrbit;
-            // V_an[j] = vOrbit;
-            //
-            e.data->R_o2an[j] = (R_an_j-R_o[j]);
-            //
-            // V_o2an[j] = (V_an[j]-V_o[j]);
-            // u_o2an[j] = (R_an[j]-R_o[j]).normalized();
-            // u_o2an[j] = e.data->R_o2an[j].normalized();
-            const orsa::Vector u_o2an_j = (*e.data->R_o2an[j]).normalized();
-            const double residual = acos(std::min(1.0,u_o2an_j*u_o2a[j]))*orsa::radToArcsec();
-            //
-            e.data->vec_residual[j] = residual;
-            //
-            stat_residual->insert(residual);
-            chisq+=orsa::square(residual/vecRMS[j]);
-            // ORSA_DEBUG("OFFSET[%i]: %5.1f",j,residual);
+            if (!e.data->R_o2an[j].isSet()) {
+                const orsa::Time t = allOpticalObs[j]->epoch;
+                orsaSolarSystem::OrbitWithEpoch tmpOrbit = e.data->O_s2an_g;
+                tmpOrbit.M = fmod(e.data->O_s2an_g.M + twopi()*(t-e.data->O_s2an_g.epoch).get_d()/e.data->O_s2an_g.period(),orsa::twopi());
+                tmpOrbit.relativePosVel(rOrbit,vOrbit);
+                rOrbit += R_s[j];
+                vOrbit += V_s[j];
+                const orsa::Vector R_an_j = rOrbit;
+                e.data->R_o2an[j] = (R_an_j-R_o[j]);
+            }
+            if (!e.data->vec_residual[j].isSet()) {  const orsa::Vector u_o2an_j = (*e.data->R_o2an[j]).normalized();
+                const double residual = acos(std::min(1.0,u_o2an_j*u_o2a[j]))*orsa::radToArcsec();
+                e.data->vec_residual[j] = residual;
+            }
+            stat_residual->insert(e.data->vec_residual[j]);
+            chisq+=orsa::square(e.data->vec_residual[j]/vecRMS[j]);
         }
         e.level = chisq;
         e.data->RMS = stat_residual->RMS();
-        // ORSA_DEBUG("chisq: %g  RMS: %g",(*e.level),(*e.data->RMS));
     }    
 };
 
