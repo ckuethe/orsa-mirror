@@ -22,45 +22,16 @@
 #include <orsa/util.h>
 #include <orsa/statistic.h>
 
-#include <orsaOSG/viz.h>
-#include <orsaOSG/FindNamedNodeVisitor.h>
-#include <orsaOSG/Track.h>
-#include <orsaOSG/DepthPartitionNode.h>
-#include <orsaOSG/DistanceAccumulator.h>
-
-#include <osgGA/NodeTrackerManipulator>
-
 #include <gsl/gsl_cdf.h>
-
-#include "vestaViz.h"
 
 #include <algorithm>
 
 #include <QApplication>
 
-#include <orsaQt/debug.h>
-
 #include <orsaUtil/adaptiveInterval.h>
 #include <orsaUtil/multimin.h>
 
 using namespace orsa;
-
-// main purpose: disable the rotation after the release of the mouse button
-class VestaNodeTrackerManipulator : public osgGA::NodeTrackerManipulator {
-public:
-    bool handle(const osgGA::GUIEventAdapter & ea,
-                osgGA::GUIActionAdapter      & us) {
-        if (ea.getEventType() == osgGA::GUIEventAdapter::RELEASE) {
-            osg::ref_ptr<osgGA::GUIEventAdapter> mod_ea = new osgGA::GUIEventAdapter(ea);
-            mod_ea->setButtonMask(99);
-            return osgGA::NodeTrackerManipulator::handle((*mod_ea.get()),us);
-        } else {
-            return osgGA::NodeTrackerManipulator::handle(ea,us);
-        }
-    }
-};
-
-//
 
 #warning improve this with something better than a bunch of global vars...
 // some global vars (bad!)
@@ -69,15 +40,7 @@ public:
 std::vector< orsa::Cache<orsa::Vector> > R_s, V_s, R_o, V_o;
 std::vector< orsa::Cache<orsa::Vector> > u_o2a; // unit vectors, from Dawn to Satellite
 std::vector< orsa::Cache<orsa::Vector> > xS_o2a, yS_o2a; // unit vectors, orthogonal to u_d2s, to model astrometric accuacy
-//
-/* std::vector<orsa::Vector> u_o2an; // unit vectors, from Dawn to Satellite, with "noise" (astrometric uncertainty)
-   std::vector<orsa::Vector> R_o2an; // real length vectors, from Dawn to Satellite, with "noise" (astrometric uncertainty)
-   // std::vector<orsa::Vector> V_o2an; // real length vectors, from Dawn to Satellite, with "noise" (astrometric uncertainty)
-   std::vector<orsa::Vector> R_an, V_an; //
-   std::vector<orsa::Vector> R_s2an;
-   std::vector<orsa::Vector> V_s2an;
-*/
-//
+
 std::vector<double> vecRMSnominal; // same index as observations
 std::vector<double> vecRMS; // same index as observations
 //
@@ -135,10 +98,6 @@ public:
                 orsaSolarSystem::OrbitWithEpoch tmpOrbit = e.data->O_s2an_g;
                 tmpOrbit.M = fmod(e.data->O_s2an_g.M + twopi()*(t-e.data->O_s2an_g.epoch).get_d()/e.data->O_s2an_g.period(),orsa::twopi());
                 tmpOrbit.relativePosVel(rOrbit,vOrbit);
-                // rOrbit += R_s[j];
-                // vOrbit += V_s[j];
-                // const orsa::Vector R_an_j = rOrbit;
-                // e.data->R_o2an[j] = (R_an_j-R_o[j]);
                 e.data->R_o2an[j] = (rOrbit+R_s[j]-R_o[j]);
                 e.data->V_o2an[j] = (vOrbit+V_s[j]-V_o[j]);
             }
@@ -158,8 +117,6 @@ public:
 #warning use single rng instead of passing random seed around... maybe use globalRNG?
 
 int main(int argc, char **argv) {
-    
-    // QApplication app(argc, argv);
     
     // orsaQt::Debug::instance()->initTimer();
     //
@@ -183,6 +140,7 @@ int main(int argc, char **argv) {
         FILE * fp = fopen("obsRMS.dat","r");
         if (!fp) {
             ORSA_DEBUG("problem: cannot open file [obsRMS.dat]");
+            exit(0);
         } else {
             char line[1024];
             char obsCode[1024];
@@ -194,14 +152,7 @@ int main(int argc, char **argv) {
             fclose(fp);
         }
     }
-    // test
-    /* ORSA_DEBUG("RMS[703] = %g",obsRMS["703"]);
-       ORSA_DEBUG("RMS[XYZ] = %g",obsRMS["XYZ"]);
-    */
-    //
-    // std::vector<double> vecRMSnominal; // same index as observations
-    // std::vector<double> vecRMS; // same index as observations
-    
+        
     osg::ref_ptr<BodyGroup> bg = new BodyGroup;
     
     osg::ref_ptr<Body> sun = new Body;
@@ -388,27 +339,6 @@ int main(int argc, char **argv) {
         xS_o2a.resize(allOpticalObs.size());
         yS_o2a.resize(allOpticalObs.size());
         
-        // std::vector<orsa::Vector> u_o2an; // unit vectors, from Dawn to Satellite, with "noise" (astrometric uncertainty)
-        // u_o2an.resize(allOpticalObs.size());
-        
-        // std::vector<orsa::Vector> R_o2an, V_o2an; // real length vectors, from Dawn to Satellite, with "noise" (astrometric uncertainty)
-        // R_o2an.resize(allOpticalObs.size());
-        // V_o2an.resize(allOpticalObs.size());
-        
-        // std::vector<orsa::Vector> R_an, V_an;
-        // R_an.resize(allOpticalObs.size());
-        // V_an.resize(allOpticalObs.size());
-        
-        // std::vector<orsa::Vector> R_s2an;
-        // R_s2an.resize(allOpticalObs.size());
-        
-        // std::vector<orsa::Vector> V_s2an;
-        // V_s2an.resize(allOpticalObs.size());
-        
-        // computed ONCE ONLY, otherwise it rotates...
-        // const orsa::Matrix l2g = orsa::localToGlobal(vesta.get(),bg.get(),obsTime[0]);
-        // const orsa::Matrix g2l = orsa::globalToLocal(vesta.get(),bg.get(),obsTime[0]);
-        
         for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
             
             const orsa::Time t = allOpticalObs[j]->epoch;
@@ -435,31 +365,6 @@ int main(int argc, char **argv) {
             xS_o2a[j] = orsa::externalProduct(orsa::Vector(0,0,1),u_o2a[j]).normalized();
             yS_o2a[j] = orsa::externalProduct(u_o2a[j],xS_o2a[j]).normalized();
         } 
-        
-        /* {
-        // test
-        for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-        for (unsigned int k=j+1; k<allOpticalObs.size(); ++k) {
-        const double angle = acos(u_o2a[j]*u_o2a[k]);
-        const double dt = (allOpticalObs[k]->epoch-allOpticalObs[j]->epoch).get_d();
-        if (k-j==1) {
-        ORSA_DEBUG("angle between [%02i] and [%02i] obs. = %8.3f [arcsec]   dt = %8.1f [s]   rate = %8.3f [arcsec/s]",
-        j,
-        k,
-        angle*orsa::radToArcsec(),
-        orsa::FromUnits(dt,orsa::Unit::SECOND,-1),
-        orsa::FromUnits(angle/dt,orsa::Unit::SECOND)*orsa::radToArcsec());
-        } else {
-        ORSA_DEBUG("angle between [%02i] and [%02i] obs. = %8.3f [arcsec]   dt = %8.1f [s]",
-        j,
-        k,
-        angle*orsa::radToArcsec(),
-        orsa::FromUnits(dt,orsa::Unit::SECOND,-1));
-        }   
-        }
-        }
-        }
-        */
         
         std::vector< orsa::Cache<double> > vecMinRange;
         vecMinRange.resize(allOpticalObs.size());
@@ -523,93 +428,7 @@ int main(int argc, char **argv) {
 #warning is it correct to force it here?
                     vecMaxRange[j] = maxAdaptiveRange; 
                 }
-            }
-
-            
-#if 0 // excluding the REDUCED range for the moment... is it correct?
-            // if including it again, adapt it for minRange as well...
-            
-            // try to reduce vecMaxRange values:
-            // take the smallest, and reduce all others according to V_escape*dt....
-            orsa::Cache<unsigned int> indexMin;
-            // first, find one initial indexMin, any one works, the first that is set
-            for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
-                if (vecMaxRange[k].isSet()) {
-                    if (vecMaxRange[k] > minAdaptiveRange) {
-                        indexMin=k;
-                        break;
-                    }
-                }
-            }
-            if (indexMin.isSet()) {
-                // find real indexMin
-                for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
-                    if (vecMaxRange[k].isSet()) {
-                        if (vecMaxRange[k] > minAdaptiveRange) {
-                            if (vecMaxRange[k] < vecMaxRange[indexMin]) indexMin = k;
-                        }
-                    }
-                }
-                ORSA_DEBUG("SMALLEST max range distance for obs [%02i] = %8.3f [AU]",
-                           (*indexMin),
-                           orsa::FromUnits(vecMaxRange[indexMin],orsa::Unit::AU,-1));
-                
-                const orsa::Vector R_s2a = R_o[indexMin] + u_o2a[indexMin]*vecMaxRange[indexMin] - R_s[indexMin];
-                const double escapeVelocity = sqrt(2*orsaSolarSystem::Data::GMSun()/R_s2a.length());
-                
-                for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                    if (j==indexMin) continue;
-                    // const double rangeCenter = (R_a-R_o[j])*u_o2a[j];
-                    const double rangeCenter = (R_s2a-R_o[j]+R_s[j])*u_o2a[j];
-                    
-                    // const double minDistance = (R_o[j]+u_o2a[j]*rangeCenter-R_a).length();
-                    const double minDistance = (R_o[j]+u_o2a[j]*rangeCenter-R_s2a+R_s[j]).length();
-                    const double dt = fabs((allOpticalObs[j]->epoch-allOpticalObs[indexMin]->epoch).get_d());
-                    const double maxDistance = escapeVelocity*dt;
-                    if (minDistance > maxDistance) {
-                        /* ORSA_DEBUG("------------- minD: %g   maxD: %g",
-                           FromUnits(minDistance,orsa::Unit::AU,-1),
-                           FromUnits(maxDistance,orsa::Unit::AU,-1));
-                        */
-                        if (rangeCenter > 0.0) {
-#warning check this!!!
-                            ORSA_DEBUG("check this!!!");
-                            // now setting if SMALLER!
-                            // vecMaxRange[j].setIfSmaller(rangeCenter);
-                            //
-                            vecMaxRange[j] = rangeCenter;
-                            
-                        }
-                    } else {
-                        const double rangeDelta  = sqrt(orsa::square(maxDistance)-orsa::square(minDistance));
-                        const double newRange = rangeCenter+rangeDelta;
-                        if (newRange > 0.0) {
-                            // now setting if SMALLER!
-                            // vecMaxRange[j].setIfSmaller(rangeCenter+rangeDelta);
-                            //
-                            vecMaxRange[j] = newRange;
-                        }
-                    }
-                }
-                
-                for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                    ORSA_DEBUG("REDUCED max range distance for obs [%02i] = %8.3f [AU]",
-                               j,
-                               orsa::FromUnits(vecMaxRange[j],orsa::Unit::AU,-1));
-                }
-            }
-            
-            if (0) {
-#warning remove this
-                // test: force large maxRange...
-                for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                    vecMaxRange[j] = orsa::FromUnits(100.00,orsa::Unit::AU);
-                }
-            }
-
-#endif // REDUCED range code
-
-            
+            }           
         }
 
 
@@ -654,31 +473,19 @@ int main(int argc, char **argv) {
         
         osg::ref_ptr<orsaUtil::MultiminOrbitalVelocity> mov = new orsaUtil::MultiminOrbitalVelocity;
         unsigned int iter=0;
-        // for (unsigned int zzz=0; zzz<10000; ++zzz) {
-        //
         // test counts
 #warning need to improve this! (one for each value of chisq confidence level?)
         unsigned int ct_tot=0;
         unsigned int ct_NEO=0;
         unsigned int old_ct_tot=0;
-        //
-#warning remove this initial value of 99999;
-        orsa::Cache<double> minRMS = 99999;
-        //
-        // std::list<Entry> entryList;
-        //
+        
+        orsa::Cache<double> minRMS;
         while (iter<100000000) {
             ++iter;
             // ORSA_DEBUG("ITER: %i",iter);
             // first add noise to unit vectors
             
 #warning should create an Entry right away, and then discard it if not used?
-            
-            // std::vector<orsa::Vector> u_o2an; // unit vectors, from Dawn to Satellite, with "noise" (astrometric uncertainty)
-            // std::vector<orsa::Vector> R_o2an; // real length vectors, from Dawn to Satellite, with "noise" (astrometric uncertainty)
-            // std::vector<orsa::Vector> R_an, V_an; //
-            // std::vector<orsa::Vector> R_s2an;
-            // std::vector<orsa::Vector> V_s2an;
             
             // only one really needed across this loop iteration?
             std::vector<orsa::Vector> R_s2an; R_s2an.resize(allOpticalObs.size());
@@ -693,66 +500,27 @@ int main(int argc, char **argv) {
             const unsigned int z1 = std::min(___z1,___z2);
             const unsigned int z2 = std::max(___z1,___z2);
             {
-                
-#warning it is possible that excessive use of ranges limits the sampled space
-#warning so we should make it possible to give up some of the speed
-#warning to get more solid coverage of the space
-                
                 bool bound=true;
                 double dx,dy;
                 for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
                     if ((j!=z1) && (j!=z2)) continue;
-
-                    /* if ( (j==z1) ||
-                       (j==z2 && activeRange[z2]->size()>=minAdaptiveSize) ) {
-                    */
                     if (j==z1) {
-                        // if (j==z2) ORSA_DEBUG("speed-up...");
-                        // normal sampling on z1
                         rng->gsl_ran_dir_2d(&dx,&dy);
-                        // u_o2an[j] = (u_o2a[j]+rng->gsl_ran_gaussian(astrometricSigma)*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
-                        // u_o2an[j] = (u_o2a[j]+rng->gsl_ran_gaussian(vecRMS[j]*orsa::arcsecToRad())*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
                         const orsa::Vector u_o2an_j = (u_o2a[j]+rng->gsl_ran_gaussian(vecRMS[j]*orsa::arcsecToRad())*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
-                        // R_o2an[j] = range->sample()*u_o2an[j];
-#warning which range to use?
-                        // R_o2an[j] = activeRange[j]->sample()*u_o2an[j];
-                        // R_o2an[j] = activeRange[j]->sample()*u_o2an[j];
                         const orsa::Vector R_o2an_j = activeRange[j]->sample()*u_o2an_j;
-                        // R_an[j] = R_o[j] + R_o2an[j];
                         const orsa::Vector R_an_j = R_o[j] + R_o2an_j;
-                        // R_s2an[j] = R_an[j] - R_s[j];
                         R_s2an[j] = R_an_j - R_s[j];
-                        /* if (j==z2 && activeRange[z2]->size()>=minAdaptiveSize) {
-                        // const double escapeVelocity = sqrt(2*orsaSolarSystem::Data::GMSun()/R_s2an[z1].length());
-                        const double escapeVelocity = sqrt(2*orsaSolarSystem::Data::GMSun()/R_s2an[z1].length());
-                        const double dt = (allOpticalObs[z2]->epoch-allOpticalObs[z1]->epoch).get_d();
-                        const double maxDistance = escapeVelocity*dt;
-                        if ((R_s2an[z2]-R_s2an[z1]).length() > maxDistance) {
-                        // no possible bound solutions here
-                        bound=false;
-                        continue;
-                        }
-                        }
-                        */
+                        
                     }
-                    
-                    // if (j==z2 && activeRange[z2]->size()<minAdaptiveSize) {
                     if (j==z2) {
                         // enforce bound orbit on z2
                         const double escapeVelocity = sqrt(2*orsaSolarSystem::Data::GMSun()/R_s2an[z1].length());
                         const double dt = (allOpticalObs[z2]->epoch-allOpticalObs[z1]->epoch).get_d();
                         const double maxDistance = escapeVelocity*dt;
-                        //
                         rng->gsl_ran_dir_2d(&dx,&dy);
-                        // u_o2an[j] = (u_o2a[j]+rng->gsl_ran_gaussian(astrometricSigma)*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
-                        // u_o2an[j] = (u_o2a[j]+rng->gsl_ran_gaussian(vecRMS[j]*orsa::arcsecToRad())*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
                         const orsa::Vector u_o2an_j = (u_o2a[j]+rng->gsl_ran_gaussian(vecRMS[j]*orsa::arcsecToRad())*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
-                        //
-                        // const orsa::Vector diffVector = R_s2an[z1]-R_o[z2]+R_s[z2];
-                        // const orsa::Vector diffVector = R_s2an[z1]+R_s[z1]-R_o[z2];
                         const orsa::Vector diffVector = R_s2an[z1]-R_o[z2]+R_s[z2];
                         const double rangeCenter = std::max(0.0,u_o2an_j*diffVector); // range of min distance to R...z1
-                        // const double minDistance = (u_o2an[j]*rangeCenter-diffVector).length();
                         const double minDistance = (u_o2an_j*rangeCenter-diffVector).length();
                         if (minDistance > maxDistance) {
                             // no possible bound solutions here
@@ -760,13 +528,7 @@ int main(int argc, char **argv) {
                             continue;
                         }
                         const double rangeDelta  = sqrt(orsa::square(maxDistance)-orsa::square(minDistance));
-                        //
-                        // ORSA_DEBUG("R_z1: %g  R_z2_center: %g  diff: %g",R_o2an[z1].length(),rangeCenter,R_o2an[z1].length()-rangeCenter);
-                        // ORSA_DEBUG("maxDistance: %g   minDistance: %g   rangeDelta: %g",maxDistance,minDistance,rangeDelta);
-                        //
-                        // R_o2an[j] = std::max(0.0,rangeCenter+rangeDelta*(2*rng->gsl_rng_uniform()-1))*u_o2an[j];
                         const orsa::Vector R_o2an_j = std::max(0.0,rangeCenter+rangeDelta*(2*rng->gsl_rng_uniform()-1))*u_o2an_j;
-                        // R_an[j] = R_o[j] + R_o2an[j];
                         const orsa::Vector R_an_j = R_o[j] + R_o2an_j;
                         R_s2an[j] = R_an_j - R_s[j];
                     }
@@ -779,15 +541,6 @@ int main(int argc, char **argv) {
                                                                    R_s2an[z2],allOpticalObs[z2]->epoch,
                                                                    orsaSolarSystem::Data::GMSun());
             
-            /* {
-               ORSA_DEBUG("V_s2an[%i]:  %.3f [km/s]  theta: %.1f [deg]  phi: %.1f [deg]",
-               z1,
-               orsa::FromUnits(orsa::FromUnits(V_s2an_z1.length(),orsa::Unit::KM,-1),orsa::Unit::SECOND),
-               orsa::radToDeg()*acos(V_s2an_z1.normalized().getZ()),
-               orsa::radToDeg()*atan2(V_s2an_z1.getY(),V_s2an_z1.getX()));
-               }
-            */
-            
             {
                 orsaSolarSystem::OrbitWithEpoch tmpOrbit;
                 tmpOrbit.compute(R_s2an[z1],
@@ -799,55 +552,13 @@ int main(int argc, char **argv) {
                 AdaptiveIntervalElementType e;
                 e.data->resize(vecSize);
                 e.data->O_s2an_g = O_s2an_g;
-                // e.tested   = false;
-                // entryList.push_back(e);
-                // #warning CORRECT?
-                /* for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
-                   if ((k!=z1) && (k!=z2)) continue; // R_o2an was set only for z1 and z2
-                   // e.position = R_o2an[k].length();
-                   // necessary to set e.data->R_o2an... here?
-                   const orsa::Vector R_o2an_k = R_s2an[k]+R_s[k]-R_o[k];
-                   e.position = R_o2an_k.length();
-                   e.data->R_o2an[k] = R_o2an_k;
-                   ORSA_DEBUG("trying activeRange[%i]->insert(e)",k);
-                   activeRange[k]->insert(e);
-                   }
-                */
                 for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
-                    // must set them all, and compute R_o2an... later!
-                    /* 
-                       if ((k!=z1) && (k!=z2)) continue; // R_o2an was set only for z1 and z2
-                       // e.position = R_o2an[k].length();
-                       // necessary to set e.data->R_o2an... here?
-                       const orsa::Vector R_o2an_k = R_s2an[k]+R_s[k]-R_o[k];
-                       e.position = R_o2an_k.length();
-                       e.data->R_o2an[k] = R_o2an_k;
-                    */
-                    // update all R_o2an...
                     activeRange[k]->updateLevel(e);
                     e.position = (*e.data->R_o2an[k]).length();
-                    /* {
-                    // test
-                    if ((k==z1) || (k==z2)) {
-                    print((R_s2an[k]+R_s[k]-R_o[k]).length());
-                    print((*e.position));
-                    print((R_s2an[k]+R_s[k]-R_o[k]).length()-(*e.position));
-                    }
-                    }
-                    */
-                    // ORSA_DEBUG("trying activeRange[%i]->insert(e)",k);
                     activeRange[k]->insert(e);
                 }
                 
             }
-            
-            // orsa::print(O_v2sn_g);
-            
-            /* ORSA_DEBUG("FINAL ORBIT: a: %16.6f [km]   e: %8.6f",
-               orsa::FromUnits(O_v2sn_g.a,orsa::Unit::KM,-1),
-               O_v2sn_g.e);
-            */
-            
             AdaptiveIntervalType::DataType::DataType::const_iterator it = activeRange[0]->getData()->getData().begin();
             while (it != activeRange[0]->getData()->getData().end()) {
                 
@@ -855,8 +566,6 @@ int main(int argc, char **argv) {
 #warning should replace this threshold (16) with a check that enough points are available with lower RMS value
                 if (iter%100==0) {
                     if (activeRange[0]->size() >= 50) {
-                        
-                        // orsa::Cache<Entry> newMinRMSEntry;
                         AdaptiveIntervalElementType newMinRMSEntry;
                         bool newMinRMS=false;
                         
@@ -1020,9 +729,6 @@ int main(int argc, char **argv) {
                 }
             }
             
-            // #warning test only first?
-            // if (activeRange[0]->size() >= 1000) break;
-
             {
                 bool canStop=true;
                 for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
@@ -1038,46 +744,6 @@ int main(int argc, char **argv) {
         }
         
         ORSA_DEBUG("iter: %i",iter);
-        
-        // add body to bg
-        // #warning fix threshold
-        // if (stat_residual->RMS() < successThreshold) {
-        /*         if (chisq < chisq_99) {
-                   osg::ref_ptr<Body> b = new Body;
-                   char bodyName[1024];
-                   sprintf(bodyName,"b%i",iter); // fix...
-                   b->setName(bodyName);
-                   orsa::Vector rOrbit, vOrbit;
-                   O_s2an_g.relativePosVel(rOrbit,vOrbit);
-                   IBPS ibps;    
-                   ibps.time = O_s2an_g.epoch;
-                   //
-                   ibps.inertial = new PointLikeConstantInertialBodyProperty(0);
-                   //
-                   ibps.translational = new DynamicTranslationalBodyProperty;
-                   #warning make sure epoch(z1) == orbit epoch!
-                   if (allOpticalObs[z1]->epoch != ibps.time) {
-                   ORSA_DEBUG("problems!");
-                   }
-                   ibps.translational->setPosition(rOrbit+R_s[z1]);
-                   ibps.translational->setVelocity(vOrbit+V_s[z1]);
-                   // orsa::print(ibps.translational->position());
-                   // orsa::print(ibps.translational->velocity());
-                   b->setInitialConditions(ibps);
-                   
-                   bg->addBody(b.get());
-                   
-                   ORSA_DEBUG("bg->size(): %i",bg->size());
-                   }
-        */
-        
-        // test: slowly decrement all...
-        /* {
-           range->feedbackAll(0.9999);
-           }
-        */
-            
-        // ORSA_DEBUG("RMS: %8.3f",stat_residual->RMS());
         
         AdaptiveIntervalType::DataType::DataType::const_iterator it = activeRange[0]->getData()->getData().begin();
         while (it != activeRange[0]->getData()->getData().end()) {
