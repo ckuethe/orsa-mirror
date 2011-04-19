@@ -369,6 +369,8 @@ int main(int argc, char **argv) {
         const double minAdaptiveRange = orsa::FromUnits(100.0,orsa::Unit::KM); // important: not zero...
         const double maxAdaptiveRange = orsa::FromUnits(100.0,orsa::Unit::AU);
         
+        const double intervalResidualProbability = 1.0e-10; // "1-confidence level" for this interval, different from the chisq-level
+        
         // const unsigned int minAdaptiveSize = 2; // 2
         
         const int randomSeed = getpid(); // 717901;
@@ -636,7 +638,7 @@ int main(int argc, char **argv) {
         for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
             range_99[k] = new AdaptiveIntervalType(std::max(minAdaptiveRange,(*vecMinRange[k])),
                                                    std::min((*vecMaxRange[k]),maxAdaptiveRange),
-                                                   1.0e-10, // "1-confidence level" for this interval, different from the chisq-level
+                                                   intervalResidualProbability, // "1-confidence level" for this interval, different from the chisq-level
                                                    chisq_99,
                                                    chisq_99,
                                                    randomSeed+234,
@@ -648,7 +650,7 @@ int main(int argc, char **argv) {
         for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
             range_XY[k] = new AdaptiveIntervalType(std::max(minAdaptiveRange,(*vecMinRange[k])),
                                                    std::min((*vecMaxRange[k]),maxAdaptiveRange),
-                                                   1.0e-10, // "1-confidence level" for this interval, different from the chisq-level
+                                                   intervalResidualProbability, // "1-confidence level" for this interval, different from the chisq-level
 #warning this level should depend on the success, i.e. start with low level and increase it if no points get inserted...
                                                    100*chisq_99,
                                                    chisq_99, // this should be the lowest possible level we work with
@@ -907,26 +909,54 @@ int main(int argc, char **argv) {
                     if (activeRange[k]->size()==activeRangeOldSize[k]) continue;
                     activeRangeOldSize[k]=activeRange[k]->size();
                     if (activeRange[k]->getThreshold() == activeRange[k]->getTargetThreshold()) continue;
+                    const double currentSampleRange = activeRange[k]->maxSample()-activeRange[k]->minSample();
 #warning parameters...
-                    const size_t minSize = 50;
+                    // const size_t minSize = 50;
                     const double thresholdIncreaseFactor = 1.2;
-                    if (activeRange[k]->size()<minSize) continue;
+                    // if (activeRange[k]->size()<minSize) continue;
                     double testThreshold = activeRange[k]->getTargetThreshold();
+                    double testSampleRange = currentSampleRange;
+                    orsa::Cache<double> testMin, testMax;
                     size_t testSize = 0;
                     while (1) {
                         if (testThreshold>=activeRange[k]->getThreshold()) break;
                         testSize = 0;
-                        AdaptiveIntervalType::DataType::DataType::const_iterator it = activeRange[k]->getData()->getData().begin();
+                        AdaptiveIntervalType::DataType::DataType::const_iterator it =
+                            activeRange[k]->getData()->getData().begin();
                         while (it != activeRange[k]->getData()->getData().end()) {
-                            if ((*it).level < testThreshold) ++testSize;
+                            if ((*it).level < testThreshold) {
+                                testMin.setIfSmaller((*it).position);
+                                testMax.setIfLarger((*it).position);
+                                ++testSize;
+                            }
                             ++it;
                         }
-                        if (testSize>=minSize) break; // done
+                        // if (testSize>=minSize) break; // done
+                        // test if new interval would be smaller than current one
+                        if (testMin.isSet() && testMax.isSet()) {
+                            // should use an actual AdaptiveInterval for this?
+                            
+                            // same as 2*delta in
+                            // must use same residual probability as actual intervals
+                            if (testSize >= 2) {
+                                testSampleRange = (testMax-testMin)/(pow(intervalResidualProbability,1.0/testSize));
+                                if (testSampleRange < currentSampleRange) break; // done
+                            }
+                        }
                         testThreshold *= thresholdIncreaseFactor;
                     }
-                    if ( (testSize>=minSize) &&
+                    if ( (testSampleRange < currentSampleRange) && 
+                         // (testSize>=minSize) &&
+                         (testSize>=2) &&
                          (testThreshold<activeRange[k]->getThreshold()) ) {
-                        ORSA_DEBUG("reducing threshold for range %i to %g",k,testThreshold);
+                        ORSA_DEBUG("reducing threshold for range %3i: %8.2f -> %8.2f   size: %3i -> %3i   range: %7.3f -> %7.3f [AU]",
+                                   k,
+                                   activeRange[k]->getThreshold(),
+                                   testThreshold,
+                                   activeRange[k]->size(),
+                                   testSize,
+                                   orsa::FromUnits(currentSampleRange,orsa::Unit::AU,-1),
+                                   orsa::FromUnits(testSampleRange,orsa::Unit::AU,-1));
                         activeRange[k]->updateThresholdLevel(testThreshold);
                     }
                 }

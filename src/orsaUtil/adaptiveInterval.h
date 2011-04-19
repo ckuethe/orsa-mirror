@@ -91,6 +91,20 @@ namespace orsaUtil {
         ~AdaptiveInterval() { }
         
     public:
+        double minSample() const {
+            if (data->size()>=2) {
+                return sampleMin;
+            } else {
+                return initialMin;
+            }
+        }
+        double maxSample() const {
+            if (data->size()>=2) {
+                return sampleMax;
+            } else {
+                return initialMax;
+            }
+        }
         double sample() const {
             // #warning minimum number of points to use (at least 2...)
             if (data->size()>=2) {
@@ -116,20 +130,22 @@ namespace orsaUtil {
         virtual void updateThresholdLevel(const double & newThreshold) {
             // ORSA_DEBUG("NEW threshold: %g",newThreshold);
             threshold = newThreshold;
-            ORSA_DEBUG("size BEFORE refresh: %i",data->size());
+            // ORSA_DEBUG("size BEFORE refresh: %i",data->size());
             typename DataType::DataType::iterator it = data->getData().begin();
             while (it != data->getData().end()) {
                 // (*it).level.reset();
                 // updateLevel(*it);
                 if ((*it).level < threshold) {
+                    // ORSA_DEBUG("keeping level: %g",(*(*it).level));
                     ++it;
                 } else {
+                    // ORSA_DEBUG("rejecting level: %g",(*(*it).level));
                     it = data->getData().erase(it);
                 }
             }
             data->update();
             update();
-            ORSA_DEBUG("size AFTER refresh: %i",data->size());
+            // ORSA_DEBUG("size AFTER refresh: %i",data->size());
         }
     public:
         double getThreshold() const { return threshold; } 
