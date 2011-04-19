@@ -124,7 +124,7 @@ namespace orsaUtil {
                 return (initialMin+(initialMax-initialMin)*rnd->gsl_rng_uniform());
             }
         }
-    protected:
+    public:
         virtual void updateLevel(const AdaptiveIntervalElement<T> & e) const = 0;
     public:
         virtual void updateThresholdLevel(const double & newThreshold) {
@@ -155,6 +155,7 @@ namespace orsaUtil {
             if (!e.level.isSet()) {
                 updateLevel(e);
             }
+            // ORSA_DEBUG("testing level: %g   threshold: %g",(*e.level),threshold);
             if (e.level < threshold) {
                 data->insert(e,false,false);
                 data->update();
@@ -164,7 +165,7 @@ namespace orsaUtil {
     public:
         // call refresh() when vecRMS changes
         void refresh() {
-            ORSA_DEBUG("size BEFORE refresh: %i",data->size());
+            // ORSA_DEBUG("size BEFORE refresh: %i",data->size());
             typename DataType::DataType::iterator it = data->getData().begin();
             while (it != data->getData().end()) {
                 (*it).level.reset();
@@ -177,7 +178,7 @@ namespace orsaUtil {
             }
             data->update();
             update();
-            ORSA_DEBUG("size AFTER refresh: %i",data->size());
+            // ORSA_DEBUG("size AFTER refresh: %i",data->size());
         }
     public:
         bool reset() {

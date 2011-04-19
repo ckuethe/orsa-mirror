@@ -89,7 +89,7 @@ public:
     void resize(const size_t & vecSize) {
         vec_residual.resize(vecSize);
         R_o2an.resize(vecSize);
-        // V_o2an.resize(vecSize);
+        V_o2an.resize(vecSize);
     }
 protected:
     ~Entry() { }
@@ -100,7 +100,7 @@ public:
     mutable orsa::Cache<double> RMS;
 public:
     mutable std::vector< orsa::Cache<orsa::Vector> > R_o2an;
-    // mutable std::vector< orsa::Cache<orsa::Vector> > V_o2an;
+    mutable std::vector< orsa::Cache<orsa::Vector> > V_o2an;
 };
 
 typedef Entry AdaptiveIntervalTemplateType;
@@ -121,23 +121,26 @@ public:
         { }
 protected:
     const orsaSolarSystem::OpticalObservationVector & allOpticalObs;
-protected:
-    void updateLevel(const orsaUtil::AdaptiveIntervalElement<AdaptiveIntervalTemplateType> & e) const {
+public:
+    void updateLevel(const AdaptiveIntervalElementType & e) const {
         if (e.level.isSet()) return;
         osg::ref_ptr< orsa::Statistic<double> > stat_residual =
             new orsa::Statistic<double>;
         double chisq=0.0; // chisq
         orsa::Vector rOrbit, vOrbit;
-        for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-            if (!e.data->R_o2an[j].isSet()) {
+        for (unsigned int j=0; j<vecSize; ++j) {
+            if ( (!e.data->R_o2an[j].isSet()) ||
+                 (!e.data->V_o2an[j].isSet()) ) {
                 const orsa::Time t = allOpticalObs[j]->epoch;
                 orsaSolarSystem::OrbitWithEpoch tmpOrbit = e.data->O_s2an_g;
                 tmpOrbit.M = fmod(e.data->O_s2an_g.M + twopi()*(t-e.data->O_s2an_g.epoch).get_d()/e.data->O_s2an_g.period(),orsa::twopi());
                 tmpOrbit.relativePosVel(rOrbit,vOrbit);
-                rOrbit += R_s[j];
-                vOrbit += V_s[j];
-                const orsa::Vector R_an_j = rOrbit;
-                e.data->R_o2an[j] = (R_an_j-R_o[j]);
+                // rOrbit += R_s[j];
+                // vOrbit += V_s[j];
+                // const orsa::Vector R_an_j = rOrbit;
+                // e.data->R_o2an[j] = (R_an_j-R_o[j]);
+                e.data->R_o2an[j] = (rOrbit+R_s[j]-R_o[j]);
+                e.data->V_o2an[j] = (vOrbit+V_s[j]-V_o[j]);
             }
             if (!e.data->vec_residual[j].isSet()) {  const orsa::Vector u_o2an_j = (*e.data->R_o2an[j]).normalized();
                 const double residual = acos(std::min(1.0,u_o2an_j*u_o2a[j]))*orsa::radToArcsec();
@@ -345,6 +348,8 @@ int main(int argc, char **argv) {
         const double maxAdaptiveRange = orsa::FromUnits(100.0,orsa::Unit::AU);
         
         const double intervalResidualProbability = 1.0e-10; // "1-confidence level" for this interval, different from the chisq-level
+        
+        const size_t targetSamples = 100;
         
         // const unsigned int minAdaptiveSize = 2; // 2
         
@@ -627,7 +632,7 @@ int main(int argc, char **argv) {
                                                    std::min((*vecMaxRange[k]),maxAdaptiveRange),
                                                    intervalResidualProbability, // "1-confidence level" for this interval, different from the chisq-level
 #warning this level should depend on the success, i.e. start with low level and increase it if no points get inserted...
-                                                   100*chisq_99,
+                                                   1000*chisq_99,
                                                    chisq_99, // this should be the lowest possible level we work with
                                                    randomSeed+234,
                                                    allOpticalObs);
@@ -639,6 +644,12 @@ int main(int argc, char **argv) {
         activeRangeOldSize.resize(vecSize);
         for (unsigned int k=0; k<vecSize; ++k) {
             activeRangeOldSize[k] = 0;
+        }
+        
+        std::vector<size_t> activeRangeOldSizeDBG;
+        activeRangeOldSizeDBG.resize(vecSize);
+        for (unsigned int k=0; k<vecSize; ++k) {
+            activeRangeOldSizeDBG[k] = 0;
         }
         
         osg::ref_ptr<orsaUtil::MultiminOrbitalVelocity> mov = new orsaUtil::MultiminOrbitalVelocity;
@@ -671,6 +682,7 @@ int main(int argc, char **argv) {
             
             // only one really needed across this loop iteration?
             std::vector<orsa::Vector> R_s2an; R_s2an.resize(allOpticalObs.size());
+            std::vector<orsa::Vector> V_s2an; V_s2an.resize(allOpticalObs.size());
             
             // don't use ___z1 and ___z2 in code below, but z1 and z2 
             unsigned int ___z1 = rng->gsl_rng_uniform_int(allOpticalObs.size());
@@ -767,6 +779,15 @@ int main(int argc, char **argv) {
                                                                    R_s2an[z2],allOpticalObs[z2]->epoch,
                                                                    orsaSolarSystem::Data::GMSun());
             
+            /* {
+               ORSA_DEBUG("V_s2an[%i]:  %.3f [km/s]  theta: %.1f [deg]  phi: %.1f [deg]",
+               z1,
+               orsa::FromUnits(orsa::FromUnits(V_s2an_z1.length(),orsa::Unit::KM,-1),orsa::Unit::SECOND),
+               orsa::radToDeg()*acos(V_s2an_z1.normalized().getZ()),
+               orsa::radToDeg()*atan2(V_s2an_z1.getY(),V_s2an_z1.getX()));
+               }
+            */
+            
             {
                 orsaSolarSystem::OrbitWithEpoch tmpOrbit;
                 tmpOrbit.compute(R_s2an[z1],
@@ -780,17 +801,45 @@ int main(int argc, char **argv) {
                 e.data->O_s2an_g = O_s2an_g;
                 // e.tested   = false;
                 // entryList.push_back(e);
-#warning CORRECT?
+                // #warning CORRECT?
+                /* for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+                   if ((k!=z1) && (k!=z2)) continue; // R_o2an was set only for z1 and z2
+                   // e.position = R_o2an[k].length();
+                   // necessary to set e.data->R_o2an... here?
+                   const orsa::Vector R_o2an_k = R_s2an[k]+R_s[k]-R_o[k];
+                   e.position = R_o2an_k.length();
+                   e.data->R_o2an[k] = R_o2an_k;
+                   ORSA_DEBUG("trying activeRange[%i]->insert(e)",k);
+                   activeRange[k]->insert(e);
+                   }
+                */
                 for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
-                    if ((k!=z1) && (k!=z2)) continue; // R_o2an was set only for z1 and z2
-                    // e.position = R_o2an[k].length();
-                    const orsa::Vector R_o2an_k = R_s2an[k]+R_s[k]-R_o[k];
-                    e.position = R_o2an_k.length();
-                    e.data->R_o2an[k] = R_o2an_k;
+                    // must set them all, and compute R_o2an... later!
+                    /* 
+                       if ((k!=z1) && (k!=z2)) continue; // R_o2an was set only for z1 and z2
+                       // e.position = R_o2an[k].length();
+                       // necessary to set e.data->R_o2an... here?
+                       const orsa::Vector R_o2an_k = R_s2an[k]+R_s[k]-R_o[k];
+                       e.position = R_o2an_k.length();
+                       e.data->R_o2an[k] = R_o2an_k;
+                    */
+                    // update all R_o2an...
+                    activeRange[k]->updateLevel(e);
+                    e.position = (*e.data->R_o2an[k]).length();
+                    /* {
+                    // test
+                    if ((k==z1) || (k==z2)) {
+                    print((R_s2an[k]+R_s[k]-R_o[k]).length());
+                    print((*e.position));
+                    print((R_s2an[k]+R_s[k]-R_o[k]).length()-(*e.position));
+                    }
+                    }
+                    */
+                    // ORSA_DEBUG("trying activeRange[%i]->insert(e)",k);
                     activeRange[k]->insert(e);
                 }
+                
             }
-            
             
             // orsa::print(O_v2sn_g);
             
@@ -824,7 +873,7 @@ int main(int argc, char **argv) {
                         }
                         
                         if (newMinRMS) {
-                            ORSA_DEBUG("RESET HERE...  new minRMS = %g   activeRange[0]->size(): %i",(*minRMS),activeRange[0]->size());
+                            ORSA_DEBUG("new minRMS = %g",(*minRMS));
 #warning remember to reset all other counters around the code...
                             for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
                                 
@@ -853,15 +902,33 @@ int main(int argc, char **argv) {
                     }
                 }
                 
-                {
+                if (iter%100==0) {
+
                     // debug
-                    static unsigned int old_range99_0_size=0;
-                    if (activeRange[0]->size()!=old_range99_0_size) {
-                        ORSA_DEBUG("activeRange[0]->size(): %i",activeRange[0]->size());
-                        old_range99_0_size = activeRange[0]->size();
+                    
+                    bool printSize=false;
+                    for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+                        if (activeRange[k]->size()!=activeRangeOldSizeDBG[k]) {
+                            printSize=true;
+                            break;
+                        }
+                    }
+                    if (printSize) {
+                        char line_printSize[1024*1024];
+                        char tmpStr[1024];
+                        line_printSize[0] = '\0';
+                        for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+                            sprintf(tmpStr,"%i %.1f ",activeRange[k]->size(),activeRange[k]->getThreshold());
+                            strcat(line_printSize,tmpStr);
+                        }
+                        ORSA_DEBUG("activeRanges: %s",line_printSize);
+                    }
+                    // update
+                    for (unsigned int k=0; k<vecSize; ++k) {
+                        activeRangeOldSizeDBG[k]=activeRange[k]->size();
                     }
                 }
-
+                
 #warning which level to use?
                 // if (stat_residual->RMS() < successThreshold) {
                 // if ((*it).level < chisq_99) {
@@ -896,17 +963,18 @@ int main(int argc, char **argv) {
                     while (1) {
                         if (testThreshold>=activeRange[k]->getThreshold()) break;
                         testSize = 0;
-                        AdaptiveIntervalType::DataType::DataType::const_iterator it =
-                            activeRange[k]->getData()->getData().begin();
-                        while (it != activeRange[k]->getData()->getData().end()) {
-                            if ((*it).level < testThreshold) {
-                                testMin.setIfSmaller((*it).position);
-                                testMax.setIfLarger((*it).position);
-                                ++testSize;
+                        {
+                            AdaptiveIntervalType::DataType::DataType::const_iterator it =
+                                activeRange[k]->getData()->getData().begin();
+                            while (it != activeRange[k]->getData()->getData().end()) {
+                                if ((*it).level < testThreshold) {
+                                    testMin.setIfSmaller((*it).position);
+                                    testMax.setIfLarger((*it).position);
+                                    ++testSize;
+                                }
+                                ++it;
                             }
-                            ++it;
                         }
-                        // if (testSize>=minSize) break; // done
                         // test if new interval would be smaller than current one
                         if (testMin.isSet() && testMax.isSet()) {
                             // should use an actual AdaptiveInterval for this?
@@ -915,15 +983,30 @@ int main(int argc, char **argv) {
                             // must use same residual probability as actual intervals
                             if (testSize >= 2) {
                                 testSampleRange = (testMax-testMin)/(pow(intervalResidualProbability,1.0/testSize));
-                                if (testSampleRange < currentSampleRange) break; // done
+                                if (testSampleRange < currentSampleRange) {
+                                    break; // done
+                                }
                             }
+                        }
+                        // exception break: have enough points at target threshold
+                        if ( (testThreshold==activeRange[k]->getTargetThreshold()) && 
+                             (testSize>=targetSamples) ) {
+                            ORSA_DEBUG("QUICK EXIT for activeRange[%i] ****************************",k);
+                            break;
                         }
                         testThreshold *= thresholdIncreaseFactor;
                     }
+                    bool reduceThreshold=false;
                     if ( (testSampleRange < currentSampleRange) && 
-                         // (testSize>=minSize) &&
                          (testSize>=2) &&
                          (testThreshold<activeRange[k]->getThreshold()) ) {
+                        reduceThreshold=true;
+                    }
+                    if ( (testThreshold==activeRange[k]->getTargetThreshold()) &&
+                         (testSize>=targetSamples) ) {
+                        reduceThreshold=true;
+                    }
+                    if (reduceThreshold) {
                         ORSA_DEBUG("reducing threshold for range %3i: %8.2f -> %8.2f   size: %3i -> %3i   range: %7.3f -> %7.3f [AU]",
                                    k,
                                    activeRange[k]->getThreshold(),
@@ -937,9 +1020,21 @@ int main(int argc, char **argv) {
                 }
             }
             
-            
-#warning test only first?
-            if (activeRange[0]->size() >= 1000) break;
+            // #warning test only first?
+            // if (activeRange[0]->size() >= 1000) break;
+
+            {
+                bool canStop=true;
+                for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+                    if ( (activeRange[k]->size() >= targetSamples) &&
+                         (activeRange[k]->getThreshold()==activeRange[k]->getTargetThreshold()) ) {
+                        // keep going
+                    } else {
+                        canStop=false;
+                    }
+                }
+                if (canStop) break;
+            }
         }
         
         ORSA_DEBUG("iter: %i",iter);
@@ -1021,18 +1116,18 @@ int main(int argc, char **argv) {
                     }
                 }
                 
-                // this is relative to the Sun
-                /* char line_eachVelocity[1024*1024];
-                   {
-                   char tmpStr[1024];
-                   line_eachVelocity[0] = '\0';
-                   for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
-                   #warning FIX use of [j] here, should be (*it)...
-                   sprintf(tmpStr,"%4.1f ",orsa::FromUnits(orsa::FromUnits((V_an[j]-V_s[j]).length(),orsa::Unit::KM,-1),orsa::Unit::SECOND));
-                   strcat(line_eachVelocity,tmpStr);
-                   }
-                   }
-                */
+                char line_eachVelocity[1024*1024];
+                {
+                    char tmpStr[1024];
+                    line_eachVelocity[0] = '\0';
+                    for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
+                        orsa::Cache<orsa::Vector> & cv = (*it).data->V_o2an[j];
+                        if (cv.isSet()) {
+                            sprintf(tmpStr,"%4.1f ",orsa::FromUnits(orsa::FromUnits((*cv).length(),orsa::Unit::KM,-1),orsa::Unit::SECOND));
+                            strcat(line_eachVelocity,tmpStr);
+                        }
+                    }
+                }
                 
                 // a string to write all the single RMS values used
                 char line_eachRMS[1024*1024];
@@ -1090,7 +1185,7 @@ int main(int argc, char **argv) {
                 }
                 
                 
-                ORSA_DEBUG("SAMPLE[minRMS=%.3f]: %6.3f %7.3f %9.3f %8.6f %7.3f %5.2f %6.4f %s %s %s",
+                ORSA_DEBUG("SAMPLE[minRMS=%.3f]: %6.3f %7.3f %9.3f %8.6f %7.3f %5.2f %6.4f %s %s %s %s",
                            (*minRMS),
                            (*(*it).data->RMS),
                            (*(*it).level),
@@ -1101,7 +1196,7 @@ int main(int argc, char **argv) {
                            orsa::FromUnits(EarthMOID,orsa::Unit::AU,-1),
                            line_eachResidual,
                            line_eachDistance,
-                           // line_eachVelocity,
+                           line_eachVelocity,
                            line_eachRMS);
                 
             } else {
