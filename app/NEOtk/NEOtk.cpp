@@ -273,15 +273,6 @@ int main(int argc, char **argv) {
             vecRMS[k]        = RMS; // in arcsec
         }
     }
-
-    /* {
-       #warning remove this
-       // test: force fixed vecRMS
-       for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
-       vecRMS[k] = 0.2; // in arcsec
-       }
-       }
-    */
     
     const double chisq_50  = gsl_cdf_chisq_Pinv(0.50,allOpticalObs.size());
     const double chisq_90  = gsl_cdf_chisq_Pinv(0.90,allOpticalObs.size());
@@ -430,8 +421,7 @@ int main(int argc, char **argv) {
                 }
             }           
         }
-
-
+        
         std::vector< osg::ref_ptr<AdaptiveIntervalType> > range_99;
         range_99.resize(allOpticalObs.size());
         for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
@@ -481,13 +471,8 @@ int main(int argc, char **argv) {
         
         orsa::Cache<double> minRMS;
         while (iter<100000000) {
-            ++iter;
-            // ORSA_DEBUG("ITER: %i",iter);
-            // first add noise to unit vectors
+            ++iter;            
             
-#warning should create an Entry right away, and then discard it if not used?
-            
-            // only one really needed across this loop iteration?
             std::vector<orsa::Vector> R_s2an; R_s2an.resize(allOpticalObs.size());
             // std::vector<orsa::Vector> V_s2an; V_s2an.resize(allOpticalObs.size());
             
@@ -557,8 +542,8 @@ int main(int argc, char **argv) {
                     e.position = (*e.data->R_o2an[k]).length();
                     activeRange[k]->insert(e);
                 }
-                
             }
+                        
             AdaptiveIntervalType::DataType::DataType::const_iterator it = activeRange[0]->getData()->getData().begin();
             while (it != activeRange[0]->getData()->getData().end()) {
                 
