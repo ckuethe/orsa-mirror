@@ -543,14 +543,15 @@ int main(int argc, char **argv) {
                     activeRange[k]->insert(e);
                 }
             }
-                        
+            
+#warning should NOT be [0] but the one with the smallest number of entries... because for that one, all entries are in common with all other activeRange
             AdaptiveIntervalType::DataType::DataType::const_iterator it = activeRange[0]->getData()->getData().begin();
             while (it != activeRange[0]->getData()->getData().end()) {
                 
                 // perform this check only if enought points are already available, to speed up things...
 #warning should replace this threshold (16) with a check that enough points are available with lower RMS value
                 if (iter%100==0) {
-                    if (activeRange[0]->size() >= 50) {
+                    if (activeRange[0]->size() >= 5) {
                         AdaptiveIntervalElementType newMinRMSEntry;
                         bool newMinRMS=false;
                         
@@ -570,8 +571,9 @@ int main(int argc, char **argv) {
                             ORSA_DEBUG("new minRMS = %g",(*minRMS));
 #warning remember to reset all other counters around the code...
                             for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
-                                
-                                activeRange[k]->refresh();
+
+                                // not here, just a little bit later...
+                                // activeRange[k]->refresh();
                                 
                                 // reset counters...
                                 ct_tot=0;
@@ -581,15 +583,30 @@ int main(int argc, char **argv) {
                                 //
                                 
 #warning RE-INCLUDE THIS!
-                                if (newMinRMSEntry.data->vec_residual[k] > vecRMSnominal[k]) {
+                                {
+                                    const double old_vecRMS_k = vecRMS[k];
+                                    if (newMinRMSEntry.data->vec_residual[k] >= vecRMSnominal[k]) {
 #warning MAXIMUM RMS value set here, with min(...,3.0)...
-                                    vecRMS[k] = std::min((*newMinRMSEntry.data->vec_residual[k]),2.5);
-                                    ORSA_DEBUG("RMS[%02i] = %5.2f (updated)",k,vecRMS[k]);
-                                } else {
-                                    ORSA_DEBUG("RMS[%02i] = %5.2f",k,vecRMS[k]);
+                                        // vecRMS[k] = std::min((*newMinRMSEntry.data->vec_residual[k]),2.5);
+                                        vecRMS[k] = std::min((*newMinRMSEntry.data->vec_residual[k]),2*vecRMSnominal[k]);
+                                    } else {
+                                        vecRMS[k] = vecRMSnominal[k];
+                                    }
+                                    
+                                    if (vecRMS[k] < old_vecRMS_k) {
+                                        ORSA_DEBUG("RMS[%02i] = %5.2f (lowered)",k,vecRMS[k]);
+                                    } else if (vecRMS[k] > old_vecRMS_k) {
+                                        ORSA_DEBUG("RMS[%02i] = %5.2f (raised)",k,vecRMS[k]);
+                                    } else {
+                                        ORSA_DEBUG("RMS[%02i] = %5.2f",k,vecRMS[k]);
+                                    }
                                 }
-                                
                             }
+                            
+                            for (unsigned int k=0; k<allOpticalObs.size(); ++k) {
+                                activeRange[k]->refresh();
+                            }
+                            
                             // continue;
                             break;
                         }
@@ -730,6 +747,7 @@ int main(int argc, char **argv) {
         
         ORSA_DEBUG("iter: %i",iter);
         
+#warning should NOT be [0] but the one with the smallest number of entries... because for that one, all entries are in common with all other activeRange's
         AdaptiveIntervalType::DataType::DataType::const_iterator it = activeRange[0]->getData()->getData().begin();
         while (it != activeRange[0]->getData()->getData().end()) {
             
