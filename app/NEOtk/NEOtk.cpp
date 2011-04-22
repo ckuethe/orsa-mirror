@@ -77,9 +77,8 @@ public:
                          const double & confidenceLevel,
                          const double & initialThresholdLevel,
                          const double & targetThresholdLevel,
-                         const    int & randomSeed,
                          const orsaSolarSystem::OpticalObservationVector & allOpticalObs_) :
-        orsaUtil::AdaptiveInterval<AdaptiveIntervalTemplateType> (min,max,confidenceLevel,initialThresholdLevel,targetThresholdLevel,randomSeed),
+        orsaUtil::AdaptiveInterval<AdaptiveIntervalTemplateType> (min,max,confidenceLevel,initialThresholdLevel,targetThresholdLevel),
         allOpticalObs(allOpticalObs_)
         { }
 protected:
@@ -113,8 +112,6 @@ public:
     }    
 };
 
-
-#warning use single rng instead of passing random seed around... maybe use globalRNG?
 
 int main(int argc, char **argv) {
     
@@ -294,13 +291,14 @@ int main(int argc, char **argv) {
         const size_t targetSamples = 100;
         
         // const unsigned int minAdaptiveSize = 2; // 2
-        
-        const int randomSeed = getpid(); // 717901;
+
+        // using GlobalRNG
+        // const int randomSeed = getpid(); // 717901;
         
         /***** END INPUT *****/
         
-        ORSA_DEBUG("randomSeed: %i",randomSeed);
-        osg::ref_ptr<orsa::RNG> rng = new orsa::RNG(randomSeed);
+        // ORSA_DEBUG("randomSeed: %i",randomSeed);
+        // osg::ref_ptr<orsa::RNG> rng = new orsa::RNG(randomSeed);
         
         if (allOpticalObs.size() < 2) {
             ORSA_DEBUG("problem: not enough observations");
@@ -430,7 +428,6 @@ int main(int argc, char **argv) {
                                                    intervalResidualProbability, // "1-confidence level" for this interval, different from the chisq-level
                                                    chisq_99,
                                                    chisq_99,
-                                                   randomSeed+234,
                                                    allOpticalObs);
         }
         
@@ -443,7 +440,6 @@ int main(int argc, char **argv) {
 #warning this level should depend on the success, i.e. start with low level and increase it if no points get inserted...
                                                    1000*chisq_99,
                                                    chisq_99, // this should be the lowest possible level we work with
-                                                   randomSeed+234,
                                                    allOpticalObs);
         }
         
@@ -477,9 +473,9 @@ int main(int argc, char **argv) {
             // std::vector<orsa::Vector> V_s2an; V_s2an.resize(allOpticalObs.size());
             
             // don't use ___z1 and ___z2 in code below, but z1 and z2 
-            unsigned int ___z1 = rng->gsl_rng_uniform_int(allOpticalObs.size());
+            unsigned int ___z1 = orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform_int(allOpticalObs.size());
             unsigned int ___z2;
-            do { ___z2 = rng->gsl_rng_uniform_int(allOpticalObs.size()); }
+            do { ___z2 = orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform_int(allOpticalObs.size()); }
             while (___z1 == ___z2);
             // save them as z1 < z2 to ensure that vectors...[z1] are set before vectors...[z2]
             const unsigned int z1 = std::min(___z1,___z2);
@@ -490,8 +486,8 @@ int main(int argc, char **argv) {
                 for (unsigned int j=0; j<allOpticalObs.size(); ++j) {
                     if ((j!=z1) && (j!=z2)) continue;
                     if (j==z1) {
-                        rng->gsl_ran_dir_2d(&dx,&dy);
-                        const orsa::Vector u_o2an_j = (u_o2a[j]+rng->gsl_ran_gaussian(vecRMS[j]*orsa::arcsecToRad())*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
+                        orsa::GlobalRNG::instance()->rng()->gsl_ran_dir_2d(&dx,&dy);
+                        const orsa::Vector u_o2an_j = (u_o2a[j]+orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(vecRMS[j]*orsa::arcsecToRad())*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
                         const orsa::Vector R_o2an_j = activeRange[j]->sample()*u_o2an_j;
                         const orsa::Vector R_an_j = R_o[j] + R_o2an_j;
                         R_s2an[j] = R_an_j - R_s[j];
@@ -502,8 +498,8 @@ int main(int argc, char **argv) {
                         const double escapeVelocity = sqrt(2*orsaSolarSystem::Data::GMSun()/R_s2an[z1].length());
                         const double dt = (allOpticalObs[z2]->epoch-allOpticalObs[z1]->epoch).get_d();
                         const double maxDistance = escapeVelocity*dt;
-                        rng->gsl_ran_dir_2d(&dx,&dy);
-                        const orsa::Vector u_o2an_j = (u_o2a[j]+rng->gsl_ran_gaussian(vecRMS[j]*orsa::arcsecToRad())*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
+                        orsa::GlobalRNG::instance()->rng()->gsl_ran_dir_2d(&dx,&dy);
+                        const orsa::Vector u_o2an_j = (u_o2a[j]+orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(vecRMS[j]*orsa::arcsecToRad())*(dx*xS_o2a[j]+dy*yS_o2a[j])).normalized();
                         const orsa::Vector diffVector = R_s2an[z1]-R_o[z2]+R_s[z2];
                         const double rangeCenter = std::max(0.0,u_o2an_j*diffVector); // range of min distance to R...z1
                         const double minDistance = (u_o2an_j*rangeCenter-diffVector).length();
@@ -513,7 +509,7 @@ int main(int argc, char **argv) {
                             continue;
                         }
                         const double rangeDelta  = sqrt(orsa::square(maxDistance)-orsa::square(minDistance));
-                        const orsa::Vector R_o2an_j = std::max(0.0,rangeCenter+rangeDelta*(2*rng->gsl_rng_uniform()-1))*u_o2an_j;
+                        const orsa::Vector R_o2an_j = std::max(0.0,rangeCenter+rangeDelta*(2*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()-1))*u_o2an_j;
                         const orsa::Vector R_an_j = R_o[j] + R_o2an_j;
                         R_s2an[j] = R_an_j - R_s[j];
                     }
@@ -747,7 +743,8 @@ int main(int argc, char **argv) {
         
         ORSA_DEBUG("iter: %i",iter);
         
-#warning should NOT be [0] but the one with the smallest number of entries... because for that one, all entries are in common with all other activeRange's
+#warning should NOT be [0] but the one with the smallest number of entries... because for that one, all entries are in common with all other activeRange
+        
         AdaptiveIntervalType::DataType::DataType::const_iterator it = activeRange[0]->getData()->getData().begin();
         while (it != activeRange[0]->getData()->getData().end()) {
             
@@ -848,7 +845,6 @@ int main(int argc, char **argv) {
                                M2,
                                EarthOrbit,
                                O_s2an_g,
-                               randomSeed+88,
                                16,
                                1.0e-6);
                 }

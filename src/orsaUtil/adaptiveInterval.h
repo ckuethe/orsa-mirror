@@ -68,15 +68,13 @@ namespace orsaUtil {
                          const double & max,
                          const double & residualProbability, // 1-confidenceLevel
                          const double & initialThresholdLevel,
-                         const double & targetThresholdLevel,
-                         const    int & randomSeed) :
+                         const double & targetThresholdLevel) :
             osg::Referenced(),
             initialMin(std::min(min,max)),
             initialMax(std::max(min,max)),
             probability(residualProbability),
             threshold(initialThresholdLevel),
-            targetThreshold(targetThresholdLevel),
-            rnd(new orsa::RNG(randomSeed)) {
+            targetThreshold(targetThresholdLevel) {
             if ( (probability < 0.0) ||
                  (probability > 1.0) ||
                  (threshold < targetThreshold)) {
@@ -119,9 +117,9 @@ namespace orsaUtil {
                    const double sampleMin = std::max(mu-delta,initialMin);
                    const double sampleMax = std::min(mu+delta,initialMax);
                 */
-                return (sampleMin+(sampleMax-sampleMin)*rnd->gsl_rng_uniform());
+                return (sampleMin+(sampleMax-sampleMin)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
             } else {
-                return (initialMin+(initialMax-initialMin)*rnd->gsl_rng_uniform());
+                return (initialMin+(initialMax-initialMin)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
             }
         }
     public:
@@ -215,8 +213,6 @@ namespace orsaUtil {
     protected:
         double threshold;
         const double targetThreshold;
-    protected:
-        osg::ref_ptr<orsa::RNG> rnd;
     };
 
 }; // namespace orsaUtil
