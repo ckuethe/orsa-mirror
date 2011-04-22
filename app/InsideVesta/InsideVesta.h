@@ -8,38 +8,6 @@
 #include <orsa/vector.h>
 #include <orsa/massDistribution.h>
 
-// A singletone class for the random number generator
-class GlobalRNG {   
-public:
-    static GlobalRNG * instance() {
-        if (_instance == 0) {
-            _instance = new GlobalRNG;
-        }
-        return _instance;
-    }
-protected:
-    GlobalRNG() {
-        if (!randomSeed.isSet()) {
-            randomSeed=getpid();
-        }
-        randomSeed.lock();
-        ORSA_DEBUG("randomSeed: %i",(*randomSeed));
-        rng = new orsa::RNG(randomSeed);
-    }
-public:
-    virtual ~GlobalRNG() {
-        _instance = 0;
-    }
-protected:
-    static GlobalRNG * _instance;
-public:
-    static orsa::Cache<int> randomSeed;
-protected:
-    osg::ref_ptr<orsa::RNG> rng;
-public:
-    const orsa::RNG * get() const { return rng.get(); }
-};
-
 // Each parameter of the model
 class ModelParameter : public osg::Referenced {
 public:
@@ -52,7 +20,7 @@ protected:
     virtual ~ModelParameter() { }
 public:
     double sample() const {
-        return min+range*GlobalRNG::instance()->get()->gsl_rng_uniform();
+        return min+range*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
     }
 protected:
     const double min, range;

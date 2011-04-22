@@ -388,6 +388,12 @@ void orsa::principalAxis(orsa::Matrix & genericToPrincipal,
 
 /***/
 
+orsa::GlobalRNG * orsa::GlobalRNG::_instance = 0;
+
+orsa::Cache<int> orsa::GlobalRNG::randomSeed;
+
+/***/
+
 RandomPointsInShape::RandomPointsInShape(const orsa::Shape * s,
                                          const unsigned int N,
                                          const int rs) : osg::Referenced(), shape(s), size(N), randomSeed(rs) {

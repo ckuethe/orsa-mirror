@@ -204,7 +204,42 @@ namespace orsa {
     protected:  
         gsl_rng * rnd;
     };
-  
+    
+    /***/
+    
+    // A singletone class for the random number generator
+    class GlobalRNG {   
+    public:
+        static GlobalRNG * instance() {
+            if (_instance == 0) {
+                _instance = new GlobalRNG;
+            }
+            return _instance;
+        }
+    protected:
+        GlobalRNG() {
+            if (!randomSeed.isSet()) {
+#warning use something better than getpid()...
+                randomSeed=getpid();
+            }
+            randomSeed.lock();
+            ORSA_DEBUG("randomSeed: %i",(*randomSeed));
+            rng_ = new orsa::RNG(randomSeed);
+        }
+    public:
+        virtual ~GlobalRNG() {
+            _instance = 0;
+        }
+    protected:
+        static GlobalRNG * _instance;
+    public:
+        static orsa::Cache<int> randomSeed;
+    protected:
+        osg::ref_ptr<orsa::RNG> rng_;
+    public:
+        const orsa::RNG * rng() const { return rng_.get(); }
+    };
+    
     /***/
   
     class RandomPointsInShape : public osg::Referenced {

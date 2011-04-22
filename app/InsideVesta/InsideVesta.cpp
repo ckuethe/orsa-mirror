@@ -5,12 +5,10 @@
 using namespace orsa;
 using namespace orsaSolarSystem;
 
-GlobalRNG * GlobalRNG::_instance = 0;
-
-orsa::Cache<int> GlobalRNG::randomSeed;
-
 // int main(int argc, char **argv) {
 int main() {
+    
+    // orsa::GlobalRNG::randomSeed = 777;
     
     orsa::Debug::instance()->initTimer();
 
@@ -76,9 +74,9 @@ int main() {
         const Box boundingBox = shape->boundingBox();
         FILE * fp = fopen("profile.dat","w");
         for (unsigned int k=0; k<1000000; ++k) {
-            const orsa::Vector v =  Vector(boundingBox.getXMin()+(boundingBox.getXMax()-boundingBox.getXMin())*GlobalRNG::instance()->get()->gsl_rng_uniform(),
+            const orsa::Vector v =  Vector(boundingBox.getXMin()+(boundingBox.getXMax()-boundingBox.getXMin())*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),
                                            0.0,
-                                           boundingBox.getZMin()+(boundingBox.getZMax()-boundingBox.getZMin())*GlobalRNG::instance()->get()->gsl_rng_uniform());
+                                           boundingBox.getZMin()+(boundingBox.getZMax()-boundingBox.getZMin())*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
             if (shape->isInside(v)) {
                 fprintf(fp,"%g %g %g\n",v.getX(),v.getZ(),refMD->density(v));
             } else {
@@ -97,7 +95,7 @@ int main() {
     osg::ref_ptr<orsa::PaulMoment> paulMoment;
     
     const unsigned int N = 1000000;
-    // remember, there is another RNG, see GlobalRNG in InsideVesta.h
+    // remember, there is another RNG: orsa::GlobalRNG, see orsa/util.h
     // int randomSeed = getpid();
     int randomSeed = 85719;
     
