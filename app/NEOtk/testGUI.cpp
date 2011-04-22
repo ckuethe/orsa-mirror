@@ -76,13 +76,13 @@ int main(int argc, char ** argv) {
                      (std::string(s_checkbox) == std::string("type=\"checkbox\"")) ){
                     // ORSA_DEBUG("good line: [%s]",line);
                     char designation[1024];
-                    if (1 == sscanf(s_value,"VALUE=\"%s7\"",designation)) {
+                    if (1 == sscanf(s_value,"VALUE=\"%s\"",designation)) {
                         // remove trailing \"
                         designation[strlen(designation)-1] = '\0';
-                        if (strlen(designation)==7) {
-                            ORSA_DEBUG("designation: [%s]",designation);
-                            NEOCPlist << designation;
-                        }
+                        // if (strlen(designation)==7) {
+                        ORSA_DEBUG("designation: [%s]",designation);
+                        NEOCPlist << designation;
+                        // }
                     }
                 }
             }
