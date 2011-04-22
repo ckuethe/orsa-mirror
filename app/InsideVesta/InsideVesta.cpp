@@ -7,11 +7,13 @@ using namespace orsaSolarSystem;
 
 GlobalRNG * GlobalRNG::_instance = 0;
 
+orsa::Cache<int> GlobalRNG::randomSeed;
+
 // int main(int argc, char **argv) {
 int main() {
     
     orsa::Debug::instance()->initTimer();
-    
+
     // units
     const double    km = orsa::FromUnits(1,orsa::Unit::KM);
     const double g_cm3 = orsa::FromUnits(orsa::FromUnits(1,orsa::Unit::GRAM),orsa::Unit::CM,-3);
@@ -74,9 +76,9 @@ int main() {
         const Box boundingBox = shape->boundingBox();
         FILE * fp = fopen("profile.dat","w");
         for (unsigned int k=0; k<1000000; ++k) {
-            const orsa::Vector v =  Vector(boundingBox.getXMin()+(boundingBox.getXMax()-boundingBox.getXMin())*GlobalRNG::instance()->gsl_rng_uniform(),
+            const orsa::Vector v =  Vector(boundingBox.getXMin()+(boundingBox.getXMax()-boundingBox.getXMin())*GlobalRNG::instance()->get()->gsl_rng_uniform(),
                                            0.0,
-                                           boundingBox.getZMin()+(boundingBox.getZMax()-boundingBox.getZMin())*GlobalRNG::instance()->gsl_rng_uniform());
+                                           boundingBox.getZMin()+(boundingBox.getZMax()-boundingBox.getZMin())*GlobalRNG::instance()->get()->gsl_rng_uniform());
             if (shape->isInside(v)) {
                 fprintf(fp,"%g %g %g\n",v.getX(),v.getZ(),refMD->density(v));
             } else {

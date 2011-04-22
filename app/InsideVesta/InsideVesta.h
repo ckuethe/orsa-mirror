@@ -19,9 +19,12 @@ public:
     }
 protected:
     GlobalRNG() {
-        const pid_t pid = getpid();
-        ORSA_DEBUG("RNG seed: %i",pid);
-        rng = new orsa::RNG(pid);
+        if (!randomSeed.isSet()) {
+            randomSeed=getpid();
+        }
+        randomSeed.lock();
+        ORSA_DEBUG("randomSeed: %i",(*randomSeed));
+        rng = new orsa::RNG(randomSeed);
     }
 public:
     virtual ~GlobalRNG() {
@@ -29,12 +32,12 @@ public:
     }
 protected:
     static GlobalRNG * _instance;
+public:
+    static orsa::Cache<int> randomSeed;
 protected:
     osg::ref_ptr<orsa::RNG> rng;
 public:
-    double gsl_rng_uniform() const {
-        return rng->gsl_rng_uniform();
-    }
+    const orsa::RNG * get() const { return rng.get(); }
 };
 
 // Each parameter of the model
@@ -49,7 +52,7 @@ protected:
     virtual ~ModelParameter() { }
 public:
     double sample() const {
-        return min+range*GlobalRNG::instance()->gsl_rng_uniform();
+        return min+range*GlobalRNG::instance()->get()->gsl_rng_uniform();
     }
 protected:
     const double min, range;
@@ -61,15 +64,18 @@ typedef ModelParameter Par;
 // keep all vars in sync!
 class Model {
 public:
+    // global
     osg::ref_ptr<Par> totalMass;
     osg::ref_ptr<Par> totalVolume;
+    // core
     osg::ref_ptr<Par> coreDensity;
     osg::ref_ptr<Par> coreCenterX;
     osg::ref_ptr<Par> coreCenterY;
     osg::ref_ptr<Par> coreCenterZ;
     osg::ref_ptr<Par> coreRadiusX; // X-Y-Z dimension of core BEFORE ROTATION
-    osg::ref_ptr<Par> coreRadiusY; 
+    osg::ref_ptr<Par> coreRadiusY;
     osg::ref_ptr<Par> coreRadiusZ;
+    // osg::ref_ptr<Par> 
     // no core rotation for now
     // core-mantle interface
     // no mantle density, that's a dependant variable, to conserve total mass
