@@ -12,21 +12,34 @@
 
 namespace orsaUtil {
     
-    class AdaptiveMonteCarlo : public osg::Referenced {
+    template <typename T> class AdaptiveMonteCarlo : public osg::Referenced {
     public:
-        AdaptiveMonteCarlo();
+        AdaptiveMonteCarlo() : osg::Referenced() {
+            
+        }
     protected:
-        virtual ~AdaptiveMonteCarlo();
+        virtual ~AdaptiveMonteCarlo() { }
     public:
-        virtual bool run(const size_t & maxIter);
+        virtual bool run(std::vector< osg::ref_ptr<orsaUtil::AdaptiveInterval<T> > > & intervalVector,
+                         const size_t & maxIter) {
+            doAbort=false;
+            size.lock();
+            size_t iter=0;
+            while (iter<maxIter) {
+                ++iter;
+                
+            }
+            size.unlock();
+            return true;
+        }
     protected:
-        virtual void singleStepDone() const;
+        virtual void singleStepDone() const { }
     public:
         virtual void abort() const { doAbort=true; }
     private:
         mutable bool doAbort;
     public:
-        
+        orsa::Cache<size_t> size;
     };
     
 }; // namespace orsaUtil
