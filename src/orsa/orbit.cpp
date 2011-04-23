@@ -599,6 +599,7 @@ public:
         orsa::Vector r1, r2;
         o1.relativePosition(r1);
         o2.relativePosition(r2);
+        // ORSA_DEBUG("M1: %g  M2: %g  dr: %g",o1.M*orsa::radToDeg(),o2.M*orsa::radToDeg(),orsa::FromUnits((r2-r1).length(),orsa::Unit::AU,-1));
         return (r2-r1).length();
     }
 public:
@@ -610,10 +611,9 @@ bool orsa::MOID(double             & moid,
                 double             & M2,
                 const orsa::Orbit  & o1,
                 const orsa::Orbit  & o2,
-                const int          & randomSeed,
                 const unsigned int & numPoints,
                 const double       & epsAbs) {
-  
+    
     osg::ref_ptr<orsa::MultiminParameters> par = new MultiminParameters;
     //
     par->insert("M1",o1.M,orsa::arcsecToRad());
@@ -624,16 +624,17 @@ bool orsa::MOID(double             & moid,
     multimin->setMultiminParameters(par.get());
   
     bool found=false;
-  
+    
     {
-        osg::ref_ptr<orsa::RNG> rng = new orsa::RNG(randomSeed);  
+        // osg::ref_ptr<orsa::RNG> rng = new orsa::RNG(randomSeed);  
+        osg::ref_ptr<const orsa::RNG> rng = orsa::GlobalRNG::instance()->rng();  
         for (unsigned int k=0; k<numPoints; ++k) {
             par->set("M1",rng->gsl_rng_uniform()*orsa::twopi());
             par->set("M2",rng->gsl_rng_uniform()*orsa::twopi());
             if (multimin->run_nmsimplex(128,
                                         epsAbs)) {
-                if ((found && (multimin->fun(multimin->getMultiminParameters()) < moid)) ||
-                    (!found) ) {      
+                if ( (found && (multimin->fun(multimin->getMultiminParameters()) < moid) ) ||
+                     (!found) ) {      
                     moid = multimin->fun(multimin->getMultiminParameters());
                     M1   = multimin->getMultiminParameters()->get("M1");
                     M2   = multimin->getMultiminParameters()->get("M2");

@@ -288,7 +288,7 @@ int main(int argc, char **argv) {
         
         const double intervalResidualProbability = 1.0e-10; // "1-confidence level" for this interval, different from the chisq-level
         
-        const size_t targetSamples = 100;
+        const size_t targetSamples = 1000;
         
         // const unsigned int minAdaptiveSize = 2; // 2
 
@@ -840,15 +840,17 @@ int main(int argc, char **argv) {
                     orsa::Orbit EarthOrbit;
                     EarthOrbit.compute(earth.get(),sun.get(),bg.get(),O_s2an_g.epoch);
                     double M1, M2;
-                    orsa::MOID(EarthMOID,
-                               M1,
-                               M2,
-                               EarthOrbit,
-                               O_s2an_g,
-                               16,
-                               1.0e-6);
+                    const bool found = orsa::MOID(EarthMOID,
+                                                  M1,
+                                                  M2,
+                                                  EarthOrbit,
+                                                  O_s2an_g,
+                                                  16,
+                                                  1.0e-6);
+                    if (!found) {
+                        ORSA_DEBUG("problems...");
+                    }
                 }
-                
                 
                 ORSA_DEBUG("SAMPLE[minRMS=%.3f]: %6.3f %7.3f %9.3f %8.6f %7.3f %5.2f %6.4f %s %s %s %s",
                            (*minRMS),

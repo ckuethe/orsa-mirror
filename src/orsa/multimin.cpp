@@ -449,7 +449,7 @@ double Multimin::_diff_five_points_ (const double & y_mm,
 
 bool Multimin::run_nmsimplex(const unsigned int maxIter,
                              const double       epsAbs) const {
-  
+    
     if (_par.get() == 0) {
         ORSA_ERROR("no parameters");
         return false;
@@ -548,7 +548,7 @@ bool Multimin::run_nmsimplex(const unsigned int maxIter,
     if (cv_status == GSL_SUCCESS) {
         success(_par.get());
     }	
-  
+    
     // ORSA_DEBUG("total iterations: %i",iter);
   
     for (unsigned int k=0; k<_par->size(); ++k) {
@@ -563,7 +563,7 @@ bool Multimin::run_nmsimplex(const unsigned int maxIter,
         ORSA_ERROR("mf should never change during the run... use a lock?");
         return false;
     }
-  
+    
     if ((cv_status == GSL_CONTINUE) || (it_status == GSL_CONTINUE)) {
         return false;
     } else {
