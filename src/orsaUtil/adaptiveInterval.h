@@ -200,7 +200,8 @@ namespace orsaUtil {
     public:
         size_t size() const { return data->size(); }
     public:
-        typedef typename orsa::Interval< AdaptiveIntervalElement<T> > DataType;
+        typedef typename orsaUtil::AdaptiveIntervalElement<T> AdaptiveIntervalElementType;
+        typedef typename orsa::Interval<AdaptiveIntervalElementType> DataType;
     protected:
         osg::ref_ptr<DataType> data;
     public:
