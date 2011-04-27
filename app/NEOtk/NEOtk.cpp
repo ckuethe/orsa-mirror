@@ -77,8 +77,9 @@ public:
                          const double & confidenceLevel,
                          const double & initialThresholdLevel,
                          const double & targetThresholdLevel,
+                         const size_t & targetSamples,
                          const orsaSolarSystem::OpticalObservationVector & allOpticalObs_) :
-        orsaUtil::AdaptiveInterval<AdaptiveIntervalTemplateType> (min,max,confidenceLevel,initialThresholdLevel,targetThresholdLevel),
+        orsaUtil::AdaptiveInterval<AdaptiveIntervalTemplateType> (min,max,confidenceLevel,initialThresholdLevel,targetThresholdLevel,targetSamples),
         allOpticalObs(allOpticalObs_)
         { }
 protected:
@@ -428,6 +429,7 @@ int main(int argc, char **argv) {
                                                    intervalResidualProbability, // "1-confidence level" for this interval, different from the chisq-level
                                                    chisq_99,
                                                    chisq_99,
+                                                   targetSamples,
                                                    allOpticalObs);
         }
         
@@ -440,6 +442,7 @@ int main(int argc, char **argv) {
 #warning this level should depend on the success, i.e. start with low level and increase it if no points get inserted...
                                                    1000*chisq_99,
                                                    chisq_99, // this should be the lowest possible level we work with
+                                                   targetSamples,
                                                    allOpticalObs);
         }
         

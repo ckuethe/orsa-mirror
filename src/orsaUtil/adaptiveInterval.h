@@ -68,13 +68,15 @@ namespace orsaUtil {
                          const double & max,
                          const double & residualProbability, // 1-confidenceLevel
                          const double & initialThresholdLevel,
-                         const double & targetThresholdLevel) :
+                         const double & targetThresholdLevel,
+                         const size_t & targetSamples_) :
             osg::Referenced(),
             initialMin(std::min(min,max)),
             initialMax(std::max(min,max)),
             probability(residualProbability),
             threshold(initialThresholdLevel),
-            targetThreshold(targetThresholdLevel) {
+            targetThreshold(targetThresholdLevel),
+            targetSamples(targetSamples_) {
             if ( (probability < 0.0) ||
                  (probability > 1.0) ||
                  (threshold < targetThreshold)) {
@@ -106,17 +108,6 @@ namespace orsaUtil {
         double sample() const {
             // #warning minimum number of points to use (at least 2...)
             if (data->size()>=2) {
-                /* 
-                   #warning cache values, to speed-up this part 
-                   // const double    tmpMin = forcePositive ? std::max(0.0,data->min().position) : data->min().position;
-                   // forcePositive test is not needed, because of the stronger check below agains the intial min and max
-                   const double    tmpMin = data->min().position;
-                   const double    tmpMax = data->max().position;
-                   const double        mu = 0.5*(tmpMin+tmpMax);
-                   const double     delta = (tmpMax-tmpMin)/(2*pow(probability,1.0/data->size()));
-                   const double sampleMin = std::max(mu-delta,initialMin);
-                   const double sampleMax = std::min(mu+delta,initialMax);
-                */
                 return (sampleMin+(sampleMax-sampleMin)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
             } else {
                 return (initialMin+(initialMax-initialMin)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
@@ -183,16 +174,51 @@ namespace orsaUtil {
             return data->reset();
         }
     public:
+        // to estimate range from outside this class
+        static void sampleRange(double & sampleMin,
+                                double & sampleMax,
+                                const double & initialMin,
+                                const double & initialMax,
+                                const double & dataMin,
+                                const double & dataMax,
+                                const double & residualProbability,
+                                const size_t & dataSize) {
+            const double    mu = 0.5*(dataMin+dataMax);
+            const double delta = (dataMax-dataMin)/(2*pow(residualProbability,1.0/dataSize));
+            sampleMin = std::max(mu-delta,initialMin);
+            sampleMax = std::min(mu+delta,initialMax);
+        }
+        static void sampleRange(orsa::Cache<double> & sampleMin,
+                                orsa::Cache<double> & sampleMax,
+                                const double & initialMin,
+                                const double & initialMax,
+                                const double & dataMin,
+                                const double & dataMax,
+                                const double & residualProbability,
+                                const size_t & dataSize) {
+            double sMin, sMax;
+            sampleRange(sMin,
+                        sMax,
+                        initialMin,
+                        initialMax,
+                        dataMin,
+                        dataMax,
+                        residualProbability,
+                        dataSize);
+            sampleMin = sMin;
+            sampleMax = sMax;
+        }
+    public:
         void update() {
             if (data->size()>=2) {
-                const double    tmpMin = data->min().position;
-                const double    tmpMax = data->max().position;
-                //
-                const double        mu = 0.5*(tmpMin+tmpMax);
-                const double     delta = (tmpMax-tmpMin)/(2*pow(probability,1.0/data->size()));
-                //
-                sampleMin = std::max(mu-delta,initialMin);
-                sampleMax = std::min(mu+delta,initialMax);
+                sampleRange(sampleMin,
+                            sampleMax,
+                            initialMin,
+                            initialMax,
+                            data->min().position,
+                            data->max().position,
+                            probability,
+                            data->size());
             }
         }
     protected:
@@ -207,13 +233,15 @@ namespace orsaUtil {
     public:
         const DataType * getData() const { return data.get(); }
         
-    protected:
+    public:
         const double initialMin;
         const double initialMax;
         const double probability;
     protected:
         double threshold;
         const double targetThreshold;
+    public:
+        const size_t targetSamples;
     };
 
 }; // namespace orsaUtil

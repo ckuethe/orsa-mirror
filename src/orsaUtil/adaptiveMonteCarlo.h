@@ -57,7 +57,7 @@ namespace orsaUtil {
     public:
         // most implementations will want to rewrite sample(...)
         virtual bool sample(ElementTypeVector & ev) const {
-            for (unsigned int k=0; k<N; ++k) {
+            for (size_t k=0; k<N; ++k) {
                 ev[k].position = intervalVector[k]->sample();
 #warning maybe add an updateData() to update the auxiliary data...
                 intervalVector[k]->updateLevel(ev[k]);
@@ -71,6 +71,7 @@ namespace orsaUtil {
             intervalVector=iv;
             N=intervalVector.size();
             N.lock();
+            std::vector<size_t> intervalVectorOldSize; intervalVectorOldSize.resize(N); for (size_t k=0; k<N; ++k) { intervalVectorOldSize[k] = 0; }
             doAbort=false;
             size_t iter=0;
             // size_t ___z1=0, ___z2=0; // init once to make compiler happy
@@ -94,14 +95,125 @@ namespace orsaUtil {
                 ev.resize(N);
                 sample(ev);
 
+                // insert
+                for (size_t k=0; k<N; ++k) {
+                    intervalVector[k]->insert(ev[k]);
+                }
+                
                 // every so often, check if a better nominal solution has been found ... old minRMS
                 
                 
                 // every so often, try to decrease the threshold level
-
+#warning should test this only if there has been an insert...       
+                // another test: can decreast threshold level?
+                if (iter%100==0) {
+                    for (size_t k=0; k<N; ++k) {
+#warning should test if the adaptive interval actually shrinks when reducing level and at the same time reducing the number of points...
+                        if (intervalVector[k]->size()==intervalVectorOldSize[k]) continue;
+                        intervalVectorOldSize[k]=intervalVector[k]->size();
+                        if (intervalVector[k]->getThreshold() == intervalVector[k]->getTargetThreshold()) continue;
+                        const double currentSampleRange = intervalVector[k]->maxSample()-intervalVector[k]->minSample();
+#warning parameters...
+                        // const size_t minSize = 50;
+                        const double thresholdIncreaseFactor = 1.2;
+                        // if (intervalVector[k]->size()<minSize) continue;
+                        double testThreshold = intervalVector[k]->getTargetThreshold();
+                        double testSampleRange = currentSampleRange;
+                        orsa::Cache<double> testMin, testMax;
+                        orsa::Cache<double> testSampleMin, testSampleMax;
+                        size_t testSize = 0;
+                        while (1) {
+                            if (testThreshold>=intervalVector[k]->getThreshold()) break;
+                            testSize = 0;
+                            {
+                                typename T::value_type::element_type::DataType::DataType::const_iterator it =
+                                    intervalVector[k]->getData()->getData().begin();
+                                while (it != intervalVector[k]->getData()->getData().end()) {
+                                    if ((*it).level < testThreshold) {
+                                        testMin.setIfSmaller((*it).position);
+                                        testMax.setIfLarger((*it).position);
+                                        ++testSize;
+                                    }
+                                    ++it;
+                                }
+                            }
+                            // test if new interval would be smaller than current one
+                            if (testMin.isSet() && testMax.isSet()) {
+                                // should use an actual AdaptiveInterval for this?
+                                
+                                // same as 2*delta in
+                                // must use same residual probability as actual intervals
+                                if (testSize >= 2) {
+                                    T::value_type::element_type::sampleRange(testSampleMin,
+                                                                             testSampleMax,
+                                                                             intervalVector[k]->initialMin,
+                                                                             intervalVector[k]->initialMax,
+                                                                             testMin,
+                                                                             testMax,
+                                                                             intervalVector[k]->probability,
+                                                                             testSize);
+                                    testSampleRange = testSampleMax - testSampleMin;
+                                    if (testSampleRange < currentSampleRange) {
+                                        break; // done
+                                    }
+                                }
+                            }
+                            // exception break: have enough points at target threshold
+                            if ( (testThreshold==intervalVector[k]->getTargetThreshold()) && 
+                                 (testSize>=intervalVector[k]->targetSamples) ) {
+                                ORSA_DEBUG("QUICK EXIT for intervalVector[%i] ****************************",k);
+                                break;
+                            }
+                            testThreshold *= thresholdIncreaseFactor;
+                        }
+                        bool reduceThreshold=false;
+                        if ( (testSampleRange < currentSampleRange) && 
+                             (testSize>=2) &&
+                             (testThreshold<intervalVector[k]->getThreshold()) ) {
+                            reduceThreshold=true;
+                        }
+                        if ( (testThreshold==intervalVector[k]->getTargetThreshold()) &&
+                             (testSize>=intervalVector[k]->targetSamples) ) {
+                            reduceThreshold=true;
+                        }
+                        if (reduceThreshold) {
+                            // version with range in AU
+                            /* ORSA_DEBUG("reducing threshold for range %3i: %8.2f -> %8.2f   size: %3i -> %3i   range: %7.3f -> %7.3f [AU]",
+                               k,
+                               intervalVector[k]->getThreshold(),
+                               testThreshold,
+                               intervalVector[k]->size(),
+                               testSize,
+                               orsa::FromUnits(currentSampleRange,orsa::Unit::AU,-1),
+                               orsa::FromUnits(testSampleRange,orsa::Unit::AU,-1));
+                            */
+                            ORSA_DEBUG("reducing threshold for range %3i: %8.2f -> %8.2f   size: %3i -> %3i   range: [%7.3f;%7.3f]",
+                                       k,
+                                       intervalVector[k]->getThreshold(),
+                                       testThreshold,
+                                       intervalVector[k]->size(),
+                                       testSize,
+                                       (*testSampleMin),
+                                       (*testSampleMax));
+                            intervalVector[k]->updateThresholdLevel(testThreshold);
+                        }
+                    }
+                }
+                
                 
                 // check if we can stop now
-                
+                {
+                    bool canStop=true;
+                    for (size_t k=0; k<N; ++k) {
+                        if ( (intervalVector[k]->size() >= intervalVector[k]->targetSamples) &&
+                             (intervalVector[k]->getThreshold() == intervalVector[k]->getTargetThreshold()) ) {
+                            // still can stop, so keep canStop=true;
+                        } else {
+                            canStop=false;
+                        }
+                    }
+                    if (canStop) break;
+                }
             }
             N.unlock();
             return true;
