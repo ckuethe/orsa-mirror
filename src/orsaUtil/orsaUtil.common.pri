@@ -31,8 +31,10 @@ HEADERS = adaptiveInterval.h \
 	  adaptiveMonteCarlo.h \
 	  multimin.h \
           observatory.h \
-	  orbit.h
+	  orbit.h \
+	  statisticalRanging.h 
 
 SOURCES = multimin.cpp \
 	  observatory.cpp \
-	  orbit.cpp
+	  orbit.cpp \
+          statisticalRanging.cpp

@@ -187,14 +187,15 @@ namespace orsaUtil {
                                orsa::FromUnits(currentSampleRange,orsa::Unit::AU,-1),
                                orsa::FromUnits(testSampleRange,orsa::Unit::AU,-1));
                             */
-                            ORSA_DEBUG("reducing threshold for range %3i: %8.2f -> %8.2f   size: %3i -> %3i   range: [%7.3f;%7.3f]",
+                            ORSA_DEBUG("reducing threshold for interval %3i: %8.2f -> %8.2f   size: %3i -> %3i   range: [%7.3f;%7.3f]   delta: %g",
                                        k,
                                        intervalVector[k]->getThreshold(),
                                        testThreshold,
                                        intervalVector[k]->size(),
                                        testSize,
                                        (*testSampleMin),
-                                       (*testSampleMax));
+                                       (*testSampleMax),
+                                       testSampleMax-testSampleMin);
                             intervalVector[k]->updateThresholdLevel(testThreshold);
                         }
                     }
