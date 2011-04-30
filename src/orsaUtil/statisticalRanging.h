@@ -15,6 +15,7 @@ namespace orsaUtil {
     protected:
         virtual ~SR_AuxiliaryData() { }
     public:
+        orsaSolarSystem::OpticalObservationVector allOpticalObs;
         std::vector< orsa::Cache<orsa::Vector> > R_s, V_s, R_o, V_o;
         std::vector< orsa::Cache<orsa::Vector> > u_o2a; // unit vectors, from Dawn to Satellite
         std::vector< orsa::Cache<orsa::Vector> > xS_o2a, yS_o2a; // unit vectors, orthogonal to u_d2s, to model astrometric accuacy
@@ -48,18 +49,18 @@ namespace orsaUtil {
     public:
         SR_AdaptiveInterval(const double & min,
                             const double & max,
-                            const double & confidenceLevel,
+                            const double & residualProbability, // 1-confidenceLevel
                             const double & initialThresholdLevel,
                             const double & targetThresholdLevel,
                             const size_t & targetSamples,
-                            const orsaSolarSystem::OpticalObservationVector & allOpticalObs_,
+                            // const orsaSolarSystem::OpticalObservationVector & allOpticalObs_,
                             const SR_AuxiliaryData * auxiliaryData) :
-            orsaUtil::AdaptiveInterval<SR_ElementData> (min,max,confidenceLevel,initialThresholdLevel,targetThresholdLevel,targetSamples),
-            allOpticalObs(allOpticalObs_),
+            orsaUtil::AdaptiveInterval<SR_ElementData> (min,max,residualProbability,initialThresholdLevel,targetThresholdLevel,targetSamples),
+            // allOpticalObs(allOpticalObs_),
             aux(auxiliaryData)
             { }
     protected:
-        const orsaSolarSystem::OpticalObservationVector & allOpticalObs;
+        // const orsaSolarSystem::OpticalObservationVector & allOpticalObs;
         osg::ref_ptr<const SR_AuxiliaryData> aux;
     public:
         void updateLevel(const AdaptiveIntervalElementType & e) const {
@@ -71,7 +72,7 @@ namespace orsaUtil {
             for (unsigned int j=0; j<aux->vecSize; ++j) {
                 if ( (!e.data->R_o2an[j].isSet()) ||
                      (!e.data->V_o2an[j].isSet()) ) {
-                    const orsa::Time t = allOpticalObs[j]->epoch;
+                    const orsa::Time t = aux->allOpticalObs[j]->epoch;
                     orsaSolarSystem::OrbitWithEpoch tmpOrbit = e.data->O_s2an_g;
                     tmpOrbit.M = fmod(e.data->O_s2an_g.M + orsa::twopi()*(t-e.data->O_s2an_g.epoch).get_d()/e.data->O_s2an_g.period(),orsa::twopi());
                     tmpOrbit.relativePosVel(rOrbit,vOrbit);
@@ -89,12 +90,23 @@ namespace orsaUtil {
             }
             e.level = chisq;
             e.data->RMS = stat_residual->RMS();
-        }    
+        }
     };
     
-    bool statisticalRanging(const orsaSolarSystem::OpticalObservationVector & allOpticalObs,
-                            const SR_AuxiliaryData * aux);
+    typedef std::vector< osg::ref_ptr<SR_AdaptiveInterval> > SR_AdaptiveIntervalVector;
     
+    class SR_AdaptiveMonteCarlo : public orsaUtil::AdaptiveMonteCarlo<SR_AdaptiveIntervalVector> { };
+    
+    bool statisticalRanging(SR_AdaptiveIntervalVector & vec,
+                            const double & initialThresholdLevel,
+                            const double & targetThresholdLevel,
+                            const double & minAdaptiveRange,
+                            const double & maxAdaptiveRange,
+                            const double & intervalResidualProbability,
+                            const size_t & targetSamples,
+                            const size_t & maxIter,
+                            // const orsaSolarSystem::OpticalObservationVector & allOpticalObs,
+                            const SR_AuxiliaryData * aux);
     
 }; // namespace orsaUtil
 
