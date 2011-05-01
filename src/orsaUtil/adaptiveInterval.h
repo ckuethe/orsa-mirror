@@ -37,7 +37,8 @@ namespace orsaUtil {
            }
         */
     public:
-        orsa::Cache<double> position;
+#warning for now, I need to be able to set position.... using lock to somehow prevent changes to it...
+        mutable orsa::Cache<double> position;
         mutable orsa::Cache<double> level;
     public:
         mutable osg::ref_ptr<T> data;

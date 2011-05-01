@@ -31,6 +31,7 @@
 #include <orsaUtil/adaptiveInterval.h>
 #include <orsaUtil/adaptiveMonteCarlo.h>
 #include <orsaUtil/multimin.h>
+#include <orsaUtil/statisticalRanging.h>
 
 using namespace orsa;
 
@@ -107,7 +108,11 @@ public:
                 e.data->vec_residual[j] = residual;
             }
             stat_residual->insert(e.data->vec_residual[j]);
-            chisq+=orsa::square(e.data->vec_residual[j]/vecRMS[j]);
+
+#warning divide by vecRMS or vecRMSnominal?
+            // chisq+=orsa::square(e.data->vec_residual[j]/vecRMS[j]);
+            chisq+=orsa::square(e.data->vec_residual[j]/vecRMSnominal[j]);
+            
         }
         e.level = chisq;
         e.data->RMS = stat_residual->RMS();
@@ -290,7 +295,7 @@ int main(int argc, char **argv) {
         
         const double intervalResidualProbability = 1.0e-10; // "1-confidence level" for this interval, different from the chisq-level
         
-        const size_t targetSamples = 1000;
+        const size_t targetSamples = 100;
         
         // const unsigned int minAdaptiveSize = 2; // 2
 
@@ -356,6 +361,43 @@ int main(int argc, char **argv) {
             xS_o2a[j] = orsa::externalProduct(orsa::Vector(0,0,1),u_o2a[j]).normalized();
             yS_o2a[j] = orsa::externalProduct(u_o2a[j],xS_o2a[j]).normalized();
         } 
+
+
+
+// test new code
+        osg::ref_ptr<orsaUtil::SR_AuxiliaryData> aux = new orsaUtil::SR_AuxiliaryData;
+        aux->allOpticalObs = allOpticalObs;
+        aux->R_s = R_s;
+        aux->R_o = R_o;
+        aux->V_s = V_s;
+        aux->V_o = V_o;
+        aux->u_o2a = u_o2a;
+        aux->xS_o2a = xS_o2a;
+        aux->yS_o2a = yS_o2a;
+        aux->vecRMSnominal = vecRMSnominal;
+        aux->vecRMS = vecRMS;
+        aux->vecSize = allOpticalObs.size();
+        orsaUtil::SR_AdaptiveIntervalVector vec;
+        orsaUtil::statisticalRanging(vec,
+                                     100*chisq_99,
+                                     chisq_99,
+                                     minAdaptiveRange,
+                                     maxAdaptiveRange,
+                                     intervalResidualProbability,
+                                     targetSamples,
+                                     1000000, // maxIter
+                                     aux.get());
+        
+        
+
+
+
+
+
+
+
+
+
         
         std::vector< orsa::Cache<double> > vecMinRange;
         vecMinRange.resize(allOpticalObs.size());

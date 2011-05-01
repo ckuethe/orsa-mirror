@@ -1,6 +1,7 @@
 #include <orsaUtil/multimin.h>
 
 #include <orsa/orbit.h>
+#include <orsa/print.h>
 
 double orsaUtil::MultiminOrbitalVelocity::fun(const orsa::MultiminParameters * par) const {
         
@@ -40,7 +41,10 @@ orsa::Vector  orsaUtil::MultiminOrbitalVelocity::getOrbitalVelocity(
     const orsa::Vector & R2_,
     const orsa::Time   & t2_,
     const double       mu_) {
-        
+    
+    // orsa::print(R1_);
+    // orsa::print(R2_);
+    
     R1 = R1_;
     R2 = R2_;
     mu = mu_;

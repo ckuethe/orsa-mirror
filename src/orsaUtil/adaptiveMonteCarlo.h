@@ -59,7 +59,7 @@ namespace orsaUtil {
         virtual bool sample(ElementTypeVector & ev) const {
             for (size_t k=0; k<N; ++k) {
                 ev[k].position = intervalVector[k]->sample();
-#warning maybe add an updateData() to update the auxiliary data...
+#warning maybe add an updateData() to update the derived data
                 intervalVector[k]->updateLevel(ev[k]);
             }
             return true;
@@ -93,8 +93,11 @@ namespace orsaUtil {
                 
                 ElementTypeVector ev;
                 ev.resize(N);
-                sample(ev);
-
+                if (!sample(ev)) {
+                    ORSA_DEBUG("problems...");
+                    return false;
+                }
+                
                 // insert
                 for (size_t k=0; k<N; ++k) {
                     intervalVector[k]->insert(ev[k]);

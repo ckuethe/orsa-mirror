@@ -2,6 +2,10 @@
 
 #include <orsaUtil/multimin.h>
 
+#warning this function does too much, should factor it better, i.e.
+#warning to prevent resetting the content of internalVector and reuse it if possible,
+#warning i.e. if coming from a previous run with higher threshold
+
 bool orsaUtil::statisticalRanging(orsaUtil::SR_AdaptiveIntervalVector & intervalVector,
                                   const double & initialThresholdLevel,
                                   const double & targetThresholdLevel,
@@ -10,7 +14,6 @@ bool orsaUtil::statisticalRanging(orsaUtil::SR_AdaptiveIntervalVector & interval
                                   const double & intervalResidualProbability,
                                   const size_t & targetSamples,
                                   const size_t & maxIter,
-                                  // const orsaSolarSystem::OpticalObservationVector & allOpticalObs,
                                   const orsaUtil::SR_AuxiliaryData * aux) {
     
     std::vector< orsa::Cache<double> > vecMinRange;
@@ -80,7 +83,6 @@ bool orsaUtil::statisticalRanging(orsaUtil::SR_AdaptiveIntervalVector & interval
     
     intervalVector.resize(aux->vecSize);
     for (size_t j=0; j<aux->vecSize; ++j) {
-        // intervalVector[j] = new SR_AdaptiveInterval(0.0, 1.0, 1.0e-6, 100.0, 1.0, 1000);
         intervalVector[j] = new SR_AdaptiveInterval(std::max(minAdaptiveRange,(*vecMinRange[j])),
                                                     std::min((*vecMaxRange[j]),maxAdaptiveRange),
                                                     intervalResidualProbability, // "1-confidence level" for this interval, different from the chisq-level
@@ -90,9 +92,11 @@ bool orsaUtil::statisticalRanging(orsaUtil::SR_AdaptiveIntervalVector & interval
                                                     aux);
     }
     
-    osg::ref_ptr<SR_AdaptiveMonteCarlo> mc = new SR_AdaptiveMonteCarlo;
+    osg::ref_ptr<SR_AdaptiveMonteCarlo> mc = new SR_AdaptiveMonteCarlo(aux);
     
     mc->run(intervalVector,maxIter);
+    
+    ORSA_DEBUG("----- OUT OF MC -----");
     
     return true;
 }
