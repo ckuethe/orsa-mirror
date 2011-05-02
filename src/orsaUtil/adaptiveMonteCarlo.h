@@ -17,49 +17,16 @@ namespace orsaUtil {
         typedef typename T::value_type::element_type::AdaptiveIntervalElementType ElementType;
         typedef typename std::vector<ElementType> ElementTypeVector;
     public:
-        AdaptiveMonteCarlo() : osg::Referenced() {
-            
-        }
+        AdaptiveMonteCarlo() : osg::Referenced() { }
     protected:
         virtual ~AdaptiveMonteCarlo() { }
     public:
-        // two different integers between 0 and N-1, with z1 < z2
-        /* static bool z1z2(size_t & z1, size_t & z2, const size_t & N) {
-           if (N<2) return false;
-           // don't use ___z1 and ___z2 in code below, but z1 and z2 
-           size_t ___z1 = orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform_int(N);
-           size_t ___z2;
-           do { ___z2 = orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform_int(N); }
-           while (___z1 == ___z2);
-           // save them as z1 < z2 to ensure that vectors...[z1] are set before vectors...[z2]
-           z1 = std::min(___z1,___z2);
-           z2 = std::max(___z1,___z2);
-           return true;
-           }
-        */
-        // for this one, we don't force z1 < z2, so it can be z1 > z2
-        /* static bool z1z2(size_t & z1, size_t & z2, const size_t & N) {
-           if (N<2) return false;
-           z1 = orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform_int(N);
-           do { z2 = orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform_int(N); }
-           while (z1 == z2);
-           return true;
-           }
-        */
-        /* 
-           virtual void sample(ElementType & e1,
-           ElementType & e2,
-           const T & intervalVector,
-           const size_t & z1,
-           const size_t & z2) const {
-           }
-        */
-    public:
-        // most implementations will want to rewrite sample(...)
+        // most derived classes will want to reimplement sample(...), in particular to update all the data within each element
         virtual bool sample(ElementTypeVector & ev) const {
+            ++iterCount;
             for (size_t k=0; k<N; ++k) {
                 ev[k].position = intervalVector[k]->sample();
-#warning maybe add an updateData() to update the derived data
+                ev[k].position.lock();
                 intervalVector[k]->updateLevel(ev[k]);
             }
             return true;
@@ -69,27 +36,15 @@ namespace orsaUtil {
         virtual bool run(const T & iv,
                          const size_t & maxIter) {
             intervalVector=iv;
+            maxIterCount=maxIter;
             N=intervalVector.size();
             N.lock();
             std::vector<size_t> intervalVectorOldSize; intervalVectorOldSize.resize(N); for (size_t k=0; k<N; ++k) { intervalVectorOldSize[k] = 0; }
             doAbort=false;
-            size_t iter=0;
-            // size_t ___z1=0, ___z2=0; // init once to make compiler happy
-            while (iter<maxIter) {
-                ++iter;
+            iterCount=0;
+            while (iterCount<maxIterCount) {
+                // ++iter; // increase iterCount within sample(...), as sample(...) can require multiple iterations to produce a good sample
                 if (doAbort) break;
-                
-                // don't use ___z1 and ___z2 in code below, but z1 and z2
-                /* if (!z1z2(___z1,___z2,N)) { ORSA_DEBUG("problems..."); }
-                   const size_t z1 = ___z1; const size_t z2 = ___z2;
-                   // ORSA_DEBUG("z1: %i   z2: %i",z1,z2);
-                   */
-                
-                /* ElementType e1, e2;
-                   e1.position = 0.0;
-                   e1.level = 0.0;
-                   // sample(e1, e2, intervalVector, z1, z2);
-                   */
                 
                 ElementTypeVector ev;
                 ev.resize(N);
@@ -109,7 +64,7 @@ namespace orsaUtil {
                 // every so often, try to decrease the threshold level
 #warning should test this only if there has been an insert...       
                 // another test: can decreast threshold level?
-                if (iter%100==0) {
+                if (iterCount%100==0) {
                     for (size_t k=0; k<N; ++k) {
 #warning should test if the adaptive interval actually shrinks when reducing level and at the same time reducing the number of points...
                         if (intervalVector[k]->size()==intervalVectorOldSize[k]) continue;
@@ -220,6 +175,7 @@ namespace orsaUtil {
                 }
             }
             N.unlock();
+            ORSA_DEBUG("iterCount: %i",iterCount);
             return true;
         }
     protected:
@@ -233,7 +189,7 @@ namespace orsaUtil {
     public:
         orsa::Cache<size_t> N;
     protected:
-        // osg::ref_ptr<orsa::RNG> rng;
+        mutable size_t iterCount, maxIterCount;
     };
     
 }; // namespace orsaUtil

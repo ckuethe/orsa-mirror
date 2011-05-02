@@ -144,8 +144,8 @@ namespace orsaUtil {
             size_t z1=0, z2=0; // set to 0 just to make compiler happy...
             bool bound;
             double dx,dy;
-#warning a local maxIter should be added, as the do/while loop could be an infinite loop in certain situations
-            do {
+            while (iterCount<maxIterCount) {
+                ++iterCount;
                 bound=true;
                 // note: z1 and z2 are not ordered, i.e. can be z2 < z1
                 z1z2(z1,z2,aux->vecSize);
@@ -189,9 +189,15 @@ namespace orsaUtil {
                 }
                 // if (j==z2) break; // done // can't do this because z1 and z2 are not ordered...
                 // }
-            } while (bound==false);
-
+                if (bound==true) break;
+            }
+            
             // ORSA_DEBUG("bound: %i", bound);
+            
+            if (bound==false) {
+                ORSA_DEBUG("bound: %i   iterCount: %i   maxIterCount: %i   returning false...", bound,iterCount,maxIterCount);
+                return false;
+            }
             
             const orsa::Vector V_s2an_z1 = mov->getOrbitalVelocity(R_s2an[z1],aux->allOpticalObs[z1]->epoch,
                                                                    R_s2an[z2],aux->allOpticalObs[z2]->epoch,

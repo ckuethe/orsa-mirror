@@ -363,35 +363,35 @@ int main(int argc, char **argv) {
         } 
 
 
-
+        {
 // test new code
-        osg::ref_ptr<orsaUtil::SR_AuxiliaryData> aux = new orsaUtil::SR_AuxiliaryData;
-        aux->allOpticalObs = allOpticalObs;
-        aux->R_s = R_s;
-        aux->R_o = R_o;
-        aux->V_s = V_s;
-        aux->V_o = V_o;
-        aux->u_o2a = u_o2a;
-        aux->xS_o2a = xS_o2a;
-        aux->yS_o2a = yS_o2a;
-        aux->vecRMSnominal = vecRMSnominal;
-        aux->vecRMS = vecRMS;
-        aux->vecSize = allOpticalObs.size();
-        orsaUtil::SR_AdaptiveIntervalVector vec;
-        orsaUtil::statisticalRanging(vec,
-                                     100*chisq_99,
-                                     chisq_99,
-                                     minAdaptiveRange,
-                                     maxAdaptiveRange,
-                                     intervalResidualProbability,
-                                     targetSamples,
-                                     1000000, // maxIter
-                                     aux.get());
+            osg::ref_ptr<orsaUtil::SR_AuxiliaryData> aux = new orsaUtil::SR_AuxiliaryData;
+            aux->allOpticalObs = allOpticalObs;
+            aux->R_s = R_s;
+            aux->R_o = R_o;
+            aux->V_s = V_s;
+            aux->V_o = V_o;
+            aux->u_o2a = u_o2a;
+            aux->xS_o2a = xS_o2a;
+            aux->yS_o2a = yS_o2a;
+            aux->vecRMSnominal = vecRMSnominal;
+            aux->vecRMS = vecRMS;
+            aux->vecSize = allOpticalObs.size();
+            orsaUtil::SR_AdaptiveIntervalVector vec;
+            orsaUtil::statisticalRanging(vec,
+                                         100*chisq_99,
+                                         chisq_99,
+                                         minAdaptiveRange,
+                                         maxAdaptiveRange,
+                                         intervalResidualProbability,
+                                         targetSamples,
+                                         1000000, // maxIter
+                                         aux.get());
+        }
         
         
-
-
-
+        
+        
 
 
 
