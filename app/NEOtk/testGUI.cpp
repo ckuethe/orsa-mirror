@@ -57,7 +57,7 @@ int main(int argc, char ** argv) {
         
         curl = curl_easy_init();
         if(curl) {
-            curl_easy_setopt(curl, CURLOPT_URL, "http://www.minorplanetcenter.org/iau/NEO/ToConfirm.html");
+            curl_easy_setopt(curl, CURLOPT_URL,"http://www.minorplanetcenter.net/iau/NEO/ToConfirm.html");
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
             res = curl_easy_perform(curl);
             /* always cleanup */ 
