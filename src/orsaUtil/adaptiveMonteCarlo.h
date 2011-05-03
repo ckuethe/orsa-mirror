@@ -58,17 +58,18 @@ namespace orsaUtil {
                     intervalVector[k]->insert(ev[k]);
                 }
                 
-                // every so often, check if a better nominal solution has been found ... old minRMS
-                
-                
-                // every so often, try to decrease the threshold level
-#warning should test this only if there has been an insert...       
-                // another test: can decreast threshold level?
                 if (iterCount%100==0) {
+                    
+                    // every so often, check if a better nominal solution has been found ... old minRMS
+                    periodicUpdate();
+                    
+                    // every so often, try to decrease the threshold level
+#warning should test this only if there has been an insert...       
+                    // another test: can decreast threshold level?
                     for (size_t k=0; k<N; ++k) {
 #warning should test if the adaptive interval actually shrinks when reducing level and at the same time reducing the number of points...
                         if (intervalVector[k]->size()==intervalVectorOldSize[k]) continue;
-                        intervalVectorOldSize[k]=intervalVector[k]->size();
+                        // intervalVectorOldSize[k]=intervalVector[k]->size(); // update oldVec later...
                         if (intervalVector[k]->getThreshold() == intervalVector[k]->getTargetThreshold()) continue;
                         const double currentSampleRange = intervalVector[k]->maxSample()-intervalVector[k]->minSample();
 #warning parameters...
@@ -101,6 +102,7 @@ namespace orsaUtil {
                                 
                                 // same as 2*delta in
                                 // must use same residual probability as actual intervals
+#warning use number different from 2 ?  
                                 if (testSize >= 2) {
                                     T::value_type::element_type::sampleRange(testSampleMin,
                                                                              testSampleMax,
@@ -111,6 +113,7 @@ namespace orsaUtil {
                                                                              intervalVector[k]->probability,
                                                                              testSize);
                                     testSampleRange = testSampleMax - testSampleMin;
+#warning use a factor to compare ranges? if so, correct every occurrence of testSampleRange...
                                     if (testSampleRange < currentSampleRange) {
                                         break; // done
                                     }
@@ -145,7 +148,7 @@ namespace orsaUtil {
                                orsa::FromUnits(currentSampleRange,orsa::Unit::AU,-1),
                                orsa::FromUnits(testSampleRange,orsa::Unit::AU,-1));
                             */
-                            ORSA_DEBUG("reducing threshold for interval %3i: %8.2f -> %8.2f   size: %3i -> %3i   range: [%7.3f;%7.3f]   delta: %g",
+                            ORSA_DEBUG("reducing threshold for interval %3i: %8.2f -> %8.2f   size: %3i -> %3i   range: [%.2g;%.2g]   delta: %.2g",
                                        k,
                                        intervalVector[k]->getThreshold(),
                                        testThreshold,
@@ -157,6 +160,11 @@ namespace orsaUtil {
                             intervalVector[k]->updateThresholdLevel(testThreshold);
                         }
                     }
+                    
+                    for (size_t k=0; k<N; ++k) {
+                        intervalVectorOldSize[k]=intervalVector[k]->size();
+                    }
+                    
                 }
                 
                 
@@ -179,7 +187,7 @@ namespace orsaUtil {
             return true;
         }
     protected:
-        virtual void singleStepDone() const { }
+        virtual void periodicUpdate() const { }
     public:
         virtual void abort() const { doAbort=true; }
     private:

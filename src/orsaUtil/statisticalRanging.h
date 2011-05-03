@@ -21,7 +21,7 @@ namespace orsaUtil {
         std::vector< orsa::Cache<orsa::Vector> > u_o2a; // unit vectors, from Dawn to Satellite
         std::vector< orsa::Cache<orsa::Vector> > xS_o2a, yS_o2a; // unit vectors, orthogonal to u_d2s, to model astrometric accuacy
         std::vector<double> vecRMSnominal; // same index as observations
-        std::vector<double> vecRMS; // same index as observations
+        mutable std::vector<double> vecRMS; // same index as observations
         orsa::Cache<size_t> vecSize;
     };
 
@@ -96,7 +96,10 @@ namespace orsaUtil {
             }
             e.level = chisq;
             e.data->RMS = stat_residual->RMS();
+            // ORSA_DEBUG("level: %g  RMS: %g",(*e.level),(*e.data->RMS));
         }
+    public:
+        
     };
     
     typedef std::vector< osg::ref_ptr<SR_AdaptiveInterval> > SR_AdaptiveIntervalVector;
@@ -223,7 +226,97 @@ namespace orsaUtil {
             }
             
             return true;
-        } 
+        }
+    public:
+        void periodicUpdate() const {
+            // orsa::Cache<double> minRMS;
+            orsa::Cache<SR_Element> minRMS_Element;
+            // testing intervalVector[0] only instead of all N because in most cases they contain the same data
+#warning correct to use only member [0] ? 
+            SR_AdaptiveInterval::DataType::DataType::const_iterator it =
+                intervalVector[0]->getData()->getData().begin();
+            while (it != intervalVector[0]->getData()->getData().end()) {
+                if (!(*it).data->RMS.isSet()) {
+                    ORSA_DEBUG("problems...");
+                    ++it;
+                    continue;
+                }
+                /* if (!minRMS.isSet()) {
+                   minRMS = (*it).data->RMS;
+                   minRMS_Element =(*it);
+                   } else {
+                   if ((*it).data->RMS < minRMS) {
+                   minRMS = (*it).data->RMS;
+                   minRMS_Element =(*it);
+                   }
+                   }
+                */
+                //
+                if (!minRMS_Element.isSet()) {
+                    // minRMS = (*it).data->RMS;
+                    minRMS_Element = (*it);
+                } else {
+                    if ((*it).data->RMS < (*minRMS_Element).data->RMS) {
+                        // minRMS = (*it).data->RMS;
+                        minRMS_Element = (*it);
+                    }
+                }
+                ++it;
+            }
+            if (!minRMS_Element.isSet()) {
+                return;
+            }
+            bool new_minRMS=false;
+            for (size_t k=0; k<N; ++k) {
+                // orsa::print((*minRMS_Element).data->vec_residual[k]);
+                // ORSA_DEBUG("res[%i]: $g",k,(*(*minRMS_Element).data->vec_residual[k]));
+#warning keep this same rule everywhere
+                const double new_vecRMS_k = bracket_RMS(aux->vecRMSnominal[k],
+                                                        (*(*minRMS_Element).data->vec_residual[k]),
+                                                        3.0*aux->vecRMSnominal[k]);
+                if (aux->vecRMS[k] != new_vecRMS_k) {
+                    new_minRMS=true;
+                    break;
+                }
+            }
+            if (new_minRMS) {
+                ORSA_DEBUG("new minRMS: %g",(*(*minRMS_Element).data->RMS));
+                for (size_t k=0; k<N; ++k) {
+                    // const double old_vecRMS_k = aux->vecRMS[k];
+#warning MAXIMUM RMS value set here, with min(...,3.0)...
+                    const double old_vecRMS_k = aux->vecRMS[k];
+#warning keep this same rule everywhere
+                    const double new_vecRMS_k = bracket_RMS(aux->vecRMSnominal[k],
+                                                            (*minRMS_Element).data->vec_residual[k],
+                                                            3.0*aux->vecRMSnominal[k]);
+                    
+                    /* if ((*minRMS_Element).data->vec_residual[k] >= aux->vecRMSnominal[k]) {
+                       #warning MAXIMUM RMS value set here, with min(...,3.0)...
+                       aux->vecRMS[k] = std::min((*(*minRMS_Element).data->vec_residual[k]),3*aux->vecRMSnominal[k]);
+                       } else {
+                       aux->vecRMS[k] = aux->vecRMSnominal[k];
+                       }
+                    */
+                    //
+                    aux->vecRMS[k] = new_vecRMS_k;
+                    
+                    if (aux->vecRMS[k] < old_vecRMS_k) {
+                        ORSA_DEBUG("RMS[%02i] = %5.2f (lowered)",k,aux->vecRMS[k]);
+                    } else if (aux->vecRMS[k] > old_vecRMS_k) {
+                        ORSA_DEBUG("RMS[%02i] = %5.2f (raised)",k,aux->vecRMS[k]);
+                    } else {
+                        ORSA_DEBUG("RMS[%02i] = %5.2f",k,aux->vecRMS[k]);
+                    }
+                }                
+                for (size_t k=0; k<N; ++k) {
+                    intervalVector[k]->refresh();
+                }
+            }
+        }
+    public:
+        static double bracket_RMS(const double & min, const double & nom, const double & max) {
+            return (std::max(min,std::min(nom,max)));
+        }
     };
     
     bool statisticalRanging(SR_AdaptiveIntervalVector & vec,
