@@ -69,7 +69,7 @@ void Debug::flush() {
         ++it;
     }
     if (queueReady) {
-        char message[1024*1024];
+        char message[4096];
         QueueType::const_iterator it = queue.begin();
         while (it != queue.end()) {
             gmp_sprintf(message,
@@ -169,13 +169,13 @@ void Debug::printOut(const std::string & s) {
 
 // with local time & total time elapsed
 void Debug::head(const DebugType type, const char * file, const int line, const char * function) {
-
+  
     const time_t tt_now = time(0);
     struct tm * tm_struct = localtime(&tt_now);
 
 #warning need to check string lengths...
     
-    char headString[1024*1024];
+    char headString[4096];
 
 #ifdef __ADVANCED_TIMER__
 
@@ -261,7 +261,7 @@ void Debug::trace(const char * fmt, ...) {
 */
 
 void Debug::vtrace(const char * fmt, std::va_list list) {
-    char traceString[1024*1024];
+    char traceString[4096];
     gmp_vsprintf(traceString,
                  fmt,
                  list);
