@@ -102,7 +102,7 @@ IBPS::IBPS(const IBPS & ibps) {
        this,translational.get());
     */
   
-    if (ibps.time.isSet()) time = ibps.time;
+    if (ibps.time.isSet()) time = ibps.time.getRef();
   
     if (ibps.inertial.get()) {
         if (ibps.inertial->dynamic()) {
@@ -149,8 +149,8 @@ IBPS::~IBPS() {
     */
 }
 
-IBPS & IBPS::operator = (const IBPS & ibps) {
-    
+const IBPS & IBPS::operator = (const IBPS & ibps) {
+  
     /* 
        ORSA_DEBUG("copying IBPS, from address: %x   to address %x",&ibps,this);
        ORSA_DEBUG("%x.translational.get(): %x   %x.translational.get(): %x",
@@ -158,11 +158,11 @@ IBPS & IBPS::operator = (const IBPS & ibps) {
        this,translational.get());
     */
   
-    if (ibps.time.isSet()) time = ibps.time;
+    if (ibps.time.isSet()) time = ibps.time.getRef();
     /* 
        if (ibps.dynamic()) {
-       // time = ibps.time;
-       // ORSA_DEBUG("copy operator, time: %.6f",time.get_d());
+       // time = ibps.time.getRef();
+       // ORSA_DEBUG("copy operator, time: %.6f",time.getRef().get_d());
        } 
     */
     if (ibps.inertial.get()) {

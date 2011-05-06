@@ -182,11 +182,11 @@ void orsaSolarSystem::GaussMethod(std::vector<orsaSolarSystem::OrbitWithEpoch> &
     {
         for (unsigned int p=0; p<3; ++p) {
             for (unsigned int q=0; q<p; ++q) {
-                if (obs[p]->obsCode == obs[q]->obsCode) {
-                    if (obs[p]->epoch == obs[q]->epoch) {
+                if (obs[p]->obsCode.getRef() == obs[q]->obsCode.getRef()) {
+                    if (obs[p]->epoch.getRef() == obs[q]->epoch.getRef()) {
                         ORSA_ERROR("observations not unique");
-                        orsa::print(obs[p]->epoch);
-                        orsa::print(obs[q]->epoch);
+                        orsa::print(obs[p]->epoch.getRef());
+                        orsa::print(obs[q]->epoch.getRef());
                         return;
                     }
                 }
@@ -203,28 +203,28 @@ void orsaSolarSystem::GaussMethod(std::vector<orsaSolarSystem::OrbitWithEpoch> &
     {
         double mass;
         for (unsigned int k=0; k<3; ++k) {
-            if (!bg->getInterpolatedMass(mass,refBody,obs[k]->epoch)) { ORSA_DEBUG("problems..."); }	
+            if (!bg->getInterpolatedMass(mass,refBody,obs[k]->epoch.getRef())) { ORSA_DEBUG("problems..."); }	
             sqrtGM[k] = sqrt(orsa::Unit::G()*mass);
             // ORSA_DEBUG("sqrtGM[%i]: %f",k,sqrtGM[k]());
         }
     
         tau[2] = 
-            sqrtGM[1]*(*obs[1]->epoch).get_d() -
-            sqrtGM[0]*(*obs[0]->epoch).get_d();
-        
-        tau[0] = 
-            sqrtGM[2]*(*obs[2]->epoch).get_d() -
-            sqrtGM[1]*(*obs[1]->epoch).get_d();
-        
-        tau[1] = 
-            sqrtGM[2]*(*obs[2]->epoch).get_d() -
-            sqrtGM[0]*(*obs[0]->epoch).get_d();
-    }
+            sqrtGM[1]*obs[1]->epoch.getRef().get_d() -
+            sqrtGM[0]*obs[0]->epoch.getRef().get_d();
     
+        tau[0] = 
+            sqrtGM[2]*obs[2]->epoch.getRef().get_d() -
+            sqrtGM[1]*obs[1]->epoch.getRef().get_d();
+    
+        tau[1] = 
+            sqrtGM[2]*obs[2]->epoch.getRef().get_d() -
+            sqrtGM[0]*obs[0]->epoch.getRef().get_d();
+    }
+  
     // debug
     /* 
        for (unsigned int k=0; k<3; ++k) {     
-       // ORSA_DEBUG("epoch[%i]: %f",k,obs[k]->epoch.get_d());
+       // ORSA_DEBUG("epoch[%i]: %f",k,obs[k]->epoch.getRef().get_d());
        ORSA_DEBUG("tau[%i]: %f",k,tau[k]());
        }
     */
@@ -232,7 +232,7 @@ void orsaSolarSystem::GaussMethod(std::vector<orsaSolarSystem::OrbitWithEpoch> &
     orsa::Vector refBodyPosition[3];
     orsa::Vector refBodyVelocity[3];
     for (unsigned int k=0; k<3; ++k) {
-        if (!bg->getInterpolatedPosVel(refBodyPosition[k],refBodyVelocity[k],refBody,obs[k]->epoch)) {
+        if (!bg->getInterpolatedPosVel(refBodyPosition[k],refBodyVelocity[k],refBody,obs[k]->epoch.getRef())) {
             ORSA_DEBUG("problems");
         }
     }	    
@@ -257,10 +257,10 @@ void orsaSolarSystem::GaussMethod(std::vector<orsaSolarSystem::OrbitWithEpoch> &
             if (!opticalObservation) {
                 ORSA_DEBUG("observation is not optical");
             }
-            orsa::sincos((*opticalObservation->ra).getRad(), 
+            orsa::sincos(opticalObservation->ra.getRef().getRad(), 
                          &s_ra, 
                          &c_ra);
-            orsa::sincos((*opticalObservation->dec).getRad(),
+            orsa::sincos(opticalObservation->dec.getRef().getRad(),
                          &s_dec,
                          &c_dec);
             u_rho[k].set(c_dec*c_ra,
@@ -392,7 +392,7 @@ void orsaSolarSystem::GaussMethod(std::vector<orsaSolarSystem::OrbitWithEpoch> &
             // Vector v = (r[1]-r[0])/(FromUnits(obs[0].date.GetJulian()-obs[1].date.GetJulian(),DAY));
             // orsa::Vector v = (r[1]-r[0])/(FromUnits(obs[1].date.GetJulian()-obs[0].date.GetJulian(),DAY));
             //
-            orsa::Vector v = (r[1]-r[0]) / (obs[1]->epoch-obs[0]->epoch).get_d();
+            orsa::Vector v = (r[1]-r[0]) / (obs[1]->epoch.getRef()-obs[0]->epoch.getRef()).get_d();
       
             // light-time correction [to be checked!]
             r[0] += (refBodyVelocity[0]+v)*(r[0]-R[0]).length()/orsa::Unit::c();
@@ -411,7 +411,7 @@ void orsaSolarSystem::GaussMethod(std::vector<orsaSolarSystem::OrbitWithEpoch> &
             // orbit.compute(r[0],v,ref_jpl_planet,obs[0].date);
             //
             orbit.compute(r[0],v,sqrtGM[0]*sqrtGM[0]);
-            orbit.epoch = obs[0]->epoch;
+            orbit.epoch = obs[0]->epoch.getRef();
       
             // ORSA_DEBUG("orbit.mu: %f",orbit.mu);
       
@@ -440,7 +440,7 @@ void orsaSolarSystem::GaussMethod(std::vector<orsaSolarSystem::OrbitWithEpoch> &
                    orsa::FromUnits(orbit.a,orsa::Unit::AU,-1),
                    orbit.e(),
                    orbit.i*orsa::radToDeg(),
-                   orbit.rms);
+                   orbit.rms.getRef());
                    }
                 */
 	

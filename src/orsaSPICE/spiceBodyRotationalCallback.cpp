@@ -15,27 +15,27 @@ SpiceBodyRotationalCallback::SpiceBodyRotationalCallback(const SpiceBodyRotation
     orsa::PrecomputedRotationalBodyProperty(),
     _name(sbrc._name) {
     if (sbrc._previousTime.isSet()) {
-        _q            = sbrc._q;
-        _omega        = sbrc._omega;
-        _previousTime = sbrc._previousTime;
+        _q            = sbrc._q.getRef();
+        _omega        = sbrc._omega.getRef();
+        _previousTime = sbrc._previousTime.getRef();
     }
 }
 
 bool SpiceBodyRotationalCallback::get(orsa::Quaternion & q,
                                       orsa::Vector     & omega) const {
-    q = _q;
-    omega = _omega;
+    q = _q.getRef();
+    omega = _omega.getRef();
     return true;
 }
 
-orsa::Quaternion SpiceBodyRotationalCallback::getQ() const { return _q; }
+orsa::Quaternion SpiceBodyRotationalCallback::getQ() const { return _q.getRef(); }
 
-orsa::Vector SpiceBodyRotationalCallback::getOmega() const { return _omega; }
+orsa::Vector SpiceBodyRotationalCallback::getOmega() const { return _omega.getRef(); }
 
 bool SpiceBodyRotationalCallback::update(const orsa::Time & t) {
   
     if (_previousTime.isSet()) {
-        if (_previousTime == t) {
+        if (_previousTime.getRef() == t) {
             // ORSA_DEBUG("cached...");
             return true;
         }    
@@ -50,12 +50,4 @@ bool SpiceBodyRotationalCallback::update(const orsa::Time & t) {
     _omega = orsa::Vector(0,0,0);
   
     return true;
-}
-
-void  SpiceBodyRotationalCallback::lock() {
-    mutex.lock();
-}
-
-void SpiceBodyRotationalCallback::unlock() {
-    mutex.unlock();
 }

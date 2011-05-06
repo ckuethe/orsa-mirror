@@ -328,15 +328,15 @@ namespace orsa {
         orsa::Cache<std::string> logFile;
     public:
         virtual void setLogFile(const std::string & lf) { 
-            logFile = lf;
+            logFile.set(lf);
             // erase it
-            FILE * fp = fopen((*logFile).c_str(),"w");
+            FILE * fp = fopen(logFile.getRef().c_str(),"w");
             if (fp == 0) {
-                ORSA_ERROR("cannot open file %s",(*logFile).c_str());
+                ORSA_ERROR("cannot open file %s",logFile.getRef().c_str());
             }
             fclose(fp);
         }
-        virtual const std::string & getLogFile() const { return logFile; }
+        virtual const std::string & getLogFile() const { return logFile.getRef(); }
         
     public:
         virtual void abort() const {

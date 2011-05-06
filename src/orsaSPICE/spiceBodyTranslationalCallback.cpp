@@ -14,20 +14,20 @@ SpiceBodyTranslationalCallback::SpiceBodyTranslationalCallback(const SpiceBodyTr
     orsa::PrecomputedTranslationalBodyProperty(),
     _name(sbtc._name) { 
     if (sbtc._previousTime.isSet()) {
-        _position     = sbtc._position;
-        _velocity     = sbtc._velocity;
-        _previousTime = sbtc._previousTime;
+        _position     = sbtc._position.getRef();
+        _velocity     = sbtc._velocity.getRef();
+        _previousTime = sbtc._previousTime.getRef();
     }
 }
 
-orsa::Vector SpiceBodyTranslationalCallback::position() const { return _position; }
+orsa::Vector SpiceBodyTranslationalCallback::position() const { return _position.getRef(); }
 
-orsa::Vector SpiceBodyTranslationalCallback::velocity() const { return _velocity; }
+orsa::Vector SpiceBodyTranslationalCallback::velocity() const { return _velocity.getRef(); }
 
 bool SpiceBodyTranslationalCallback::update(const orsa::Time & t) {
   
     if (_previousTime.isSet()) {
-        if (_previousTime == t) {
+        if (_previousTime.getRef() == t) {
             // ORSA_DEBUG("cached...");
             return true;
         }    
@@ -45,12 +45,4 @@ bool SpiceBodyTranslationalCallback::update(const orsa::Time & t) {
     _velocity = v;
   
     return true;
-}
-
-void  SpiceBodyTranslationalCallback::lock() {
-    mutex.lock();
-}
-
-void SpiceBodyTranslationalCallback::unlock() {
-    mutex.unlock();
 }

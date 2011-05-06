@@ -22,9 +22,9 @@ namespace orsaSPICE {
         }
     protected:
         SPICE() { 
-            _observer = "SSB";
-            // _global = "J2000";
-            _global = "ECLIPJ2000";  
+            _observer.set("SSB");
+            // _global.set("J2000");
+            _global.set("ECLIPJ2000");  
         }
     public:
         virtual ~SPICE() {
@@ -50,11 +50,11 @@ namespace orsaSPICE {
                        orsa::Vector      & relativeVelocity);
     public:
         void setDefaultObserver(const std::string & observer) {
-            _observer = observer;
+            _observer.set(observer);
         }
     public:
         const std::string & getDefaultObserver() const {
-            return _observer;
+            return _observer.getRef();
         }
     protected:
         orsa::Cache<std::string> _observer;

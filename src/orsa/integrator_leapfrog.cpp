@@ -48,13 +48,11 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
             if (bg->getInterpolatedIBPS(ibps,(*_b_it).get(),start)) {
 	
 	
-                if (!ibps.dynamic()) {
+                if (!ibps.translational->dynamic()) {
                     ++_b_it;
                     continue;
                 }
-
-                ibps.lock();
-                
+	
                 ibps.time += _h2;
 	
                 if ((*_b_it)->getInitialConditions().translational.get()) {
@@ -84,13 +82,10 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
 	
                 ibps.tmp = true;
 	
-                // if (!(bg->getBodyInterval((*_b_it).get())->insert(ibps,onlyIfExtending,false))) {
-                if (!(bg->getBodyInterval((*_b_it).get())->insert(ibps,false,false))) {
+                if (!(bg->getBodyInterval((*_b_it).get())->insert(ibps,onlyIfExtending.getRef(),false))) {
                     ORSA_DEBUG("problems with insert, body [%s]",
                                (*_b_it)->getName().c_str());
                 }
-
-                ibps.unlock();
 	
             } else {
                 ORSA_ERROR("point not present in interval, body [%s]",
@@ -135,22 +130,20 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
         if (!b->alive(start+_h2)) {
             continue;
         }
-        
+    
         if (bg->getInterpolatedIBPS(ibps,b,start+_h2)) {
       
-            if (!ibps.dynamic()) {
+            if (!ibps.translational->dynamic()) {
                 continue;
             }
-
-            ibps.lock();
-            
+      
             if (b->getInitialConditions().translational.get()) {
                 if (b->getInitialConditions().translational->dynamic()) {
                     ibps.translational->setVelocity(ibps.translational->velocity() +
                                                     a[j] * _h.get_d());
                 }
             }
-            
+      
             if (b->getInitialConditions().rotational.get()) {
                 if (b->getInitialConditions().rotational->dynamic()) {
 	  
@@ -176,13 +169,13 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
                             // const orsa::Matrix l2g = BodyAttitude(b,bg).localToGlobal(start+_h2);
 	      
                             // osg::ref_ptr<orsa::Attitude> attitude = new orsa::BodyAttitude(b,bg);
-                            
+	      
                             // const orsa::Matrix g2l = attitude->globalToLocal(start+_h2);
                             // const orsa::Matrix l2g = attitude->localToGlobal(start+_h2);
-                            
+	      
                             const orsa::Matrix g2l = orsa::globalToLocal(b,bg,start+_h2);
                             const orsa::Matrix l2g = orsa::localToGlobal(b,bg,start+_h2);
-                            
+	      
                             const orsa::Vector oldOmega = ibps.rotational->getOmega();
                             const orsa::Matrix I        = inertiaMoment;
                             const orsa::Vector T        = N[j];
@@ -261,9 +254,10 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
 		
                                 // ORSA_DEBUG("use better/normalized check...");
                             } while ((omegaIter-oldOmegaIter).length() > orsa::epsilon());
-                            
+	      
                             ibps.rotational->set(ibps.rotational->getQ(),
                                                  omegaIter);
+	      
                         }
 	    
                     } else {
@@ -275,14 +269,11 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
       
             ibps.tmp = true;
       
-            // if (!(bg->getBodyInterval(b)->insert(ibps,onlyIfExtending,true))) {
-            if (!(bg->getBodyInterval(b)->insert(ibps,false,true))) {
+            if (!(bg->getBodyInterval(b)->insert(ibps,onlyIfExtending.getRef(),true))) {
                 ORSA_DEBUG("problems with insert, body [%s]",
                            b->getName().c_str());
             }
-
-            ibps.unlock();
-            
+      
         } else {
             ORSA_ERROR("point not present in interval, body [%s]",
                        b->getName().c_str());
@@ -304,13 +295,11 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
       
             if (bg->getInterpolatedIBPS(ibps,(*_b_it).get(),start+_h2)) {
 	
-                if (!ibps.dynamic()) {
+                if (!ibps.translational->dynamic()) {
                     ++_b_it;
                     continue;
                 }
-
-                ibps.lock();
-                
+	
                 ibps.time += _h2;
 	
                 if ((*_b_it)->getInitialConditions().translational.get()) {
@@ -322,7 +311,15 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
 	
                 if ((*_b_it)->getInitialConditions().rotational.get()) {
                     if ((*_b_it)->getInitialConditions().rotational->dynamic()) {
-                        
+	    
+                        // old code
+                        /* 
+                           ibps.rotational->set(RotationalBodyProperty::qFiniteRotation(ibps.rotational->getQ(),
+                           ibps.rotational->getOmega(),
+                           _h2),
+                           ibps.rotational->getOmega());
+                        */
+	    
                         // new code
                         {
                             const double omegaSq = ibps.rotational->getOmega().lengthSquared();
@@ -344,13 +341,11 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
 	
                 ibps.tmp = false;
 	
-                if (!(bg->getBodyInterval((*_b_it).get())->insert(ibps,onlyIfExtending,false))) {
+                if (!(bg->getBodyInterval((*_b_it).get())->insert(ibps,onlyIfExtending.getRef(),false))) {
                     ORSA_DEBUG("problems with insert, body [%s]",
                                (*_b_it)->getName().c_str());
                 }
-
-                ibps.unlock();
-                
+	
             } else {
                 ORSA_ERROR("point not present in interval, body [%s]",
                            (*_b_it)->getName().c_str());

@@ -74,6 +74,7 @@ namespace orsa {
               double             & M2,
               const orsa::Orbit  & o1,
               const orsa::Orbit  & o2,
+              const int          & randomSeed,
               const unsigned int & numPoints = 16,
               const double       & epsAbs    = 1e-6);
     

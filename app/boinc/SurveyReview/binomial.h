@@ -2,48 +2,21 @@
 #define _ORSA_BINOMIAL_H_
 
 double singleProbabilityTerm(const double & p,
-                             const unsigned int & N,
-                             const unsigned int & R,
+                             const double & N,
+                             const double & R,
                              const bool & cache=true) {
-    if (N<R) {
-        return 0.0;
-    }
-    double sPT = (p * orsa::binomial(N,R,cache).get_d() * orsa::int_pow(p,R) * orsa::int_pow(1-p,N-R));
-    if (!finite(sPT)) {
-        // need MPF
-        sPT = mpf_class(mpf_class(p) * orsa::binomial(N,R,cache) * orsa::int_pow(mpf_class(p),R) * orsa::int_pow(mpf_class(1-p),N-R)).get_d();
-    }
-    if (!finite(sPT)) {
-        ORSA_DEBUG("PROBLEMS -- p: %g  N: %i  R: %i   binomial(N,R): %Zi (float=%g)",
-                   p,N,R,
-                   orsa::binomial(N,R,cache).get_mpz_t(),
-                   orsa::binomial(N,R,cache).get_d());
-        orsa::crash();
-    }
-    return sPT;
+    return (p * orsa::binomial(N,R,cache).get_d() * orsa::int_pow(p,R) * orsa::int_pow(1-p,N-R));
 }       
 
 double cumulativeProbability(const double & p,
-                             const unsigned int & N,
-                             const unsigned int & R,
+                             const double & N,
+                             const double & R,
                              const bool & cache=true) {
     double runningProb = 0.0;
     for (unsigned int Z=R; Z<=N; ++Z) {
-        const double sPT = singleProbabilityTerm(p,Z,R,cache);
-        /* if (!finite(sPT)) {
-           ORSA_DEBUG("Z=%i --> adding sPT=%g to rP=%g",Z,sPT,runningProb);
-           }
-        */
-        runningProb += sPT;
+        runningProb += singleProbabilityTerm(p,Z,R,cache);
     }
     return runningProb;
-}
-
-double probabilityToFindOneMore(const double & p,
-                                const unsigned int & R,
-                                const bool & cache=true) {
-    // ORSA_DEBUG("R: %i",R);
-    return (1.0-singleProbabilityTerm(p,R,R,cache));
 }
 
 bool bisectionSearch(unsigned int & N_minus,
@@ -60,17 +33,11 @@ bool bisectionSearch(unsigned int & N_minus,
             N_plus = R;
             return true;
         } else {
-            ORSA_DEBUG("problem: N_minus=%i is above threshold, retrying...",N_minus);
-            --N_minus;
-            return bisectionSearch(N_minus,
-                                   N_plus,
-                                   R,
-                                   p,
-                                   probThreshold,
-                                   cache);
+            ORSA_DEBUG("problem: N_minus=%i is above threshold",N_minus);
+            return false;
         }
     }
-    if (p_plus < probThreshold) {
+    if (p_plus  < probThreshold) {
         ORSA_DEBUG("problem: N_plus=%i is below threshold",N_plus);
         return false;
     }
@@ -81,7 +48,7 @@ bool bisectionSearch(unsigned int & N_minus,
         if (N_middle==N_minus) break;
         if (N_middle==N_plus)  break;
         p_middle = cumulativeProbability(p, N_middle, R, cache);
-        // ORSA_DEBUG("N: %i  cP: %g  pN: %g",N_middle,p_middle,singleProbabilityTerm(p,N_middle,R,cache));
+        // ORSA_DEBUG("N: %i  cP: %g",N_middle,p_middle);
         if (p_middle <= probThreshold) {
             N_minus = N_middle;
             p_minus = p_middle;
@@ -117,7 +84,6 @@ bool BinomialConfidenceInterval(unsigned int & N_low,
         N_low = R;
     } else {
         // search N_low
-        // ORSA_DEBUG("searching N_low...");
         const double probThreshold = (1.0-CL)/2;
         unsigned int N_minus = R;
         unsigned int N_plus  = N_mean+1;
@@ -130,12 +96,9 @@ bool BinomialConfidenceInterval(unsigned int & N_low,
     
     {
         // search N_high
-        // ORSA_DEBUG("searching N_high...");
         const double probThreshold = (R==0 ? CL : (1.0+CL)/2);
         unsigned int N_minus = N_mean;
-        double factor = 5.0+fabs(log10(1.0-CL)); // gets larger as CL gets closer to 1.0 
-        // ORSA_DEBUG("suggested factor: %g",factor);
-        unsigned int N_plus  = factor*(N_mean+1);
+        unsigned int N_plus  = 5*(N_mean+1);
         if (bisectionSearch(N_minus,N_plus,R,p,probThreshold,cache)) {
             N_high = N_plus;
         } else {
@@ -151,22 +114,6 @@ bool BinomialConfidenceInterval(unsigned int & N_low,
        N_mean,
        N_high,
        100*CL);
-    */
-
-    /* 
-       {
-       // test
-       unsigned int Q=0;
-       double sum_Qp=0.0;
-       double sum_p=0.0;
-       while (Q<1000) {
-       const double ppp = singleProbabilityTerm(p,Q,R,cache);
-       sum_Qp+=Q*ppp;
-       sum_p += ppp;
-       ORSA_DEBUG("Q: %i   average: %g",Q,sum_Qp);
-       ++Q;
-       }
-       }
     */
     
     return true;

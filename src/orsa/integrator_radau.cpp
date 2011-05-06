@@ -28,12 +28,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                            orsa::Time       & next_timestep) {
   
     // ORSA_DEBUG("called...");
-    
-    /* ORSA_DEBUG("call start, start+timestep [below]");
-       orsa::print(start);
-       orsa::print(start+timestep);
-    */
-    
+  
     unsigned int niter = 2;
   
     const BodyGroup::BodyList & bl = bg->getBodyList();
@@ -62,7 +57,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
     }
   
     if (_lastCallRejected.isSet()) {
-        if (_lastCallRejected) {
+        if (_lastCallRejected.get()) {
             niter = 6;
         }
     }
@@ -143,22 +138,14 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
             if (!bg->getInterpolatedIBPS(ibps,b,start)) {
                 ORSA_DEBUG("problem, body: [%s]",b->getName().c_str());
             }
-            
+      
             const orsa::Body * k = b;
       
             if (b->getInitialConditions().translational.get()) {
                 if (b->getInitialConditions().translational->dynamic()) {
-                    /* x1[k] = ibps.translational->position();
-                       v1[k] = ibps.translational->velocity();
-                    */
-                    /* orsa::Vector _fr, _fv;
-                       bg->getInterpolatedPosVel(_fr,_fv,b,start);
-                       orsa::print(_fr);
-                       orsa::print(_fv);
-                       x1[k] = _fr;
-                       v1[k] = _fv;
-                    */
-                    bg->getInterpolatedPosVel(x1[k],v1[k],b,start);
+                    // if (bg->getInterpolatedIBPS(ibps,b,start)) {
+                    x1[k] = ibps.translational->position();
+                    v1[k] = ibps.translational->velocity();
                     a1[k] = acc[bodyIndex];
                     /* } else {
                        ORSA_DEBUG("problem, body: [%s]",b->getName().c_str());
@@ -169,7 +156,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
             /* 
                x1[k] = ibps.translational->position();
                v1[k] = ibps.translational->velocity();
-               a1[k] = acc[(*bl_it).get()];
+               a1[k] = acc[(*bl_it).get()].getRef();
             */
       
             // should this be here??
@@ -204,15 +191,11 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
 	      
                             const orsa::Matrix g2l = orsa::globalToLocal(b,bg,start);
                             const orsa::Matrix l2g = orsa::localToGlobal(b,bg,start);
-                            
-                            ibps.lock();
-                            ibps.update(start);
+	      
                             const orsa::Vector omega = ibps.rotational->getOmega();
-                            ibps.unlock();
-                            
                             const orsa::Matrix I     = inertiaMoment;
                             const orsa::Vector T     = torque[bodyIndex];
-                            
+	      
                             orsa::Vector omegaDot;
 	      
                             Euler(omegaDot,
@@ -222,11 +205,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                             //
                             omegaDot = l2g * omegaDot;
 	      
-                            ibps.lock();
-                            ibps.update(start);
                             Q1[k]       = ibps.rotational->getQ();
-                            ibps.unlock();
-                            
                             Q1Dot[k]    = RotationalBodyProperty::qDot(Q1[k], omega);
                             Q1DotDot[k] = RotationalBodyProperty::qDotDot(Q1[k], omega, omegaDot);
                         }
@@ -736,17 +715,14 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                         ++bl_it;
                         continue;
                     }
-
-                    ibps.lock();
-                    
+	  
                     ibps.time = start + orsa::Time(FromUnits(h[j]*timestep.get_d(),Unit::MICROSECOND,-1));
 	  
-                    if (!k->alive(ibps.time)) {
+                    if (!k->alive(ibps.time.getRef())) {
                         ++bl_it;
-                        ibps.unlock();
                         continue;
                     }
-                    
+	  
                     if ((*bl_it)->getInitialConditions().translational.get()) {
                         if ((*bl_it)->getInitialConditions().translational->dynamic()) {
 	      
@@ -794,29 +770,9 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                     }
 	  
                     ibps.tmp = true;
-                    
-                    // if (!bg->insertIBPS(ibps,k,onlyIfExtending,true)) {
-                    // when ibps.tmp is true, the varialbe onlyIfExtending passed to insert must be "false"
-                    if (!bg->insertIBPS(ibps,k,false,true)) {
-                        /* ORSA_DEBUG("insert failed t: %.8f [interval: %.8f -> %.8f]",
-                           orsa::FromUnits(ibps.time.get_d(),orsa::Unit::DAY,-1),
-                           orsa::FromUnits(bg->getBodyInterval((*bl_it).get())->min().time.get_d(),orsa::Unit::DAY,-1),
-                           orsa::FromUnits(bg->getBodyInterval((*bl_it).get())->max().time.get_d(),orsa::Unit::DAY,-1));
-                        */
-                        /* ORSA_DEBUG("problem, body: [%s]",(*bl_it).get()->getName().c_str());
-                           ORSA_DEBUG("insert failed, ibps.tmp: %i, ibps.time [below]",ibps.tmp);
-                           orsa::print(ibps.time);
-                           ORSA_DEBUG("interval range: min,max [below]");
-                           orsa::print(bg->getBodyInterval((*bl_it).get())->min().time);
-                           orsa::print(bg->getBodyInterval((*bl_it).get())->max().time);
-                           ORSA_DEBUG("call start, start+timestep [below]");
-                           orsa::print(start);
-                           orsa::print(start+timestep);
-                        */
-                    }
-                    
-                    ibps.unlock();
-                    
+	  
+                    bg->insertIBPS(ibps,k,onlyIfExtending.getRef(),true);
+	  
                     ++bl_it;
                 }
             }
@@ -949,9 +905,9 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                                    inertiaMoment.getM11(),
                                    inertiaMoment.getM22(),
                                    inertiaMoment.getM33(),
-                                   torque[k].getX(),
-                                   torque[k].getY(),
-                                   torque[k].getZ());
+                                   torque[k].getRef().getX(),
+                                   torque[k].getRef().getY(),
+                                   torque[k].getRef().getZ());
 		   
                                    phiDotDot[k]   = localPhiDotDot;
                                    thetaDotDot[k] = localThetaDotDot;
@@ -1002,7 +958,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
             orsa::Quaternion tmpQ, gkQ;
             orsa::Vector     tmpV, gkV;
             // double     tmpD, gkD;
-            
+      
             switch (j) {
                 case 1: 
                     /* 
@@ -1027,7 +983,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                         */
 	    
                         const orsa::Body * k = (*bl_it).get();
-                        
+	    
                         if ((*bl_it)->getInitialConditions().translational.get()) {
                             if ((*bl_it)->getInitialConditions().translational->dynamic()) {
 		
@@ -1613,9 +1569,9 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
         // timestep = copysign(pow(accuracy/tmp,0.1111111111111111),timestep_done.Getdouble()); // 1/9=0.111...
         //
     
-        next_timestep = orsa::Time(FromUnits(copysign(pow(_accuracy/tmp, 1.0/9.0), timestep.get_d()),Unit::MICROSECOND,-1)); // 1/9=0.111...
+        next_timestep = orsa::Time(FromUnits(copysign(pow(_accuracy.getRef()/tmp, 1.0/9.0), timestep.get_d()),Unit::MICROSECOND,-1)); // 1/9=0.111...
     
-        // next_timestep = orsa::Time(copysign(pow(_accuracy/tmp, 1/double("9.0")), FromUnits(timestep.get_d(),Unit::MICROSECOND,-1))); // 1/9=0.111...
+        // next_timestep = orsa::Time(copysign(pow(_accuracy.getRef()/tmp, 1/double("9.0")), FromUnits(timestep.get_d(),Unit::MICROSECOND,-1))); // 1/9=0.111...
     }
   
     /* 
@@ -1627,14 +1583,26 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
     // check this only on "initialization" steps, i.e. when niter > 2
     if ((niter > 2) && (fabs(next_timestep.get_d()/timestep.get_d()) < 1.0)) {
         next_timestep = orsa::Time(FromUnits(timestep.get_d()*0.8,Unit::MICROSECOND,-1));
+        // std::cerr << "Radau: step rejected! New proposed timestep: " << timestep.Getdouble() << std::endl;
+        // frame_out = frame_in;
         _lastCallRejected = true;
-        // ORSA_DEBUG("last call REJECTED");
-        // "rollback" (kind of) all inserts in this call (done in the Integrator class calling this method)
+        // niter = 6;
+        // std::cerr << "[rej]" << std::endl;
+    
+        /* 
+           ORSA_DEBUG("REJECTED, next_timestep: %20.12f [day]",
+           FromUnits(FromUnits(next_timestep.getMuSec(),Unit::MICROSECOND),Unit::DAY,-1)());
+        */
+    
+        // ORSA_DEBUG("done.");
+    
         return true;
+    
     } else {
+        // ORSA_DEBUG("->>>>>>>> CALL NOT REJECTED!!!");
         _lastCallRejected = false;
     }
-    
+  
     if (fabs(timestep.get_d()/timestep.get_d()) > 1.4) {
         // timestep = timestep_done * 1.4;
         next_timestep = orsa::Time(FromUnits(timestep.get_d()*1.4,Unit::MICROSECOND,-1));
@@ -1870,9 +1838,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                 ++bl_it;
                 continue;
             }
-            
-            ibps.lock();
-            
+      
             ibps.time = start + timestep;
       
             if ((*bl_it)->getInitialConditions().translational.get()) {
@@ -1920,24 +1886,13 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
 	  
                 }
             }
-            
+      
             ibps.tmp = false;
-            
-            if (!bg->insertIBPS(ibps,k,onlyIfExtending,false)) {
-                /* ORSA_DEBUG("problem, body: [%s]",(*bl_it).get()->getName().c_str());
-                   ORSA_DEBUG("insert failed, ibps.tmp: %i, ibps.time [below]",ibps.tmp);
-                   orsa::print(ibps.time);
-                   ORSA_DEBUG("interval range: min,max [below]");
-                   orsa::print(bg->getBodyInterval((*bl_it).get())->min().time);
-                   orsa::print(bg->getBodyInterval((*bl_it).get())->max().time);
-                   ORSA_DEBUG("call start, start+timestep [below]");
-                   orsa::print(start);
-                   orsa::print(start+timestep);
-                */
+      
+            if (!bg->insertIBPS(ibps,k,onlyIfExtending.getRef(),false)) {
+                ORSA_DEBUG("problem, body: [%s]",(*bl_it).get()->getName().c_str());
             }
-            
-            ibps.unlock();
-            
+      
             ++bl_it;
         }
     }
@@ -1991,15 +1946,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                 if ((*bl_it)->getInitialConditions().translational->dynamic()) {
 	  
                     orsa::Vector local_s[7];
-                    
-                    /* for (unsigned int lll=0;lll<=6;++lll) {
-                       orsa::print(lll);
-                       orsa::print(local_s[lll]);
-                       orsa::print(b[lll][k]);
-                       orsa::print(e[lll][k]);
-                       }
-                    */
-                    
+	  
                     local_s[0] = b[0][k] - e[0][k];
                     local_s[1] = b[1][k] - e[1][k];
                     local_s[2] = b[2][k] - e[2][k];
@@ -2007,7 +1954,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                     local_s[4] = b[4][k] - e[4][k];
                     local_s[5] = b[5][k] - e[5][k];
                     local_s[6] = b[6][k] - e[6][k];
-
+	  
                     // Estimate B values for the next sequence
 	  
                     e[0][k] = q1*(b[6][k]* 7.0 + b[5][k]* 6.0 + b[4][k]* 5.0 + b[3][k]* 4.0 + b[2][k]* 3.0 + b[1][k]*2.0 + b[0][k]);
@@ -2017,7 +1964,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                     e[4][k] = q5*(b[6][k]*21.0 + b[5][k]* 6.0 + b[4][k]);
                     e[5][k] = q6*(b[6][k]* 7.0 + b[5][k]);
                     e[6][k] = q7* b[6][k];
-                    
+	  
                     b[0][k] = e[0][k] + local_s[0];
                     b[1][k] = e[1][k] + local_s[1];
                     b[2][k] = e[2][k] + local_s[2];
@@ -2090,9 +2037,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
 	  
                 }
             }
-            
-            // ORSA_DEBUG("..done");
-            
+      
             ++bl_it;
         }
     }
@@ -2108,7 +2053,7 @@ void IntegratorRadau::_init() {
   
     progressiveCleaningSteps = 32;
   
-    _accuracy = 1.0e-8;
+    _accuracy.set(1.0e-8);
   
     // for h and xc should use higher accuracy, since the double class has arbitrary precision!
   
@@ -2207,19 +2152,7 @@ void IntegratorRadau::_body_mass_or_number_changed(orsa::BodyGroup  * bg,
             g[l].clear();
             b[l].clear();
             e[l].clear();
-#ifndef ORSA_VECTOR_INIT_ZERO
-            const BodyGroup::BodyList & bl = bg->getBodyList();
-            BodyGroup::BodyList::const_iterator bl_it = bl.begin();
-            while (bl_it != bl.end()) {
-                const orsa::Body * k = (*bl_it).get();
-                g[l][k] = orsa::Vector(0,0,0);
-                b[l][k] = orsa::Vector(0,0,0);
-                e[l][k] = orsa::Vector(0,0,0);
-                ++bl_it;
-            }
-#endif // ORSA_VECTOR_INIT_ZERO
         }
-        
         x.clear();
         v.clear();
         a.clear();
@@ -2231,7 +2164,26 @@ void IntegratorRadau::_body_mass_or_number_changed(orsa::BodyGroup  * bg,
         acc.clear();
     
         // rotational
-        
+    
+        /* 
+           gPhi.resize(7);
+           bPhi.resize(7);
+           ePhi.resize(7);
+           //
+           for (unsigned int l=0;l<7;++l) {
+           gPhi[l].clear();
+           bPhi[l].clear();
+           ePhi[l].clear();
+           }
+           phi.clear();
+           phiDot.clear();
+           phiDotDot.clear();
+           //
+           phi1.clear();
+           phi1Dot.clear();
+           phi1DotDot.clear();
+        */
+        //
         gQ.resize(7);
         bQ.resize(7);
         eQ.resize(7);
@@ -2240,9 +2192,7 @@ void IntegratorRadau::_body_mass_or_number_changed(orsa::BodyGroup  * bg,
             gQ[l].clear();
             bQ[l].clear();
             eQ[l].clear();
-            // no need to set to 0 the quaternions, that's done automatically by the default constructor
         }
-        
         Q.clear();
         QDot.clear();
         QDotDot.clear();

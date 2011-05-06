@@ -35,7 +35,7 @@ namespace orsaSolarSystem {
         // derived latitude
         double latitude() const {
             if (pxy.isSet() && pz.isSet()) {
-                return atan2(pz,pxy);
+                return atan2(pz.getRef(),pxy.getRef());
             } else {
                 ORSA_DEBUG("problems");
                 return 0.0;

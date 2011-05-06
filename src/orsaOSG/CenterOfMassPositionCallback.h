@@ -34,7 +34,7 @@ namespace orsaOSG {
                     const orsa::Time simulationTime = _at->getSimulationTime(nv->getFrameStamp()->getFrameNumber());
 	  
                     if ( (!(_lastSimulationTime.isSet())) ||
-                         ((_lastSimulationTime.isSet()) && (simulationTime != _lastSimulationTime)) ) {
+                         ((_lastSimulationTime.isSet()) && (simulationTime != _lastSimulationTime.getRef())) ) {
 	    
                         _lastSimulationTime = simulationTime;
 	    

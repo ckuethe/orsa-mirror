@@ -23,8 +23,8 @@ double MultiminPhase::fun(const orsa::MultiminParameters * par) const {
   Matrix m = Matrix::identity();
   m.rotZ(par->get("alpha"));
   
-  const double retVal = fabs(phi - 
-                             fabs(acos((m*uI).normalized() * uS)-halfpi()));
+  const double retVal = fabs(phi.getRef() - 
+				   fabs(acos((m*uI.getRef()).normalized() * uS.getRef())-halfpi()));
   
   // ORSA_DEBUG("fun: %Fg",retVal.get_mpf_t());
   

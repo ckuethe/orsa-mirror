@@ -99,16 +99,16 @@ bool TriShape::_updateCache() const {
             }      
             ++_it;
         }
-        _r_min = sqrt(_d2_min);
-        _r_max = sqrt(_d2_max);
+        _r_min.set(sqrt(_d2_min));
+        _r_max.set(sqrt(_d2_max));
         //
-        // std::cerr << "r_min: " << FromUnits(_r_min,Unit::KM,-1) << " KM" << std::endl;
+        // std::cerr << "r_min: " << FromUnits(_r_min.getRef(),Unit::KM,-1) << " KM" << std::endl;
     }
     //
     if (!_boundingBox.isSet()) {
         double xMin, xMax, yMin, yMax, zMin, zMax;
-        xMin = yMin = zMin =  _r_max;
-        xMax = yMax = zMax = -_r_max;
+        xMin = yMin = zMin =  _r_max.get();
+        xMax = yMax = zMax = -_r_max.get();
         VertexVector::const_iterator _it = _vertex.begin();
         while (_it != _vertex.end()) {
             const Vector & v = (*_it);
@@ -137,7 +137,7 @@ bool TriShape::_updateCache() const {
         FaceVector::const_iterator _it = _face.begin();
         double _d2_ij, _d2_ik, _d2_jk, _d2_tmp;
         // init
-        double _d2_min = _r_max*_r_max;
+        double _d2_min = _r_max.getRef()*_r_max.getRef();
         double _d2_max = 0;
         while (_it != _face.end()) {
             _d2_ij = (_vertex[(*_it).i()]-_vertex[(*_it).j()]).lengthSquared();
@@ -156,8 +156,8 @@ bool TriShape::_updateCache() const {
             //
             ++_it;
         }
-        _delta_min = sqrt(_d2_min);
-        _delta_max = sqrt(_d2_max);
+        _delta_min.set(sqrt(_d2_min));
+        _delta_max.set(sqrt(_d2_max));
     } 
     //
     // ORSA_DEBUG("need to fill the _ref_point_inside_model vector somewhere...");
@@ -175,9 +175,9 @@ bool TriShape::isInside(const Vector & v) const {
 
 bool TriShape::_isInside_useLineMethod(const Vector & v) const {
     _updateCache();
-    if (v.lengthSquared() > (_r_max*_r_max)) {
+    if (v.lengthSquared() > (_r_max.getRef()*_r_max.getRef())) {
         return false;
-    } else if (v.lengthSquared() < (_r_min*_r_min)) {
+    } else if (v.lengthSquared() < (_r_min.getRef()*_r_min.getRef())) {
         return true;
     }
     //
@@ -210,7 +210,7 @@ bool TriShape::_isInside_useLineMethod(const Vector & v) const {
   
     // search for vertex point close to the line
     // passing through ref. point and v
-    const double _max_d_from_line  = _delta_max;
+    const double _max_d_from_line  = _delta_max.getRef();
     const double _max_d2_from_line = _max_d_from_line*_max_d_from_line;
     const Vector _unit_v = (v - _min_ref).normalized();
     // index of vertex close to the line
@@ -253,7 +253,7 @@ bool TriShape::_isInside_useLineMethod(const Vector & v) const {
     }
     // check if the line is passing too close to the edge of the shape
     if (_index.size() > 0) {
-        const double _line_step = 0.5*_delta_min;
+        const double _line_step = 0.5*_delta_min.getRef();
         Vector _p = _min_ref;
         while ((_p-_min_ref).lengthSquared() < (_min_d2+(_line_step*_line_step))) {
             if ((_p-_min_ref).lengthSquared() > _min_d2) {
@@ -283,14 +283,14 @@ bool TriShape::_isInside_useLineMethod(const Vector & v) const {
 
 bool TriShape::_isInside_useNormalMethod(const Vector & v) const {
     _updateCache();
-    if (v.lengthSquared() > (_r_max*_r_max)) {
+    if (v.lengthSquared() > (_r_max.getRef()*_r_max.getRef())) {
         /* 
-           ORSA_DEBUG("fast out: v.length()=%f > _r_max=%f",
+           ORSA_DEBUG("fast out: v.length()=%f > _r_max.getRef()=%f",
            v.length(),
-           _r_max);
+           _r_max.getRef());
         */
         return false;
-    } else if (v.lengthSquared() < (_r_min*_r_min)) {
+    } else if (v.lengthSquared() < (_r_min.getRef()*_r_min.getRef())) {
         // ORSA_DEBUG("fast in");
         return true;
     }
@@ -326,14 +326,14 @@ bool TriShape::_isInside_useNormalMethod(const Vector & v) const {
 
 bool TriShape::_isInside_useFaceMethod(const Vector & v) const {
     _updateCache();
-    if (v.lengthSquared() > (_r_max*_r_max)) {
+    if (v.lengthSquared() > (_r_max.getRef()*_r_max.getRef())) {
         /* 
-           ORSA_DEBUG("fast out: v.length()=%f > _r_max=%f",
+           ORSA_DEBUG("fast out: v.length()=%f > _r_max.getRef()=%f",
            v.length(),
-           _r_max);
+           _r_max.getRef());
         */
         return false;
-    } else if (v.lengthSquared() < (_r_min*_r_min)) {
+    } else if (v.lengthSquared() < (_r_min.getRef()*_r_min.getRef())) {
         // ORSA_DEBUG("fast in");
         return true;
     }
@@ -757,8 +757,8 @@ bool LatLonShape::_updateCache() const {
                         }      
                     }
                 }
-                _r_min = _d_min;
-                _r_max = _d_max;
+                _r_min.set(_d_min);
+                _r_max.set(_d_max);
             } else {
                 ORSA_ERROR("inconsistent data problem");
                 return false;
@@ -799,8 +799,8 @@ bool EllipsoidShape::isInside(const Vector & v) const {
 
 bool EllipsoidShape::_updateCache() const {
     if ((!_r_min.isSet()) || (!_r_max.isSet())) {
-        _r_min = std::min(std::min(_a,_b),_c);
-        _r_max = std::max(std::max(_a,_b),_c);
+        _r_min.set(std::min(std::min(_a,_b),_c));
+        _r_max.set(std::max(std::max(_a,_b),_c));
     }
     if (!_boundingBox.isSet()) {
         _boundingBox.set(-_a, _a, -_b, _b, -_c, _c);

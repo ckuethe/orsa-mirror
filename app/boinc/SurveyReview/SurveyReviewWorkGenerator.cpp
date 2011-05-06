@@ -98,7 +98,7 @@ bool writeOutputTemplate(const std::string          & fileName,
     {
         unsigned int uploadCounter=0;
         for (unsigned int k=0; k<outputTemplateVector.size(); ++k) {
-            if (outputTemplateVector[k].upload) {
+            if (outputTemplateVector[k].upload.getRef()) {
                 gmp_fprintf(fp,
                             "<file_info>\n"
                             "  <name><OUTFILE_%i/></name>\n"
@@ -108,7 +108,7 @@ bool writeOutputTemplate(const std::string          & fileName,
                             "  <url><UPLOAD_URL/></url>\n"
                             "</file_info>\n",
                             uploadCounter,
-                            (*outputTemplateVector[k].fileSize));
+                            outputTemplateVector[k].fileSize.getRef());
                 ++uploadCounter;
             }
         }
@@ -117,14 +117,14 @@ bool writeOutputTemplate(const std::string          & fileName,
     {
         unsigned int uploadCounter=0;
         for (unsigned int k=0; k<outputTemplateVector.size(); ++k) {
-            if (outputTemplateVector[k].upload) {
+            if (outputTemplateVector[k].upload.getRef()) {
                 gmp_fprintf(fp,
                             "  <file_ref>\n"
                             "    <file_name><OUTFILE_%i/></file_name>\n"
                             "    <open_name>%s</open_name>\n",
                             uploadCounter,
-                            (*outputTemplateVector[k].fileName).c_str());
-                if (outputTemplateVector[k].optional) {
+                            outputTemplateVector[k].fileName.getRef().c_str());
+                if (outputTemplateVector[k].optional.getRef()) {
                     gmp_fprintf(fp,
                                 "    <optional/>\n");
                 }
@@ -164,7 +164,7 @@ int main(int argc, char ** argv) {
     //
     double rsc_disk_bound = 0;
     for (unsigned int k=0; k<outputTemplateVector.size(); ++k) {
-        rsc_disk_bound += outputTemplateVector[k].fileSize;
+        rsc_disk_bound += outputTemplateVector[k].fileSize.getRef();
     }
     
     /* const std::string inTemplateName = 

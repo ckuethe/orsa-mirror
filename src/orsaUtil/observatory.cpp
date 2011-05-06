@@ -52,7 +52,7 @@ bool StandardObservatoryPositionCallback::getPosVel(orsa::Vector      & position
                                                     orsa::Vector      & velocity,
                                                     const orsaSolarSystem::Observation * obs) const {
   
-    const orsa::Time t = obs->epoch;
+    const orsa::Time t = obs->epoch.getRef();
   
     orsa::Vector rEarth, vEarth;
     if (!bg->getInterpolatedPosVel(rEarth,vEarth,earth.get(),t)) { 
@@ -60,7 +60,7 @@ bool StandardObservatoryPositionCallback::getPosVel(orsa::Vector      & position
         return false;
     }
   
-    const orsaSolarSystem::Observatory & observatory = obsCodeFile->_data.observatory[obs->obsCode];
+    const orsaSolarSystem::Observatory & observatory = obsCodeFile->_data.observatory[obs->obsCode.getRef()];
   
     orsa::Vector obsPos;
   
@@ -69,17 +69,17 @@ bool StandardObservatoryPositionCallback::getPosVel(orsa::Vector      & position
         const orsaSolarSystem::SatelliteObservation * satelliteObservation =  
             dynamic_cast<const orsaSolarSystem::SatelliteObservation *>(obs);
         if (satelliteObservation) {
-            obsPos = satelliteObservation->obsPos;
+            obsPos = satelliteObservation->obsPos.getRef();
         }
     
     } else {
     
         // LMST = GMST + longitude
         double s, c;
-        orsa::sincos(orsaSolarSystem::gmst(t).getRad()+observatory.lon,&s,&c);
-        obsPos = orsa::Vector(observatory.pxy*c,
-                              observatory.pxy*s,
-                              observatory.pz);
+        orsa::sincos(orsaSolarSystem::gmst(t).getRad()+observatory.lon.getRef(),&s,&c);
+        obsPos = orsa::Vector(observatory.pxy.getRef()*c,
+                              observatory.pxy.getRef()*s,
+                              observatory.pz.getRef());
     }
   
     obsPos = orsaSolarSystem::equatorialToEcliptic()*obsPos;
@@ -110,5 +110,5 @@ const orsaSolarSystem::Observatory & StandardObservatoryPositionCallback::getObs
 }
 
 const orsaSolarSystem::Observatory & StandardObservatoryPositionCallback::getObservatory(const orsaSolarSystem::Observation * obs) const {
-    return obsCodeFile->_data.observatory[obs->obsCode];
+    return obsCodeFile->_data.observatory[obs->obsCode.getRef()];
 }

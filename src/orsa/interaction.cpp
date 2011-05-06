@@ -86,18 +86,18 @@ bool Interaction::acceleration(InteractionVector & a,
                bg->getBodyInterval(ref_b);
                const orsa::Time dt = 
                std::min(orsa::Time(0,0,0,5,0),
-               std::min(bi->max().time-t,
-               t-bi->min().time));
+               std::min(bi->max().time.getRef()-t,
+               t-bi->min().time.getRef()));
                // REMEMBER: now thrust is in FrenetSerret components
                orsa::Vector T, N, B;
-               ORSA_DEBUG("bi->min().time.tmp: %i",bi->min().tmp);
-               ORSA_DEBUG("bi->max().time.tmp: %i",bi->max().tmp);
-               if (t > bi->min().time) {
+               ORSA_DEBUG("bi->min().time.getRef().tmp: %i",bi->min().tmp);
+               ORSA_DEBUG("bi->max().time.getRef().tmp: %i",bi->max().tmp);
+               if (t > bi->min().time.getRef()) {
                FrenetSerret(ref_b, bg,
                t,
                -dt,
                T, N, B);
-               } else if (t < bi->max().time) {
+               } else if (t < bi->max().time.getRef()) {
                FrenetSerret(ref_b, bg,
                t,
                dt,
@@ -105,8 +105,8 @@ bool Interaction::acceleration(InteractionVector & a,
                } else {
                ORSA_DEBUG("interval smaller than dt");
                ORSA_DEBUG("--BODY-INTERVAL-TIME-RANGE--");
-               print(bi->min().time);
-               print(bi->max().time);
+               print(bi->min().time.getRef());
+               print(bi->max().time.getRef());
                ORSA_DEBUG("call time:");
                print(t);
                //
@@ -131,13 +131,13 @@ bool Interaction::acceleration(InteractionVector & a,
             /* 
                if (ref_b->getPropulsion() != 0) {
                osg::ref_ptr<PropulsionEvent> pe = ref_b->getPropulsion()->getPropulsionEvent(t);
-               // if (pe.thrustMagnitude > 0) {
+               // if (pe.thrustMagnitude.getRef() > 0) {
                // ORSA_DEBUG("using propulsion!! time: %f",t.get_d());
      
                // IMPORTANT!!!!
                // ORSA_DEBUG("a=F/m and F=thrust, so I have to divide by the instantaneous mass...");
 	 
-               // a[(*ref_b_it).get()] += pe.thrustMagnitude * pe.thrustDirection();
+               // a[(*ref_b_it).get()] += pe.thrustMagnitude.getRef() * pe.thrustDirection();
 	 
                const double bodyMass = ref_b->getMass() - ref_b->getPropulsion()->massLost(t);
 	 
@@ -148,7 +148,7 @@ bool Interaction::acceleration(InteractionVector & a,
                }
 	 
                if (bodyMass > 0) {
-               a_ref_b += pe->thrust / bodyMass;
+               a_ref_b += pe->thrust.getRef() / bodyMass;
                } else {
                ORSA_DEBUG("problem: non-positive mass!! (m=%Fe)",bodyMass());
                }
@@ -179,9 +179,9 @@ bool Interaction::acceleration(InteractionVector & a,
                 if (!b->alive(t)) {
                     continue;
                 }
-                
+	
                 // ORSA_DEBUG("b is [%s]",b->getName().c_str());
-                
+	
                 if (!bg->getInterpolatedMass(m_b,b,t)) {
                     ORSA_DEBUG("problems...");
                 }
@@ -214,10 +214,7 @@ bool Interaction::acceleration(InteractionVector & a,
                     ORSA_DEBUG("problems...");
                     return false;
                 }
-                
-                // ORSA_DEBUG("ref_b_ibps.inertial->paulMoment() = %x",ref_b_ibps.inertial->paulMoment());
-                // ORSA_DEBUG("    b_ibps.inertial->paulMoment() = %x",    b_ibps.inertial->paulMoment());
-                
+	
                 /* if (ref_b->getPaulMoment() || 
                    b->getPaulMoment()) {
                 */
@@ -309,7 +306,7 @@ bool Interaction::acceleration(InteractionVector & a,
                         _d /= (_l*_l*_l);
 	    
                         if (ref_b->betaSun == b) {
-                            const orsa::Vector accTerm = (1 - ref_b->beta) * _d;
+                            const orsa::Vector accTerm = (1 - ref_b->beta.getRef()) * _d;
                             // a[(*ref_b_it).get()] += (*b_it)->getMu()     * accTerm;
                             // a[    (*b_it).get()] -= (*ref_b_it)->getMu() * accTerm;
                             // a_ref_b += b->getMu()     * accTerm;
@@ -405,7 +402,7 @@ bool Interaction::acceleration(InteractionVector & a,
                         _d /= (_l*_l*_l);
 	    
                         if (ref_b->betaSun == b) {
-                            const orsa::Vector accTerm = (1 - ref_b->beta) * _d;
+                            const orsa::Vector accTerm = (1 - ref_b->beta.getRef()) * _d;
                             // a[(*ref_b_it).get()] += (*b_it)->getMu()     * accTerm;
                             // a[    (*b_it).get()] -= (*ref_b_it)->getMu() * accTerm;
                             // a_ref_b += b->getMu()     * accTerm;

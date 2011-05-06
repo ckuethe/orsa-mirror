@@ -26,38 +26,38 @@ void Box::set(const double & xMin,
               const double & yMax,
               const double & zMin,
               const double & zMax) {
-    _xMin = xMin;
-    _xMax = xMax;
-    _yMin = yMin;
-    _yMax = yMax;
-    _zMin = zMin;
-    _zMax = zMax;
+    _xMin.set(xMin);
+    _xMax.set(xMax);
+    _yMin.set(yMin);
+    _yMax.set(yMax);
+    _zMin.set(zMin);
+    _zMax.set(zMax);
 }
 
 void Box::set(const orsa::Vector & v1,
               const orsa::Vector & v2) {
     if (v1.getX() < v2.getX()) {
-        _xMin = v1.getX();
-        _xMax = v2.getX();
+        _xMin.set(v1.getX());
+        _xMax.set(v2.getX());
     } else {
-        _xMin = v2.getX();
-        _xMax = v1.getX();
+        _xMin.set(v2.getX());
+        _xMax.set(v1.getX());
     }
   
     if (v1.getY() < v2.getY()) {
-        _yMin = v1.getY();
-        _yMax = v2.getY();
+        _yMin.set(v1.getY());
+        _yMax.set(v2.getY());
     } else {
-        _yMin = v2.getY();
-        _yMax = v1.getY();
+        _yMin.set(v2.getY());
+        _yMax.set(v1.getY());
     }
   
     if (v1.getZ() < v2.getZ()) {
-        _zMin = v1.getZ();
-        _zMax = v2.getZ();
+        _zMin.set(v1.getZ());
+        _zMax.set(v2.getZ());
     } else {
-        _zMin = v2.getZ();
-        _zMax = v1.getZ();
+        _zMin.set(v2.getZ());
+        _zMax.set(v1.getZ());
     }
 }
 
@@ -80,27 +80,27 @@ void Box::reset() {
 }
 
 double Box::volume() const {
-    return fabs((_xMax-_xMin)*
-                (_yMax-_yMin)*
-                (_zMax-_zMin));
+    return fabs((_xMax.getRef()-_xMin.getRef())*
+                (_yMax.getRef()-_yMin.getRef())*
+                (_zMax.getRef()-_zMin.getRef()));
 }
 
 bool Box::isInside(const orsa::Vector & v) const {
-    if (v.getX() < _xMin) return false;
-    if (v.getX() > _xMax) return false;
-    if (v.getY() < _yMin) return false;
-    if (v.getY() > _yMax) return false;
-    if (v.getZ() < _zMin) return false;
-    if (v.getZ() > _zMax) return false;
+    if (v.getX() < _xMin.getRef()) return false;
+    if (v.getX() > _xMax.getRef()) return false;
+    if (v.getY() < _yMin.getRef()) return false;
+    if (v.getY() > _yMax.getRef()) return false;
+    if (v.getZ() < _zMin.getRef()) return false;
+    if (v.getZ() > _zMax.getRef()) return false;
     return true;
 }
 
 osg::BoundingBox Box::getOSGBoundingBox() const {
-    return osg::BoundingBox(_xMin,
-                            _yMin,
-                            _zMin,
-                            _xMax,
-                            _yMax,
-                            _zMax);
+    return osg::BoundingBox(_xMin.getRef(),
+                            _yMin.getRef(),
+                            _zMin.getRef(),
+                            _xMax.getRef(),
+                            _yMax.getRef(),
+                            _zMax.getRef());
 }
 

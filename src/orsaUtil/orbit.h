@@ -155,7 +155,7 @@ namespace orsaUtil {
                           const orsa::MultifitParameters * par, 
                           const orsa::MultifitData       * data) const {
       
-            if (integrate) {
+            if (integrate.getRef()) {
 	
                 /*** INTEGRATING ***/
 	
@@ -178,7 +178,7 @@ namespace orsaUtil {
                 double mSun;
                 if (!bg->getInterpolatedMass(mSun,
                                              sun.get(),
-                                             orbitEpoch)) { 
+                                             orbitEpoch.getRef())) { 
                     ORSA_DEBUG("problems...");
                 }	
       
@@ -186,7 +186,7 @@ namespace orsaUtil {
                 if (!bg->getInterpolatedPosVel(rSun,
                                                vSun,
                                                sun.get(),
-                                               orbitEpoch)) { 
+                                               orbitEpoch.getRef())) { 
                     ORSA_DEBUG("problems");
                 }
 	
@@ -350,7 +350,7 @@ namespace orsaUtil {
 	
                 orsaSolarSystem::OrbitWithEpoch orbit;
                 //
-                orbit.epoch = orbitEpoch;
+                orbit.epoch = orbitEpoch.getRef();
                 //
                 /* orbit.mu = mSun*orsa::Unit::G();
                    orbit.a = par->get("orbit_a");
@@ -376,7 +376,7 @@ namespace orsaUtil {
                 {
                     b->setName("b");
                     orsa::IBPS ibps;
-                    ibps.time = orbitEpoch;
+                    ibps.time = orbitEpoch.getRef();
                     ibps.inertial = new orsa::PointLikeConstantInertialBodyProperty(0);
                     ibps.translational = new orsa::DynamicTranslationalBodyProperty;
                     ibps.translational->setPosition(rOrbit);
@@ -401,7 +401,7 @@ namespace orsaUtil {
                     const orsa::Time obsTime = orsa::Time(data->getZ("epoch",row));
 	
                     radau->integrate(bg.get(),
-                                     orbitEpoch,
+                                     orbitEpoch.getRef(),
                                      obsTime,
                                      orsa::Time(0,0,10,0,0));
 	
@@ -505,7 +505,7 @@ namespace orsaUtil {
 	
                 orsaSolarSystem::OrbitWithEpoch orbit;
                 //
-                orbit.epoch = orbitEpoch;
+                orbit.epoch = orbitEpoch.getRef();
                 //
                 /* orbit.a = par->get("orbit_a");
                    orbit.e = par->get("orbit_e");
@@ -547,7 +547,7 @@ namespace orsaUtil {
 	  
                     {
                         orsa::Orbit localOrbit = orbit;
-                        localOrbit.M = fmod(orbit.M + orsa::twopi()*(obsTime-orbit.epoch).get_d()/orbit.period(),orsa::twopi()); 
+                        localOrbit.M = fmod(orbit.M + orsa::twopi()*(obsTime-orbit.epoch.getRef()).get_d()/orbit.period(),orsa::twopi()); 
                         if (!localOrbit.relativePosVel(relativePosition,relativeVelocity)) { ORSA_DEBUG("problems"); }
                     }
 	

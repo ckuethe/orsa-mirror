@@ -34,7 +34,7 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
         const orsa::BodyGroup::BodyList bl = bg->getBodyList();
         orsa::BodyGroup::BodyList::const_iterator it = bl.begin();
         while (it != bl.end()) {
-            ORSA_DEBUG("integration includes body [%s] id: %i   requested integration time: [below]",
+            ORSA_DEBUG("integration includes body [%s] id: %i   time interval: [below]",
                        (*it)->getName().c_str(),
                        (*it)->id());
             orsa::print(start);
@@ -42,16 +42,15 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
             ++it;
         }
     }
-
-    /* 
-       ORSA_DEBUG("CALL start: %f [day]",
+    
+    /* ORSA_DEBUG("CALL start: %f [day]",
        FromUnits(start.get_d(),Unit::DAY,-1));
        orsa::print(start);
        ORSA_DEBUG("CALL stop:  %f [day]",
        FromUnits(stop.get_d(),Unit::DAY,-1));
        orsa::print(stop);
     */
-    
+  
     // always start <= stop
     // but integration direction may not be from start to stop.... 
     // maybe I should change the name of the variables!!
@@ -79,7 +78,6 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
                 needMicroIntegrations=true;
             }
         }
-        // ORSA_DEBUG("needMicroIntegrations: %i",needMicroIntegrations);
         if (needMicroIntegrations) {
             // compute global interval
             Time t1, t2;
@@ -119,7 +117,7 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
             // try to add massless bodies at small groups and integrate
             // the test for a good addition is that getCommonInterval returns true
             {
-                orsa::Cache<unsigned int> old_bgDump_size; // don't init now, to skip first iteration, where the massive bodies are integrated, along with possibly some massless bodies
+                // orsa::Cache<unsigned int> old_bgDump_size; // don't init now, to skip first iteration, where the massive bodies are integrated, along with possibly some massless bodies
                 while (bgDump->size() != 0) {
                     const orsa::BodyGroup::BodyList bl = bgDump->getBodyList();
                     orsa::BodyGroup::BodyList::const_iterator it = bl.begin();
@@ -147,14 +145,15 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
                         ORSA_DEBUG("problems...");
                         return false;
                     }
-                    if (old_bgDump_size.isSet()) {
-                        if (bgDump->size() == old_bgDump_size) {
-                            ORSA_DEBUG("problem while dealing with massless bodies");
-                            break;
-                        }
-                    }
-                    old_bgDump_size = bgDump->size();
-               }
+                    /* if (old_bgDump_size.isSet()) {
+                       if (bgDump->size() == old_bgDump_size.getRef()) {
+                       ORSA_DEBUG("problem while dealing with massless bodies");
+                       break;
+                       }
+                       }
+                       old_bgDump_size = bgDump->size();
+                    */
+                }
             }
         }
     }
@@ -214,12 +213,12 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
     if (t1 == stop) {
         t    = t1;
         tEnd = start;
-        sign = -1;
+        sign.set(-1);
         // ORSA_DEBUG("--SIGN--MARK--");
     } else if (t2 == start) {
         t    = t2;
         tEnd = stop;
-        sign = +1;
+        sign.set(+1);
         // ORSA_DEBUG("--SIGN--MARK--");
     } else {
     
@@ -246,12 +245,12 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
             // ORSA_DEBUG("new code ctstart...");
             t    = ctstop;
             tEnd = stop;
-            sign = (t-tEnd).getMuSec()/abs((t-tEnd).getMuSec());
+            sign.set((t-tEnd).getMuSec()/abs((t-tEnd).getMuSec()));
         } else if (ctstop==stop) {
             // ORSA_DEBUG("new code ctstop...");
             t    = ctstart;
             tEnd = start;
-            sign = (t-tEnd).getMuSec()/abs((t-tEnd).getMuSec());
+            sign.set((t-tEnd).getMuSec()/abs((t-tEnd).getMuSec()));
         } else {
             ORSA_DEBUG("---- CASE NOT HANDLED YET ----");
         }
@@ -306,8 +305,8 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
   
     // orsa::Time dt = sampling_period;
     //
-    orsa::Time call_dt = sampling_period*sign;
-    orsa::Time next_dt = sampling_period*sign;
+    orsa::Time call_dt = sampling_period*sign.getRef();
+    orsa::Time next_dt = sampling_period*sign.getRef();
   
     /* 
        if (start > stop) {
@@ -323,11 +322,11 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
     // while (t <= stop) {
   
     // a better first step
-    if ((t+next_dt-tEnd)*sign > zeroTime) {
+    if ((t+next_dt-tEnd)*sign.getRef() > zeroTime) {
         next_dt = tEnd - t;
     }
   
-    while((tEnd-t)*sign > zeroTime) {
+    while((tEnd-t)*sign.getRef() > zeroTime) {
     
         /* 
            ORSA_DEBUG("next_dt: %f   (mu: %Zi)",
@@ -366,14 +365,14 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
             ret_val = false;
             break;
         }
-        
+    
         if (0) {
             // debug
             BodyGroup::BodyList::const_iterator _b_it = bg->getBodyList().begin();
             while (_b_it != bg->getBodyList().end()) { 
-                const orsa::BodyGroup::BodyInterval * _b_interval = bg->getBodyInterval((*_b_it).get());
-                const orsa::BodyGroup::BodyInterval::DataType & _b_interval_data = _b_interval->getData();
-                orsa::BodyGroup::BodyInterval::DataType::const_iterator _b_interval_data_it = _b_interval_data.begin();
+                orsa::BodyGroup::BodyInterval * _b_interval = bg->getBodyInterval((*_b_it).get());
+                orsa::BodyGroup::BodyInterval::DataType & _b_interval_data = _b_interval->getData();
+                orsa::BodyGroup::BodyInterval::DataType::iterator _b_interval_data_it = _b_interval_data.begin();
                 unsigned int counter=0;
                 while (_b_interval_data_it != _b_interval_data.end()) {
                     ++counter;
@@ -381,7 +380,7 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
                                counter,
                                (*_b_interval).size(),
                                (*_b_it)->getName().c_str(),
-                               (*(*_b_interval_data_it).time).get_d());
+                               (*_b_interval_data_it).time.getRef().get_d());
                     ++_b_interval_data_it;
                 }
                 ++_b_it;	
@@ -419,8 +418,8 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
             //
       
             if (progressiveCleaningSteps.isSet()) {
-                if (progressiveCleaningSteps > 0) {
-                    if ((stat->entries() % progressiveCleaningSteps) == 0) {
+                if (progressiveCleaningSteps.getRef() > 0) {
+                    if ((stat->entries() % progressiveCleaningSteps.getRef()) == 0) {
                         BodyGroup::BodyList::const_iterator _b_it = bg->getBodyList().begin();
                         while (_b_it != bg->getBodyList().end()) { 
                             if (!((*_b_it)->getInitialConditions().dynamic())) { 
@@ -433,7 +432,7 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
                             while (_b_interval_data_it != _b_interval_data.end()) {
                                 /* ORSA_DEBUG("testing: body [%s]   t: %f   [tmp: %i]   this: %x   end: %x",
                                    (*_b_it)->getName().c_str(),
-                                   (*_b_interval_data_it).time.get_d(),
+                                   (*_b_interval_data_it).time.getRef().get_d(),
                                    (*_b_interval_data_it).tmp,
                                    (&(*_b_interval_data_it)),
                                    (&(*(_b_interval_data.end()))));
@@ -453,7 +452,7 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
             }
 
             if (keepOnlyLastStep.isSet()) {
-                if (keepOnlyLastStep) {
+                if (keepOnlyLastStep.getRef()) {
                     BodyGroup::BodyList::const_iterator _b_it = bg->getBodyList().begin();
                     while (_b_it != bg->getBodyList().end()) { 
                         if (!((*_b_it)->getInitialConditions().dynamic())) { 
@@ -464,15 +463,14 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
                         orsa::BodyGroup::BodyInterval::DataType & _b_interval_data = _b_interval->getData();
                         orsa::BodyGroup::BodyInterval::DataType::iterator _b_interval_data_it = _b_interval_data.begin();
                         while (_b_interval_data_it != _b_interval_data.end()) {
-                            /* ORSA_DEBUG("testing: body [%s]   t: %f   (now: %f)   [tmp: %i]   this: %x   end: %x",
+                            /* ORSA_DEBUG("testing: body [%s]   t: %f   [tmp: %i]   this: %x   end: %x",
                                (*_b_it)->getName().c_str(),
-                               (*_b_interval_data_it).time.get_d(),
-                               t.get_d(),
+                               (*_b_interval_data_it).time.getRef().get_d(),
                                (*_b_interval_data_it).tmp,
                                (&(*_b_interval_data_it)),
                                (&(*(_b_interval_data.end()))));
                             */
-                            if ((*_b_interval_data_it).time!=t) {
+                            if ((*_b_interval_data_it).time.getRef()!=t) {
                                 _b_interval_data_it = _b_interval_data.erase(_b_interval_data_it);
                                 // ORSA_DEBUG("removed");
                             } else {
@@ -498,37 +496,10 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
             */
             
         } else {
-            // last call was rejected, remove all tmp entries
-            BodyGroup::BodyList::const_iterator _b_it = bg->getBodyList().begin();
-            while (_b_it != bg->getBodyList().end()) { 
-                if (!((*_b_it)->getInitialConditions().dynamic())) { 
-                    ++_b_it;
-                    continue;
-                }
-                orsa::BodyGroup::BodyInterval * _b_interval = bg->getBodyInterval((*_b_it).get());
-                orsa::BodyGroup::BodyInterval::DataType & _b_interval_data = _b_interval->getData();
-                orsa::BodyGroup::BodyInterval::DataType::iterator _b_interval_data_it = _b_interval_data.begin();
-                while (_b_interval_data_it != _b_interval_data.end()) {
-                    /* ORSA_DEBUG("testing: body [%s]   t: %f   [tmp: %i]   this: %x   end: %x",
-                       (*_b_it)->getName().c_str(),
-                       (*_b_interval_data_it).time.get_d(),
-                       (*_b_interval_data_it).tmp,
-                       (&(*_b_interval_data_it)),
-                       (&(*(_b_interval_data.end()))));
-                    */
-                    if ((*_b_interval_data_it).tmp==true) {
-                        _b_interval_data_it = _b_interval_data.erase(_b_interval_data_it);
-                    } else {
-                        ++_b_interval_data_it;
-                    }
-                }     
-                // IMPORTANT!
-                _b_interval->update();
-                ++_b_it;
-            }
+            // last call was rejected...
         }
-        
-        if ((t+next_dt-tEnd)*sign > zeroTime) {
+    
+        if ((t+next_dt-tEnd)*sign.getRef() > zeroTime) {
             next_dt = tEnd - t;
             if (next_dt == zeroTime) {
                 // out of here!
@@ -541,8 +512,8 @@ bool Integrator::integrate(orsa::BodyGroup  * bg,
             while (bl_it != bg->getBodyList().end()) { 
                 if ((*bl_it)->propulsion.get()) {
                     eventTime = t;
-                    if ((*bl_it)->propulsion->nextEventTime(eventTime,sign)) {
-                        if ((t+next_dt-eventTime)*sign > zeroTime) {
+                    if ((*bl_it)->propulsion->nextEventTime(eventTime,sign.getRef())) {
+                        if ((t+next_dt-eventTime)*sign.getRef() > zeroTime) {
                             next_dt = eventTime - t;
                             //
                             // must call reset to allow step rejection

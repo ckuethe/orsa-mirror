@@ -95,86 +95,85 @@ public:
     unsigned int Nobs, Ndsc, Ntot;  
 };
 
-
-
-class Var : public osg::Referenced {
-public:
-    Var() : osg::Referenced() { }
-protected:
-    ~Var() { }
-public:
-    virtual size_t size() const = 0;
-    virtual size_t bin(const double x) const = 0;
-    virtual double binStart(const size_t bin) const = 0;
-    virtual double binStop(const size_t bin) const = 0;
-    double binCenter(const size_t bin) const {
-        return (0.5*(binStart(bin)+binStop(bin)));
-    }
-};
-
-class LinearVar : public Var {
-public:
-    LinearVar(const double startValue,
-              const double stopValue,
-              const double incrValue) : 
-        Var(),
-        start(startValue),
-        stop(stopValue),
-        incr(incrValue) {
-    }
-public:
-    size_t size() const {
-        return (size_t)ceil((stop-start)/incr);
-    }
-    size_t bin(const double x) const {
-        const size_t retVal = (size_t)((x-start)/incr);
-        // ORSA_DEBUG("x: %g\tbin: %i\tstart: %g\tincr: %g",x,retVal,start,incr);
-        // the correct check follows; think twice before changing it!
-        if (retVal>=size()) return ((size_t)-1);
-        return retVal;
-    }
-    double binStart(const size_t bin) const {
-        return (start+bin*incr);
-    }
-    double binStop(const size_t bin) const {
-        return (start+(bin+1)*incr);
-    }
-public:
-    const double start, stop, incr;
-};
-
-class LogarithmicVar : public Var {
-public:
-    LogarithmicVar(const double startValue,
-                   const double stopValue,
-                   const double factorValue) : 
-        Var(),
-        start(startValue),
-        stop(stopValue),
-        factor(factorValue) {
-    }
-public:
-    size_t size() const {
-        return (size_t)ceil(log(stop/start)/log(factor));
-    }
-    size_t bin(const double x) const {
-        const size_t retVal = (size_t)(log(x/start)/log(factor));
-        // the correct check follows; think twice before changing it!
-        if (retVal>=size()) return ((size_t)-1);
-        return retVal;
-    }
-    double binStart(const size_t bin) const {
-        return (start*orsa::int_pow(factor,bin));
-    }
-    double binStop(const size_t bin) const {
-        return (start*orsa::int_pow(factor,bin+1));
-    }
-public:
-    const double start, stop, factor;
-};
-
 template <typename T> class BinStats : public osg::Referenced {  
     // first, the classes to handle linear and logarithmic variables
+public:
+    class Var : public osg::Referenced {
+    public:
+        Var() : osg::Referenced() { }
+    protected:
+        ~Var() { }
+    public:
+        virtual size_t size() const = 0;
+        virtual size_t bin(const double x) const = 0;
+        virtual double binStart(const size_t bin) const = 0;
+        virtual double binStop(const size_t bin) const = 0;
+        double binCenter(const size_t bin) const {
+            return (0.5*(binStart(bin)+binStop(bin)));
+        }
+    };
+public:	
+    class LinearVar : public Var {
+    public:
+        LinearVar(const double startValue,
+                  const double stopValue,
+                  const double incrValue) : 
+            Var(),
+            start(startValue),
+            stop(stopValue),
+            incr(incrValue) {
+        }
+    public:
+        size_t size() const {
+            return (size_t)ceil((stop-start)/incr);
+        }
+        size_t bin(const double x) const {
+            const size_t retVal = (size_t)((x-start)/incr);
+            // ORSA_DEBUG("x: %g\tbin: %i\tstart: %g\tincr: %g",x,retVal,start,incr);
+            // the correct check follows; think twice before changing it!
+            if (retVal>=size()) return ((size_t)-1);
+            return retVal;
+        }
+        double binStart(const size_t bin) const {
+            return (start+bin*incr);
+        }
+        double binStop(const size_t bin) const {
+            return (start+(bin+1)*incr);
+        }
+    public:
+        const double start, stop, incr;
+    };
+public:	
+    class LogarithmicVar : public Var {
+    public:
+        LogarithmicVar(const double startValue,
+                       const double stopValue,
+                       const double factorValue) : 
+            Var(),
+            start(startValue),
+            stop(stopValue),
+            factor(factorValue) {
+        }
+    public:
+        size_t size() const {
+            return (size_t)ceil(log(stop/start)/log(factor));
+        }
+        size_t bin(const double x) const {
+            const size_t retVal = (size_t)(log(x/start)/log(factor));
+            // the correct check follows; think twice before changing it!
+            if (retVal>=size()) return ((size_t)-1);
+            return retVal;
+        }
+        double binStart(const size_t bin) const {
+            return (start*orsa::int_pow(factor,bin));
+        }
+        double binStop(const size_t bin) const {
+            return (start*orsa::int_pow(factor,bin+1));
+        }
+    public:
+        const double start, stop, factor;
+    };
+    
 public:
     BinStats(const std::vector< osg::ref_ptr<Var> > & varDefinition) :
         osg::Referenced(),
@@ -332,7 +331,7 @@ public:
 
 class Histo {
 public:
-    Histo(const Var * Var) : var(Var) {
+    Histo(const CountStats::Var * Var) : var(Var) {
         histo.resize(var->size());
         for (unsigned int k=0; k<histo.size(); ++k) {
             histo[k] = new EfficiencyStatistics(var->binCenter(k));
@@ -358,15 +357,15 @@ protected:
 public:
     const HistoDataType & getData() const { return histo; }
 protected:
-    const Var * var;  
+    const CountStats::Var * var;  
 };
 
 typedef Histo Histo1D;
 
 class Histo2D {
 public:
-    Histo2D(const Var * VarX,
-            const Var * VarY) : varx(VarX), vary(VarY) {
+    Histo2D(const CountStats::Var * VarX,
+            const CountStats::Var * VarY) : varx(VarX), vary(VarY) {
         histo.resize(varx->size());
         for (unsigned int j=0; j<varx->size(); ++j) {
             histo[j].resize(vary->size());
@@ -400,8 +399,8 @@ protected:
 public:
     const HistoDataType & getData() const { return histo; }
 protected:
-    const Var * varx;
-    const Var * vary;
+    const CountStats::Var * varx;
+    const CountStats::Var * vary;
 };
 
 #endif // __FIT_H__
