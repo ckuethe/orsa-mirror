@@ -67,6 +67,14 @@ namespace orsa {
             return sqrt(variance()/_n.get_d());
         }
     public:
+        T RMS() const {
+            if (_n > 0) {
+                return (sqrt(_s2/_n.get_d()));
+            } else {
+                return 0;
+            }
+        }
+    public:
         const mpz_class & entries() const {
             return _n;
         }
@@ -210,7 +218,7 @@ namespace orsa {
         }
     public:
         void insert(const T & val) {
-            _v[_loop_index].set(val);
+            _v[_loop_index] = val;
             _loop_index = ((_loop_index+1)%_v.size());
             _dirty = true;
         }
@@ -259,7 +267,7 @@ namespace orsa {
                 _stat->reset();
                 for (unsigned int k=0; k<_v.size(); ++k) {
                     if (_v[k].isSet()) {
-                        _stat->insert(_v[k].getRef());
+                        _stat->insert(_v[k]);
                     }
                 }
             }

@@ -25,7 +25,7 @@ namespace orsaInputOutput {
         > () {
             twoLinesCall=false;
         }
-      
+        
     protected:
         ~MPCObservationsFile() { }
     
@@ -37,15 +37,16 @@ namespace orsaInputOutput {
     
     public:
         bool processLine(const char * line);
-    
+        
     public:
         bool processLines(const char * lineAbove, const char * line);
-    
+        
     public:
         orsa::Cache<orsa::Time>  select_startEpoch, select_stopEpoch;
         orsa::Cache<std::string> select_obsCode;
+        orsa::Cache<bool>        select_discovery;
     };
-  
+    
 }; // orsaInputOutput
 
 #endif // _ORSA_INPUT_OUTPUT_MPC_OBSERVATIONS_

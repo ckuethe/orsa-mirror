@@ -44,9 +44,13 @@ namespace orsa {
         virtual bool dynamic() const { return (type() == BP_DYNAMIC); }
     public:	
         /* update() should be implemented by all properties of type BP_PRECOMPUTED */
-        virtual bool update(const orsa::Time &) = 0; 
+        virtual bool update(const orsa::Time &) = 0;
+    public:
+        // encapsulate the update and data retrevial in a lock/unlock, useful for properties of type BP_PRECOMPUTED in multi-threaded applications
+        virtual void lock() = 0;
+        virtual void unlock() = 0;
     };
-  
+    
     /***/
   
     /*
@@ -84,7 +88,7 @@ namespace orsa {
             s2l           = data.s2l;
         }
     public:
-        const LocalShapeData & operator = (const LocalShapeData & data) {
+        LocalShapeData & operator = (const LocalShapeData & data) {
             localShape    = data.localShape;
             originalShape = data.originalShape;
             cm            = data.cm;
@@ -109,7 +113,7 @@ namespace orsa {
             data = cache.data;
         }
     public:
-        const LocalShapeCache & operator = (const LocalShapeCache & cache) {
+        LocalShapeCache & operator = (const LocalShapeCache & cache) {
             data = cache.data;
             return (*this);
         }
@@ -133,7 +137,7 @@ namespace orsa {
             // ORSA_DEBUG("ls_cache: %x",ls_cache.get());
         }
     public:
-        const InertialBodyProperty & operator = (const InertialBodyProperty & ibp) {
+        InertialBodyProperty & operator = (const InertialBodyProperty & ibp) {
             ls_cache = ibp.ls_cache;
             // ORSA_DEBUG("ls_cache: %x",ls_cache.get());
             return (*this);
@@ -182,7 +186,7 @@ namespace orsa {
         virtual InertialBodyProperty * clone() const = 0;
     };
   
-    // NOTE: in general, copy operators "operator =" of non-const IBP must copy "ls_cache" along. 
+    // NOTE: in general "operator =" of non-const IBP must copy "ls_cache" along. 
   
     class PointLikeConstantInertialBodyProperty : public InertialBodyProperty {
     public:
@@ -194,7 +198,7 @@ namespace orsa {
             InertialBodyProperty(ibp),
             _m(ibp._m) { }
     public:
-        const PointLikeConstantInertialBodyProperty & operator = (const PointLikeConstantInertialBodyProperty &) {
+        PointLikeConstantInertialBodyProperty & operator = (const PointLikeConstantInertialBodyProperty &) {
             ORSA_ERROR("this class is not supposed to change...");
             return (*this);
         }
@@ -245,8 +249,11 @@ namespace orsa {
         BodyPropertyType type() const { return BP_CONSTANT; }
     public:
         bool update(const orsa::Time &) { return true; }
+    public:
+        void lock() { }
+        void unlock() { }
     };
-  
+    
     class ConstantInertialBodyProperty : public InertialBodyProperty {
     public:
         ConstantInertialBodyProperty(const double           & m,
@@ -332,8 +339,11 @@ namespace orsa {
         BodyPropertyType type() const { return BP_CONSTANT; }
     public:
         bool update(const orsa::Time &) { return true; }
+    public:
+        void lock() { }
+        void unlock() { }
     };
-  
+    
     /***/
   
     class TranslationalBodyProperty : public BodyProperty {
@@ -352,8 +362,11 @@ namespace orsa {
         BodyPropertyType type() const { return BP_CONSTANT; }
     public:
         bool update(const orsa::Time &) { return true; }
+    public:
+        void lock() { }
+        void unlock() { }
     };
-  
+    
     class PrecomputedTranslationalBodyProperty : public TranslationalBodyProperty {
     public:
         BodyPropertyType type() const { return BP_PRECOMPUTED; }
@@ -379,29 +392,32 @@ namespace orsa {
     public:
         bool update(const orsa::Time &) { return true; }
     public:
+        void lock() { }
+        void unlock() { }
+    public:
         orsa::Vector position() const { 
-            // ORSA_DEBUG("_position: %.20e",_position.getRef().length());
-            // orsa::print(_position.getRef());
-            return _position.getRef();
+            // ORSA_DEBUG("_position: %.20e",_position.length());
+            // orsa::print(_position);
+            return _position;
         }
     public:
         orsa::Vector velocity() const {
-            // ORSA_DEBUG("_velocity: %.20e",_velocity.getRef().length());
-            // orsa::print(_velocity.getRef());
-            return _velocity.getRef();
+            // ORSA_DEBUG("_velocity: %.20e",_velocity.length());
+            // orsa::print(_velocity);
+            return _velocity;
         }
     public:
         bool setPosition(const orsa::Vector & r) { 
             _position = r;
-            // ORSA_DEBUG("_position: %.20e",_position.getRef().length());
-            // orsa::print(_position.getRef());
+            // ORSA_DEBUG("_position: %.20e",_position.length());
+            // orsa::print(_position);
             return true;
         }
     public: 
         bool setVelocity(const orsa::Vector & v) {
             _velocity = v;
-            // ORSA_DEBUG("_velocity: %.20e",_velocity.getRef().length());
-            // orsa::print(_velocity.getRef());
+            // ORSA_DEBUG("_velocity: %.20e",_velocity.length());
+            // orsa::print(_velocity);
             return true;
         }
     public:
@@ -464,8 +480,11 @@ namespace orsa {
         BodyPropertyType type() const { return BP_CONSTANT; }
     public:
         bool update(const orsa::Time &) { return true; }
+    public:
+        void lock() { }
+        void unlock() { }
     };
-  
+    
     class PrecomputedRotationalBodyProperty : public RotationalBodyProperty {
     public:
         BodyPropertyType type() const { return BP_PRECOMPUTED; }
@@ -487,21 +506,24 @@ namespace orsa {
     public:
         bool update(const orsa::Time &) { return true; }
     public:
+        void lock() { }
+        void unlock() { }
+    public:
         bool get(orsa::Quaternion & q,
                  orsa::Vector     & omega) const {
-            q     = _q.getRef();
-            omega = _omega.getRef();
+            q     = _q;
+            omega = _omega;
             return true;
         }
     public:
-        orsa::Quaternion getQ()     const { return _q.getRef(); }
-        orsa::Vector     getOmega() const { return _omega.getRef(); }
+        orsa::Quaternion getQ()     const { return _q; }
+        orsa::Vector     getOmega() const { return _omega; }
     public:
         bool set(const orsa::Quaternion & q,
                  const orsa::Vector     & omega) {
             _q     = q;
             _omega = omega;
-            // ORSA_DEBUG("omega: %Fg",_omega.getRef().length());
+            // ORSA_DEBUG("omega: %Fg",_omega.length());
             return true;
         }
     public:
@@ -532,8 +554,8 @@ namespace orsa {
         osg::ref_ptr<RotationalBodyProperty> rotational;
     
     public:
-        const IBPS & operator = (const IBPS &);
-    
+        IBPS & operator = (const IBPS &);
+        
     public:
         virtual bool update(const orsa::Time & t) {
             if (inertial.get()) {
@@ -547,7 +569,32 @@ namespace orsa {
             }
             return true;
         }
-    
+        
+    public:
+        void lock() {
+            if (inertial.get()) {
+                inertial->lock();
+            }
+            if (translational.get()) {
+                translational->lock();
+            }
+            if (rotational.get()) {
+                rotational->lock();
+            }
+        }
+    public:
+        void unlock() {
+            if (inertial.get()) {
+                inertial->unlock();
+            }
+            if (translational.get()) {
+                translational->unlock();
+            }
+            if (rotational.get()) {
+                rotational->unlock();
+            }
+        }
+        
     public:
         bool dynamic() const {
             if (inertial.get()) {
@@ -568,27 +615,27 @@ namespace orsa {
         // time ordering, needed when used in orsa::Interval<>
     public:
         inline bool operator == (const IBPS & rhs) const {
-            return (time.getRef() == rhs.time.getRef());
+            return (time == rhs.time);
         }
     public:
         inline bool operator != (const IBPS & rhs) const {
-            return (time.getRef() != rhs.time.getRef());
+            return (time != rhs.time);
         }
     public:
         inline bool operator < (const IBPS & rhs) const {
-            return (time.getRef() < rhs.time.getRef());
+            return (time < rhs.time);
         }
     public:
         inline bool operator > (const IBPS & rhs) const {
-            return (time.getRef() > rhs.time.getRef());
+            return (time > rhs.time);
         }
     public:
         inline bool operator <= (const IBPS & rhs) const {
-            return (time.getRef() <= rhs.time.getRef());
+            return (time <= rhs.time);
         }
     public:
         inline bool operator >= (const IBPS & rhs) const {
-            return (time.getRef() >= rhs.time.getRef());
+            return (time >= rhs.time);
         }
     };
   
@@ -625,20 +672,20 @@ namespace orsa {
            public:
            virtual const double & getMass() const {
            if (_mass.isSet()) {
-           return _mass.getRef();
+           return _mass;
            } else {
            ORSA_ERROR("mass has never been set for this Body.");
            }
-           return _mass.getRef();
+           return _mass;
            }
            public:
            virtual const double & getMu() const {
            if (_mu.isSet()) {
-           return _mu.getRef();
+           return _mu;
            } else {
            ORSA_ERROR("mu has never been set for this Body.");
            }
-           return _mu.getRef(); 
+           return _mu; 
            }
            protected:
            orsa::Cache<double> _mass;
@@ -661,7 +708,7 @@ namespace orsa {
         }
     public:
         const orsa::IBPS & getInitialConditions() const {
-            return _ibps.getRef();
+            return _ibps;
         }
     protected:
         orsa::Cache<orsa::IBPS> _ibps;
@@ -682,7 +729,7 @@ namespace orsa {
            if (_shape.get()) {
            return _shape->boundingRadius();
            } else if (_radius.isSet()) {
-           return _radius.getRef();
+           return _radius;
            } else {
            return 0;
            }
@@ -752,10 +799,10 @@ namespace orsa {
     public:
         bool alive(const orsa::Time & t) const {
             if (birthTime.isSet()) {
-                if (t < birthTime.getRef()) return false;
+                if (t < birthTime) return false;
             }
             if (deathTime.isSet()) {
-                if (t > deathTime.getRef()) return false;
+                if (t > deathTime) return false;
             }
             return true;
         }

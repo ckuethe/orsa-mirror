@@ -211,27 +211,27 @@ int main(int argc, char ** argv) {
                     index = z_H_vec.size()-1;
                     //
                     NEO_eta_field_ws_vec.resize(z_H_vec.size());
-                    NEO_eta_field_ws_vec[index.get()].resize(z_L_size);
+                    NEO_eta_field_ws_vec[index].resize(z_L_size);
                     for (unsigned int l=0; l<z_L_size; ++l) {
-                        NEO_eta_field_ws_vec[index.get()][l] = new orsa::WeightedStatistic<double>;
+                        NEO_eta_field_ws_vec[index][l] = new orsa::WeightedStatistic<double>;
                     }
                     //
                     NEO_eta_detect_ws_vec.resize(z_H_vec.size());
-                    NEO_eta_detect_ws_vec[index.get()].resize(z_L_size);
+                    NEO_eta_detect_ws_vec[index].resize(z_L_size);
                     for (unsigned int l=0; l<z_L_size; ++l) {
-                        NEO_eta_detect_ws_vec[index.get()][l] = new orsa::WeightedStatistic<double>;
+                        NEO_eta_detect_ws_vec[index][l] = new orsa::WeightedStatistic<double>;
                     }
                     //
                     PHO_eta_field_ws_vec.resize(z_H_vec.size());
-                    PHO_eta_field_ws_vec[index.get()].resize(z_L_size);
+                    PHO_eta_field_ws_vec[index].resize(z_L_size);
                     for (unsigned int l=0; l<z_L_size; ++l) {
-                        PHO_eta_field_ws_vec[index.get()][l] = new orsa::WeightedStatistic<double>;
+                        PHO_eta_field_ws_vec[index][l] = new orsa::WeightedStatistic<double>;
                     }
                     //
                     PHO_eta_detect_ws_vec.resize(z_H_vec.size());
-                    PHO_eta_detect_ws_vec[index.get()].resize(z_L_size);
+                    PHO_eta_detect_ws_vec[index].resize(z_L_size);
                     for (unsigned int l=0; l<z_L_size; ++l) {
-                        PHO_eta_detect_ws_vec[index.get()][l] = new orsa::WeightedStatistic<double>;
+                        PHO_eta_detect_ws_vec[index][l] = new orsa::WeightedStatistic<double>;
                     }
                 }
                 //
@@ -250,35 +250,35 @@ int main(int argc, char ** argv) {
                         const double NEO_eta_field       = (double)(NEO_in_field)/(double)(N_NEO);
                         /* const double p                   = (double)(NEO_in_field+1)/(double)(N_NEO+2);
                            const double NEO_sigma_eta_field = sqrt(p*(1-p)/N_NEO);
-                           if (NEO_sigma_eta_field>0) NEO_eta_field_ws_vec[index.get()]->insert(NEO_eta_field,orsa::square(1.0/NEO_sigma_eta_field));
+                           if (NEO_sigma_eta_field>0) NEO_eta_field_ws_vec[index]->insert(NEO_eta_field,orsa::square(1.0/NEO_sigma_eta_field));
                         */
                         // try to use weight=N_NEO
-                        NEO_eta_field_ws_vec[index.get()][index_L]->insert(NEO_eta_field,N_NEO);
+                        NEO_eta_field_ws_vec[index][index_L]->insert(NEO_eta_field,N_NEO);
                         //
                         const double NEO_eta_detect       = eta_NEO;
                         /* 
                            const double NEO_sigma_eta_detect = sigma_eta_NEO;
-                           if (NEO_sigma_eta_detect>0) NEO_eta_detect_ws_vec[index.get()]->insert(NEO_eta_detect,orsa::square(1.0/NEO_sigma_eta_detect));
+                           if (NEO_sigma_eta_detect>0) NEO_eta_detect_ws_vec[index]->insert(NEO_eta_detect,orsa::square(1.0/NEO_sigma_eta_detect));
                         */
                         // try to use weight=N_NEO
-                        NEO_eta_detect_ws_vec[index.get()][index_L]->insert(NEO_eta_detect,N_NEO);
+                        NEO_eta_detect_ws_vec[index][index_L]->insert(NEO_eta_detect,N_NEO);
                     }
                     //
                     if (N_PHO>0) {
                         const double PHO_eta_field       = (double)(PHO_in_field)/(double)(N_PHO);
                         /* const double p                   = (double)(PHO_in_field+1)/(double)(N_PHO+2);
                            const double PHO_sigma_eta_field = sqrt(p*(1-p)/N_PHO);
-                           if (PHO_sigma_eta_field>0) PHO_eta_field_ws_vec[index.get()]->insert(PHO_eta_field,orsa::square(1.0/PHO_sigma_eta_field));
+                           if (PHO_sigma_eta_field>0) PHO_eta_field_ws_vec[index]->insert(PHO_eta_field,orsa::square(1.0/PHO_sigma_eta_field));
                         */
                         // try to use weight=N_PHO
-                        PHO_eta_field_ws_vec[index.get()][index_L]->insert(PHO_eta_field,N_PHO);
+                        PHO_eta_field_ws_vec[index][index_L]->insert(PHO_eta_field,N_PHO);
                         //
                         const double PHO_eta_detect       = eta_PHO;
                         /* const double PHO_sigma_eta_detect = sigma_eta_PHO;
-                           if (PHO_sigma_eta_detect>0) PHO_eta_detect_ws_vec[index.get()]->insert(PHO_eta_detect,orsa::square(1.0/PHO_sigma_eta_detect));
+                           if (PHO_sigma_eta_detect>0) PHO_eta_detect_ws_vec[index]->insert(PHO_eta_detect,orsa::square(1.0/PHO_sigma_eta_detect));
                         */
                         // try to use weight=N_PHO
-                        PHO_eta_detect_ws_vec[index.get()][index_L]->insert(PHO_eta_detect,N_PHO);
+                        PHO_eta_detect_ws_vec[index][index_L]->insert(PHO_eta_detect,N_PHO);
                     }
                 }
             }

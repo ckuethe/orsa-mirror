@@ -34,8 +34,9 @@ double Orbit::eccentricAnomaly(const double & e, const double & M) {
     
         unsigned int count = 0;
         const unsigned int max_count = 1024;
+        orsa::Cache<double> oldDelta;
         do {
-      
+            
             sx = sin(x);
             cx = cos(x);
       
@@ -54,14 +55,25 @@ double Orbit::eccentricAnomaly(const double & e, const double & M) {
             ++count;
             // update x, ready for the next iteration
             x = E;
-      
-        } while ((fabs(E-old_E) > 10*(fabs(E)+fabs(M))*epsilon()) && (count < max_count));
-    
+
+            if (oldDelta.isSet()) {
+                if (fabs(E-old_E) >= oldDelta) {
+                    // ORSA_DEBUG("delta: %g   count: %i",fabs(E-old_E),count);
+                    break;
+                }
+            }
+            oldDelta = fabs(E-old_E);
+
+        } while (1);
+        // } while ((fabs(E-old_E) > 10*(fabs(E)+fabs(M))*epsilon()) && (count < max_count));
+        
         if (count >= max_count) {
-            ORSA_ERROR("Orbit::eccentricAnomaly(...): max count reached");
-            // ORSA_ERROR("Orbit::eccentricAnomaly(): max count reached, e = %g    E = %g   fabs(E-old_E) = %g   10*(fabs(E)+fabs(M))*epsilon() = %g",e,E,fabs(E-old_E),10*(fabs(E)+fabs(M))*std::numeric_limits<double>::epsilon());
+            // ORSA_ERROR("Orbit::eccentricAnomaly(...): max count reached");
+            ORSA_WARNING("Orbit::GetEccentricAnomaly(): max count reached, e = %g    E = %g   fabs(E-old_E) = %g   10*(fabs(E)+fabs(M)+twopi())*epsilon() = %g",e,E,fabs(E-old_E),10*(fabs(E)+fabs(M)+twopi())*epsilon());
         }
-    
+        
+        // ORSA_DEBUG("count: %i",count);
+        
     } else {
     
         double m = fmod(10*twopi()+fmod(M,twopi()),twopi());
@@ -79,6 +91,7 @@ double Orbit::eccentricAnomaly(const double & e, const double & M) {
     
         unsigned int count = 0;
         const unsigned int max_count = 128;
+        orsa::Cache<double> oldDelta;
         do {
       
             sa = sin(x+m);
@@ -96,20 +109,31 @@ double Orbit::eccentricAnomaly(const double & e, const double & M) {
             old_E = E;
             E = x + m;
             ++count;
-      
-        } while ((fabs(E-old_E) > 10*(fabs(E)+fabs(M)+twopi())*epsilon()) && (count < max_count));
-    
+
+            if (oldDelta.isSet()) {
+                if (fabs(E-old_E) >= oldDelta) {
+                    // ORSA_DEBUG("delta: %g   count: %i",fabs(E-old_E),count);
+                    break;
+                }
+            }
+            oldDelta = fabs(E-old_E);
+            
+        } while (1);
+        // } while ((fabs(E-old_E) > 100*(fabs(E)+fabs(M)+twopi())*epsilon()) && (count < max_count));
+        
         if (iflag) {
             E = twopi() - E;
             old_E = twopi() - old_E;
         }
     
         if (count >= max_count) {
-            ORSA_WARNING("Orbit::eccentricAnomaly(...): max count reached...");
-            // ORSA_WARNING("Orbit::GetEccentricAnomaly(): max count reached, e = %g    E = %g   fabs(E-old_E) = %g   10*(fabs(E)+fabs(M))*std::numeric_limits<double>::epsilon() = %g",e,E,fabs(E-old_E),10*(fabs(E)+fabs(M))*std::numeric_limits<double>::epsilon());
+            // ORSA_WARNING("Orbit::eccentricAnomaly(...): max count reached...");
+            ORSA_WARNING("Orbit::GetEccentricAnomaly(): max count reached, e = %g    E = %g   fabs(E-old_E) = %g   100*(fabs(E)+fabs(M)+twopi())*epsilon() = %g",e,E,fabs(E-old_E),100*(fabs(E)+fabs(M)+twopi())*epsilon());
         }
+        
+        // ORSA_DEBUG("count: %i",count);
     }
-  
+    
     return E;
 }
 
@@ -152,9 +176,9 @@ bool Orbit::compute(const Body * b, const Body * ref_b, BodyGroup * bg, const Ti
     //
     if (b->betaSun == ref_b) {
         ORSA_DEBUG("beta-orbit...");
-        // mu = (1 - b->beta.getRef())*b->getMu() + ref_b->getMu();
+        // mu = (1 - b->beta)*b->getMu() + ref_b->getMu();
         mu = orsa::Unit::G() * 
-            ((1-b->beta.getRef())*m_b + m_ref_b);
+            ((1-b->beta)*m_b + m_ref_b);
     } else {
         // mu = b->getMu()+ref_b->getMu();
         mu = orsa::Unit::G() * 
@@ -348,8 +372,8 @@ bool Orbit::relativePosVel(Vector & relativePosition, Vector & relativeVelocity)
     // ORSA_DEBUG("-- speedup area --");
   
     if (_cached_omega_pericenter.isSet()) {
-        if (_cached_omega_pericenter.getRef() != omega_pericenter) {
-            _cached_omega_pericenter = omega_pericenter;
+        if (_cached_omega_pericenter != omega_pericenter) {
+            _cached_omega_pericenter  = omega_pericenter;
             orsa::sincos(omega_pericenter,&_sp,&_cp);
         } else {
             // ORSA_DEBUG("-- speedup --");
@@ -363,8 +387,8 @@ bool Orbit::relativePosVel(Vector & relativePosition, Vector & relativeVelocity)
     const double cp = _cp;
   
     if (_cached_omega_node.isSet()) {
-        if (_cached_omega_node.getRef() != omega_node) {
-            _cached_omega_node = omega_node;
+        if (_cached_omega_node != omega_node) {
+            _cached_omega_node  = omega_node;
             orsa::sincos(omega_node,&_so,&_co);
         } else {
             // ORSA_DEBUG("-- speedup --");
@@ -378,8 +402,8 @@ bool Orbit::relativePosVel(Vector & relativePosition, Vector & relativeVelocity)
     const double co = _co;
   
     if (_cached_i.isSet()) {
-        if (_cached_i.getRef() != i) {
-            _cached_i = i;
+        if (_cached_i != i) {
+            _cached_i  = i;
             orsa::sincos(i,&_si,&_ci);
         } else {
             // ORSA_DEBUG("-- speedup --");
@@ -436,8 +460,8 @@ bool Orbit::relativePosVel(Vector & relativePosition, Vector & relativeVelocity)
 #ifdef _ORBIT_RPV_SPEEDUP_
     
         if (_cached_e.isSet()) {
-            if (_cached_e.getRef() != e) {
-                _cached_e = e;
+            if (_cached_e != e) {
+                _cached_e  = e;
                 _sqe = sqrt(1 - e*e);
             } else {
                 // ORSA_DEBUG("-- speedup --");
@@ -450,7 +474,7 @@ bool Orbit::relativePosVel(Vector & relativePosition, Vector & relativeVelocity)
         const double sqe = _sqe;
     
         if (_cached_mu.isSet() && _cached_a.isSet()) {
-            if ((_cached_mu.getRef() != mu) || (_cached_a.getRef() != a)) {
+            if ((_cached_mu != mu) || (_cached_a != a)) {
                 _cached_mu = mu;
                 _cached_a  = a;
                 _sqgma = sqrt(fabs(mu*a));
@@ -575,6 +599,7 @@ public:
         orsa::Vector r1, r2;
         o1.relativePosition(r1);
         o2.relativePosition(r2);
+        // ORSA_DEBUG("M1: %g  M2: %g  dr: %g",o1.M*orsa::radToDeg(),o2.M*orsa::radToDeg(),orsa::FromUnits((r2-r1).length(),orsa::Unit::AU,-1));
         return (r2-r1).length();
     }
 public:
@@ -586,10 +611,9 @@ bool orsa::MOID(double             & moid,
                 double             & M2,
                 const orsa::Orbit  & o1,
                 const orsa::Orbit  & o2,
-                const int          & randomSeed,
                 const unsigned int & numPoints,
                 const double       & epsAbs) {
-  
+    
     osg::ref_ptr<orsa::MultiminParameters> par = new MultiminParameters;
     //
     par->insert("M1",o1.M,orsa::arcsecToRad());
@@ -600,16 +624,17 @@ bool orsa::MOID(double             & moid,
     multimin->setMultiminParameters(par.get());
   
     bool found=false;
-  
+    
     {
-        osg::ref_ptr<orsa::RNG> rng = new orsa::RNG(randomSeed);  
+        // osg::ref_ptr<orsa::RNG> rng = new orsa::RNG(randomSeed);  
+        osg::ref_ptr<const orsa::RNG> rng = orsa::GlobalRNG::instance()->rng();  
         for (unsigned int k=0; k<numPoints; ++k) {
             par->set("M1",rng->gsl_rng_uniform()*orsa::twopi());
             par->set("M2",rng->gsl_rng_uniform()*orsa::twopi());
             if (multimin->run_nmsimplex(128,
                                         epsAbs)) {
-                if ((found && (multimin->fun(multimin->getMultiminParameters()) < moid)) ||
-                    (!found) ) {      
+                if ( (found && (multimin->fun(multimin->getMultiminParameters()) < moid) ) ||
+                     (!found) ) {      
                     moid = multimin->fun(multimin->getMultiminParameters());
                     M1   = multimin->getMultiminParameters()->get("M1");
                     M2   = multimin->getMultiminParameters()->get("M2");
