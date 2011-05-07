@@ -412,7 +412,7 @@ public:
     EOT eot;
     eot.eo.set(orbit);
     eot.t  = t;
-    return data->insert(eot);
+    return data->insert(eot,false,false);
   }
 };
 
