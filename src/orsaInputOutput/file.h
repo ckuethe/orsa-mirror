@@ -64,13 +64,13 @@ namespace orsaInputOutput {
     
     public:
         const std::string & getFileName() const { 
-            return _filename;
+            return _filename.getRef();
         }
     
     public:
         virtual void setFileName(const std::string & filename) {
             close();
-            _filename = filename;
+            _filename.set(filename);
         }
     
     
@@ -88,7 +88,7 @@ namespace orsaInputOutput {
     public:
         CompressedFile() : File() {
             _file = Z_NULL;
-            _status = FS_CLOSE;
+            _status.set(FS_CLOSE);
         }
       
     protected:     
@@ -102,7 +102,7 @@ namespace orsaInputOutput {
             const char * err = gzerror(_file,&errnum);
             ORSA_ERROR("func: %s   file [%s]: %s   [_file: %x]",
                        func,
-                       (*_filename).c_str(),
+                       _filename.getRef().c_str(),
                        err,
                        _file);
         }
@@ -110,7 +110,7 @@ namespace orsaInputOutput {
     private:
         bool _open(const char * mode) {
             close();
-            _file = gzopen((*_filename).c_str(),mode);
+            _file = gzopen(_filename.getRef().c_str(),mode);
             if (_file == Z_NULL) {
                 printError(__func__);
                 return false;
@@ -123,7 +123,7 @@ namespace orsaInputOutput {
         bool openR() {
             const bool success = _open("r");
             if (success) {
-                _status = FS_OPEN_R;
+                _status.set(FS_OPEN_R);
             }
             return success;
         }
@@ -131,7 +131,7 @@ namespace orsaInputOutput {
         bool openW() { 
             const bool success = _open("w");
             if (success) {
-                _status = FS_OPEN_W;
+                _status.set(FS_OPEN_W);
             }
             return success;
         }
@@ -139,17 +139,17 @@ namespace orsaInputOutput {
         bool openA() {
             const bool success = _open("a");
             if (success) {
-                _status = FS_OPEN_A;
+                _status.set(FS_OPEN_A);
             }
             return success;
         }
     
     public:
         int close() {
-            if (_status != FS_CLOSE) {
+            if (_status.getRef() != FS_CLOSE) {
                 const int retVal = gzclose(_file);
                 if (retVal == Z_OK) {
-                    _status = FS_CLOSE;
+                    _status.set(FS_CLOSE);
                     _file = 0;
                     return 0;
                 } else {
@@ -213,7 +213,7 @@ namespace orsaInputOutput {
     public:
         PlainFile() : File() {
             _file = 0;
-            _status = FS_CLOSE;
+            _status.set(FS_CLOSE);
         }
       
     protected:     
@@ -224,10 +224,10 @@ namespace orsaInputOutput {
     private:
         bool _open(const char * mode) {
             close();
-            _file = fopen((*_filename).c_str(),mode);
+            _file = fopen(_filename.getRef().c_str(),mode);
             if (_file == 0) {
                 ORSA_ERROR("cannot open file [%s]: %s",
-                           (*_filename).c_str(),
+                           _filename.getRef().c_str(),
                            strerror(errno));
                 return false;
             } else {
@@ -239,7 +239,7 @@ namespace orsaInputOutput {
         bool openR() {
             const bool success = _open("r");
             if (success) {
-                _status = FS_OPEN_R;
+                _status.set(FS_OPEN_R);
             }
             return success;
         }
@@ -247,7 +247,7 @@ namespace orsaInputOutput {
         bool openW() { 
             const bool success = _open("w");
             if (success) {
-                _status = FS_OPEN_W;
+                _status.set(FS_OPEN_W);
             }
             return success;
         }
@@ -255,21 +255,21 @@ namespace orsaInputOutput {
         bool openA() {
             const bool success = _open("a");
             if (success) {
-                _status = FS_OPEN_A;
+                _status.set(FS_OPEN_A);
             }
             return success;
         }
     
     public:
         int close() {
-            if (_status != FS_CLOSE) {
+            if (_status.getRef() != FS_CLOSE) {
                 if (fclose(_file) == 0) {
-                    _status = FS_CLOSE;
+                    _status.set(FS_CLOSE);
                     _file = 0;
                     return 0;
                 } else {
                     ORSA_ERROR("cannot close file [%s]: %s",
-                               (*_filename).c_str(),
+                               _filename.getRef().c_str(),
                                strerror(errno));
                     return -1;
                 }
@@ -325,7 +325,7 @@ namespace orsaInputOutput {
     
     public:
         InputFile() : osg::Referenced(true) {
-            _lineLength = 1024;
+            _lineLength.set(1024);
             _file = new T;
             dataInit();
         }
@@ -350,7 +350,7 @@ namespace orsaInputOutput {
             if (!_file->openR()) {
                 return false;
             }
-            const unsigned int length = _lineLength;
+            const unsigned int length = _lineLength.getRef();
             char line[length], lineAbove[length];
             _file->rewind();
             while (_file->gets(line,length)) {
@@ -360,17 +360,13 @@ namespace orsaInputOutput {
                     // ORSA_DEBUG("accepted line: [%s]",line);
                     // first, try to process a single line
                     // ORSA_DEBUG("calling processLine, line: [%s]",line);
-                    if (processLine(line)) {
-                        processedLine();
-                    } else {
+                    if (!processLine(line)) {
                         // if unsuccessful, try processing two lines together
                         // this is necessary as sometimes files have mixed 1-line, 2-line data
                         if (goodLine(lineAbove)) {
                             // ORSA_DEBUG("calling processLines, line1: [%s]",lineAbove);
                             // ORSA_DEBUG("calling processLines, line2: [%s]",line);
-                            if (processLines(lineAbove,line)) {
-                                processedLines();
-                            } else {
+                            if (!processLines(lineAbove,line)) {
                                 // ORSA_DEBUG("processLines failed");
                             }
                         } else {
@@ -405,14 +401,7 @@ namespace orsaInputOutput {
         //! extract data from two good lines,
         //! defaults to empty method returning false
         virtual bool processLines(const char * /* line_1 */ , const char * /* line_2 */ ) { return false; }
-        
-    public:
-        //! called each time a good line has been processed successfully
-        virtual void processedLine() const { }
-    public:
-        //! called each time two good lines have been processed successfully
-        virtual void processedLines() const { }
-        
+    
     public:
         orsa::Cache<unsigned int> _lineLength;
     private:

@@ -22,13 +22,13 @@ public:
 					     orsaSolarSystem::TS_UTC);
       // orsa::print(epoch);
       if (select_startEpoch.isSet()) {
-	if (epoch < select_startEpoch) {
+	if (epoch < select_startEpoch.getRef()) {
 	  // ORSA_DEBUG("--OUT--");
 	  return false;
 	}
       }
       if (select_stopEpoch.isSet()) {
-	if (epoch > select_stopEpoch) {
+	if (epoch > select_stopEpoch.getRef()) {
 	  // ORSA_DEBUG("--OUT--");
 	  return false;
 	}
@@ -66,8 +66,8 @@ int main(int argc, char ** argv) {
   obsFile->select_startEpoch = orsaSolarSystem::gregorTime(year-1,12,29);
   obsFile->select_stopEpoch  = orsaSolarSystem::gregorTime(year+1, 1, 3);
   ORSA_DEBUG("select start/stop:");
-  orsa::print(obsFile->select_startEpoch);
-  orsa::print(obsFile->select_stopEpoch);
+  orsa::print(obsFile->select_startEpoch.getRef());
+  orsa::print(obsFile->select_stopEpoch.getRef());
   obsFile->setFileName("NumObs.txt.gz");
   obsFile->read();
   obsFile->setFileName("UnnObs.txt.gz");

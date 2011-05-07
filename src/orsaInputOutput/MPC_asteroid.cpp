@@ -33,12 +33,12 @@ bool MPCAsteroidFile::processLine(const char * line) {
     removeLeadingAndTrailingSpaces(s_designation);
     
     if (select_number.isSet()) {
-        if (select_number != MPC_packedNumber(s_designation)) {
+        if (select_number.getRef() != MPC_packedNumber(s_designation)) {
             return false;
         }
     }
     if (select_designation.isSet()) {
-        if (select_designation != s_designation) {
+        if (select_designation.getRef() != s_designation.c_str()) {
             return false;
         }
     }
@@ -50,7 +50,7 @@ bool MPCAsteroidFile::processLine(const char * line) {
     orbit.a = FromUnits(atof(s_a.c_str()),orsa::Unit::AU);
     
     if (select_NEO.isSet()) {
-        if (select_NEO) {
+        if (select_NEO.getRef()) {
             if (orbit.a*(1-orbit.e) > NEO_max_q) {
                 return false;
             }
@@ -99,8 +99,8 @@ bool MPCAsteroidFile::processLine(const char * line) {
     if (strlen(s_designation.c_str()) != 0) {
         element.designation = s_designation;
     }
-    
+  
     _data.push_back(element);
-    
+  
     return true;
 }

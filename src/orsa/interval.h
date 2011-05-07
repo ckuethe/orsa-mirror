@@ -10,7 +10,6 @@
 // #include <QList>
 
 #include <orsa/cache.h>
-#include <orsa/crash.h>
 #include <orsa/debug.h>
 
 namespace orsa {
@@ -34,13 +33,16 @@ namespace orsa {
                 if (size() == 0) {
                     _data.push_front(val);
                 } else {
-                    if (val < _min) {
+                    if (val < _min.getRef()) {
                         _data.push_front(val);
-                    } else if (val > _max) {
+                    } else if (val > _max.getRef()) {
                         _data.push_back(val);
                     } else if (!onlyIfExtending) {
                         //
                         typename DataType::iterator _it = lower_bound(_data.begin(),_data.end(),val);
+                        // typename DataType::iterator _it = qLowerBound(_data.begin(),_data.end(),val);
+                        // typename DataType::iterator _it = _num_edge_lower_bound(val);
+                        //
                         if ((*_it) != val) {
                             _data.insert(_it,val);
                         } else {
@@ -48,32 +50,34 @@ namespace orsa {
                                 *_it = val;
                             } else {
                                 ORSA_DEBUG("called Interval<T>::insert() with duplicate entry");
+                                // double * q; q[22] = 0; // voluntary segfault, useful for debugging purposes ;-)
                                 return false;
                             }
                         }
-                    } else {
-                        // ORSA_DEBUG("insert failed, onlyIfExtending=%i",onlyIfExtending);
-                        return false;
                     }
                 }
+                
                 update();
-                // ORSA_DEBUG("size: %i",size());
+                
             } else {
                 if (_min.isSet()) {
-                    if (val < _min) {
-                        _min = val;
+                    if (val < _min.getRef()) {
+                        _min.set(val);
                     }
                 } else {
-                    _min = val;
+                    _min.set(val);
                 }
                 if (_max.isSet()) {
-                    if (val > _max) {
-                        _max = val;
+                    if (val > _max.getRef()) {
+                        _max.set(val);
                     }
                 } else {
-                    _max = val;
+                    _max.set(val);
                 }
             }
+      
+            // ORSA_DEBUG("size: %i",size());
+      
             return true;
         }
     public:
@@ -89,20 +93,40 @@ namespace orsa {
                 return false;
             }
         }
-        
+    public:
+        /* 
+           bool valid() const {
+           if (_store_data) {
+           return (_data.begin() != _data.end());
+           } else {
+           return (_min.isSet() && _max.isSet());
+           }
+           }
+        */
     public:
         bool reset() { 
             _data.clear();
             _min.reset();
             _max.reset();
-            // ORSA_DEBUG("called reset(), this = %x",this);
             return true;
         }
     public:
+        /* 
+           bool update() {
+           if (_store_data && (size() >= 2)) {
+           _min.set(*(_data.begin()));
+           _max.set(*(--_data.end()));
+           } else {
+           // nothing useful to do...
+           }
+           return true;
+           }
+        */
+    public:
         bool update() {
             if (_store_data && size()) {
-                _min = *(_data.begin());
-                _max = *(--_data.end());
+                _min.set(*(_data.begin()));
+                _max.set(*(--_data.end()));
             }  
             return true;
         }
@@ -125,21 +149,19 @@ namespace orsa {
     
     public:
         const T & min() const {
-            return _min;
+            return _min.getRef();
         }
     
     public:
         const T & max() const {
-            return _max;
+            return _max.getRef();
         }
     
     public:
         bool getSubInterval(const T & val, T & sub_min, T & sub_max) const {
-            
-            // ORSA_DEBUG("size: %i   this = %x",size(),this);
-            
-            if (size()==0) return false;
-            
+      
+            // ORSA_DEBUG("size: %i",size());
+      
             if (!isStoringData()) {
                 ORSA_ERROR("this interval is not storing data");
                 return false;
@@ -175,7 +197,7 @@ namespace orsa {
                 sub_min = min();
                 return true;
             }
-            
+      
             // ORSA_DEBUG("//6//");
             //
             // ORSA_DEBUG("getSubInterval(...) is searching...");
@@ -188,9 +210,9 @@ namespace orsa {
             if ((*_it) == val) {
 	
                 sub_max = sub_min = (*_it);
-                
+	
                 // ORSA_DEBUG("//7//");
-                
+	
                 return true;
                 /* 
                 // IF you need some code in here, the interval has some problems (i.e. was modified from outside the class, without calling update() when done)
@@ -206,15 +228,15 @@ namespace orsa {
             } else {
                 sub_max = (*_it);
                 sub_min = (*(--_it));
-                
+	
                 // ORSA_DEBUG("//8//");
-                
+	
                 return true;	  
             }	  
-            
+      
             return false;
         }	
-        
+    
     public:
         size_t size() const {
             return _data.size();
@@ -228,7 +250,6 @@ namespace orsa {
         }
     public:
         // non-const version too
-        // you MUST call update() after any change...
         DataType & getData() {
             return _data;
         }

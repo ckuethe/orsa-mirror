@@ -97,12 +97,12 @@ int main(int argc, char **argv) {
        const double y_max  = 360.0;
     */
     
-    std::vector< osg::ref_ptr<Var> > varDefinition;
+    std::vector< osg::ref_ptr<PlotStats::Var> > varDefinition;
     //
-    osg::ref_ptr<LinearVar> var_x = new LinearVar(x_min+1*x_step,x_max+3*x_step,x_step);
+    osg::ref_ptr<PlotStats::LinearVar> var_x = new PlotStats::LinearVar(x_min+1*x_step,x_max+3*x_step,x_step);
     varDefinition.push_back(var_x.get());
     //
-    osg::ref_ptr<LinearVar> var_y = new LinearVar(y_min+1*y_step,y_max+3*y_step,y_step);
+    osg::ref_ptr<PlotStats::LinearVar> var_y = new PlotStats::LinearVar(y_min+1*y_step,y_max+3*y_step,y_step);
     varDefinition.push_back(var_y.get());
     
     osg::ref_ptr<PlotStats> plotStats = 

@@ -2,7 +2,7 @@
 
 #include <orsa/box.h>
 #include <orsa/double.h>
-// #include <orsa/legendre.h>
+#include <orsa/legendre.h>
 #include <orsa/multimin.h>
 #include <orsa/statistic.h>
 #include <orsa/unit.h>
@@ -188,8 +188,8 @@ void orsa::convert(std::vector< std::vector<double> > & C,
                 }
             }
       
-            pq_factor /= int_pow(2.0,l);
-            pq_factor_uncertainty /= int_pow(2.0,l);
+            pq_factor /= int_pow(2,l);
+            pq_factor_uncertainty /= int_pow(2,l);
       
             const double C_lm = pq_factor;
             const double C_lm_uncertainty = fabs(pq_factor_uncertainty);
@@ -203,7 +203,7 @@ void orsa::convert(std::vector< std::vector<double> > & C,
                 ORSA_DEBUG("norm_C[%i][%i] = %+16.12f +/- %16.12f   norm: %f",
                            l,m,norm_C_lm,norm_C_lm_uncertainty,normalization(l,m));
             }
-            
+      
             C[l][m]      = C_lm;
             norm_C[l][m] = norm_C_lm;
       
@@ -289,8 +289,8 @@ void orsa::convert(std::vector< std::vector<double> > & C,
                 }
             }
             //
-            pq_factor /= int_pow(2.0,l);
-            pq_factor_uncertainty /= int_pow(2.0,l);
+            pq_factor /= int_pow(2,l);
+            pq_factor_uncertainty /= int_pow(2,l);
             //
             const double S_lm = pq_factor;
             const double S_lm_uncertainty = fabs(pq_factor_uncertainty);

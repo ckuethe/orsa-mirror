@@ -36,32 +36,31 @@ void writeEfficiencyDataFile(const std::vector<EfficiencyData> & etaData,
         const EfficiencyData & ed = etaData[k];
         char id[1024];
         if (ed.number.isSet()) {
-            // sprintf(id,"%i",ed.number.operator unsigned int const &());
-            sprintf(id,"%i",(*ed.number));
+            sprintf(id,"%i",ed.number.getRef());
         } else if (ed.designation.isSet()) {
-            sprintf(id,"%s",(*ed.designation).c_str());
+            sprintf(id,"%s",ed.designation.getRef().c_str());
         }
         fprintf(fp_allEta,
                 "%5.2f %7s %5.2f %7.2f %6.2f %6.2f %+7.2f %+7.2f %6.2f %6.3f %5.1f %+8.3f %+7.3f %+8.3f %+7.3f %5.2f %1i %1i %1i\n",
-                (*ed.H),
+                ed.H.getRef(),
                 id,
-                (*ed.V),
-                orsa::FromUnits(ed.apparentVelocity*orsa::radToArcsec(),orsa::Unit::HOUR), // arcsec/hour
-                orsa::radToDeg()*ed.solarElongation,
-                orsa::radToDeg()*ed.lunarElongation,
-                orsa::radToDeg()*ed.solarAltitude,
-                orsa::radToDeg()*ed.lunarAltitude,
-                orsa::radToDeg()*ed.lunarPhase,
-                (*ed.airMass),
-                orsa::radToDeg()*ed.azimuth,
-                orsa::radToDeg()*ed.galacticLongitude,
-                orsa::radToDeg()*ed.galacticLatitude,
-                orsa::radToDeg()*ed.eclipticLongitude,
-                orsa::radToDeg()*ed.eclipticLatitude,
-                orsa::FromUnits(ed.activeTime,orsa::Unit::HOUR,-1), 
-                (*ed.epochFromField),
-                (*ed.observed),
-                (*ed.discovered));
+                ed.V.getRef(),
+                orsa::FromUnits(ed.apparentVelocity.getRef()*orsa::radToArcsec(),orsa::Unit::HOUR), // arcsec/hour
+                orsa::radToDeg()*ed.solarElongation.getRef(),
+                orsa::radToDeg()*ed.lunarElongation.getRef(),
+                orsa::radToDeg()*ed.solarAltitude.getRef(),
+                orsa::radToDeg()*ed.lunarAltitude.getRef(),
+                orsa::radToDeg()*ed.lunarPhase.getRef(),
+                ed.airMass.getRef(),
+                orsa::radToDeg()*ed.azimuth.getRef(),
+                orsa::radToDeg()*ed.galacticLongitude.getRef(),
+                orsa::radToDeg()*ed.galacticLatitude.getRef(),
+                orsa::radToDeg()*ed.eclipticLongitude.getRef(),
+                orsa::radToDeg()*ed.eclipticLatitude.getRef(),
+                orsa::FromUnits(ed.activeTime.getRef(),orsa::Unit::HOUR,-1), 
+                ed.epochFromField.getRef(),
+                ed.observed.getRef(),
+                ed.discovered.getRef());
     }
     fclose(fp_allEta);
 }
@@ -275,19 +274,19 @@ public:
             unsigned int row=0;
             for (unsigned int fileID=0; fileID<numFiles; ++fileID) {
                 for (unsigned int l=0; l<data[fileID].size(); ++l) {
-                    fitData->insertD("V", row,data[fileID][l].V);
-                    fitData->insertD("U", row,data[fileID][l].U);
-                    fitData->insertD("AM",row,data[fileID][l].AM);
-                    fitData->insertD("GB",row,data[fileID][l].GB);
-                    fitData->insertD("GL",row,data[fileID][l].GL);
-                    /* fitData->insertD("SA",row,data[fileID][l].SA);
-                       fitData->insertD("LA",row,data[fileID][l].LA);
-                       fitData->insertD("LI",row,data[fileID][l].LI); */
+                    fitData->insertD("V", row,data[fileID][l].V.getRef());
+                    fitData->insertD("U", row,data[fileID][l].U.getRef());
+                    fitData->insertD("AM",row,data[fileID][l].AM.getRef());
+                    fitData->insertD("GB",row,data[fileID][l].GB.getRef());
+                    fitData->insertD("GL",row,data[fileID][l].GL.getRef());
+                    /* fitData->insertD("SA",row,data[fileID][l].SA.getRef());
+                       fitData->insertD("LA",row,data[fileID][l].LA.getRef());
+                       fitData->insertD("LI",row,data[fileID][l].LI.getRef()); */
                     //
                     fitData->insertZ("fileID",row,fileID);
                     //
-                    fitData->insertF(row,data[fileID][l].eta);
-                    fitData->insertSigma(row,data[fileID][l].sigmaEta);
+                    fitData->insertF(row,data[fileID][l].eta.getRef());
+                    fitData->insertSigma(row,data[fileID][l].sigmaEta.getRef());
                     //
                     ++row;
                 }
@@ -495,9 +494,9 @@ protected:
             
             unsigned int sNobs=0, sNdsc=0, sNtot=0;
             for (unsigned int row=0; row<data[fileID].size(); ++row) {
-                sNobs += data[fileID][row].Nobs;
-                sNdsc += data[fileID][row].Ndsc;
-                sNtot += data[fileID][row].Ntot;
+                sNobs += data[fileID][row].Nobs.getRef();
+                sNdsc += data[fileID][row].Ndsc.getRef();
+                sNtot += data[fileID][row].Ntot.getRef();
             }
             
             {

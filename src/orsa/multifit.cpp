@@ -178,13 +178,13 @@ void MultifitParameters::setInRange(const unsigned int index) {
         return;
     }
     if (_data[index].min.isSet()) {
-        if (_data[index].value < _data[index].min) {
-            _data[index].value = _data[index].min;
+        if (_data[index].value < _data[index].min.getRef()) {
+            _data[index].value = _data[index].min.getRef();
         }
     }
     if (_data[index].max.isSet()) {
-        if (_data[index].value > _data[index].max) {
-            _data[index].value = _data[index].max;
+        if (_data[index].value > _data[index].max.getRef()) {
+            _data[index].value = _data[index].max.getRef();
         }
     }
 }
@@ -362,7 +362,7 @@ MultifitData::~MultifitData() { }
 bool MultifitData::insertVariable(const std::string & name) {
     std::vector<NZDV>::const_iterator it = _data.var.begin();
     while (it != _data.var.end()) {
-        if ((*it).name == name) {
+        if ((*it).name.getRef() == name) {
             ORSA_ERROR("trying to insert duplicate variable");
             return false;
         }
@@ -371,7 +371,7 @@ bool MultifitData::insertVariable(const std::string & name) {
     {
         NZDV tmp;
         //
-        tmp.name = name;
+        tmp.name.set(name);
         //
         _data.var.push_back(tmp);
     }
@@ -394,7 +394,7 @@ bool MultifitData::insertZ(const unsigned int   index,
     if (_data.var[index].z.size() <= row) {
         _data.var[index].z.resize(row+1);
     }
-    _data.var[index].z[row] = value;
+    _data.var[index].z[row].set(value);
     return true;
 }
 
@@ -414,7 +414,7 @@ bool MultifitData::insertD(const unsigned int   index,
     if (_data.var[index].d.size() <= row) {
         _data.var[index].d.resize(row+1);
     }
-    _data.var[index].d[row] = value;
+    _data.var[index].d[row].set(value);
     return true;
 }
 
@@ -434,7 +434,7 @@ bool MultifitData::insertV(const unsigned int   index,
     if (_data.var[index].v.size() <= row) {
         _data.var[index].v.resize(row+1);
     }
-    _data.var[index].v[row] = value;
+    _data.var[index].v[row].set(value);
     return true;
 }
 
@@ -443,7 +443,7 @@ bool MultifitData::insertF(const unsigned int   row,
     if (_data.f.size() <= row) {
         _data.f.resize(row+1);
     }
-    _data.f[row] = value;
+    _data.f[row].set(value);
     return true;
 }
 
@@ -452,15 +452,15 @@ bool MultifitData::insertSigma(const unsigned int   row,
     if (_data.sigma.size() <= row) {
         _data.sigma.resize(row+1);
     }
-    _data.sigma[row] = value;
+    _data.sigma[row].set(value);
     return true;
 }
 
 unsigned int MultifitData::index(const std::string & name) const {
     // ORSA_DEBUG("called name: %s",name.c_str());
     for (unsigned int k=0; k<_data.var.size(); ++k) {
-        // ORSA_DEBUG("tested name: %s",_data.var[k].name.c_str());
-        if (_data.var[k].name == name) {
+        // ORSA_DEBUG("tested name: %s",_data.var[k].name.getRef().c_str());
+        if (_data.var[k].name.getRef() == name) {
             // ORSA_DEBUG("found: returning %i",k);
             return k;
         }	
@@ -474,7 +474,7 @@ std::string MultifitData::name(const unsigned int index) const {
         ORSA_ERROR("name not found: %i",index);
         return "";
     }
-    return _data.var[index].name;
+    return _data.var[index].name.getRef();
 }
 
 mpz_class MultifitData::getZ(const std::string & name,
@@ -488,7 +488,7 @@ mpz_class MultifitData::getZ(const unsigned int index,
         ORSA_ERROR("row too big, var: %s row=%i",name(index).c_str(),row);
         return 0;
     }
-    return _data.var[index].z[row];
+    return _data.var[index].z[row].getRef();
 }
 
 double MultifitData::getD(const std::string & name,
@@ -502,7 +502,7 @@ double MultifitData::getD(const unsigned int index,
         ORSA_ERROR("row too big");
         return 0;
     }
-    return _data.var[index].d[row];
+    return _data.var[index].d[row].getRef();
 }
 
 Vector MultifitData::getV(const std::string & name,
@@ -516,7 +516,7 @@ Vector MultifitData::getV(const unsigned int index,
         ORSA_ERROR("row too big");
         return Vector();
     }
-    return _data.var[index].v[row];
+    return _data.var[index].v[row].getRef();
 }
 
 double MultifitData::getF(const unsigned int row) const {
@@ -527,7 +527,7 @@ double MultifitData::getF(const unsigned int row) const {
         ORSA_ERROR("row too big");
         return 0;
     }
-    return _data.f[row];
+    return _data.f[row].getRef();
 }
 
 double MultifitData::getSigma(const unsigned int row) const {
@@ -535,7 +535,7 @@ double MultifitData::getSigma(const unsigned int row) const {
         ORSA_ERROR("row too big");
         return 0;
     }
-    return _data.sigma[row];
+    return _data.sigma[row].getRef();
 }
 
 unsigned int MultifitData::size() const {
@@ -576,13 +576,13 @@ double Multifit::__fun__(const orsa::MultifitParameters * par,
     bool outsideRange=false;
     //
     if (par->getRangeMin(p).isSet()) {
-        if (par->get(p) < par->getRangeMin(p)) {
+        if (par->get(p) < par->getRangeMin(p).getRef()) {
             outsideRange=true;
         }    
     }
     // 
     if (par->getRangeMax(p).isSet()) {
-        if (par->get(p) > par->getRangeMax(p)) {
+        if (par->get(p) > par->getRangeMax(p).getRef()) {
             outsideRange=true;
         }    
     }
@@ -863,9 +863,9 @@ bool Multifit::run() {
     
         if (logFile.isSet()) {
       
-            FILE * fp = fopen((*logFile).c_str(),"a");
+            FILE * fp = fopen(logFile.getRef().c_str(),"a");
             if (fp == 0) {
-                ORSA_ERROR("cannot open file %s",(*logFile).c_str());
+                ORSA_ERROR("cannot open file %s",logFile.getRef().c_str());
                 return false;
             }
       
@@ -887,7 +887,7 @@ bool Multifit::run() {
             // #define FIT(i) gsl_vector_get(s->x, i)
             // #define ERR(i) sqrt(gsl_matrix_get(covar,i,i))
       
-            ORSA_DEBUG("appending to file %s",(*logFile).c_str());
+            ORSA_DEBUG("appending to file %s",logFile.getRef().c_str());
       
             {
                 unsigned int gslIndex=0; 

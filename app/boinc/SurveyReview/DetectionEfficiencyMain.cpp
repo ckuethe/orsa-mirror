@@ -57,19 +57,19 @@ public:
             obs = dynamic_cast<orsaSolarSystem::OpticalObservation *> (_data[k].get());
             if (obs) {
                 if (obs_near_epoch != 0) {
-                    if (fabs((obs->epoch-epoch).get_d()) < fabs((obs_near_epoch->epoch-epoch).get_d())) {
+                    if (fabs((obs->epoch.getRef()-epoch).get_d()) < fabs((obs_near_epoch->epoch.getRef()-epoch).get_d())) {
                         obs_near_epoch = obs;
                     }
                 } else {
                     obs_near_epoch = obs;
                 }
-                if (obs_near_epoch->epoch == epoch) {
+                if (obs_near_epoch->epoch.getRef() == epoch) {
                     break;
                 }
             }
         }
         /* if (obs_near_epoch != 0) {
-           ORSA_DEBUG("final epoch offset: %.3f [hours]",orsa::FromUnits((obs_near_epoch->epoch-epoch).get_d(),orsa::Unit::HOUR,-1));
+           ORSA_DEBUG("final epoch offset: %.3f [hours]",orsa::FromUnits((obs_near_epoch->epoch.getRef()-epoch).get_d(),orsa::Unit::HOUR,-1));
            }
         */
         return obs_near_epoch;
@@ -113,13 +113,13 @@ public:
         */
     
         // a copy
-        orsaSolarSystem::OrbitWithEpoch orbit = _data[_data.size()-1].orbit;
+        orsaSolarSystem::OrbitWithEpoch orbit = _data[_data.size()-1].orbit.getRef();
     
         const double orbitPeriod = orbit.period();
     
         const double original_M  = orbit.M;
         //
-        orbit.M = original_M + fmod(orsa::twopi() * (skyCoverage->epoch-orbit.epoch).get_d() / orbitPeriod, orsa::twopi());
+        orbit.M = original_M + fmod(orsa::twopi() * (skyCoverage->epoch.getRef()-orbit.epoch.getRef()).get_d() / orbitPeriod, orsa::twopi());
         orsa::Vector r;
         orbit.relativePosition(r);
         const orsa::Vector orbitPosition = r + sunPosition;
@@ -149,13 +149,13 @@ public:
                            }
                         */
                         if (obs->designation.isSet() && _data[_data.size()-1].designation.isSet()) {
-                            if (obs->designation == _data[_data.size()-1].designation) {
+                            if (obs->designation.getRef() == _data[_data.size()-1].designation.getRef()) {
                                 present=true;
                                 break;
                             }
                         }
                         if (obs->number.isSet() && _data[_data.size()-1].number.isSet()) {
-                            if (obs->number == _data[_data.size()-1].number) {
+                            if (obs->number.getRef() == _data[_data.size()-1].number.getRef()) {
                                 present=true;
                                 break;
                             }
@@ -171,11 +171,11 @@ public:
                     if (minArc > 0.0) {
                         if (obs->number.isSet()) {
                             ORSA_DEBUG("object (%i) present, min distance: %.2f [deg]",
-                                       (*obs->number),
+                                       obs->number.getRef(),
                                        orsa::radToDeg()*minArc);
                         } else if (obs->designation.isSet()) {
                             ORSA_DEBUG("object [%s] present, min distance: %.2f [deg]",
-                                       (*obs->designation).c_str(),
+                                       obs->designation.getRef().c_str(),
                                        orsa::radToDeg()*minArc);
                         } else {
                             ORSA_DEBUG("NONAME??");
@@ -221,7 +221,7 @@ public:
             if (!bg->getInterpolatedPosVel(rSun,
                                            vSun,
                                            sun.get(),
-                                           orbit.epoch)) { 
+                                           orbit.epoch.getRef())) { 
                 ORSA_DEBUG("problems");
             }
       
@@ -238,7 +238,7 @@ public:
             {
                 b->setName("b");
                 orsa::IBPS ibps;
-                ibps.time = orbit.epoch;
+                ibps.time = orbit.epoch.getRef();
                 ibps.inertial = new orsa::PointLikeConstantInertialBodyProperty(0);
                 ibps.translational = new orsa::DynamicTranslationalBodyProperty;
                 ibps.translational->setPosition(rOrbit);
@@ -252,15 +252,15 @@ public:
             radau->_accuracy = 1.0e-3;
       
             radau->integrate(bg.get(),
-                             orbit.epoch,
-                             skyCoverage->epoch,
+                             orbit.epoch.getRef(),
+                             skyCoverage->epoch.getRef(),
                              orsa::Time(0,0,10,0,0));
       
             orsa::Vector bodyPosition, bodyVelocity;
             if (!bg->getInterpolatedPosVel(bodyPosition,
                                            bodyVelocity,
                                            b.get(),
-                                           skyCoverage->epoch)) { 
+                                           skyCoverage->epoch.getRef())) { 
                 ORSA_DEBUG("problems");
             }
       
@@ -300,12 +300,12 @@ public:
             const orsaInputOutput::MPCAsteroidDataElement & orb = _data[_data.size()-1];
             if (orb.number.isSet()) {
                 ORSA_DEBUG("object (%i) present, min distance: %.2f [deg]   in field: %i",
-                           (*orb.number),
+                           orb.number.getRef(),
                            orsa::radToDeg()*minArc,
                            inField);
             } else if (orb.designation.isSet()) {
                 ORSA_DEBUG("object [%s] present, min distance: %.2f [deg]   in field: %i",
-                           (*orb.designation).c_str(),
+                           orb.designation.getRef().c_str(),
                            orsa::radToDeg()*minArc,
                            inField);
             }
@@ -334,10 +334,10 @@ public:
                     const orsaInputOutput::MPCAsteroidDataElement & orb = _data[_data.size()-1];
                     if (orb.number.isSet()) {
                         ORSA_DEBUG("[SKY-orb] (%i) %.6f %.6f",
-                                   (*orb.number),ra.getRad(),dec.getRad());
+                                   orb.number.getRef(),ra.getRad(),dec.getRad());
                     } else if (orb.designation.isSet()) {
                         ORSA_DEBUG("[SKY-orb] [%s] %.6f %.6f",
-                                   (*orb.designation).c_str(),ra.getRad(),dec.getRad());
+                                   orb.designation.getRef().c_str(),ra.getRad(),dec.getRad());
                     }
                 }
             }
@@ -356,15 +356,15 @@ public:
                            }
                         */
                         if (obs->designation.isSet() && _data[_data.size()-1].designation.isSet()) {
-                            // ORSA_DEBUG("obs: [%s]   orb: [%s]",obs->designation.c_str(),_data[_data.size()-1].designation.c_str());
-                            if (obs->designation == _data[_data.size()-1].designation) {
+                            // ORSA_DEBUG("obs: [%s]   orb: [%s]",obs->designation.getRef().c_str(),_data[_data.size()-1].designation.getRef().c_str());
+                            if (obs->designation.getRef() == _data[_data.size()-1].designation.getRef()) {
                                 ++observed;
                                 break;
                             }
                         }
                         if (obs->number.isSet() && _data[_data.size()-1].number.isSet()) {
-                            // ORSA_DEBUG("obs: [%i]   orb: [%i]",obs->number,_data[_data.size()-1].number);
-                            if (obs->number == _data[_data.size()-1].number) {
+                            // ORSA_DEBUG("obs: [%i]   orb: [%i]",obs->number.getRef(),_data[_data.size()-1].number.getRef());
+                            if (obs->number.getRef() == _data[_data.size()-1].number.getRef()) {
                                 ++observed;
                                 break;
                             }
@@ -488,8 +488,8 @@ int main(int argc, char ** argv) {
         obsFile->select_startEpoch = epoch - orsa::Time(0,12,0,0,0);
         obsFile->select_stopEpoch  = epoch + orsa::Time(0,12,0,0,0);
         /* ORSA_DEBUG("select start/stop:");
-           orsaSolarSystem::print(obsFile->select_startEpoch);
-           orsaSolarSystem::print(obsFile->select_stopEpoch);
+           orsaSolarSystem::print(obsFile->select_startEpoch.getRef());
+           orsaSolarSystem::print(obsFile->select_stopEpoch.getRef());
         */
         //
         obsFile->select_obsCode = obsCode;
@@ -516,14 +516,14 @@ int main(int argc, char ** argv) {
     
     osg::ref_ptr<orsaSolarSystem::OpticalObservation> obs_near_epoch =
         obsFile->getOpticalObservationNearEpoch(epoch);
-    epoch = obs_near_epoch->epoch;
+    epoch = obs_near_epoch->epoch.getRef();
     /* {
        orsaSolarSystem::OpticalObservation * obs;
        for (unsigned int k=0; k<obsFile->_data.size(); ++k) {
        obs = dynamic_cast<orsaSolarSystem::OpticalObservation *> (obsFile->_data[k].get());
        if (obs) {
        if (obs_near_epoch.get()) {
-       if (fabs((obs->epoch-epoch).get_d()) < fabs((obs_near_epoch->epoch-epoch).get_d())) {
+       if (fabs((obs->epoch.getRef()-epoch).get_d()) < fabs((obs_near_epoch->epoch.getRef()-epoch).get_d())) {
        obs_near_epoch = obs;
        }
        } else {
@@ -563,12 +563,12 @@ int main(int argc, char ** argv) {
                    }
                 */
                 ++inFieldCandidates;
-                if (skyCoverage->fastGet(obs->ra,
-                                         obs->dec)) {	
+                if (skyCoverage->fastGet(obs->ra.getRef(),
+                                         obs->dec.getRef())) {	
                     ++inField;
-                    skyCoverage->insertFieldTime(obs->epoch,
-                                                 obs->ra,
-                                                 obs->dec);
+                    skyCoverage->insertFieldTime(obs->epoch.getRef(),
+                                                 obs->ra.getRef(),
+                                                 obs->dec.getRef());
                 } 
             }
         }
@@ -605,15 +605,9 @@ int main(int argc, char ** argv) {
                 obs = dynamic_cast<orsaSolarSystem::OpticalObservation *> (obsFile->_data[k].get());
                 if (obs) {
                     if (obs->number.isSet()) {
-                        ORSA_DEBUG("[SKY-obs] (%i) %.6f %.6f",
-                                   (*obs->number),
-                                   (*obs->ra).getRad()*orsa::radToDeg()/15.0,
-                                   (*obs->dec).getRad()*orsa::radToDeg());
+                        ORSA_DEBUG("[SKY-obs] (%i) %.6f %.6f",obs->number.getRef(),obs->ra.getRef().getRad(),obs->dec.getRef().getRad());
                     } else if (obs->designation.isSet()) {
-                        ORSA_DEBUG("[SKY-obs] [%s] %g %g",
-                                   (*obs->designation).c_str(),
-                                   (*obs->ra).getRad()*orsa::radToDeg()/15.0,
-                                   (*obs->dec).getRad()*orsa::radToDeg());
+                        ORSA_DEBUG("[SKY-obs] [%s] %.6f %.6f",obs->designation.getRef().c_str(),obs->ra.getRef().getRad(),obs->dec.getRef().getRad());
                     }
                 }
             }
@@ -623,9 +617,9 @@ int main(int argc, char ** argv) {
             for (unsigned int k=0; k<orbitFile->_data.size(); ++k) {
                 const orsaInputOutput::MPCAsteroidDataElement & orb = orbitFile->_data[k];
                 if (orb.number.isSet()) {
-                    ORSA_DEBUG("(%i)",(*orb.number));
+                    ORSA_DEBUG("(%i)",orb.number.getRef());
                 } else if (orb.designation.isSet()) {
-                    ORSA_DEBUG("[%s]",(*orb.designation).c_str());
+                    ORSA_DEBUG("[%s]",orb.designation.getRef().c_str());
                 }
             }
         }  
@@ -643,8 +637,8 @@ int main(int argc, char ** argv) {
                 const orsaSolarSystem::Observation * obs = obsFile->_data[kobs].get();
                 if (obs) {
                     if (obs->epoch.isSet()) {
-                        if ( ((*obs->epoch)>=t) && 
-                             ((*obs->epoch)<=t+dt) ) {
+                        if ( (obs->epoch.getRef()>=t) && 
+                             (obs->epoch.getRef()<=t+dt) ) {
                             activeTime += dt;
                             break;
                         }
@@ -677,30 +671,30 @@ int main(int argc, char ** argv) {
                        }
                     */
                     if (obs->designation.isSet() && orbitFile->_data[korb].designation.isSet()) {
-                        if (obs->designation == orbitFile->_data[korb].designation) {
+                        if (obs->designation.getRef() == orbitFile->_data[korb].designation.getRef()) {
                             observed=true;
                             if (obs->discovery.isSet()) {
-                                if (obs->discovery) {
+                                if (obs->discovery.getRef()) {
                                     discovered=true;
                                 }
                             }  
-                            // epoch=obs->epoch;
-                            // epochStat_JD->insert(orsaSolarSystem::timeToJulian(obs->epoch));
-                            epochVec.push_back(obs->epoch);
+                            // epoch=obs->epoch.getRef();
+                            // epochStat_JD->insert(orsaSolarSystem::timeToJulian(obs->epoch.getRef()));
+                            epochVec.push_back(obs->epoch.getRef());
                             // break; // no break, because it can skip the discovery asterisk and also because we want to include all relevant epochs
                         }
                     }
                     if (obs->number.isSet() && orbitFile->_data[korb].number.isSet()) {
-                        if (obs->number == orbitFile->_data[korb].number) {
+                        if (obs->number.getRef() == orbitFile->_data[korb].number.getRef()) {
                             observed=true;
                             if (obs->discovery.isSet()) {
-                                if (obs->discovery) {
+                                if (obs->discovery.getRef()) {
                                     discovered=true;
                                 }
                             }  
-                            // epoch=obs->epoch;
-                            // epochStat_JD->insert(orsaSolarSystem::timeToJulian(obs->epoch));
-                            epochVec.push_back(obs->epoch);
+                            // epoch=obs->epoch.getRef();
+                            // epochStat_JD->insert(orsaSolarSystem::timeToJulian(obs->epoch.getRef()));
+                            epochVec.push_back(obs->epoch.getRef());
                             // break; // no break, because it can skip the discovery asterisk and also because we want to include all relevant epochs
                         }
                     }
@@ -718,13 +712,13 @@ int main(int argc, char ** argv) {
       
             // try to retrieve epoch from field
       
-            orsaSolarSystem::OrbitWithEpoch orbit = orbitFile->_data[korb].orbit;
+            orsaSolarSystem::OrbitWithEpoch orbit = orbitFile->_data[korb].orbit.getRef();
             const double orbitPeriod = orbit.period();
             const double original_M  = orbit.M;
             //
             orsa::Vector r;
             //
-            orbit.M = original_M + fmod(orsa::twopi() * (epoch-orbit.epoch).get_d() / orbitPeriod, orsa::twopi());
+            orbit.M = original_M + fmod(orsa::twopi() * (epoch-orbit.epoch.getRef()).get_d() / orbitPeriod, orsa::twopi());
             orbit.relativePosition(r);
             const orsa::Vector orbitPosition = r + sunPosition;
             // restore, important!
@@ -745,9 +739,9 @@ int main(int argc, char ** argv) {
         osg::ref_ptr<orsaSolarSystem::OpticalObservation> obs_near_epoch_dt =
             obsFile->getOpticalObservationNearEpoch(epoch+orsa::Time(0,1,0,0,0));
         
-        epoch = obs_near_epoch->epoch;
+        epoch = obs_near_epoch->epoch.getRef();
         
-        const orsa::Time epoch_dt = obs_near_epoch_dt->epoch;
+        const orsa::Time epoch_dt = obs_near_epoch_dt->epoch.getRef();
 
         if (epoch == epoch_dt) {
             ORSA_DEBUG("problems: null dt");
@@ -772,15 +766,15 @@ int main(int argc, char ** argv) {
         obsPosCB->getPosition(r,obs_near_epoch_dt);
         const orsa::Vector obsPosition_dt = r;
         
-        orsaSolarSystem::OrbitWithEpoch orbit = orbitFile->_data[korb].orbit;
+        orsaSolarSystem::OrbitWithEpoch orbit = orbitFile->_data[korb].orbit.getRef();
         const double orbitPeriod = orbit.period();
         const double original_M  = orbit.M;
         //
-        orbit.M = original_M + fmod(orsa::twopi() * (epoch-orbit.epoch).get_d() / orbitPeriod, orsa::twopi());
+        orbit.M = original_M + fmod(orsa::twopi() * (epoch-orbit.epoch.getRef()).get_d() / orbitPeriod, orsa::twopi());
         orbit.relativePosition(r);
         const orsa::Vector orbitPosition = r + sunPosition;
         // now at t+dt
-        orbit.M = original_M + fmod(orsa::twopi() * (epoch_dt-orbit.epoch).get_d() / orbitPeriod, orsa::twopi());
+        orbit.M = original_M + fmod(orsa::twopi() * (epoch_dt-orbit.epoch.getRef()).get_d() / orbitPeriod, orsa::twopi());
         orsa::Vector r_dt;
         orbit.relativePosition(r_dt);
         const orsa::Vector orbitPosition_dt = r_dt + sunPosition_dt;
@@ -839,29 +833,21 @@ int main(int argc, char ** argv) {
         const double eclipticLongitude = (tmp_eclipticLongitude>orsa::pi()) ? (tmp_eclipticLongitude-orsa::twopi()) : (tmp_eclipticLongitude);
         const double eclipticLatitude  = theta-theta_sun;
         
-        if (observed) {
-            ORSA_DEBUG("[RADEC] %g %g [observed]",
-                       ra*orsa::radToDeg()/15.0,
-                       dec*orsa::radToDeg());
-        } else {
-            ORSA_DEBUG("[RADEC] %g %g [missed]",
-                       ra*orsa::radToDeg()/15.0,
-                       dec*orsa::radToDeg());
-        }
+        // ORSA_DEBUG("ra: %g  dec: %g",ra*orsa::radToDeg()/15.0,dec*orsa::radToDeg());
         
         EfficiencyData ed;
-        ed.H = orbitFile->_data[korb].H;
+        ed.H = orbitFile->_data[korb].H.getRef();
         if (orbitFile->_data[korb].number.isSet()) {
-            ed.number = orbitFile->_data[korb].number;
+            ed.number = orbitFile->_data[korb].number.getRef();
         }
         if (orbitFile->_data[korb].designation.isSet()) {
-            ed.designation = orbitFile->_data[korb].designation;
+            ed.designation = orbitFile->_data[korb].designation.getRef();
         }
-        ed.V = orsa::apparentMagnitude(orbitFile->_data[korb].H,
-                                       orbitFile->_data[korb].G,
-                                       phaseAngle,
-                                       orb2obs.length(),
-                                       orb2sun.length()); 
+        ed.V = apparentMagnitude(orbitFile->_data[korb].H.getRef(),
+                                 orbitFile->_data[korb].G.getRef(),
+                                 phaseAngle,
+                                 orb2obs.length(),
+                                 orb2sun.length()); 
         ed.apparentVelocity = acos(obs2orb_dt.normalized()*obs2orb.normalized())/fabs((epoch_dt-epoch).get_d());
         ed.solarElongation = solarElongation;
         ed.lunarElongation = lunarElongation;

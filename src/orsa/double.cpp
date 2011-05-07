@@ -7,8 +7,8 @@ using namespace orsa;
 
 mpz_class orsa::factorial(const mpz_class & i,
                           const bool & cache) {
-    // ORSA_DEBUG("i: %Zi  cache: %i",i.get_mpz_t(),cache);
     if (cache) {
+        // ORSA_DEBUG("f: %Zi",i.get_mpz_t());
         static std::vector< orsa::Cache<mpz_class> > _factorial_table;
         const unsigned long int index = i.get_ui();
         // static mpz_class _mpz_one("1");
@@ -16,13 +16,13 @@ mpz_class orsa::factorial(const mpz_class & i,
             return 1;
         } else if (_factorial_table.size() > i) {
             if (!_factorial_table[index].isSet()) {
-                _factorial_table[index] = i*factorial(i-1,cache);
+                _factorial_table[index].set(i*factorial(i-1,cache));
             }
-            return _factorial_table[index];
+            return _factorial_table[index].get();
         } else {
             _factorial_table.resize(index+1);
-            _factorial_table[index] = i*factorial(i-1,cache);
-            return _factorial_table[index];
+            _factorial_table[index].set(i*factorial(i-1,cache));
+            return _factorial_table[index].get();
         }
     } else {
         if (i <= 1) {
@@ -44,13 +44,13 @@ mpz_class orsa::bi_factorial(const mpz_class & i,
             return 1;
         } else if (_bi_factorial_table.size() > i) {
             if (!_bi_factorial_table[index].isSet()) {
-                _bi_factorial_table[index] = i*bi_factorial(i-2,cache);
+                _bi_factorial_table[index].set(i*bi_factorial(i-2,cache));
             }
-            return _bi_factorial_table[index];
+            return _bi_factorial_table[index].get();
         } else {
             _bi_factorial_table.resize(index+1);
-            _bi_factorial_table[index] = i*bi_factorial(i-2,cache);
-            return _bi_factorial_table[index];
+            _bi_factorial_table[index].set(i*bi_factorial(i-2,cache));
+            return _bi_factorial_table[index].get();
         }
     } else {
         if (i <= mpz_class("1")) {
@@ -63,8 +63,6 @@ mpz_class orsa::bi_factorial(const mpz_class & i,
 mpz_class orsa::binomial(const mpz_class & n,
                          const mpz_class & k,
                          const bool & cache) {
-    // ORSA_DEBUG("n: %Zi   k: %Zi   cache: %i",n.get_mpz_t(),k.get_mpz_t(),cache);
-    if ((k<0) || (k>n)) return 0;
     return factorial(n,cache)/(factorial(k,cache)*factorial(n-k,cache));
 }
 
@@ -76,29 +74,17 @@ int orsa::power_sign(const mpz_class & l) {
     }
 }
 
-/* double orsa::int_pow(const double & x, 
-   const int    & p) {
-   if (p ==  2) return x*x;
-   if (p ==  1) return x;
-   if (p ==  0) return 1;
-   if (p == -1) return 1/x;
-   double _pow = x;
-   const int max_k = abs(p);
-   for (int k=1; k<max_k; ++k) {
-   _pow *= x;
-   }
-   if (p < 0) _pow = 1/_pow;
-   return _pow;
-   }
-*/
-
-template <class T> T orsa::int_pow(const T & x,
-                                   const int & p) {
+double orsa::int_pow(const double & x, 
+                     const int    & p) {
     if (p ==  2) return x*x;
     if (p ==  1) return x;
     if (p ==  0) return 1;
     if (p == -1) return 1/x;
-    T _pow = x;
+    /* if (fabs(x) < epsilon()) {
+       return 0;
+       }
+    */
+    double _pow = x;
     const int max_k = abs(p);
     for (int k=1; k<max_k; ++k) {
         _pow *= x;
@@ -106,15 +92,6 @@ template <class T> T orsa::int_pow(const T & x,
     if (p < 0) _pow = 1/_pow;
     return _pow;
 }
-
-template int orsa::int_pow(const int & x,
-                           const int & p);
-
-template double orsa::int_pow(const double & x,
-                              const int & p);
-
-template mpf_class orsa::int_pow(const mpf_class & x,
-                                 const int & p);
 
 const double & orsa::epsilon() {
     static const double _eps = __DBL_EPSILON__; /* 2.2204460492503131e-16 */

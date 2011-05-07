@@ -191,10 +191,10 @@ double Paul::t_lmnLMN::trueGet(const int l,
     /* 
        ORSA_DEBUG("get(%i,%i,%i,%i,%i,%i) = %g",
        l,m,n,L,M,N,
-       _data[l][m][n][L][M][N]);
+       _data[l][m][n][L][M][N].getRef());
     */
     //
-    return _data[l][m][n][L][M][N];
+    return _data[l][m][n][L][M][N].getRef();
 }
 
 void Paul::t_lmnLMN::resize(const size_t order) const {

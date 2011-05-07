@@ -32,12 +32,12 @@ CustomIntegrator::CustomIntegrator(const MainThread * mt) :
   // IntegratorLeapFrog(),
   IntegratorRadau(),
   mainThread(mt) {
-    // ORSA_DEBUG("update accuracy!");
-    _accuracy = 1.0e-6;
-    connect(this,
-            SIGNAL(progress(int)),
-            mainThread,
-            SIGNAL(progress(int)));
+  // ORSA_DEBUG("update accuracy!");
+  _accuracy = 1.0e-6;
+  connect(this,
+	  SIGNAL(progress(int)),
+	  mainThread,
+	  SIGNAL(progress(int)));
 }
 
 void CustomIntegrator::singleStepDone(orsa::BodyGroup  *,
@@ -45,14 +45,14 @@ void CustomIntegrator::singleStepDone(orsa::BodyGroup  *,
 				      const orsa::Time & call_dt,
 				      orsa::Time       &) const {
   if (mainThread != 0) {
-      const int p = mpz_class((mpz_class("100")*orsa::Time((t+call_dt)-mainThread->orbitEpoch).getMuSec()) /
-                              orsa::Time(mainThread->runDuration).getMuSec()).get_ui();
-      // ORSA_DEBUG("p: %i",p);
+    const int p = mpz_class((mpz_class("100")*((t+call_dt)-mainThread->orbitEpoch.getRef()).getMuSec()) /
+			    mainThread->runDuration.getRef().getMuSec()).get_ui();
+    // ORSA_DEBUG("p: %i",p);
     emit progress(p);
     
     /* ORSA_DEBUG("progress: %.6f \%",
-       ((100*((t+call_dt)-mainThread->orbitEpoch).getMuSec().get_d()) /
-       mainThread->runDuration.getMuSec().get_d()));
+       ((100*((t+call_dt)-mainThread->orbitEpoch.getRef()).getMuSec().get_d()) /
+       mainThread->runDuration.getRef().getMuSec().get_d()));
     */
   }
 }
@@ -132,8 +132,8 @@ void MainThread::run() {
        if (1) {
        const orsa::Body * b = sun.get();
        BodyGroup::TRV trv;
-       orsa::Time t = orbitEpoch;
-       while (t <= orbitEpoch+runDuration) {
+       orsa::Time t = orbitEpoch.getRef();
+       while (t <= orbitEpoch.getRef()+runDuration.getRef()) {
        trv.t = t;
        SPICE::instance()->getPosVel(b->getName(),
        trv.t,
@@ -150,8 +150,8 @@ void MainThread::run() {
        const orsa::Body * b = sun.get();
        BodyGroup::TRV trv;
        const orsa::Time dt(0,0,0,1,0);
-       orsa::Time t = orbitEpoch;
-       while (t <= orbitEpoch+runDuration) {
+       orsa::Time t = orbitEpoch.getRef();
+       while (t <= orbitEpoch.getRef()+runDuration.getRef()) {
        trv.t = t;
        SPICE::instance()->getPosVel(b->getName(),
        trv.t,
@@ -178,8 +178,8 @@ void MainThread::run() {
       /* 
 	 SpiceBodyInterpolatedTranslationalCallback * sbipvc =
 	 new SpiceBodyInterpolatedTranslationalCallback(sun->getName(),
-	 orbitEpoch,
-	 orbitEpoch+runDuration,
+	 orbitEpoch.getRef(),
+	 orbitEpoch.getRef()+runDuration.getRef(),
 	 samplingPeriod);
 	 sun->setBodyTranslationalCallback(sbipvc);
       */
@@ -335,11 +335,11 @@ void MainThread::run() {
       orsa::IBPS ibps;
       
       osg::ref_ptr<orsa::Shape> shape;
-      if (vestaShapeModel == ComboShapeModel::smt_ellipsoid) {
+      if (vestaShapeModel.getRef() == ComboShapeModel::smt_ellipsoid) {
 	shape = new EllipsoidShape(FromUnits(280,Unit::KM),
 				   FromUnits(272,Unit::KM),
 				   FromUnits(227,Unit::KM));
-      } else if (vestaShapeModel == ComboShapeModel::smt_thomas) {
+      } else if (vestaShapeModel.getRef() == ComboShapeModel::smt_thomas) {
 	osg::ref_ptr<VestaShape> vestaShapeThomas = new VestaShape;
 	if (!vestaShapeThomas->read("vesta_thomas.dat")) {
 	  ORSA_ERROR("problems encountered while reading shape file...");
@@ -352,7 +352,7 @@ void MainThread::run() {
       osg::ref_ptr<orsa::MassDistribution> massDistribution;
       
       ComboMassDistribution::MassDistributionType mdt = 
-	vestaMassDistribution;
+	vestaMassDistribution.getRef();
       
       /* const orsa::Vector coreCenter = 
 	 (mdt == ComboMassDistribution::mdt_core) ?
@@ -369,7 +369,7 @@ void MainThread::run() {
 		     orsa::FromUnits( 8.487,orsa::Unit::KM)) :	
 	orsa::Vector(0,0,0);
       
-      const double totalMass = vestaMass;
+      const double totalMass = vestaMass.getRef();
       
       // UPDATE this when changing shape...
       double volume = FromUnits(7.875e7,Unit::KM,3); 
@@ -403,9 +403,9 @@ void MainThread::run() {
       }
       
       
-      const unsigned int order =  4;
-      const unsigned int N =  10000;
-      const int randomSeed =  95231;
+      const unsigned int order = 4;
+      const unsigned int N = 10000;
+      const int randomSeed = 95231;
       //
 #warning fix the problem of computing volume after it is actually needed...
       // double volume;
@@ -467,7 +467,7 @@ void MainThread::run() {
 	}
       }
       
-      ibps.inertial = new ConstantInertialBodyProperty(vestaMass,
+      ibps.inertial = new ConstantInertialBodyProperty(vestaMass.getRef(),
 						       shape.get(),
 						       centerOfMass,
 						       shapeToLocal,
@@ -478,18 +478,18 @@ void MainThread::run() {
       ibps.translational = sbtc.get();
       
       ibps.rotational = new orsaSolarSystem::ConstantZRotationEcliptic_RotationalBodyProperty(J2000(),
-                                                                                              292.0*degToRad(),
-                                                                                              twopi()/vestaPeriod,
-                                                                                              vestaPoleEclipticLongitude,
-                                                                                              vestaPoleEclipticLatitude);
+											      292.0*degToRad(),
+											      twopi()/vestaPeriod.getRef(),
+											      vestaPoleEclipticLongitude.getRef(),
+											      vestaPoleEclipticLatitude.getRef());
       vesta->setInitialConditions(ibps);
       
     } else {
       /* 
 	 SpiceBodyInterpolatedTranslationalCallback * sbipvc =
 	 new SpiceBodyInterpolatedTranslationalCallback(vesta->getName(),
-	 orbitEpoch,
-	 orbitEpoch+runDuration,
+	 orbitEpoch.getRef(),
+	 orbitEpoch.getRef()+runDuration.getRef(),
 	 samplingPeriod);
 	 vesta->setBodyTranslationalCallback(sbipvc);
       */
@@ -512,19 +512,19 @@ void MainThread::run() {
       if (bg->getInterpolatedPosVel(rVesta,
 				    vVesta,
 				    vesta.get(),
-				    orbitEpoch) &&
+				    orbitEpoch.getRef()) &&
 	  bg->getInterpolatedPosVel(rSun,
 				    vSun,
 				    sun.get(),
-				    orbitEpoch)) {
+				    orbitEpoch.getRef())) {
 	
 	// osg::ref_ptr<orsa::Attitude> vesta_attitude = new BodyAttitude(vesta.get(),bg.get());
 	
-	// const Matrix g2l = vesta->getAttitude()->globalToLocal(orbitEpoch);
+	// const Matrix g2l = vesta->getAttitude()->globalToLocal(orbitEpoch.getRef());
 	
-	// const Matrix g2l = vesta_attitude->globalToLocal(orbitEpoch);
+	// const Matrix g2l = vesta_attitude->globalToLocal(orbitEpoch.getRef());
 	
-	const orsa::Matrix g2l = orsa::globalToLocal(vesta.get(),bg.get(),orbitEpoch);
+	const orsa::Matrix g2l = orsa::globalToLocal(vesta.get(),bg.get(),orbitEpoch.getRef());
 	
 	const Vector uVesta2Sun_local = (g2l*(rSun-rVesta).normalized()).normalized();
 	
@@ -536,7 +536,7 @@ void MainThread::run() {
 	// should check globally for 0 <= i <= 180
 	/*
 	   {
-	   const double si = sin(orbitInclination);
+	   const double si = sin(orbitInclination.getRef());
 	   if (si != 0) {
 	   const double dAlpha = asin(uSun_z/si);
 	   alpha += dAlpha;
@@ -554,10 +554,10 @@ void MainThread::run() {
 	/*
 	// to cross-check...
 	const double beta   = acos(uSun_z);
-	// const double phiMin = fabs(beta-orbitInclination);
-	// const double phiMax = fabs(beta+orbitInclination);
-	const double phiMin = fabs(halfpi()-fabs(beta+orbitInclination));
-	const double phiMax = fabs(halfpi()-fabs(beta-orbitInclination));
+	// const double phiMin = fabs(beta-orbitInclination.getRef());
+	// const double phiMax = fabs(beta+orbitInclination.getRef());
+	const double phiMin = fabs(halfpi()-fabs(beta+orbitInclination.getRef()));
+	const double phiMax = fabs(halfpi()-fabs(beta-orbitInclination.getRef()));
 
 	ORSA_DEBUG("beta: %f",
 		   double(radToDeg()*beta));
@@ -567,7 +567,7 @@ void MainThread::run() {
 		   double(radToDeg()*phiMax));
 	*/
 
-	// const double i_z = cos(orbitInclination);
+	// const double i_z = cos(orbitInclination.getRef());
 
 	/*
 	   const Vector uI = orsa::Vector(sqrt(1-i_z*i_z)*sin(alpha),
@@ -582,27 +582,27 @@ void MainThread::run() {
 
 	   double tmpArg;
 	   if (scalarProduct > 0) {
-	   sin(orbitPhase)-zProduct;
+	   sin(orbitPhase.getRef())-zProduct;
 	   } else {
-	   -sin(orbitPhase)-zProduct;
+	   -sin(orbitPhase.getRef())-zProduct;
 	   }
 	   const double arg = tmpArg;
 	*/
 
 	/*
-	   if (orbitPhase < phiMin) {
+	   if (orbitPhase.getRef() < phiMin) {
 	   ORSA_WARNING("phase angle requested [%f] smaller than minimum admissible value [%f]",
-	   double(radToDeg()*orbitPhase),
+	   double(radToDeg()*orbitPhase.getRef()),
 	   double(radToDeg()*phiMin));
 	   alpha += 0;
-	   } else if (orbitPhase > phiMax) {
+	   } else if (orbitPhase.getRef() > phiMax) {
 	   ORSA_WARNING("phase angle requested [%f] bigger than minimum admissible value [%f]",
-	   double(radToDeg()*orbitPhase),
+	   double(radToDeg()*orbitPhase.getRef()),
 	   double(radToDeg()*phiMax));
 	   alpha += pi();
 	   } else {
 	   osg::ref_ptr<MultiminPhase> mmp = new MultiminPhase;
-	   const double mmpAlpha = mmp->getAlpha(orbitPhase,
+	   const double mmpAlpha = mmp->getAlpha(orbitPhase.getRef(),
 	   uVesta2Sun_local,
 	   orsa::Vector(0,
 	   -sqrt(1-i_z*i_z),
@@ -616,9 +616,9 @@ void MainThread::run() {
 	{
 	  // let's just call this in any case...
 
-	  const double i_z = cos(orbitInclination);
+	  const double i_z = cos(orbitInclination.getRef());
 	  osg::ref_ptr<MultiminPhase> mmp = new MultiminPhase;
-	  const double mmpAlpha = mmp->getAlpha(fmod(fmod(orbitPhase,twopi())+twopi(),twopi()),
+	  const double mmpAlpha = mmp->getAlpha(fmod(fmod(orbitPhase.getRef(),twopi())+twopi(),twopi()),
 						uVesta2Sun_local,
 						orsa::Vector(0,
 							     -sqrt(1-i_z*i_z),
@@ -635,17 +635,17 @@ void MainThread::run() {
 	   finalArg);
 	   if (finalArg > 1) {
 	   ORSA_WARNING("phase angle requested [%f] smaller than minimum admissible value [%f]",
-	   double(radToDeg()*orbitPhase),
+	   double(radToDeg()*orbitPhase.getRef()),
 	   double(radToDeg()*phiMin));
 	   alpha += 0;
 	   } else if (finalArg < (-1)) {
 	   ORSA_WARNING("phase angle requested [%f] bigger than minimum admissible value [%f]",
-	   double(radToDeg()*orbitPhase),
+	   double(radToDeg()*orbitPhase.getRef()),
 	   double(radToDeg()*phiMax));
 	   alpha += pi();
 	   } else {
 	   osg::ref_ptr<MultiminPhase> mmp = new MultiminPhase;
-	   const double mmpAlpha = mmp->getAlpha(orbitPhase,
+	   const double mmpAlpha = mmp->getAlpha(orbitPhase.getRef(),
 	   uVesta2Sun_local,
 	   orsa::Vector(0,
 	   -sqrt(1-i_z*i_z),
@@ -667,12 +667,12 @@ void MainThread::run() {
 
 	/*
 	   const double beta   = acos(uVesta2Sun_local.getZ());
-	   const double phiMin = fabs(beta-orbitInclination);
-	   const double phiMax = fabs(beta+orbitInclination);
+	   const double phiMin = fabs(beta-orbitInclination.getRef());
+	   const double phiMax = fabs(beta+orbitInclination.getRef());
 
-	   if (orbitPhase < phiMin) {
+	   if (orbitPhase.getRef() < phiMin) {
 	   ORSA_WARNING("");
-	   } else if (orbitPhase > phiMax) {
+	   } else if (orbitPhase.getRef() > phiMax) {
 	   ORSA_WARNING("");
 	   } else {
 	   }
@@ -695,21 +695,12 @@ void MainThread::run() {
     //
     orsa::Orbit orbit;
     //
-    /* orbit.mu = orsa::Unit::G() * vestaMass;
-       orbit.a  = orbitRadius;
-       orbit.e  = 0;
-       orbit.i  = orbitInclination;
-       orbit.omega_node       = alpha;
-       orbit.omega_pericenter = 0;
-       orbit.M                = 0;
-    */
-    //
-    orbit.mu = orsa::Unit::G() * vestaMass;
-    orbit.a  = orbitRadius;
-    orbit.e  = 0.15;
-    orbit.i  = orbitInclination;
+    orbit.mu = orsa::Unit::G() * vestaMass.getRef();
+    orbit.a  = orbitRadius.getRef();
+    orbit.e  = 0;
+    orbit.i  = orbitInclination.getRef();
     orbit.omega_node       = alpha;
-    orbit.omega_pericenter = 270.0*orsa::degToRad();
+    orbit.omega_pericenter = 0;
     orbit.M                = 0;
     //
     orsa::Vector rOrbit, vOrbit;
@@ -721,11 +712,11 @@ void MainThread::run() {
     {
       // osg::ref_ptr<orsa::Attitude> vesta_attitude = new BodyAttitude(vesta.get(),bg.get());
       
-      // const Matrix l2g = vesta->getAttitude()->localToGlobal(orbitEpoch);
+      // const Matrix l2g = vesta->getAttitude()->localToGlobal(orbitEpoch.getRef());
       //
-      // const Matrix l2g = vesta_attitude->localToGlobal(orbitEpoch);
+      // const Matrix l2g = vesta_attitude->localToGlobal(orbitEpoch.getRef());
       
-      const orsa::Matrix l2g = orsa::localToGlobal(vesta.get(),bg.get(),orbitEpoch);
+      const orsa::Matrix l2g = orsa::localToGlobal(vesta.get(),bg.get(),orbitEpoch.getRef());
       
       // ORSA_DEBUG("l2g.getM11(): %e",l2g.getM11());
       
@@ -740,7 +731,7 @@ void MainThread::run() {
       if (bg->getInterpolatedPosVel(rVesta,
 				    vVesta,
 				    vesta.get(),
-				    orbitEpoch)) {
+				    orbitEpoch.getRef())) {
 	rOrbit += rVesta;
 	vOrbit += vVesta;
       } else {
@@ -749,18 +740,18 @@ void MainThread::run() {
     }
     
     /* 
-       dawn_bic->setTime(orbitEpoch);
+       dawn_bic->setTime(orbitEpoch.getRef());
        dawn_bic->setPosition(rOrbit);
        dawn_bic->setVelocity(vOrbit);
     */
     //
     /* 
-       dawn_bic->time     = orbitEpoch;
+       dawn_bic->time     = orbitEpoch.getRef();
        dawn_bic->position = rOrbit;
        dawn_bic->velocity = vOrbit;
     */
     //
-    ibps.time = orbitEpoch;
+    ibps.time = orbitEpoch.getRef();
     //
     ibps.inertial = new PointLikeConstantInertialBodyProperty(0);
     //
@@ -783,13 +774,13 @@ void MainThread::run() {
     */
     
     // test
-    ORSA_DEBUG("========= DAWN time: %.6f",(*ibps.time).get_d());
+    ORSA_DEBUG("========= DAWN time: %.6f",ibps.time.getRef().get_d());
     
     bg->addBody(dawn.get());
     
     // test
     ORSA_DEBUG("========= DAWN time: %.6f",
-               (*dawn->getInitialConditions().time).get_d());
+	       dawn->getInitialConditions().time.getRef().get_d());
     
   }
   
@@ -801,10 +792,10 @@ void MainThread::run() {
      BodyGroup::TRV trv; // dummy
      trv.r = Vector(1e9,0,-1e11);
      //
-     trv.t = orbitEpoch;
+     trv.t = orbitEpoch.getRef();
      bg->insertTRV(trv,vesta.get());
      //
-     trv.t = orbitEpoch+runDuration;
+     trv.t = orbitEpoch.getRef()+runDuration.getRef();
      bg->insertTRV(trv,vesta.get());
      
      emit progress(100);
@@ -816,29 +807,29 @@ void MainThread::run() {
   
   // test
   ORSA_DEBUG("========= DAWN time: %.6f",
-             (*dawn->getInitialConditions().time).get_d());
+	     dawn->getInitialConditions().time.getRef().get_d());
   
   emit progress(0);
   //
   const bool goodIntegration = customIntegrator->integrate(bg.get(),
-							   orbitEpoch,
-							   orbitEpoch+runDuration,
+							   orbitEpoch.getRef(),
+							   orbitEpoch.getRef()+runDuration.getRef(),
 							   samplingPeriod);
 
   if (goodIntegration) {
     emit progress(100);
   }
 
-  if (runDuration < samplingPeriod) {
+  if (runDuration.getRef() < samplingPeriod) {
 
     ORSA_DEBUG("zero lenght integration, not writing SPICE file");
 
     ORSA_DEBUG("more checks here, and progress() code...");
 
-  } else if (goodIntegration && (strlen((*outputSPICEFile).c_str()) > 0)) {
+  } else if (goodIntegration && (strlen(outputSPICEFile.getRef().c_str()) > 0)) {
 
     bool doSPICE = true;
-    if (samplingPeriod > runDuration) {
+    if (samplingPeriod > runDuration.getRef()) {
       ORSA_WARNING("integration too short, not writing SPICE output file");
       doSPICE = false;
     }
@@ -848,13 +839,13 @@ void MainThread::run() {
 
       {
 	// remove the file, if existing, to prevent a SPICE error
-          remove((*outputSPICEFile).c_str());
+	remove(outputSPICEFile.getRef().c_str());
       }
 
       SpiceInt handle;
 
       SPICE::instance()->lock();
-      spkopn_c((*outputSPICEFile).c_str(),
+      spkopn_c(outputSPICEFile.getRef().c_str(),
 	       "DAWN SPK file",
 	       1024,
 	       &handle);
@@ -865,9 +856,9 @@ void MainThread::run() {
       Vector rDAWN,  vDAWN;
       Vector rVesta, vVesta;
       Vector dr, dv;
-      Time t = orbitEpoch;
+      Time t = orbitEpoch.getRef();
       unsigned int count=0;
-      while ((t+samplingPeriod) <= (orbitEpoch+runDuration)) {
+      while ((t+samplingPeriod) <= (orbitEpoch.getRef()+runDuration.getRef())) {
 
 	SpiceDouble first = SPICE::SPICETime(t);
 	SpiceDouble  last = SPICE::SPICETime(t+samplingPeriod);
@@ -915,8 +906,8 @@ void MainThread::run() {
 
 	  } else {
 	    ORSA_WARNING("problems, t: %f",
-                     orsa::FromUnits(FromUnits(localTime.getMuSec().get_d(),
-                                               orsa::Unit::MICROSECOND),
+			 orsa::FromUnits(FromUnits(localTime.getMuSec().get_d(),
+						   orsa::Unit::MICROSECOND),
 					 orsa::Unit::DAY,-1));
 	  }
 	  
@@ -955,8 +946,8 @@ void MainThread::run() {
     // verify SPICE file?
     if (0 && doSPICE) {
 
-        SPICE::instance()->loadKernel((*outputSPICEFile).c_str());
-        
+      SPICE::instance()->loadKernel(outputSPICEFile.getRef().c_str());
+
       osg::ref_ptr<Body> dawnSPICE = new Body;
       {
 	dawnSPICE->setName("DAWN");
@@ -974,8 +965,8 @@ void MainThread::run() {
 	  /* 
 	     SpiceBodyInterpolatedTranslationalCallback * sbipvc =
 	     new SpiceBodyInterpolatedTranslationalCallback(dawnSPICE->getName(),
-	     orbitEpoch,
-	     orbitEpoch+runDuration,
+	     orbitEpoch.getRef(),
+	     orbitEpoch.getRef()+runDuration.getRef(),
 	     samplingPeriod);
 	     dawnSPICE->setBodyTranslationalCallback(sbipvc);
 	  */
@@ -987,8 +978,8 @@ void MainThread::run() {
       const int randomSeed = 3242234;
 
       const unsigned int maxTrials = 32;
-      const double minJulian = timeToJulian(orbitEpoch);
-      const double maxJulian = timeToJulian(orbitEpoch+runDuration);
+      const double minJulian = timeToJulian(orbitEpoch.getRef());
+      const double maxJulian = timeToJulian(orbitEpoch.getRef()+runDuration.getRef());
 
       // GSL rng init
       gsl_rng * rnd = gsl_rng_alloc(gsl_rng_gfsr4);
@@ -1002,7 +993,7 @@ void MainThread::run() {
       for (unsigned int j=0; j<maxTrials; ++j) {
 
 	const Time t = julianToTime(minJulian + (maxJulian-minJulian)*gsl_rng_uniform(rnd));
-	// const Time t = orbitEpoch;
+	// const Time t = orbitEpoch.getRef();
 
 	/*
 	   ORSA_DEBUG("t: %f",
@@ -1031,7 +1022,7 @@ void MainThread::run() {
 
       }
 
-      SPICE::instance()->unloadKernel((*outputSPICEFile).c_str());
+      SPICE::instance()->unloadKernel(outputSPICEFile.getRef().c_str());
 
       // GSL rng clean
       gsl_rng_free(rnd);
@@ -1040,11 +1031,11 @@ void MainThread::run() {
 
   }
 
-  if (goodIntegration && (strlen((*outputASCIIFile).c_str()) > 0)) {
-      FILE * fp = fopen((*outputASCIIFile).c_str(),"w");
+  if (goodIntegration && (strlen(outputASCIIFile.getRef().c_str()) > 0)) {
+    FILE * fp = fopen(outputASCIIFile.getRef().c_str(),"w");
     if (fp == 0) {
       ORSA_ERROR("cannot write file [%s]: %s",
-                 (*outputASCIIFile).c_str(),
+		 outputASCIIFile.getRef().c_str(),
 		 strerror(errno));
     } else {
 
@@ -1087,8 +1078,8 @@ void MainThread::run() {
       Orbit  orbit_rot, orbit_norot;
       orsa::Cache<double> precNode;
       double nodeDot;
-      Time t = orbitEpoch;
-      while (t <= (orbitEpoch+runDuration)) {
+      Time t = orbitEpoch.getRef();
+      while (t <= (orbitEpoch.getRef()+runDuration.getRef())) {
 
 	if (bg->getInterpolatedPosVel(rDAWN,
 				      vDAWN,
@@ -1116,7 +1107,7 @@ void MainThread::run() {
 	  const double realPhaseAngle  = acos(dru*(rSun-rVesta).normalized());
 	  
 	  // fixed time, so no spin rotation is included (fixed body-equatorial frame)
-	  const orsa::Matrix g2l_norot = orsa::globalToLocal(vesta.get(),bg.get(),orbitEpoch);
+	  const orsa::Matrix g2l_norot = orsa::globalToLocal(vesta.get(),bg.get(),orbitEpoch.getRef());
 	  const orsa::Vector dr_norot  =  g2l_norot * dr;
 	  const orsa::Vector dv_norot  =  g2l_norot * dv;
 	  const orsa::Vector dru_norot = (g2l_norot * dru).normalized();
@@ -1154,7 +1145,7 @@ void MainThread::run() {
 	  const double longitude = fmod(twopi() + atan2(dru_rot.getY(),dru_rot.getX()),twopi());
 	  //
 	  if (precNode.isSet()) {
-	    nodeDot = (orbit_norot.omega_node-precNode)/samplingPeriod.get_d();
+	    nodeDot = (orbit_norot.omega_node-precNode.getRef())/samplingPeriod.get_d();
 	  } else {
 	    nodeDot = 0.0;
 	  }
@@ -1166,7 +1157,7 @@ void MainThread::run() {
 		      /*    1      2      3     4      5      6      7      8      9     10     11     12     13     14      15     16     17     18 */
 		      "%15.5f %14.3f %12.6f %8.6f %10.6f %10.6f %10.6f %10.6f %10.6f %10.6f %10.6f %10.6f %12.6f %12.6f %+12.9e %12.6f %12.6f %12.6f\n",
 		      timeToJulian(t),
-		      FromUnits((t-orbitEpoch).get_d(),Unit::SECOND,-1),
+		      FromUnits((t-orbitEpoch.getRef()).get_d(),Unit::SECOND,-1),
 		      FromUnits(orbit_norot.a,Unit::KM,-1),
 		      orbit_norot.e,
 		      radToDeg()*orbit_norot.i,

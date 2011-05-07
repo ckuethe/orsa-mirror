@@ -3,8 +3,6 @@
 
 #include <orsa/body.h>
 
-#include <QMutex>
-
 namespace orsaSPICE {
   
     class SpiceBodyTranslationalCallback : public orsa::PrecomputedTranslationalBodyProperty {
@@ -17,11 +15,6 @@ namespace orsaSPICE {
         orsa::Vector velocity() const;
     public:
         bool update(const orsa::Time &);
-    public:
-        void lock();
-        void unlock();
-    protected:
-        QMutex mutex;
     protected:
         const std::string _name;
     protected:

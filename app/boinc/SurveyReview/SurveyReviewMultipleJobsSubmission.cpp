@@ -84,9 +84,8 @@ int main (int argc, char ** argv) {
     
     // other args, constant for now
     // const double JD = 2455198.0; // epoch of orbits
-#warning this should be shared with other programs, on an header file...
     const double JD = 2455650; // epoch of orbits
-    
+
     // approx. number of jobs, does not take into account regions with no NEOs or regions to skip
     /* mpz_class numJobs = 1;
        numJobs *= (z_a_max-z_a_min)/z_a_delta;

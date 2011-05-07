@@ -214,7 +214,7 @@ RendezvousWithVestaWidget::RendezvousWithVestaWidget() : QWidget(0) {
 
     {
       // QLabel * aboutLabel = new QLabel(tr("Copyright (c) 2007 Pasquale Tricarico <tricaric@psi.edu>"),group);
-      QLabel * aboutLabel = new QLabel(tr("Copyright (c) 2010 Pasquale Tricarico <a href=\"mailto:tricaric@psi.edu\">tricaric@psi.edu</a>"),group);
+      QLabel * aboutLabel = new QLabel(tr("Copyright (c) 2009 Pasquale Tricarico <a href=\"mailto:tricaric@psi.edu\">tricaric@psi.edu</a>"),group);
       aboutLabel->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard | Qt::LinksAccessibleByMouse | Qt::LinksAccessibleByKeyboard);
       grid->addWidget(aboutLabel,localRow,0);
     }
@@ -479,38 +479,25 @@ void RendezvousWithVestaWidget::progressChanged(int value) const {
   } else {
     statusBar->showMessage(tr("Simulation Running..."));
   }
-  
-  /* 
-     if (value >= 0) {
-     // start graphics right away
-     runFinished();  
-     }
-  */
 }
 
 void RendezvousWithVestaWidget::runFinished() const {
 
-    // test
-    /* static int called = 0;
-       if (called > 0) return; // already called...
-       ++called;
-    */
-    
-    bool completed;
-    if (progressRun->value() == 100) {
-        statusBar->showMessage(tr("Simulation Completed"));
-        completed = true;
-    } else {
-        statusBar->showMessage(tr("Simulation Aborted"));
-        completed = false;
-    }
-    
-    if (1) if (completed) {
-        
-        // viz
-        osg::ref_ptr<orsaOSG::Viz> viz = new orsaOSG::Viz(mainThread->bg.get(),
-                                                          3600.0);
-        
+  bool completed;
+  if (progressRun->value() == 100) {
+    statusBar->showMessage(tr("Simulation Completed"));
+    completed = true;
+  } else {
+    statusBar->showMessage(tr("Simulation Aborted"));
+    completed = false;
+  }
+
+  if (1) if (completed) {
+
+    // viz
+    osg::ref_ptr<orsaOSG::Viz> viz = new orsaOSG::Viz(mainThread->bg.get(),
+						      600.0);
+
     ViewerQT * viewerWindow = new ViewerQT;
     //
     // viewerWindow->getSceneView()->setComputeNearFarMode( osgUtil::CullVisitor::DO_NOT_COMPUTE_NEAR_FAR );
@@ -548,33 +535,19 @@ void RendezvousWithVestaWidget::runFinished() const {
        ORSA_DEBUG("Optimization finished...");
        }
     */
-    
+
     {
-        // track...
-        const orsa::Time dt(0,0,3,0,0);
-        const bool groundTrack = true;
-        // const bool groundTrack = false;
-        viz->getBodyAttitudeTransform(mainThread->bg->getBody("VESTA"))->addChild(new orsaOSG::Track(mainThread->bg.get(),
-                                                                                                     mainThread->bg->getBody("DAWN"),
-                                                                                                     mainThread->bg->getBody("VESTA"),
-                                                                                                     dt,
-                                                                                                     viz->_at.get(),
-                                                                                                     groundTrack));
+      // track...
+      const orsa::Time dt(0,0,10,0,0);
+      const bool groundTrack = true;
+      viz->getBodyAttitudeTransform(mainThread->bg->getBody("VESTA"))->addChild(new orsaOSG::Track(mainThread->bg.get(),
+												   mainThread->bg->getBody("DAWN"),
+												   mainThread->bg->getBody("VESTA"),
+												   dt,
+												   viz->_at.get(),
+												   groundTrack));
     }
-    
-    {
-        // track...
-        const orsa::Time dt(0,0,3,0,0);
-        // const bool groundTrack = true;
-        const bool groundTrack = false;
-        viz->getBodyAttitudeTransform(mainThread->bg->getBody("VESTA"))->addChild(new orsaOSG::Track(mainThread->bg.get(),
-                                                                                                     mainThread->bg->getBody("DAWN"),
-                                                                                                     mainThread->bg->getBody("VESTA"),
-                                                                                                     dt,
-                                                                                                     viz->_at.get(),
-                                                                                                     groundTrack));
-    }
-    
+
     /*
        {
        // track...
@@ -804,7 +777,7 @@ void RendezvousWithVestaWidget::showAboutDialog() {
     "<br>"
     "ORSA - Orbit Reconstruction, Simulation and Analysis"
     "<br>"
-    "Copyright (C) 2002-2010 Pasquale Tricarico"
+    "Copyright (C) 2002-2009 Pasquale Tricarico"
     "<br>"
     "<br>"
     "ORSA is free software and comes with ABSOLUTELY NO WARRANTY."

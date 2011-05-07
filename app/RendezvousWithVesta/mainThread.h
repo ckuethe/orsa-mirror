@@ -18,22 +18,22 @@ class MainThread;
 
 // class CustomIntegrator : public QObject, public orsa::IntegratorLeapFrog {
 class CustomIntegrator : public QObject, public orsa::IntegratorRadau {
-    
-    Q_OBJECT;
-    
-public:
-    CustomIntegrator(const MainThread * mt);
-    
-    signals:
-    void progress(int value) const;
-    
-public:
-    const MainThread * mainThread;
-protected:
-    void singleStepDone(orsa::BodyGroup  *,
-                        const orsa::Time &,
-                        const orsa::Time &,
-                        orsa::Time       &) const;
+  
+  Q_OBJECT;
+
+ public:
+  CustomIntegrator(const MainThread * mt);
+
+ signals:
+  void progress(int value) const;
+
+ public:
+  const MainThread * mainThread;
+ protected:
+  void singleStepDone(orsa::BodyGroup  *,
+		      const orsa::Time &,
+		      const orsa::Time &,
+		      orsa::Time       &) const;
 };
 
 class MainThread : public QThread {

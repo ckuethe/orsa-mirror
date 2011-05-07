@@ -141,68 +141,100 @@ void TrackFillThread::run() {
         if (doAbort) {
             break;
         }
-        
+    
         if (_b.get() && _ref_b.get()) {
-            
+      
             if (_bg->getInterpolatedPosition(r_b,         _b.get(), t) &&
                 _bg->getInterpolatedPosition(r_ref_b, _ref_b.get(), t) ) {
-                
+	
                 const orsa::Vector dr = r_b - r_ref_b;
-                
-                if (_ref_b->getInitialConditions().inertial->localShape()) {
-                    
-                    const orsa::Matrix g2l = orsa::globalToLocal(_ref_b.get(),_bg.get(),t);
-                    
-                    const orsa::Vector dr_local = g2l * dr;
-                    
-                    if (_groundTrack) {
-                        
+	
+                if (_groundTrack) {
+	  
+                    if (_ref_b->getInitialConditions().inertial->localShape()) {
+	    
+                        /* 
+                           const orsa::Vector dr_local = (_ref_b->getAttitude()) ? 
+                           (_ref_b->getAttitude()->globalToLocal(t)*dr) : dr;
+                        */
+                        //
+                        /* 
+                           const orsa::Vector dr_local = (_bg->getInterpolatedAttitude(_ref_b.get(),t)) ? 
+                           (_bg->getInterpolatedAttitude(_ref_b.get(),t)->globalToLocal(t)*dr) : dr;
+                        */
+                        //
+                        // osg::ref_ptr<orsa::Attitude> attitude = new orsa::BodyAttitude(_ref_b.get(), _bg.get());
+                        const orsa::Matrix g2l = orsa::globalToLocal(_ref_b.get(),_bg.get(),t);
+                        const orsa::Vector dr_local = g2l * dr;
+	    
                         if (_ref_b->getInitialConditions().inertial->localShape()->rayIntersection(intersectionPoint,
                                                                                                    intersectionNormal,
                                                                                                    dr_local,
                                                                                                    (-dr_local).normalized(),
                                                                                                    false)) {
-                            
+	      
                             tmpTrackElement.t = t;
+                            //
                             tmpTrackElement.r = 1.05*intersectionPoint;
-                            
+                            // tmpTrackElement.r = orsa::FromUnits(300,orsa::Unit::KM)*(intersectionPoint.normalized());
+                            //
+                            // trackVector.push_back(tmpTrackElement);
+                            //	      
                             dataMutex.lock();
                             data.push_back(tmpTrackElement);
                             dataMutex.unlock();
-                            
+	      
                         } else {
                             ORSA_DEBUG("problems...");
                         }
-                        
+	    
                     } else {
-                        
-                        tmpTrackElement.t = t;
-                        tmpTrackElement.r = dr_local;
-                        
-                        dataMutex.lock();
-                        data.push_back(tmpTrackElement);
-                        dataMutex.unlock();
+                        ORSA_DEBUG("groundTrack without a shape?");
                     }
-
+	  
                 } else {
-                    ORSA_DEBUG("groundTrack without a shape?");
+	  
+                    tmpTrackElement.t = t;
+                    tmpTrackElement.r = dr;
+                    //
+                    // trackVector.push_back(tmpTrackElement);
+                    //
+                    dataMutex.lock();
+                    data.push_back(tmpTrackElement);
+                    dataMutex.unlock();
                 }
-                
+	
             } else {
                 ORSA_DEBUG("problems...");
             }
-            
+      
         } else if (_b.get()) {
-            
+      
+            /* 
+               if (_bg->getInterpolatedPosition(r_b, _b.get(), t)) {
+	 
+               tmpTrackElement.t = t;
+               tmpTrackElement.r = r_b - _at->centralBodyPosition(t_start);
+               //
+               trackVector.push_back(tmpTrackElement);
+	 
+               ORSA_DEBUG("tmpTrackElement.r: %f",
+               tmpTrackElement.r.length());
+	 
+               } else {
+               ORSA_DEBUG("problems...");
+               }
+            */
+            //
             ORSA_DEBUG("this case cannot be pre-computed, because of the moving AnimationTime::centralBodyPosition(...), and requires different code.");
-            
+      
         } else {
             ORSA_ERROR("problems");      
         }
-        
+    
         t += _dt;
     }
-    
+  
 }
 
 ////
