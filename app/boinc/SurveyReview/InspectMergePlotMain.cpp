@@ -49,6 +49,8 @@ public:
 int main(int argc, char **argv) { 
     
     // choose below if plotting "field" coverage, detection efficiency, or observation efficiency
+
+#warning "in a,e remember to plot the position of the 1:3 and the q=1.3 line"
     
     if (argc != 2) {
         ORSA_DEBUG("Usage: %s <inspect_merge_file>",argv[0]);
@@ -90,12 +92,12 @@ int main(int argc, char **argv) {
        const double y_max  = 360.0;
     */
     
-    std::vector< osg::ref_ptr<PlotStats::Var> > varDefinition;
+    std::vector< osg::ref_ptr<Var> > varDefinition;
     //
-    osg::ref_ptr<PlotStats::LinearVar> var_x = new PlotStats::LinearVar(x_min,x_max+2*x_step,x_step);
+    osg::ref_ptr<LinearVar> var_x = new LinearVar(x_min,x_max+2*x_step,x_step);
     varDefinition.push_back(var_x.get());
     //
-    osg::ref_ptr<PlotStats::LinearVar> var_y = new PlotStats::LinearVar(y_min,y_max+2*y_step,y_step);
+    osg::ref_ptr<LinearVar> var_y = new LinearVar(y_min,y_max+2*y_step,y_step);
     varDefinition.push_back(var_y.get());
     
     osg::ref_ptr<PlotStats> plotStats = 
@@ -372,7 +374,7 @@ int main(int argc, char **argv) {
     // const double z_min=1e-6; const double z_max=1e-3;
     //
     // other... LINEAR 0->1
-    const double z_min=0.0; const double z_max=0.05;
+    const double z_min=0.0; const double z_max=0.25;
     //
     // a,i
     // const double z_min=1e-5; const double z_max=1e-3;
@@ -413,7 +415,7 @@ int main(int argc, char **argv) {
         digits(2,"Z");
         ticks(2,"X");
         ticks(2,"Y");
-        ticks(2,"Z");
+        ticks(5,"Z");
         // axsscl("log","z");
         // labels("log","z");
         frame(5); // frame thickness
@@ -423,8 +425,23 @@ int main(int argc, char **argv) {
         */
         graf3(x_min-0.5*x_step,x_max+0.5*x_step,x_min,0.1,
               y_min-0.5*y_step,y_max+0.5*y_step,y_min,0.1,
-              z_min,z_max,z_min,0.01);
+              z_min,z_max,z_min,0.05);
         crvmat(mesh,var_x->size(),var_y->size(),1,1);
+
+        if (0) {
+            // q=1.3 line
+            const int nray=1000;
+            float xray[nray],yray[nray];
+            for (unsigned int k=0; k<nray; ++k) {
+                xray[k] = 1.9+((2.3-1.9)*k)/nray;
+                yray[k] = 1.0-(1.3/xray[k]);
+                ORSA_DEBUG("ray-> %g %g",xray[k],yray[k]);
+            }
+            graf(x_min-0.5*x_step,x_max+0.5*x_step,0,0,
+                 y_min-0.5*y_step,y_max+0.5*y_step,0,0);
+            lintyp(2);
+            curve(xray,yray,nray);
+        }
     }
     // a,i
     /* {

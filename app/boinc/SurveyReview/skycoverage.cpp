@@ -114,7 +114,7 @@ bool SkyCoverage::setField(const double & x1,
         ORSA_DEBUG("problems: obscode is not set...");
         return false;
     }
-    if (obscode.getRef()=="C51") {
+    if (obscode==std::string("C51")) {
         // fix for C51, where the field width in the direction of the ecliptic longitude
         // is not scaled by cos(eclipticLatitude), so we do it here
         // NOTE: code still has some problems when the field includes one of the ecliptic poles
@@ -172,7 +172,7 @@ bool SkyCoverage::setField(const double & x1,
     // default: north equatorial pole, for all terrestrial observatories
     // except for C51 (WISE satellite) where it is north ecliptic pole
     /* const orsa::Vector zeta_axis =
-       (obscode.getRef()=="C51") ?
+       (obscode=="C51") ?
        (orsa::Vector(0,0,1)) :
        (orsaSolarSystem::equatorialToEcliptic()*orsa::Vector(0,0,1));
        
@@ -231,7 +231,7 @@ bool SkyCoverage::get(const orsa::Vector & u,
                 if (delta_Y < (*it).halfFieldSize_Y) {
                     // if (verbose)  ORSA_DEBUG("found in one field, V: %f",(*it).limitingMagnitude);
                     if (local_V.isSet()) {
-                        local_V = std::max(local_V.getRef(),
+                        local_V = std::max(double(local_V),
                                            (*it).limitingMagnitude);
                     } else {
                         local_V = (*it).limitingMagnitude;
@@ -242,7 +242,7 @@ bool SkyCoverage::get(const orsa::Vector & u,
         ++it;
     }
     if (local_V.isSet()) {
-        V = local_V.getRef();
+        V = local_V;
         return true;
     } else {
         return false;
@@ -418,35 +418,35 @@ double SkyCoverage::minDistance(const orsa::Vector & u,
    const double & LA,
    const double & LI) const {
    return SkyCoverage::eta(V,
-   V_limit.getRef(),
-   eta0_V.getRef(),
-   V0.getRef(),
-   c_V.getRef(),
-   w_V.getRef(),
+   V_limit,
+   eta0_V,
+   V0,
+   c_V,
+   w_V,
    U,
-   U_limit.getRef(),
-   w_U.getRef(),
+   U_limit,
+   w_U,
    AM,
-   peak_AM.getRef(),
-   scale_AM.getRef(),
-   shape_AM.getRef(),
+   peak_AM,
+   scale_AM,
+   shape_AM,
    GB,
-   drop_GB.getRef(),
-   scale_GB.getRef(),
-   center_GB.getRef(),
+   drop_GB,
+   scale_GB,
+   center_GB,
    GL,
-   scale_GL.getRef(),
-   shape_GL.getRef(),
+   scale_GL,
+   shape_GL,
    SA,
-   peak_SA.getRef(),
-   scale_SA.getRef(),
-   shape_SA.getRef(),
+   peak_SA,
+   scale_SA,
+   shape_SA,
    LA,
    LI,
-   LA_LI_limit_const.getRef(),
-   LA_LI_limit_linear.getRef(),
-   LA_LI_w_const.getRef(),
-   LA_LI_w_linear.getRef());
+   LA_LI_limit_const,
+   LA_LI_limit_linear,
+   LA_LI_w_const,
+   LA_LI_w_linear);
    }
 */
 
@@ -456,24 +456,24 @@ double SkyCoverage::eta(const double & V,
                         const double & GB,
                         const double & GL) const {
     return SkyCoverage::eta(V,
-                            V_limit.getRef(),
-                            eta0_V.getRef(),
-                            V0.getRef(),
-                            c_V.getRef(),
-                            w_V.getRef(),
+                            V_limit,
+                            eta0_V,
+                            V0,
+                            c_V,
+                            w_V,
                             U,
-                            U_limit.getRef(),
-                            w_U.getRef(),
+                            U_limit,
+                            w_U,
                             AM,
-                            peak_AM.getRef(),
-                            scale_AM.getRef(),
-                            shape_AM.getRef(),
+                            peak_AM,
+                            scale_AM,
+                            shape_AM,
                             GB,
-                            drop_GB.getRef(),
-                            scale_GB.getRef(),
+                            drop_GB,
+                            scale_GB,
                             GL,
-                            scale_GL.getRef(),
-                            shape_GL.getRef());
+                            scale_GL,
+                            shape_GL);
 }
 
 /* 
@@ -727,7 +727,7 @@ bool SkyCoverage::processFilename(const std::string & filename_in,
         if (!observatory.moving()) {
             epoch = orsaSolarSystem::gregorTime(year,
                                                 1,
-                                                dayOfYear+1.0-observatory.lon.getRef()/orsa::twopi());
+                                                dayOfYear+1.0-observatory.lon/orsa::twopi());
         } else {
             // tested on C51/WISE data
             epoch = orsaSolarSystem::gregorTime(year,

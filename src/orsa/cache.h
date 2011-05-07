@@ -12,80 +12,146 @@
 #include <orsa/crash.h>
 
 namespace orsa {
-  
+    
     //! Instead of Cache, this class should be called something like GetSetVariable...
     //
     template <typename T> class Cache {
     public:
-        Cache() : _val(), _set(false) { }
+        Cache() : _val(), _set(false), _locked(false) { }
     public:
-        Cache(const T & val) : _val(val), _set(true) { }
+        Cache(const T & val) : _val(val), _set(true), _locked(false) { }
     public:
-        Cache(const Cache<T> & c) : _val(c._val), _set(c._set) { }
+        Cache(const Cache<T> & c) : _val(c._val), _set(c._set), _locked(c._locked) { }
     public:
         // virtual destructor is slow, and never needed so far...
         // virtual ~Cache() { }
         ~Cache() { }
-    public:
+        
 #if ORSA_CACHE_GET_CHECK
     public:
-        T get() const { 
+        operator T const & () const {
             if (!_set) {
                 ORSA_ERROR("returning unset value");
                 orsa::crash();
             }
             return _val; 
         }
-        const T & getRef() const {
+        const T & operator * () const {
             if (!_set) {
                 ORSA_ERROR("returning unset value");
                 orsa::crash();
             }
-            return _val;
-        } 
-        const T * getPtr() const {
+            return _val; 
+        }       
+        const T * operator -> () const {
             if (!_set) {
                 ORSA_ERROR("returning unset value");
                 orsa::crash();
             }
-            return & _val;
-        }
+            return &_val; 
+        }       
 #else  
     public:
-        inline T get() const { return _val; }
-        inline const T & getRef() const { return _val; }
-        inline const T * getPtr() const { return & _val; }
+        operator T const & () const    { return  _val; }
+        const T & operator * () const  { return  _val; }
+        const T * operator -> () const { return &_val; }
 #endif
-    public:
-        bool set(const T & val) { 
-            _val=val; 
-            _set=true; 
-            return _set;
-        }
+        
     public:
         Cache<T> & operator = (const T & val) {
-            set(val);
+            if (canChange()) {
+                _val = val;
+                _set = true;
+            }
             return (*this);
         }
     public:
         Cache<T> & operator += (const T & val) {
-            set(getRef()+val);
+            if (canChange()) {
+                _val += val;
+            }
             return (*this);
         }
     public:
         Cache<T> & operator -= (const T & val) {
-            set(getRef()-val);
+            if (canChange()) {
+                _val -= val;
+            }
             return (*this);
         }
+        
     public:
         // set only if still not set
         bool conditionalSet(const T & val) {
-            if (!_set) {
-                return set(val);
+            if (canChange()) {
+                if (!_set) {
+                    (*this) = val;
+                    return true;
+                } else {
+                    return false;
+                }
             } else {
                 return false;
             }
         }
+        
+    public:
+        // set if not set, and
+        // set if smaller than what is already set
+        bool setIfSmaller(const T & val) {
+            if (canChange()) {
+                if (!_set) {
+                    (*this) = val;
+                    return true;
+                } else {
+                    if (val < _val) {
+                        (*this) = val;
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+            } else {
+                return false;
+            }
+        }
+        
+    public:
+        // set if not set, and
+        // set if larger than what is already set
+        bool setIfLarger(const T & val) {
+            if (canChange()) {
+                if (!_set) {
+                    (*this) = val;
+                    return true;
+                } else {
+                    if (val > _val) {
+                        (*this) = val;
+                        return true;
+                    } else {
+                        return false;
+                    }
+                }
+            } else {
+                return false;
+            }
+        }
+        
+    public:
+        // use this to prevent changes to the variable
+        // this has nothing to do with multi-threading locks...
+        inline void lock()     const { _locked=true;   }
+        inline void unlock()   const { _locked=false;  }
+        inline bool isLocked() const { return _locked; }
+    protected:
+        inline bool canChange() const {
+            if (_locked) {
+                ORSA_ERROR("this variable is locked and cannot be changed");
+                orsa::crash();
+            }
+            return (!_locked);
+        }
+        
     public:
         inline bool isSet() const { return _set; }
     public:
@@ -95,8 +161,139 @@ namespace orsa {
     private:
         T    _val;
         bool _set;
+        mutable bool _locked;
     };
-  
+    
+    template <typename T> T operator + (const orsa::Cache<T> & c) {
+        return T(c);
+    }
+    
+    template <typename T> T operator - (const orsa::Cache<T> & c) {
+        return -T(c);
+    }
+    
+    template <typename T> T operator + (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        return (T(a) + T(b));
+    }
+    
+    template <typename T> T operator + (const orsa::Cache<T> & a, const T & b) {
+        return (T(a) + b);
+    }
+    
+    template <typename T> T operator + (const T & a, const orsa::Cache<T> & b) {
+        return (a + T(b));
+    }
+    
+    template <typename T> T operator - (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        return (T(a) - T(b));
+    }
+    
+    template <typename T> T operator - (const orsa::Cache<T> & a, const T & b) {
+        return (T(a) - b);
+    }
+    
+    template <typename T> T operator - (const T & a, const orsa::Cache<T> & b) {
+        return (a - T(b));
+    }
+    
+    template <typename T, typename P> P operator * (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        return (T(a) * T(b));
+    }
+    
+    template <typename T, typename P> P operator * (const orsa::Cache<T> & a, const T & b) {
+        return (T(a) * b);
+    }
+    
+    template <typename T, typename P> P operator * (const T & a, const orsa::Cache<T> & b) {
+        return (a * T(b));
+    }
+    
+    template <typename T, typename D> D operator / (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        return (T(a) / T(b));
+    }
+    
+    template <typename T, typename D> D operator / (const orsa::Cache<T> & a, const T & b) {
+        return (T(a) / b);
+    }
+    
+    template <typename T, typename D> D operator / (const T & a, const orsa::Cache<T> & b) {
+        return (a / T(b));
+    }
+    
+    template <typename T> bool operator == (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        return (T(a) == T(b));
+    }
+    
+    template <typename T> bool operator == (const orsa::Cache<T> & a, const T & b) {
+        return (T(a) == b);
+    }
+    
+    template <typename T> bool operator == (const T & a, const orsa::Cache<T> & b) {
+        return (a == T(b));
+    }
+    
+    template <typename T> bool operator != (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        return (T(a) != T(b));
+    }
+    
+    template <typename T> bool operator != (const orsa::Cache<T> & a, const T & b) {
+        return (T(a) != b);
+    }
+    
+    template <typename T> bool operator != (const T & a, const orsa::Cache<T> & b) {
+        return (a != T(b));
+    }
+    
+    template <typename T> bool operator <  (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        return (T(a) <  T(b));
+    }
+    
+    template <typename T> bool operator <  (const orsa::Cache<T> & a, const T & b) {
+        return (T(a) <  b);
+    }
+    
+    template <typename T> bool operator <  (const T & a, const orsa::Cache<T> & b) {
+        return (a < T(b));
+    }
+    
+    template <typename T> bool operator >  (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        return (T(a) > T(b));
+    }
+    
+    template <typename T> bool operator >  (const orsa::Cache<T> & a, const T & b) {
+        return (T(a) >  b);
+    }
+    
+    template <typename T> bool operator >  (const T & a, const orsa::Cache<T> & b) {
+        return (a > T(b));
+    }
+    
+    template <typename T> bool operator <= (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        return (T(a) <= T(b));
+    }
+    
+    template <typename T> bool operator <= (const orsa::Cache<T> & a, T & b) {
+        return (T(a) <= b);
+    }
+    
+    template <typename T> bool operator <= (const T & a, const orsa::Cache<T> & b) {
+        return (a <= T(b));
+    }
+    
+    template <typename T> bool operator >= (const orsa::Cache<T> & a, const orsa::Cache<T> & b) {
+        return (T(a) >= T(b));
+    }
+    
+    template <typename T> bool operator >= (const orsa::Cache<T> & a, const T & b) {
+        return (T(a) >= b);
+    }
+    
+    template <typename T> bool operator >= (const T & a, const orsa::Cache<T> & b) {
+        return (a >= T(b));
+    }
+    
+    
+    
     template <class T> class CachedVars {
     public:
         CachedVars() {

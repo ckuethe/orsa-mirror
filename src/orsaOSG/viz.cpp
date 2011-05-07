@@ -106,7 +106,7 @@ osg::Group * Viz::createRoot() {
     {
         BodyGroup::BodyList::const_iterator _b_it = _bg->getBodyList().begin();
         while (_b_it != _bg->getBodyList().end()) {
-            if ((*_b_it)->isLightSource.getRef()) {
+            if ((*_b_it)->isLightSource) {
 
                 /* 
                    ORSA_DEBUG("body [%s] is a light source...",
@@ -811,7 +811,9 @@ osg::Group * Viz::createRoot() {
     
         BodyGroup::BodyList::const_iterator _b_it = _bg->getBodyList().begin();
         while (_b_it != _bg->getBodyList().end()) {
-      
+            
+            ORSA_DEBUG("adding orbit for body: [%s]",(*_b_it)->getName().c_str());
+            
             osg::Geode * orbitGeode = new osg::Geode;
       
             orbitGeode->addDrawable(unitOffsetCircle);

@@ -147,7 +147,7 @@ namespace orsa {
     public:
         orsa::Time getTimeInterval(const orsa::Body * b) const {
             osg::ref_ptr<const BodyInterval> i = getBodyInterval(b);
-            return (i->max().time.getRef() - i->min().time.getRef());
+            return (i->max().time - i->min().time);
         }
     
     public:
@@ -156,7 +156,7 @@ namespace orsa {
             BodyGroup::BodyList::const_iterator _b_it = getBodyList().begin();
             while (_b_it != getBodyList().end()) {
                 osg::ref_ptr<const BodyInterval> i = getBodyInterval((*_b_it).get());
-                const Time _tmp_t = (i->max().time.getRef() - i->min().time.getRef());
+                const Time _tmp_t = (i->max().time - i->min().time);
                 if (_tmp_t > _t) {
                     _t = _tmp_t;
                 }
@@ -180,7 +180,7 @@ namespace orsa {
         bool getInterpolatedIBPS(orsa::IBPS       & ibps,
                                  const orsa::Body * b,
                                  const Time       & t) const;
-    
+        
     public:
         bool getClosestIBPS(orsa::IBPS       & ibps,
                             const orsa::Body * b,

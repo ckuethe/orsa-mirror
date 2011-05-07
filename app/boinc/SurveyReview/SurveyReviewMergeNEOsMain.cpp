@@ -101,9 +101,9 @@ int main(int argc, char ** argv) {
             ORSA_DEBUG("file: [%s]   etaData.size(): %i",argv[fileID+2],etaData.size());
             for (unsigned int k=0; k<etaData.size(); ++k) {
                 if (etaData[k].number.isSet()) {
-                    number_observed.push_back(etaData[k].number.getRef());
+                    number_observed.push_back(etaData[k].number);
                 } else if (etaData[k].designation.isSet()) {
-                    designation_observed.push_back(etaData[k].designation.getRef());
+                    designation_observed.push_back(etaData[k].designation);
                 } else {
                     ORSA_DEBUG("problem: neither number or designation is set");
                 }
@@ -248,7 +248,7 @@ int main(int argc, char ** argv) {
             if ((*it_orb).number.isSet()) {
                 std::list<unsigned int>::const_iterator it_num = number_observed.begin();
                 while (it_num != number_observed.end()) {
-                    if ((*it_num) == (*it_orb).number.getRef()) {
+                    if ((*it_num) == (*it_orb).number) {
                         found=true;
                         break;
                     }
@@ -257,7 +257,7 @@ int main(int argc, char ** argv) {
             } else if ((*it_orb).designation.isSet()) {
                 std::list<std::string>::const_iterator it_des = designation_observed.begin();
                 while (it_des != designation_observed.end()) {
-                    if ((*it_des) == (*it_orb).designation.getRef()) {
+                    if ((*it_des) == (*it_orb).designation) {
                         found=true;
                         break;
                     }
@@ -278,39 +278,42 @@ int main(int argc, char ** argv) {
                 const int z_M_delta    = lrint(30.00/grain_M_DEG);
                 const int z_H_delta    = lrint( 1.00/grain_H);
                 
-                const double orbit_M_at_epoch = fmod(orsa::twopi()+fmod((*it_orb).orbit.getRef().M+orsa::twopi()*(orbitEpoch-(*it_orb).orbit.getRef().epoch.getRef()).get_d()/(*it_orb).orbit.getRef().period(),orsa::twopi()),orsa::twopi());
+                const double orbit_M_at_epoch = fmod(orsa::twopi()+fmod((*(*it_orb).orbit).M+orsa::twopi()*(orbitEpoch-(*(*it_orb).orbit).epoch).get_d()/(*(*it_orb).orbit).period(),orsa::twopi()),orsa::twopi());
                 
-                const int z_a_min    = (  lrint(orsa::FromUnits((*it_orb).orbit.getRef().a,orsa::Unit::AU,-1)/grain_a_AU)/z_a_delta)*z_a_delta;
-                const int z_a_max    = (1+lrint(orsa::FromUnits((*it_orb).orbit.getRef().a,orsa::Unit::AU,-1)/grain_a_AU)/z_a_delta)*z_a_delta;
-                const int z_e_min    = (  lrint((*it_orb).orbit.getRef().e/grain_e)/z_e_delta)*z_e_delta;
-                const int z_e_max    = (1+lrint((*it_orb).orbit.getRef().e/grain_e)/z_e_delta)*z_e_delta;
-                const int z_i_min    = (  lrint((*it_orb).orbit.getRef().i*orsa::radToDeg()/grain_i_DEG)/z_i_delta)*z_i_delta;
-                const int z_i_max    = (1+lrint((*it_orb).orbit.getRef().i*orsa::radToDeg()/grain_i_DEG)/z_i_delta)*z_i_delta;
-                const int z_node_min = (  lrint((*it_orb).orbit.getRef().omega_node*orsa::radToDeg()/grain_node_DEG)/z_node_delta)*z_node_delta;
-                const int z_node_max = (1+lrint((*it_orb).orbit.getRef().omega_node*orsa::radToDeg()/grain_node_DEG)/z_node_delta)*z_node_delta;
-                const int z_peri_min = (  lrint((*it_orb).orbit.getRef().omega_pericenter*orsa::radToDeg()/grain_peri_DEG)/z_peri_delta)*z_peri_delta;
-                const int z_peri_max = (1+lrint((*it_orb).orbit.getRef().omega_pericenter*orsa::radToDeg()/grain_peri_DEG)/z_peri_delta)*z_peri_delta;
+                const int z_a_min    = (  lrint(orsa::FromUnits((*(*it_orb).orbit).a,orsa::Unit::AU,-1)/grain_a_AU)/z_a_delta)*z_a_delta;
+                const int z_a_max    = (1+lrint(orsa::FromUnits((*(*it_orb).orbit).a,orsa::Unit::AU,-1)/grain_a_AU)/z_a_delta)*z_a_delta;
+                const int z_e_min    = (  lrint((*(*it_orb).orbit).e/grain_e)/z_e_delta)*z_e_delta;
+                const int z_e_max    = (1+lrint((*(*it_orb).orbit).e/grain_e)/z_e_delta)*z_e_delta;
+                const int z_i_min    = (  lrint((*(*it_orb).orbit).i*orsa::radToDeg()/grain_i_DEG)/z_i_delta)*z_i_delta;
+                const int z_i_max    = (1+lrint((*(*it_orb).orbit).i*orsa::radToDeg()/grain_i_DEG)/z_i_delta)*z_i_delta;
+                const int z_node_min = (  lrint((*(*it_orb).orbit).omega_node*orsa::radToDeg()/grain_node_DEG)/z_node_delta)*z_node_delta;
+                const int z_node_max = (1+lrint((*(*it_orb).orbit).omega_node*orsa::radToDeg()/grain_node_DEG)/z_node_delta)*z_node_delta;
+                const int z_peri_min = (  lrint((*(*it_orb).orbit).omega_pericenter*orsa::radToDeg()/grain_peri_DEG)/z_peri_delta)*z_peri_delta;
+                const int z_peri_max = (1+lrint((*(*it_orb).orbit).omega_pericenter*orsa::radToDeg()/grain_peri_DEG)/z_peri_delta)*z_peri_delta;
                 const int z_M_min    = (  lrint(orbit_M_at_epoch*orsa::radToDeg()/grain_M_DEG)/z_M_delta)*z_M_delta;
                 const int z_M_max    = (1+lrint(orbit_M_at_epoch*orsa::radToDeg()/grain_M_DEG)/z_M_delta)*z_M_delta;
                 
 #warning MAKE SURE you are using the correct definition for z_H
                 // this is the same as z_H_max: all objects with H up to H_max
-                // const int z_H     = (1+lrint((*it_orb).H.getRef()/grain_H)/z_H_delta)*z_H_delta;
+                // const int z_H     = (1+lrint((*it_orb).H/grain_H)/z_H_delta)*z_H_delta;
                 //
                 // this is the same as z_H_min: all objects with H up to H_min
-                const int z_H     = (lrint((*it_orb).H.getRef()/grain_H)/z_H_delta)*z_H_delta;
+                // const int z_H     = (lrint((*it_orb).H/grain_H)/z_H_delta)*z_H_delta;
+                //
+                // this is the same as z_H_min: all objects with H larger than or equal to H_min
+                const int z_H     = ceil(((*it_orb).H/grain_H)/z_H_delta)*z_H_delta;
                 
-                ORSA_DEBUG("H: %g   z_H: %i",(*it_orb).H.getRef(),z_H);
+                ORSA_DEBUG("H: %g   z_H: %i",(*(*it_orb).H),z_H);
                 
                 bool isPHO=false;
                 {
                     static unsigned int oID=0;
                     osg::ref_ptr<OrbitID> orbitID = new OrbitID(oID++,earthOrbit);
-                    orbitID->a                = (*it_orb).orbit.getRef().a;
-                    orbitID->e                = (*it_orb).orbit.getRef().e;
-                    orbitID->i                = (*it_orb).orbit.getRef().i;
-                    orbitID->omega_node       = (*it_orb).orbit.getRef().omega_node;
-                    orbitID->omega_pericenter = (*it_orb).orbit.getRef().omega_pericenter;
+                    orbitID->a                = (*(*it_orb).orbit).a;
+                    orbitID->e                = (*(*it_orb).orbit).e;
+                    orbitID->i                = (*(*it_orb).orbit).i;
+                    orbitID->omega_node       = (*(*it_orb).orbit).omega_node;
+                    orbitID->omega_pericenter = (*(*it_orb).orbit).omega_pericenter;
                     orbitID->M                = orbit_M_at_epoch;
                     
                     orbitID->mu =orsaSolarSystem::Data::GMSun();
@@ -323,7 +326,7 @@ int main(int argc, char ** argv) {
                     if ((*it_orb).number.isSet()) {
                         ORSA_DEBUG("observed: [%i] obj: [%i] PHO: [%i] z_a: [%i,%i] z_e: [%i,%i] z_i: [%i,%i] z_node: [%i,%i] z_peri: [%i,%i] z_M: [%i,%i] z_H: %i",
                                    found,
-                                   (*it_orb).number.getRef(),
+                                   (*(*it_orb).number),
                                    isPHO,
                                    z_a_min,
                                    z_a_max,
@@ -341,7 +344,7 @@ int main(int argc, char ** argv) {
                     } else if ((*it_orb).designation.isSet()) {
                         ORSA_DEBUG("observed: [%i] obj: [%s] PHO: [%i] z_a: [%i,%i] z_e: [%i,%i] z_i: [%i,%i] z_node: [%i,%i] z_peri: [%i,%i] z_M: [%i,%i] z_H: %i",
                                    found,
-                                   (*it_orb).designation.getRef().c_str(),
+                                   (*(*it_orb).designation).c_str(),
                                    isPHO,
                                    z_a_min,
                                    z_a_max,
@@ -377,8 +380,8 @@ int main(int argc, char ** argv) {
                 }
                 // then the WHERE ... (extra white space as first character!)
                 char sql_where[1024];
-                // NOTE the "<=" in z_H 
-                sprintf(sql_where," WHERE z_a_min=%i and z_a_max=%i and z_e_min=%i and z_e_max=%i and z_i_min=%i and z_i_max=%i and z_node_min=%i and z_node_max=%i and z_peri_min=%i and z_peri_max=%i and z_M_min=%i and z_M_max=%i and z_H<=%i",
+                // NOTE the "<=" or ">=" in z_H 
+                sprintf(sql_where," WHERE z_a_min=%i and z_a_max=%i and z_e_min=%i and z_e_max=%i and z_i_min=%i and z_i_max=%i and z_node_min=%i and z_node_max=%i and z_peri_min=%i and z_peri_max=%i and z_M_min=%i and z_M_max=%i and z_H>=%i",
                         z_a_min,z_a_max,
                         z_e_min,z_e_max,
                         z_i_min,z_i_max,

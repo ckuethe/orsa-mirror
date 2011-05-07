@@ -1,9 +1,10 @@
 #ifndef _ORSA_SOLAR_SYSTEM_ATTITUDE_
 #define _ORSA_SOLAR_SYSTEM_ATTITUDE_
 
-// #include <orsa/attitude.h>
 #include <orsa/body.h>
 #include <orsa/print.h>
+
+#include <QMutex>
 
 namespace orsaSolarSystem {
   
@@ -26,15 +27,20 @@ namespace orsaSolarSystem {
     public:
         bool get(orsa::Quaternion & q,
                  orsa::Vector     & omega) const { 
-            q     = _q.getRef();
-            omega = _omegaVector.getRef();
+            q     = _q;
+            omega = _omegaVector;
             return true;
         }
     public:
-        orsa::Quaternion getQ()    const  { return _q.getRef(); } 
-        orsa::Vector     getOmega() const { return _omegaVector.getRef(); }
+        orsa::Quaternion getQ()    const  { return _q; } 
+        orsa::Vector     getOmega() const { return _omegaVector; }
     public:
         bool update(const orsa::Time &);
+    public:
+        void lock();
+        void unlock();
+    protected:
+        QMutex mutex;
     private:
         const orsa::Time   _t0;
         const double _phi0;
@@ -58,15 +64,20 @@ namespace orsaSolarSystem {
     public:
         bool get(orsa::Quaternion & q,
                  orsa::Vector     & omega) const { 
-            q     = _q.getRef();
-            omega = _omegaVector.getRef();
+            q     = _q;
+            omega = _omegaVector;
             return true;
         }
     public:
-        orsa::Quaternion getQ()    const  { return _q.getRef(); } 
-        orsa::Vector     getOmega() const { return _omegaVector.getRef(); }
+        orsa::Quaternion getQ()    const  { return _q; } 
+        orsa::Vector     getOmega() const { return _omegaVector; }
     public:
         bool update(const orsa::Time &);
+    public:
+        void lock();
+        void unlock();
+    protected:
+        QMutex mutex;
     private:
         const orsa::Time   _t0;
         const double _phi0;

@@ -72,7 +72,7 @@ bool RWOFile::processLine(const char * line) {
                                            orsaSolarSystem::TS_UTC);
         // ORSA_DEBUG("%s",s_epoch.c_str());
         // ORSA_DEBUG("y: %i   m: %i   d: %f",y,m,d());
-        // orsa::print(workObs->epoch.getRef());
+        // orsa::print(workObs->epoch);
     }
   
     {

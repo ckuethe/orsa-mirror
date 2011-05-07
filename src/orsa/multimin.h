@@ -178,13 +178,13 @@ namespace orsa {
                 const double xVal = gsl_vector_get(parameters,k);
 	
                 if (par->getRangeMin(k).isSet()) {
-                    if (xVal < par->getRangeMin(k).getRef()) {
+                    if (xVal < par->getRangeMin(k)) {
                         return true;
                     }
                 }
 	
                 if (par->getRangeMax(k).isSet()) {
-                    if (xVal > par->getRangeMax(k).getRef()) {
+                    if (xVal > par->getRangeMax(k)) {
                         return true;
                     }
                 }
@@ -229,8 +229,8 @@ namespace orsa {
     private:
         orsa::Cache<std::string> logFile;
     public:
-        virtual void setLogFile(const std::string & lf) { logFile.set(lf); }
-        virtual const std::string & getLogFile() const { return logFile.getRef(); }
+        virtual void setLogFile(const std::string & lf) { logFile = lf; }
+        virtual const std::string & getLogFile() const { return logFile; }
     
     protected:
         osg::ref_ptr<orsa::MultiminParameters> _par;

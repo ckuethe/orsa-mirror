@@ -79,7 +79,7 @@ namespace orsa {
                     ORSA_DEBUG("problems encountered while updating cached values");
                 }
             }
-            return _r_max.getRef();
+            return _r_max;
         }
     public:
         const orsa::Box & boundingBox() const { 
@@ -376,7 +376,7 @@ namespace orsa {
         */
     
     protected:
-        double _a, _a2, _am2, _b, _b2, _bm2, _c, _c2, _cm2;
+        const double _a, _a2, _am2, _b, _b2, _bm2, _c, _c2, _cm2;
     
     protected:
         const orsa::Vector _dummy_closest;    

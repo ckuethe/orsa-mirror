@@ -24,7 +24,7 @@ unix:!macx {
 }
 
 # BOINC sources, needed
-SOURCES += /home/tricaric/boinc/db/boinc_db.cpp /home/tricaric/boinc/db/db_base.cpp /home/tricaric/boinc/sched/sched_msgs.cpp /home/tricaric/boinc/sched/sched_util.cpp /home/tricaric/boinc/sched/sched_config.cpp /home/tricaric/boinc/tools/backend_lib.cpp /home/tricaric/boinc/tools/process_result_template.cpp /home/tricaric/boinc/lib/crypt.cpp
+SOURCES += /home/tricaric/boinc/db/boinc_db.cpp /home/tricaric/boinc/db/db_base.cpp /home/tricaric/boinc/sched/sched_msgs.cpp /home/tricaric/boinc/sched/sched_util.cpp /home/tricaric/boinc/sched/sched_config.cpp /home/tricaric/boinc/sched/sched_limit.cpp /home/tricaric/boinc/tools/backend_lib.cpp /home/tricaric/boinc/tools/process_result_template.cpp /home/tricaric/boinc/lib/crypt.cpp
 
 HEADERS += SurveyReviewWorkGenerator.h
 SOURCES += SurveyReviewWorkGenerator.cpp

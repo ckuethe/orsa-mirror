@@ -12,11 +12,31 @@ namespace orsa {
     public:
         Angle(const double & angle) : _rad(angle) { }
     public:
-        Angle operator + () const { return Angle( _rad); }
-        Angle operator - () const { return Angle(-_rad); }
+        inline Angle operator + () const { return Angle( _rad); }
+        inline Angle operator - () const { return Angle(-_rad); }
+    public:
+        Angle & operator += (const Angle & a) {
+            _rad += a._rad;
+            return *this;
+        }
+        Angle & operator -= (const Angle & a) {
+            _rad -= a._rad;
+            return *this;
+        }
+        /* public:
+           Angle operator + (const Angle & angle) {
+           _rad += angle._rad;
+           return (*this);
+           }
+           public:
+           Angle operator - (const Angle & angle) {
+           _rad -= angle._rad;
+           return (*this);
+           }
+        */
     public:
         void   setRad(const double & angle) { _rad = angle; }
-        double getRad() const { return _rad; }
+        const double & getRad() const { return _rad; }
         //
         void setDPS(const double & d, 
                     const double & p, 
@@ -44,7 +64,15 @@ namespace orsa {
     private:
         double _rad;
     };
-  
+
+    inline Angle operator - (const Angle & a, const Angle & b) {
+        return Angle(a.getRad()-b.getRad());
+    }
+    
+    inline Angle operator + (const Angle & a, const Angle & b) {
+        return Angle(a.getRad()+b.getRad());
+    }
+    
     inline double sin(const Angle & angle) {
         return ::sin(angle.getRad());
     }

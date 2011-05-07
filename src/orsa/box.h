@@ -51,12 +51,12 @@ namespace orsa {
         void reset();
     
     public:
-        const double & getXMin() const { return _xMin.getRef(); }
-        const double & getXMax() const { return _xMax.getRef(); }
-        const double & getYMin() const { return _yMin.getRef(); }
-        const double & getYMax() const { return _yMax.getRef(); }
-        const double & getZMin() const { return _zMin.getRef(); }
-        const double & getZMax() const { return _zMax.getRef(); }
+        const double & getXMin() const { return _xMin; }
+        const double & getXMax() const { return _xMax; }
+        const double & getYMin() const { return _yMin; }
+        const double & getYMax() const { return _yMax; }
+        const double & getZMin() const { return _zMin; }
+        const double & getZMax() const { return _zMax; }
     
     public:
         osg::BoundingBox getOSGBoundingBox() const;

@@ -39,18 +39,18 @@ std::string & orsa::removeLeadingPlusSign(std::string & s) {
    bg->getBodyInterval(ref_b);
    const orsa::Time dt = 
    std::min(orsa::Time(0,0,0,5,0),
-   std::min(bi->max().time.getRef()-t,
-   t-bi->min().time.getRef()));
+   std::min(bi->max().time-t,
+   t-bi->min().time));
    // REMEMBER: now thrust is in FrenetSerret components
    orsa::Vector T, N, B;
-   ORSA_DEBUG("bi->min().time.getRef().tmp: %i",bi->min().tmp);
-   ORSA_DEBUG("bi->max().time.getRef().tmp: %i",bi->max().tmp);
-   if (t > bi->min().time.getRef()) {
+   ORSA_DEBUG("bi->min().time.tmp: %i",bi->min().tmp);
+   ORSA_DEBUG("bi->max().time.tmp: %i",bi->max().tmp);
+   if (t > bi->min().time) {
    FrenetSerret(ref_b, bg,
    t,
    -dt,
    T, N, B);
-   } else if (t < bi->max().time.getRef()) {
+   } else if (t < bi->max().time) {
    FrenetSerret(ref_b, bg,
    t,
    dt,
@@ -58,8 +58,8 @@ std::string & orsa::removeLeadingPlusSign(std::string & s) {
    } else {
    ORSA_DEBUG("interval smaller than dt");
    ORSA_DEBUG("--BODY-INTERVAL-TIME-RANGE--");
-   print(bi->min().time.getRef());
-   print(bi->max().time.getRef());
+   print(bi->min().time);
+   print(bi->max().time);
    ORSA_DEBUG("call time:");
    print(t);
    //
@@ -239,7 +239,11 @@ orsa::Matrix orsa::localToGlobal(const orsa::Body       * b,
     orsa::IBPS ibps;
     if (bg->getInterpolatedIBPS(ibps, b, t)) { 
         if (ibps.rotational.get()) {
-            return QuaternionToMatrix(ibps.rotational.get()->getQ());
+            ibps.rotational->lock();
+            ibps.rotational->update(t);
+            const orsa::Matrix m = QuaternionToMatrix(ibps.rotational.get()->getQ());
+            ibps.rotational->unlock();
+            return m;
         } else {
             // ORSA_DEBUG("problems... body: [%s]",b->getName().c_str());
             return orsa::Matrix::identity();
@@ -262,9 +266,12 @@ orsa::Matrix orsa::globalToLocal(const orsa::Body       * b,
     orsa::IBPS ibps;
     if (bg->getInterpolatedIBPS(ibps, b, t)) { 
         if (ibps.rotational.get()) {
+            ibps.rotational->lock();
+            ibps.rotational->update(t);
             const orsa::Matrix m = QuaternionToMatrix(ibps.rotational.get()->getQ());
             orsa::Matrix m_tr;
             orsa::Matrix::transpose(m, m_tr);
+            ibps.rotational->unlock();
             return m_tr;
         } else {
             // ORSA_DEBUG("problems... body: [%s]",b->getName().c_str());
@@ -274,6 +281,48 @@ orsa::Matrix orsa::globalToLocal(const orsa::Body       * b,
         ORSA_DEBUG("problems... body: [%s]",b->getName().c_str());
         return orsa::Matrix::identity();
     }
+}
+
+// magnitude function
+// alpha = solar phase angle = angle Sun-Asteroid-Observer
+// G = slope parameter (G ~= 0.15)
+double orsa::P (const double & alpha, 
+                const double & G) {
+    // ORSA_DEBUG("P:   alpha = %f",alpha.get_mpf_t());
+    const double phi_1 = exp(-3.33*pow(tan(0.5*alpha),0.63));
+    const double phi_2 = exp(-1.87*pow(tan(0.5*alpha),1.22));
+    /* 
+       ORSA_DEBUG("P = %f   alpha: %f   p1: %f   p2: %f",
+       -2.5*log10((1.0-G)*phi_1+G*phi_2),
+       alpha.get_mpf_t(),
+       phi_1,
+       phi_2);
+    */
+    return (-2.5*log10((1.0-G)*phi_1+G*phi_2));
+}
+
+double orsa::apparentMagnitude(const double & H,
+                               const double & G,
+                               const double & phaseAngle,
+                               const double & neo2obs,
+                               const double & neo2sun) {
+    
+    const double V = H + P(phaseAngle,G) + 
+        5*log10(FromUnits(neo2obs,orsa::Unit::AU,-1)*FromUnits(neo2sun,orsa::Unit::AU,-1));
+    
+    return V;
+}
+
+double orsa::absoluteMagnitude(const double & V,
+                               const double & G,
+                               const double & phaseAngle,
+                               const double & neo2obs,
+                               const double & neo2sun) {
+    
+    const double H = V - P(phaseAngle,G) - 
+        5*log10(FromUnits(neo2obs,orsa::Unit::AU,-1)*FromUnits(neo2sun,orsa::Unit::AU,-1));
+    
+    return H;
 }
 
 double orsa::asteroidDiameter(const double & p, 
@@ -336,6 +385,12 @@ void orsa::principalAxis(orsa::Matrix & genericToPrincipal,
     gsl_vector_free (eval);
     gsl_matrix_free (evec);
 }
+
+/***/
+
+orsa::GlobalRNG * orsa::GlobalRNG::_instance = 0;
+
+orsa::Cache<int> orsa::GlobalRNG::randomSeed;
 
 /***/
 
@@ -583,24 +638,27 @@ orsa::PaulMoment * orsa::computePaulMoment(const unsigned int order,
                         pm->setM(stat->average(),i,j,k);
                         pm->setM_uncertainty(stat->averageError(),i,j,k);
 	    
-                        /* 
-                           if (1) {
-                           // debug output
-                           const double  M = stat->average();
-                           const double dM = stat->averageError();
-                           //
-                           const double largest = std::max(fabs(M),fabs(dM));
-                           //
-                           const int    p10 = floor(log10(largest));
-                           const double d10 = exp10(p10);
-                           //
-                           const double  M10 =  M/d10;
-                           const double dM10 = dM/d10;
-                           //
-                           ORSA_DEBUG("M[%i][%i][%i] = (%+f +/- %f) x 10^%i",
-                           i,j,k,M10,dM10,p10);
-                           }
-                        */
+                        if (0) {
+                            // debug output
+                            const double  M = stat->average();
+                            const double dM = stat->averageError();
+                            //
+                            /* ORSA_DEBUG("M[%i][%i][%i] = %g +/- %g",
+                               i,j,k,M,dM);
+                            */
+                            //
+                            const double largest = std::max(fabs(M),fabs(dM));
+                            //
+                            const int    p10 = floor(log10(largest));
+                            const double d10 = pow(10,p10);
+                            //
+                            const double  M10 =  M/d10;
+                            const double dM10 = dM/d10;
+                            //
+                            ORSA_DEBUG("M[%i][%i][%i] = (%+f +/- %f) x 10^%i",
+                                       i,j,k,M10,dM10,p10);
+                        }
+                        
                     }
                 }
             }
