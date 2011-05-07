@@ -11,7 +11,7 @@ orsa::Time AnimationTime::getSimulationTime(const int frameID) const {
     }
   
     if ( (!(_lastFrameID.isSet())) ||
-         ((_lastFrameID.isSet()) && (frameID != _lastFrameID.getRef())) ) {
+         ((_lastFrameID.isSet()) && (frameID != _lastFrameID)) ) {
     
         orsa::Time t_start, t_stop;
         _bg->getGlobalInterval(t_start,t_stop,false);
@@ -32,7 +32,7 @@ orsa::Time AnimationTime::getSimulationTime(const int frameID) const {
             if (_lastSimulationTime > t_stop)  _lastSimulationTime = t_stop; 
             _lastFrameID = frameID;
         } else {
-            _elapsedMSec = _initialTime.getRef().elapsed();
+            _elapsedMSec = QTime(_initialTime).elapsed();
             _lastFrameID = frameID;
       
             if (_timeMultiplier < 0) {
@@ -72,7 +72,7 @@ const orsa::Vector AnimationTime::centralBodyPosition(const orsa::Time & t) cons
     if (_centralBody.get()) {
     
         if ( (!(_lastCentralBodyTime.isSet())) ||
-             ((_lastCentralBodyTime.isSet()) && (t != _lastCentralBodyTime.getRef())) ) {
+             ((_lastCentralBodyTime.isSet()) && (t != _lastCentralBodyTime)) ) {
       
             _bg->getInterpolatedPosition(_lastCentralBodyPosition,
                                          _centralBody.get(),
@@ -85,7 +85,7 @@ const orsa::Vector AnimationTime::centralBodyPosition(const orsa::Time & t) cons
     } else if (_followCenterOfMass) {
     
         if ( (!(_lastCentralBodyTime.isSet())) ||
-             ((_lastCentralBodyTime.isSet()) && (t != _lastCentralBodyTime.getRef())) ) {
+             ((_lastCentralBodyTime.isSet()) && (t != _lastCentralBodyTime)) ) {
       
             // _lastCentralBodyPosition = _bg->centerOfMassPosition(t);
             //

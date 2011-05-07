@@ -65,12 +65,11 @@ namespace orsa {
                 return false;
             }
       
-            /* 
-               ORSA_DEBUG("t.: %f",t.get_d());
+            /* ORSA_DEBUG("t.: %f",t.get_d());
                ORSA_DEBUG("t0: %f",_t0.get_d());
                ORSA_DEBUG("t1: %f",_t1.get_d());
             */
-      
+            
             // Add a check: t MUST be between _t0 and _t1 included
             if (t < _t0) {
                 ORSA_ERROR("t < t0");

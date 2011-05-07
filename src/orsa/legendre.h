@@ -52,7 +52,7 @@ namespace orsa {
                 // _P[l][m].set(power_sign(m)*power_sign(l)*__fact_fact__(2.0*l-1.0)*__int_pow__(_sqrt_one_minus_x2,l));
                 // _P[l][m].set(power_sign(m)*power_sign(l)*bi_factorial(2.0*l-1)*int_pow(_sqrt_one_minus_x2,l));
                 // _P[l][m].set(power_sign(m)*power_sign(l)*bi_factorial(2*l-1)*int_pow(_sqrt_one_minus_x2,l));
-                _P[l][m].set(power_sign(m)*power_sign(l)*bi_factorial(2*mpz_class(l)-1).get_d()*int_pow(_sqrt_one_minus_x2,l));
+                _P[l][m] = power_sign(m)*power_sign(l)*bi_factorial(2*mpz_class(l)-1).get_d()*int_pow(_sqrt_one_minus_x2,l);
                 //
                 // ORSA_DEBUG("check: P(%i,%i) = %g",l,m,_P[l][m].get());
                 return;
@@ -62,7 +62,7 @@ namespace orsa {
                 //
                 // there is not a sign dependence here
                 // first sign convention
-                _P[l][m].set(_x*(2.0*m+1)*_P[m][m].getRef());
+                _P[l][m] = _x*(2.0*m+1)*_P[m][m];
                 // second sign convention (-1)^m
                 // _P[l][m].set(_x*(2.0*m+1.0)*_P[m][m].get());
                 //
@@ -113,10 +113,10 @@ namespace orsa {
             if ((l>=2) && ((l+2)>=m)) {
                 __check_P__(l-1,m); 
                 __check_P__(l-2,m); 
-                _P[l][m].set((_x*(2.0*l-1.0)*_P[l-1][m].getRef()-(l+m-1.0)*_P[l-2][m].getRef())/(l-m));
+                _P[l][m] = (_x*(2.0*l-1.0)*_P[l-1][m]-(l+m-1.0)*_P[l-2][m])/(l-m);
             } else if ((l>=1) && ((l+1)>=m)) {
                 __check_P__(l-1,m); 
-                _P[l][m].set((_x*(2.0*l-1.0)*_P[l-1][m].getRef())/(l-m));
+                _P[l][m] = (_x*(2.0*l-1.0)*_P[l-1][m])/(l-m);
             } else {
                 ORSA_ERROR("this case should have been handled already somewhere else");
             }	
@@ -132,30 +132,30 @@ namespace orsa {
             if ((l>0) && (l>m)) {
                 __check_P__(l,m);
                 __check_P__(l-1,m);
-                // _dP[l][m].set((l*_x*_P[l][m].getRef()-(l+m)*_P[l-1][m].getRef())/_sqrt_one_minus_x2);
+                // _dP[l][m].set((l*_x*_P[l][m]-(l+m)*_P[l-1][m])/_sqrt_one_minus_x2);
                 if (fabs(_sqrt_one_minus_x2) > epsilon()) {
-                    _dP[l][m].set((l*_x*_P[l][m].getRef()-(l+m)*_P[l-1][m].getRef())/_sqrt_one_minus_x2);
+                    _dP[l][m] = (l*_x*_P[l][m]-(l+m)*_P[l-1][m])/_sqrt_one_minus_x2;
                 } else {
                     ORSA_DEBUG("PROBLEM: division by zero... FIX FIX FIX (how?)");
                     //
-                    _dP[l][m].set(0);
+                    _dP[l][m] = 0;
                 }
             } else {
                 __check_P__(l,m);
-                // _dP[l][m].set((l*_x*_P[l][m].getRef())/_sqrt_one_minus_x2);
+                // _dP[l][m].set((l*_x*_P[l][m])/_sqrt_one_minus_x2);
                 if (fabs(_sqrt_one_minus_x2) > epsilon()) {
-                    _dP[l][m].set((l*_x*_P[l][m].getRef())/_sqrt_one_minus_x2);
+                    _dP[l][m] = (l*_x*_P[l][m])/_sqrt_one_minus_x2;
                 } else {
                     ORSA_DEBUG("PROBLEM: division by zero... FIX FIX FIX (how?)");
                     //
-                    _dP[l][m].set(0);
+                    _dP[l][m] = 0;
                 }
             }
             // ORSA_DEBUG("computed value: dP(%i,%i) = %g",l,m,_dP[l][m].get());
         }
     public:
-        const double P(const unsigned int l, 
-                       const unsigned int m) const {
+        double P(const unsigned int l, 
+                 const unsigned int m) const {
             // ORSA_DEBUG("called P(%i,%i)",l,m);
             if (m > l) {
                 ORSA_ERROR("incorrect values: m > l (%i > %i)",m,l);
@@ -183,15 +183,15 @@ namespace orsa {
             */
             //
             if (_P[l][m].isSet()) {
-                return _P[l][m].getRef();
+                return _P[l][m];
             }
             __check_P__(l,m);
-            return _P[l][m].getRef();
+            return _P[l][m];
         }
     public:
         //! dP returns the value of dP/d theta, assuming P=P(cos theta);
-        const double dP(const unsigned int l, 
-                        const unsigned int m) const {
+        double dP(const unsigned int l, 
+                  const unsigned int m) const {
             if (m > l) {
                 ORSA_ERROR("incorrect values: l < m (%i < %i)",l,m);
                 return 0;
@@ -203,10 +203,10 @@ namespace orsa {
                 }
             }
             if (_dP[l][m].isSet()) {
-                return _dP[l][m].getRef();
+                return _dP[l][m];
             }
             __check_dP__(l,m);
-            return _dP[l][m].getRef();
+            return _dP[l][m];
         }
     public:
         /* 

@@ -68,7 +68,9 @@ namespace orsaSolarSystem {
     typedef std::vector< osg::ref_ptr<orsaSolarSystem::Observation> > ObservationVector;
   
     typedef std::vector< osg::ref_ptr<orsaSolarSystem::OpticalObservation> > OpticalObservationVector;
-  
+    
+    orsa::Vector observationDirection(const orsaSolarSystem::OpticalObservation * obs);
+    
 } // namespace orsaSolarSystem
 
 #endif // _ORSA_SOLAR_SYSTEM_OBSERVATION_

@@ -19,24 +19,6 @@
 #include <orsaSPICE/spice.h>
 #include <orsaSPICE/spiceBodyTranslationalCallback.h>
 
-// magnitude function
-// alpha = solar phase angle = angle Sun-Asteroid-Observer
-// G = slope parameter (G ~= 0.15)
-inline double P (const double & alpha, 
-                 const double & G) {
-    // ORSA_DEBUG("P:   alpha = %f",alpha.get_mpf_t());
-    const double phi_1 = exp(-3.33*pow(tan(0.5*alpha),0.63));
-    const double phi_2 = exp(-1.87*pow(tan(0.5*alpha),1.22));
-    /* 
-       ORSA_DEBUG("P = %f   alpha: %f   p1: %f   p2: %f",
-       -2.5*log10((1.0-G)*phi_1+G*phi_2),
-       alpha.get_mpf_t(),
-       phi_1,
-       phi_2);
-    */
-    return (-2.5*log10((1.0-G)*phi_1+G*phi_2));
-}
-
 /**** function interpolation, inspired from OrbitProxy ****/
 
 // to be moved into ORSA library when tested and working
@@ -243,18 +225,6 @@ inline double P (const double & alpha,
    return V;
    }
 */
-//
-inline double apparentMagnitude(const double & H,
-                                const double & G,
-                                const double & phaseAngle,
-                                const double & neo2obs,
-                                const double & neo2sun) {
-  
-    const double V = H + P(phaseAngle,G) + 
-        5*log10(FromUnits(neo2obs,orsa::Unit::AU,-1)*FromUnits(neo2sun,orsa::Unit::AU,-1));
-  
-    return V;
-}
 
 /****/
 
@@ -307,8 +277,12 @@ public:
                  const orsa::Orbit & earthOrbit_in) :
         osg::Referenced(),
         a_AU_min(a_AU_min_in),
-        a_AU_max(a_AU_max_in),
-        e_min(e_min_in),
+        a_AU_max(e_max_in>0.99 ? a_AU_max_in : std::max(std::min(orsa::FromUnits(OrbitID::NEO_max_q,orsa::Unit::AU,-1)/(1.0-e_max_in),
+                                                                 a_AU_max_in),
+                                                        a_AU_min_in)), // NEOs optimization, old: a_AU_max(a_AU_max_in),
+        e_min(std::min(e_max_in,
+                       std::max(e_min_in,
+                                1.0-OrbitID::NEO_max_q/FromUnits(a_AU_min_in,orsa::Unit::AU)))), // NEOs optimization, old: e_min(e_min_in),
         e_max(e_max_in),
         i_DEG_min(i_DEG_min_in),
         i_DEG_max(i_DEG_max_in),
@@ -324,9 +298,9 @@ public:
         earthOrbit(earthOrbit_in),
         GMSun(orsaSolarSystem::Data::GMSun()) {
         idCounter = 0;
-    
+        
         // debug
-        /* ORSA_DEBUG("new factory object: %g-%g %g-%g %g-%g %g-%g %g-%g %g-%g %g-%g",
+        /* ORSA_DEBUG("new factory object: %g-%g %g-%g %g-%g %g-%g %g-%g %g-%g",
            a_AU_min,
            a_AU_max,
            e_min,
@@ -338,14 +312,12 @@ public:
            peri_DEG_min,
            peri_DEG_max,
            M_DEG_min,
-           M_DEG_max,
-           H_min,
-           H_max);
+           M_DEG_max);
         */
     }
 protected:
     virtual ~OrbitFactory() { }
-  
+    
 public:
     virtual OrbitID * sample() const;
   

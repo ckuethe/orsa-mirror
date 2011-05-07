@@ -29,12 +29,12 @@ namespace orsa {
     
     public:	
         bool lastCallRejected() const {
-            /* if (_lastCallRejected.get()) {
+            /* if (_lastCallRejected) {
                ORSA_DEBUG("LAST CALL REJECTED");
                }
             */
             //
-            return _lastCallRejected.get(); 
+            return _lastCallRejected; 
         }
     private:
         orsa::Cache<bool> _lastCallRejected;

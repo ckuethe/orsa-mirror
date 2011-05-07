@@ -49,7 +49,7 @@ namespace orsaOSG {
                     if (_b->alive(simulationTime)) {
 	    
                         if ( (!(_lastSimulationTime.isSet())) ||
-                             ((_lastSimulationTime.isSet()) && (simulationTime != _lastSimulationTime.getRef())) ) {
+                             ((_lastSimulationTime.isSet()) && (simulationTime != _lastSimulationTime)) ) {
 	      
                             _lastSimulationTime = simulationTime;
 	      

@@ -33,7 +33,7 @@ void SPICE::getPosVel(const std::string & target,
     mutex.lock();
     spkezr_c(target.c_str(),
              SPICETime(ephemerisTime), 
-             _global.getRef().c_str(), // "J2000", //! note: J2000 is the equatorial! eclipj2000 is the ecliptic one!
+             (*_global).c_str(), // "J2000", //! note: J2000 is the equatorial! eclipj2000 is the ecliptic one!
              "NONE",
              observer.c_str(),
              state,
@@ -53,7 +53,7 @@ void SPICE::getPosVel(const std::string & target,
                       orsa::Vector      & relativeVelocity) {
     getPosVel(target,
               ephemerisTime,
-              _observer.getRef(),
+              _observer,
               relativePosition,
               relativeVelocity);
 }
@@ -63,7 +63,7 @@ orsa::Matrix SPICE::localToGlobal(const std::string & local,
     SpiceDouble rotate[3][3];
     mutex.lock();
     pxform_c(local.c_str(),
-             _global.getRef().c_str(),
+             (*_global).c_str(),
              SPICETime(ephemerisTime),
              rotate);
     mutex.unlock();
@@ -84,7 +84,7 @@ orsa::Matrix SPICE::globalToLocal(const std::string & local,
     // SINTAX: pxform_c ( from, to,  et,  rotate );
     SpiceDouble rotate[3][3];
     mutex.lock();
-    pxform_c(_global.getRef().c_str(),
+    pxform_c((*_global).c_str(),
              local.c_str(),
              SPICETime(ephemerisTime),
              rotate);

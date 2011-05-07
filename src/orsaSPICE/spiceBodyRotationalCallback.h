@@ -3,6 +3,8 @@
 
 #include <orsa/body.h>
 
+#include <QMutex>
+
 namespace orsaSPICE {
   
     class SpiceBodyRotationalCallback : public orsa::PrecomputedRotationalBodyProperty {
@@ -18,6 +20,11 @@ namespace orsaSPICE {
         orsa::Vector     getOmega() const;
     public:
         bool update(const orsa::Time &);
+    public:
+        void lock();
+        void unlock();
+    protected:
+        QMutex mutex;
     protected:
         const std::string _name;
     protected:

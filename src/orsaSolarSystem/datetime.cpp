@@ -638,6 +638,13 @@ void orsaSolarSystem::ApproximatedLunation(const orsa::Time & t,
     }
 }
 
+double orsaSolarSystem::fractionalLunation(const orsa::Time & t) {
+    orsa::Time begin, end;
+    int lunationID;
+    ApproximatedLunation(t,begin,end,lunationID);
+    return (lunationID + (t-begin).get_d()/(end-begin).get_d());
+}
+
 /*****/
 
 double orsaSolarSystem::fractionalYear(const orsa::Time & t) {

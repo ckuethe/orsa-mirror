@@ -100,7 +100,7 @@ namespace orsaSolarSystem {
     orsa::Time J2000();
   
     orsa::Time now();
-  
+    
     //! approximated period between two full moons
     //! real full moon times can be off by up to about 15 hours
     //! only really useful to divide time in lunation periods of (almost) constant length (very small quadratic term)
@@ -108,7 +108,9 @@ namespace orsaSolarSystem {
                               orsa::Time & begin,
                               orsa::Time & end,
                               int & lunationID);
-  
+    
+    double fractionalLunation(const orsa::Time & t); // non-linear!
+    
     // utility: returns the "fractional year" i.e. 2009.121233, useful for plots...
     double fractionalYear(const orsa::Time & t);
   

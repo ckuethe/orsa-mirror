@@ -12,7 +12,7 @@
 #include <cstdlib>
 
 namespace orsa {
-  
+    
     // computes i! (factorial)
     mpz_class factorial(const mpz_class & i,
                         const bool & cache=true);
@@ -27,44 +27,44 @@ namespace orsa {
     
     // (-1)^l
     int power_sign(const mpz_class & l);
-  
-    double int_pow(const double & x, const int & p);
-  
+    
+    template <class T> T int_pow(const T & x, const int & p);
+    
     inline double square(const double & x) { return (x*x); }
-  
+    
     inline double cube(const double & x) { return (x*x*x); }
-  
+    
     const double & epsilon();
-  
+    
     const double & pi();
-  
+    
     const double & halfpi();
-  
+    
     const double & twopi();
-  
+    
     const double & pisquared();
-  
+    
     const double & radToDeg();
-  
+    
     const double & degToRad();
-  
+    
     const double & radToArcmin();
-  
+    
     const double & arcminToRad();
-  
+    
     const double & radToArcsec();
-  
+    
     const double & arcsecToRad();
-  
+    
     int kronecker(const mpz_class & i,
                   const mpz_class & j);
-  
+    
     double pochhammer(const double    & a, 
                       const mpz_class & n);
-  
+    
     // call orsa::crash() if x is not finite (+-Inf or NaN), useful for debugging
     void check(const double & x);
-  
+    
 } // namespace orsa
 
 #endif // _ORSA_DOUBLE_

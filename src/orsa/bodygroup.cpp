@@ -63,6 +63,14 @@ bool BodyGroup::addBody(const Body * b) {
         insertIBPS(ibps, b, false, false);
     }
     
+    {
+        // debug
+        /* ORSA_DEBUG("added body [%s]  inertial: %x",
+           b->getName().c_str(),
+           b->getInitialConditions().inertial.get());
+        */
+    }
+    
     return true;
 }
 
@@ -115,8 +123,8 @@ bool BodyGroup::getIBPS(orsa::IBPS       & ibps,
         ibps.time = t;
         // if (_b_interval->getSubInterval(trv, _trv1, _trv2)) {
         if (bi->getSubInterval(ibps,ibps1,ibps2)) {
-            if ((t == ibps1.time.getRef()) && 
-                (t == ibps2.time.getRef())) {
+            if ((t == ibps1.time) && 
+                (t == ibps2.time)) {
                 ibps = ibps1;
                 ibps.update(t);
                 return true;
@@ -148,8 +156,8 @@ bool BodyGroup::getClosestIBPS(orsa::IBPS       & ibps,
         // if (_b_interval->getSubInterval(trv, _trv1, _trv2)) {
         if (bi->getSubInterval(ibps,ibps1,ibps2)) {
             // if (fabs((_trv1.t-t).get_d()) < fabs((_trv2.t-t).get_d())) {
-            if (fabs((ibps1.time.getRef()-t).get_d()) < 
-                fabs((ibps2.time.getRef()-t).get_d())) {
+            if (fabs((ibps1.time-t).get_d()) < 
+                fabs((ibps2.time-t).get_d())) {
                 ibps = ibps1;
             } else {
                 ibps = ibps2;
@@ -165,18 +173,30 @@ bool BodyGroup::getClosestIBPS(orsa::IBPS       & ibps,
 bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
                                     const orsa::Body * b,
                                     const orsa::Time & t) const {
-  
+
+    // NO update(t) calls here, because it's not within a lock/unlock block
+    // commented all [R] update calls...
+    
     if (!b->alive(t)) {
         // ORSA_DEBUG("out, body [%s]",b->getName().c_str());
         return false;
     }
-  
-    /* 
-       ORSA_DEBUG("body: [%s]  bodies: %i",
-       b->getName().c_str(),
-       size());
+    
+    /* if (b->getInitialConditions().time.isSet()) {
+       if (b->getInitialConditions().time == t) {
+       ibps = b->getInitialConditions();
+       return true;
+       }
+       }
     */
-  
+    
+    /* ORSA_DEBUG("body: [%s]  bodies: %i   inertial: %x   t: [below]",
+       b->getName().c_str(),
+       size(),
+       b->getInitialConditions().inertial.get());
+       orsa::print(t);
+    */
+    
     if (b->getInitialConditions().dynamic()) {
         IBPS ibps1, ibps2;
         osg::ref_ptr<const orsa::BodyGroup::BodyInterval> bi = getBodyInterval(b);
@@ -186,25 +206,29 @@ bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
             return false;
         }
         if (bi->getSubInterval(ibps,ibps1,ibps2)) {
-            if ((t == ibps1.time.getRef()) && (t == ibps2.time.getRef())) {
+            /* ORSA_DEBUG("IBPS 1 & 2 times: [below]");
+               orsa::print(ibps1.time);
+               orsa::print(ibps2.time);
+            */
+            if ((t == ibps1.time) && (t == ibps2.time)) {
                 ibps = ibps1;	
                 //
                 // VERY IMPORTANT call to update(t);
-                ibps.update(t);
+                // [R] ibps.update(t);
                 // ORSA_DEBUG("out, body [%s]",b->getName().c_str());
                 return true;
             } else {
-                if ( (t < ibps1.time.getRef()) || 
-                     (t > ibps2.time.getRef())) {
+                if ( (t < ibps1.time) || 
+                     (t > ibps2.time)) {
                     ORSA_WARNING("outside boundaries!!");
                     getClosestIBPS(ibps,b,t);
                     ORSA_DEBUG("out, body [%s]",b->getName().c_str());
                     return false;
                 }
-                if (ibps1.time.getRef() == ibps2.time.getRef()) {
+                if (ibps1.time == ibps2.time) {
                     ibps = ibps1;
                     // ORSA_DEBUG("out, body [%s]",b->getName().c_str());
-                    ibps.update(t);
+                    // [R] ibps.update(t);
                     return true;	  
                 } else {
                     // to copy pointers...
@@ -219,13 +243,13 @@ bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
                             const double m1 = ibps1.inertial->mass();
                             const double m2 = ibps2.inertial->mass();
                             //
-                            const orsa::Time & t1 = ibps1.time.getRef();
-                            const orsa::Time & t2 = ibps2.time.getRef();
+                            const orsa::Time & t1 = ibps1.time;
+                            const orsa::Time & t2 = ibps2.time;
                             //
                             const double mt = ((m2-m1)/(t2-t1).get_d())*(t-t1).get_d();
                             ibps.inertial->setMass(mt);
                         } else {
-                            ibps.inertial->update(t);
+                            // [R] ibps.inertial->update(t);
                         }
                     }
 	  
@@ -234,12 +258,16 @@ bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
                         if (ibps.translational->dynamic()) {
                             osg::ref_ptr<orsa::PhysicalSpline<orsa::Vector> > s = new orsa::PhysicalSpline<orsa::Vector>;
                             //
+                            ibps1.translational->lock();
+                            ibps2.translational->lock();
+                            ibps1.update(t);
+                            ibps2.update(t);
                             if (s->set(ibps1.translational->position(),
                                        ibps1.translational->velocity(),
-                                       ibps1.time.getRef(),
+                                       ibps1.time,
                                        ibps2.translational->position(),
                                        ibps2.translational->velocity(),
-                                       ibps2.time.getRef())) {
+                                       ibps2.time)) {
                                 orsa::Vector r,v;
                                 if (s->get(r,v,t)) {
                                     ibps.translational->setPosition(r);
@@ -257,8 +285,10 @@ bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
                                 ORSA_DEBUG("problems...");
                                 return false;
                             }
+                            ibps1.translational->unlock();
+                            ibps2.translational->unlock();
                         } else {
-                            ibps.translational->update(t);
+                            // [R] ibps.translational->update(t);
                         }
                     } 
 	  
@@ -272,9 +302,9 @@ bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
                             osg::ref_ptr<orsa::Slerp> slerp = new Slerp;
 	      
                             if (slerp->set(ibps1.rotational->getQ(),
-                                           ibps1.time.getRef(),
+                                           ibps1.time,
                                            ibps2.rotational->getQ(),
-                                           ibps2.time.getRef())) {
+                                           ibps2.time)) {
                                 if (!slerp->get(sQ,t)) {
                                     ORSA_DEBUG("problems...");
                                     return false;
@@ -291,13 +321,13 @@ bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
                                                  ibps1.rotational->getOmega());
 	      
                         } else {
-                            ibps.rotational->update(t); 
+                            // [R] ibps.rotational->update(t); 
                         }
                     }
 	  
 	  
                     // ORSA_DEBUG("out, body [%s]",b->getName().c_str());
-                    ibps.update(t);
+                    // [R] ibps.update(t);
                     return true;
                 }
             }	
@@ -306,16 +336,14 @@ bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
                        b->getName().c_str(),
                        b->getInitialConditions().dynamic());
             orsa::print(t);
-      
             ORSA_DEBUG("body initial conditions time: [below]");
-            orsa::print(b->getInitialConditions().time.getRef());
-      
-            // ORSA_DEBUG("..out..");
+            orsa::print(b->getInitialConditions().time);
+            
             return false;
         }	
     } else {
         ibps = b->getInitialConditions();
-        ibps.update(t);
+        // [R] ibps.update(t);
         // ORSA_DEBUG("out, body [%s]",b->getName().c_str());
         return true;
     } 
@@ -327,7 +355,10 @@ bool BodyGroup::getInterpolatedPosition(Vector     & position,
     orsa::IBPS ibps;
     if (getInterpolatedIBPS(ibps,b,t)) {
         if (ibps.translational.get()) {
+            ibps.lock();
+            ibps.update(t);
             position = ibps.translational->position();
+            ibps.unlock();
             return true;
         } else {
             return false;
@@ -343,7 +374,10 @@ bool BodyGroup::getInterpolatedVelocity(Vector     & velocity,
     orsa::IBPS ibps;
     if (getInterpolatedIBPS(ibps,b,t)) {
         if (ibps.translational.get()) {
+            ibps.lock();
+            ibps.update(t);
             velocity = ibps.translational->velocity();
+            ibps.unlock();
             return true;
         } else {
             return false;
@@ -360,8 +394,11 @@ bool BodyGroup::getInterpolatedPosVel(Vector     & position,
     orsa::IBPS ibps;
     if (getInterpolatedIBPS(ibps,b,t)) {
         if (ibps.translational.get()) {
+            ibps.lock();
+            ibps.update(t);
             position = ibps.translational->position();
             velocity = ibps.translational->velocity();
+            ibps.unlock();
             return true;
         } else {
             return false;
@@ -374,10 +411,14 @@ bool BodyGroup::getInterpolatedPosVel(Vector     & position,
 bool BodyGroup::getInterpolatedMass(double     & mass,
                                     const Body * b,
                                     const Time & t) const {
+    // ORSA_DEBUG("called for [%s]",b->getName().c_str());
     orsa::IBPS ibps;
     if (getInterpolatedIBPS(ibps,b,t)) {
         if (ibps.inertial.get()) {
+            ibps.lock();
+            ibps.update(t);
             mass = ibps.inertial->mass();
+            ibps.unlock();
             return true;
         } else {
             return false;
@@ -434,7 +475,7 @@ bool BodyGroup::getClosestCommonTime(orsa::Time       & t,
             const orsa::BodyGroup::BodyInterval::DataType & interval_data = i_b_it->getData();
             orsa::BodyGroup::BodyInterval::DataType::const_iterator interval_data_it = interval_data.begin();
             while (interval_data_it != interval_data.end()) {
-                timeList.push_back(TimeBool((*interval_data_it).time.getRef(),
+                timeList.push_back(TimeBool((*interval_data_it).time,
                                             refTime));
                 ++interval_data_it;
             }
@@ -544,26 +585,26 @@ bool BodyGroup::getCommonInterval(orsa::Time & start, orsa::Time & stop, const b
         /* ORSA_DEBUG("considering body [%s] id: %i  interval: ",
            _bi.key()->getName().c_str(),
            _bi.key()->id());
-           orsa::print(_interval->min().time.getRef());
-           orsa::print(_interval->max().time.getRef());
+           orsa::print(_interval->min().time);
+           orsa::print(_interval->max().time);
         */
         
         if ( (!_min.isSet()) && 
              (!_max.isSet()) ) {
-            _min.set(_interval->min().time.getRef());
-            _max.set(_interval->max().time.getRef());
+            _min = _interval->min().time;
+            _max = _interval->max().time;
         } else if ( (_min.isSet()) && 
                     (_max.isSet()) ) {
-            if ( (_interval->min().time.getRef() > _max.getRef()) ||
-                 (_interval->max().time.getRef() < _min.getRef()) ) {
+            if ( (_interval->min().time > _max) ||
+                 (_interval->max().time < _min) ) {
                 // ORSA_DEBUG("no common interval found");
                 return false;
             } else {
-                if (_interval->min().time.getRef() > _min.getRef()) {
-                    _min.set(_interval->min().time.getRef());
+                if (_interval->min().time > _min) {
+                    _min = _interval->min().time;
                 }
-                if (_interval->max().time.getRef() < _max.getRef()) {
-                    _max.set(_interval->max().time.getRef());
+                if (_interval->max().time < _max) {
+                    _max = _interval->max().time;
                 }
             }
         } else {
@@ -576,9 +617,9 @@ bool BodyGroup::getCommonInterval(orsa::Time & start, orsa::Time & stop, const b
     
     if ( (_min.isSet()) && 
          (_max.isSet()) && 
-         (_min.getRef() <= _max.getRef()) ) {
-        start = _min.getRef();
-        stop  = _max.getRef();
+         (_min <= _max) ) {
+        start = _min;
+        stop  = _max;
         return true;
     }
     
@@ -610,19 +651,19 @@ bool BodyGroup::getGlobalInterval(orsa::Time & start, orsa::Time & stop, const b
              (!_max.isSet()) ) {
             // if ( (_bi.key()->alive(_interval->min().t)) &&
             // (_bi.key()->alive(_interval->max().t)) ) {
-            _min.set(_interval->min().time.getRef());
-            _max.set(_interval->max().time.getRef());
-            // ORSA_DEBUG("min: %f   max: %f",_min.getRef().get_d(),_max.getRef().get_d());
+            _min = _interval->min().time;
+            _max = _interval->max().time;
+            // ORSA_DEBUG("min: %f   max: %f",_min.get_d(),_max.get_d());
             // ORSA_DEBUG("//1//");
             // } 
         } else if ( (_min.isSet()) && 
                     (_max.isSet()) ) {
-            if (_interval->min().time.getRef() < _min.getRef()) {
-                _min.set(_interval->min().time.getRef());
+            if (_interval->min().time < _min) {
+                _min = _interval->min().time;
                 // ORSA_DEBUG("//2//");
             }
-            if (_interval->max().time.getRef() > _max.getRef()) {
-                _max.set(_interval->max().time.getRef());
+            if (_interval->max().time > _max) {
+                _max = _interval->max().time;
                 // ORSA_DEBUG("//3//");
             }
         } else {
@@ -633,9 +674,9 @@ bool BodyGroup::getGlobalInterval(orsa::Time & start, orsa::Time & stop, const b
     }
     if ( (_min.isSet()) && 
          (_max.isSet()) && 
-         (_min.getRef() <= _max.getRef()) ) {
-        start = _min.getRef();
-        stop  = _max.getRef();
+         (_min <= _max) ) {
+        start = _min;
+        stop  = _max;
         /* 
            ORSA_DEBUG("start: %f   stop: %f",
            start.get_d(),
