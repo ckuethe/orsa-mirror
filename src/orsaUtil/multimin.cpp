@@ -235,53 +235,45 @@ void orsaUtil::MultiminMinMaxRange::getMinMaxRange(orsa::Cache<double> & minRang
             b += db;
         } while (b <= maxBoundary);
         //
-        bool doneMin=false, doneMax=false;
         for (unsigned int k=0; k<fb.size()-1; ++k) {
-            /* ORSA_DEBUG("fb[%i]: %g   fb[%i] %g",
-               k,fb[k],
-               k+1,fb[k+1]);
-            */
             // min test
-            if (!doneMin) {
-                // min search if first few fb values are positive and fb[1] < fb[0], i.e.: positive and decreasing...
-                if ( (fb[0] > 0.0) &&
-                     (fb[k+1] < 0.0) ) {
-                    // search for minRange here
-                    // ORSA_DEBUG("minRange search...");
-                    par->set("R_o2a_1",minBoundary+db*(k+0.5));
-                    par->setRange("R_o2a_1",
-                                  minBoundary+db*k,
-                                  minBoundary+db*(k+1));
-                    setMultiminParameters(par.get());
-                    if (run_nmsimplex(1024,1.0e-2)) {
-                        osg::ref_ptr<const orsa::MultiminParameters> parFinal = getMultiminParameters();
-                        minRange = par->get("R_o2a_1");
-                        doneMin=true;
-                    } else {
-                        ORSA_WARNING("the search did not converge.");
-                    }
+            // min search if first few fb values are positive and fb[1] < fb[0], i.e.: positive and decreasing...
+            if ( (fb[0] >= 0.0) &&
+                 (fb[k+1] < 0.0) ) {
+                // search for minRange here
+                // ORSA_DEBUG("minRange search...");
+                par->set("R_o2a_1",minBoundary+db*(k+0.5));
+                par->setRange("R_o2a_1",
+                              minBoundary+db*k,
+                              minBoundary+db*(k+1));
+                setMultiminParameters(par.get());
+                if (run_nmsimplex(1024,1.0e-2)) {
+                    osg::ref_ptr<const orsa::MultiminParameters> parFinal = getMultiminParameters();
+                    minRange = par->get("R_o2a_1");
+                    break;
+                } else {
+                    ORSA_WARNING("the search did not converge.");
                 }
             }
-            if (!doneMax) {
-                if ( (fb[k] < 0.0) &&
-                     (fb[k+1] > 0.0) ) {
-                    // search for maxRange here
-                    // ORSA_DEBUG("maxRange search...");
-                    par->set("R_o2a_1",minBoundary+db*(k+0.5));
-                    par->setRange("R_o2a_1",
-                                  minBoundary+db*k,
-                                  minBoundary+db*(k+1));
-                    setMultiminParameters(par.get());
-                    if (run_nmsimplex(1024,1.0e-2)) {
-                        osg::ref_ptr<const orsa::MultiminParameters> parFinal = getMultiminParameters();
-                        maxRange = par->get("R_o2a_1");
-                        doneMax=true;
-                    } else {
-                        ORSA_WARNING("the search did not converge.");
-                    }
+        }
+        for (int k=fb.size()-2; k>=0; --k) {
+            if ( (fb[k] < 0.0) &&
+                 (fb[k+1] >= 0.0) ) {
+                // search for maxRange here
+                // ORSA_DEBUG("maxRange search...");
+                par->set("R_o2a_1",minBoundary+db*(k+0.5));
+                par->setRange("R_o2a_1",
+                              minBoundary+db*k,
+                              minBoundary+db*(k+1));
+                setMultiminParameters(par.get());
+                if (run_nmsimplex(1024,1.0e-2)) {
+                    osg::ref_ptr<const orsa::MultiminParameters> parFinal = getMultiminParameters();
+                    maxRange = par->get("R_o2a_1");
+                    break;
+                } else {
+                    ORSA_WARNING("the search did not converge.");
                 }
             }
-            if (doneMin && doneMax) break;
         }
     }
     

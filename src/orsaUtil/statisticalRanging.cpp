@@ -51,15 +51,15 @@ bool orsaUtil::statisticalRanging(orsaUtil::SR_AdaptiveIntervalVector & interval
                         vecMaxRange[j].setIfLarger(maxRange);
                     }
                 }
-                
-                /* if (maxRange.isSet()) {
+
+                /* 
+                   if (maxRange.isSet()) {
                    ORSA_DEBUG("max range distance for obs [%02i] and [%02i] = %8.3g [AU]",
                    j,
                    k,
                    orsa::FromUnits(maxRange,orsa::Unit::AU,-1));
                    }
                 */
-                
             }
             // ORSA_DEBUG("set: %i",vecMaxRange[j].isSet());
             if (vecMinRange[j].isSet()) {
