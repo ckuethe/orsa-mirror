@@ -88,7 +88,6 @@ bool OrbitID::isPHO() const {
                     M2,
                     earthOrbit,
                     (*this),
-                    19923,
                     16,
                     1e-6)) {
         ORSA_DEBUG("problems while computing MOID...");
