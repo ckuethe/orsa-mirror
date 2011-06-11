@@ -63,26 +63,31 @@ int main(int argc, char ** argv) {
             /* always cleanup */ 
             curl_easy_cleanup(curl);
         }
-
+        
         fclose(fp);
-
+        
         // re-open read-only to parse
         fp = fopen(outputFileName,"r");
         char line[4096];
-        char s_br_input[1024], s_checkbox[1024], s_name[1024], s_value[1024];
+        char s_input[1024], s_checkbox[1024], s_name[1024], s_value[1024];
         while (fgets(line,1024,fp)) {
-            if (4 == sscanf(line,"%s %s %s %s",s_br_input,s_checkbox,s_name,s_value)) {
-                if ( (std::string(s_br_input) == std::string("<br><input")) && 
-                     (std::string(s_checkbox) == std::string("type=\"checkbox\"")) ){
+            if (4 == sscanf(line,"%s %s %s %s",s_input,s_checkbox,s_name,s_value)) {
+                if ( (std::string(s_input) == std::string("<input")) && 
+                     (std::string(s_checkbox) == std::string("type=\"checkbox\"")) &&
+                     (std::string(s_name) == std::string("name=\"obj\"")) ) {
                     // ORSA_DEBUG("good line: [%s]",line);
                     char designation[1024];
-                    if (1 == sscanf(s_value,"VALUE=\"%s\"",designation)) {
-                        // remove trailing \"
-                        designation[strlen(designation)-1] = '\0';
-                        // if (strlen(designation)==7) {
-                        ORSA_DEBUG("designation: [%s]",designation);
-                        NEOCPlist << designation;
-                        // }
+                    if (1 == sscanf(s_value,"VALUE=\"%s\">",designation)) {
+                        if (strlen(designation)>=2) {
+                            // remove trailing "> that its TWO characters!
+                            designation[strlen(designation)-2] = '\0';
+                            // if (strlen(designation)==7) {
+                            ORSA_DEBUG("designation: [%s]",designation);
+                            NEOCPlist << designation;
+                            // }
+                        } else {
+                            ORSA_DEBUG("designation name too short...");
+                        }
                     }
                 }
             }
