@@ -388,8 +388,25 @@ int main(int argc, char **argv) {
                                          targetSamples,
                                          1000000, // maxIter
                                          aux.get());
-
+            
+            
             {
+                // orbits output
+                orsaUtil::SR_AdaptiveInterval::DataType::DataType::const_iterator it = vec[0]->getData()->getData().begin();
+                while (it != vec[0]->getData()->getData().end()) {
+                    const orsaSolarSystem::OrbitWithEpoch & o = (*it).data->O_s2an_g;
+                    ORSA_DEBUG("SAMPLE: %6.3f %7.3f %9.3f %8.6f %7.3f",
+                               (*(*it).data->RMS),
+                               (*(*it).level),
+                               orsa::FromUnits(o.a,orsa::Unit::AU,-1),
+                               o.e,
+                               o.i*orsa::radToDeg());
+                    ++it;
+                }
+            }
+            
+            {
+                // NEO rating
                 size_t countALL=0, countNEO=0;
 #warning only vec[0] ?      
                 orsaUtil::SR_AdaptiveInterval::DataType::DataType::const_iterator it = vec[0]->getData()->getData().begin();
@@ -404,6 +421,7 @@ int main(int argc, char **argv) {
                 }
                 ORSA_DEBUG("NEO RATING: %.1f\% (%i/%i)",100*(double)countNEO/(double)countALL,countNEO,countALL);
             }
+            
         }
     }
     
