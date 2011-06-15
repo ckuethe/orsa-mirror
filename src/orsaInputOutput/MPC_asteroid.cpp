@@ -60,8 +60,10 @@ bool MPCAsteroidFile::processLine(const char * line) {
     // now, all the remaining fields
     
     s_H.assign(line,8,5);
+    removeLeadingAndTrailingSpaces(s_H);
     
     s_G.assign(line,14,5);
+    removeLeadingAndTrailingSpaces(s_G);
     
     s_epoch.assign(line,20,5);
   
@@ -91,8 +93,12 @@ bool MPCAsteroidFile::processLine(const char * line) {
     MPCAsteroidDataElement element;
     //
     element.orbit       = orbit;
-    element.H           = atof(s_H.c_str());
-    element.G           = atof(s_G.c_str());
+    if (strlen(s_H.c_str()) != 0) {
+        element.H = atof(s_H.c_str());
+    }
+    if (strlen(s_G.c_str()) != 0) { 
+        element.G = atof(s_G.c_str());
+    }
     if (MPC_packedNumber(s_designation) != 0) {
         element.number = MPC_packedNumber(s_designation);
     }
