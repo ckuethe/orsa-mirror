@@ -47,6 +47,7 @@ namespace orsa {
                     double & p, 
                     double & s, 
                     int & sign) const;
+        std::string getDPSstr() const;
         //
         void setHMS(const double & h, 
                     const double & m, 
@@ -57,6 +58,7 @@ namespace orsa {
                     double & m, 
                     double & s,
                     int & sign) const;
+        std::string getHMSstr() const;
     
     private:
         int check_sign(int sign);

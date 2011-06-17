@@ -34,7 +34,20 @@ void Angle::getDPS(double & d,
     const double frac = abs_fdeg - d;
     p = floor(frac*60);  
     s = frac*3600 - p*60;
-} 
+}
+
+std::string Angle::getDPSstr() const {
+    char line[1024];
+    double d,p,s;
+    int sign;
+    getDPS(d,p,s,sign);
+    if (sign>0) {
+        sprintf(line, "%3g %2g %5.2f", d,p,s);
+    } else {
+        sprintf(line,"%+3g %2g %5.2f",-d,p,s);
+    }
+    return line;
+}
 
 void Angle::setHMS(const double & h, 
                    const double & m,
@@ -60,3 +73,16 @@ void Angle::getHMS(double & h,
     m = floor(frac*60);  
     s = frac*3600 - m*60; 
 }    
+
+std::string Angle::getHMSstr() const {
+    char line[1024];
+    double h,m,s;
+    int sign;
+    getHMS(h,m,s,sign);
+    if (sign>0) {
+        sprintf(line, "%3g %2g %5.2f", h,m,s);
+    } else {
+        sprintf(line,"%+3g %2g %5.2f",-h,m,s);
+    }
+    return line;
+}
