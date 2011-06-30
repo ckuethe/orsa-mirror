@@ -65,7 +65,7 @@ namespace orsaUtil {
                     
                     // every so often, try to decrease the threshold level
 #warning should test this only if there has been an insert...       
-                    // another test: can decreast threshold level?
+                    // another test: can decrease threshold level?
                     for (size_t k=0; k<N; ++k) {
 #warning should test if the adaptive interval actually shrinks when reducing level and at the same time reducing the number of points...
                         if (intervalVector[k]->size()==intervalVectorOldSize[k]) continue;

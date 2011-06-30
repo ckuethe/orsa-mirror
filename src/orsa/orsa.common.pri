@@ -29,6 +29,7 @@ HEADERS = angle.h \
 #          borderies.h \
           box.h \
           cache.h \
+          chebyshev.h \
           covariance.h \
           crash.h \
           datetime.h \
