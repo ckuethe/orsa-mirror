@@ -12,24 +12,33 @@
 #include <QHash>
 
 namespace orsaPDS {
+
+    class RadioScienceGravityFile;
     
     class RadioScienceGravityData : public osg::Referenced {
+        friend class orsaPDS::RadioScienceGravityFile;
     public:
         double R0, GM, sigmaGM;
         unsigned int degree, order;
         unsigned int normalizationState;
         unsigned int numberOfCoefficients;
         double referenceLongitude, referenceLatitude;
-    public:
+    protected:
         // maps the coefficient name to its index
         // keys are: GM, C002000, C002001, S002001, C002002, S002002, ...
-        QHash<QString, unsigned int> hash;
+    public:
+        typedef QHash<QString, unsigned int> HashType;
+    protected:
+        HashType hash;
     public:
         static QString keyC(unsigned int l, unsigned int m);
         static QString keyS(unsigned int l, unsigned int m);
-    public:
+    protected:
         std::vector< orsa::Cache<double> >                coeff;
         std::vector< std::vector< orsa::Cache<double> > > covar; // triangular
+    public:
+        double getCoeff(const QString &) const;
+        double getCovar(const QString &, const QString &) const;
     };
     
     class RadioScienceGravityFile : public osg::Referenced {

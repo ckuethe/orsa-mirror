@@ -20,6 +20,28 @@ QString RadioScienceGravityData::keyS(unsigned int l, unsigned int m) {
     return qs;
 }
 
+double RadioScienceGravityData::getCoeff(const QString & s) const {
+    const HashType::const_iterator it = hash.constFind(s);
+    if (it != hash.constEnd()) {
+        return coeff[it.value()];
+    } else {
+        ORSA_DEBUG("problem: no hash found for [%s]",s.toStdString().c_str());
+        return 0;
+    }
+}
+
+double RadioScienceGravityData::getCovar(const QString & s1, const QString & s2) const {
+    const HashType::const_iterator it1 = hash.constFind(s1);
+    const HashType::const_iterator it2 = hash.constFind(s2);
+    if ( (it1 != hash.constEnd()) && (it2 != hash.constEnd()) ) {
+        return covar[std::max(it1.value(),it2.value())][std::min(it1.value(),it2.value())];
+    } else {
+        if (it1 == hash.constEnd()) ORSA_DEBUG("problem: no hash found for [%s]",s1.toStdString().c_str());
+        if (it2 == hash.constEnd()) ORSA_DEBUG("problem: no hash found for [%s]",s2.toStdString().c_str());
+        return 0;
+    }
+}
+
 RadioScienceGravityFile::RadioScienceGravityFile(const std::string & fileName,
                                                  const size_t & RECORD_BYTES_,
                                                  const size_t & FILE_RECORDS_) :
