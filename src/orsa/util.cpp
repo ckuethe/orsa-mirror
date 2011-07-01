@@ -395,9 +395,7 @@ orsa::Cache<int> orsa::GlobalRNG::randomSeed;
 /***/
 
 RandomPointsInShape::RandomPointsInShape(const orsa::Shape * s,
-                                         const unsigned int N,
-                                         const int rs) : osg::Referenced(), shape(s), size(N), randomSeed(rs) {
-    rng = new orsa::RNG(randomSeed);
+                                         const unsigned int N) : osg::Referenced(), shape(s), size(N) {
     in.clear();
     in.resize(N);
     const Box boundingBox = shape->boundingBox();
@@ -412,7 +410,7 @@ RandomPointsInShape::RandomPointsInShape(const orsa::Shape * s,
     //
     counter = 0;
     while (counter < N) {
-        in[counter] = shape->isInside(__randomVectorUtil(rng.get(),boundingBox));
+        in[counter] = shape->isInside(__randomVectorUtil(boundingBox));
         ++counter;
     }
     reset();
@@ -423,7 +421,7 @@ bool RandomPointsInShape::get(orsa::Vector & v) const {
         return false;
     }
     do { 
-        v = __randomVectorUtil(rng,shape->boundingBox());
+        v = __randomVectorUtil(shape->boundingBox());
         if (in[counter++]) { /* note, increasing counter here */
             return true;
         }
@@ -431,11 +429,10 @@ bool RandomPointsInShape::get(orsa::Vector & v) const {
     return false;
 }
 
-orsa::Vector RandomPointsInShape::__randomVectorUtil(const orsa::RNG * rng,
-                                                     const Box & boundingBox) {
-    return Vector(boundingBox.getXMin()+(boundingBox.getXMax()-boundingBox.getXMin())*rng->gsl_rng_uniform(),
-                  boundingBox.getYMin()+(boundingBox.getYMax()-boundingBox.getYMin())*rng->gsl_rng_uniform(),
-                  boundingBox.getZMin()+(boundingBox.getZMax()-boundingBox.getZMin())*rng->gsl_rng_uniform());
+orsa::Vector RandomPointsInShape::__randomVectorUtil(const Box & boundingBox) {
+    return Vector(boundingBox.getXMin()+(boundingBox.getXMax()-boundingBox.getXMin())*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),
+                  boundingBox.getYMin()+(boundingBox.getYMax()-boundingBox.getYMin())*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),
+                  boundingBox.getZMin()+(boundingBox.getZMax()-boundingBox.getZMin())*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
 }
 
 /***/
@@ -678,10 +675,9 @@ void orsa::bodyInertialComputations(double & volume,
                                     const unsigned int order,
                                     const orsa::Shape * shape,
                                     const orsa::MassDistribution * massDistribution,
-                                    const unsigned int N,
-                                    const int randomSeed) {
-  
-    osg::ref_ptr<RandomPointsInShape> randomPointsInShape = new RandomPointsInShape(shape,N,randomSeed);
+                                    const unsigned int N) {
+    
+    osg::ref_ptr<RandomPointsInShape> randomPointsInShape = new RandomPointsInShape(shape,N);
   
     volume = orsa::volume(randomPointsInShape);
   

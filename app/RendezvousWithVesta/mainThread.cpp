@@ -405,7 +405,7 @@ void MainThread::run() {
       
       const unsigned int order =  4;
       const unsigned int N =  10000;
-      const int randomSeed =  95231;
+      // const int randomSeed =  95231;
       //
 #warning fix the problem of computing volume after it is actually needed...
       // double volume;
@@ -415,16 +415,15 @@ void MainThread::run() {
       orsa::Matrix inertiaMatrix;
       orsa::PaulMoment * paulMoment;
       orsa::bodyInertialComputations(volume,
-				     centerOfMass,
-				     shapeToLocal,
-				     localToShape,
-				     inertiaMatrix,
-				     &paulMoment,
-				     order,
-				     shape.get(),
-				     massDistribution.get(),
-				     N,
-				     randomSeed);
+                                     centerOfMass,
+                                     shapeToLocal,
+                                     localToShape,
+                                     inertiaMatrix,
+                                     &paulMoment,
+                                     order,
+                                     shape.get(),
+                                     massDistribution.get(),
+                                     N);
       
       ORSA_DEBUG("volume: %g",volume);
       
