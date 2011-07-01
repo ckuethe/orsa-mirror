@@ -4,6 +4,8 @@
 #include <osg/Referenced>
 #include <osg/ref_ptr>
 
+#include <orsa/vector.h>
+
 namespace orsa {
   
     class MassDistribution : public osg::Referenced {
