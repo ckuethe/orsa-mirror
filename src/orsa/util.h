@@ -244,11 +244,6 @@ namespace orsa {
   
     class RandomPointsInShape : public osg::Referenced {
     public:
-        /* RandomPointsInShape(const orsa::Shape * shape,
-           const unsigned int N,
-           const int randomSeed);
-        */
-        //
         RandomPointsInShape(const orsa::Shape * shape,
                             const unsigned int N);
     protected:
@@ -257,21 +252,23 @@ namespace orsa {
         osg::ref_ptr<const orsa::Shape> shape;
     public:
         const unsigned int size;
-        // const int randomSeed;
     public:
         // if get(v) fails, you used all vectors
         // in order to use again all vectors, call reset()
         bool get(orsa::Vector & v) const;
     public:
         void reset() const { 
-            // rng = new orsa::RNG(randomSeed);
+            rng = new orsa::RNG(randomSeed);
             counter = 0; 
         }
     protected:
         mutable unsigned int counter;
         mutable osg::ref_ptr<orsa::RNG> rng;
+        static const int maxRandomSeed;
+        const int randomSeed;
     protected:
-        static orsa::Vector __randomVectorUtil(const Box & boundingBox);
+        static orsa::Vector __randomVectorUtil(const orsa::RNG * rng,
+                                               const Box & boundingBox);
     protected:
         std::vector<bool> in;
     };
