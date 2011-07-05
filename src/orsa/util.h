@@ -219,8 +219,7 @@ namespace orsa {
     protected:
         GlobalRNG() {
             if (!randomSeed.isSet()) {
-#warning use something better than getpid()...
-                randomSeed=getpid();
+                randomSeed=time(NULL)*getpid();
             }
             randomSeed.lock();
             ORSA_DEBUG("randomSeed: %i",(*randomSeed));
