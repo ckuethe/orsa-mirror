@@ -11,6 +11,9 @@
 
 #include <QHash>
 
+#include <gsl/gsl_vector.h>
+#include <gsl/gsl_matrix.h>
+
 namespace orsaPDS {
 
     class RadioScienceGravityFile;
@@ -39,6 +42,10 @@ namespace orsaPDS {
     public:
         double getCoeff(const QString &) const;
         double getCovar(const QString &, const QString &) const;
+    public:
+        gsl_vector * getCoefficientVector() const;
+        gsl_matrix * getCovarianceMatrix() const;
+        gsl_matrix * getInverseCovarianceMatrix() const;
     };
     
     class RadioScienceGravityFile : public osg::Referenced {

@@ -6,6 +6,9 @@
 #include <orsa/print.h>
 #include <orsa/util.h>
 
+#include <gsl/gsl_blas.h>
+#include <gsl/gsl_eigen.h>
+
 using namespace orsaPDS;
 
 QString RadioScienceGravityData::keyC(unsigned int l, unsigned int m) {
@@ -40,6 +43,81 @@ double RadioScienceGravityData::getCovar(const QString & s1, const QString & s2)
         if (it2 == hash.constEnd()) ORSA_DEBUG("problem: no hash found for [%s]",s2.toStdString().c_str());
         return 0;
     }
+}
+
+gsl_vector * RadioScienceGravityData::getCoefficientVector() const {
+    gsl_vector * mu = gsl_vector_alloc(numberOfCoefficients);
+    for (unsigned int k=0; k<numberOfCoefficients; ++k) {
+        gsl_vector_set(mu,k,coeff[k]);
+    }
+    return mu;
+}
+
+gsl_matrix * RadioScienceGravityData::getCovarianceMatrix() const {
+    gsl_matrix * covm = gsl_matrix_alloc(numberOfCoefficients,numberOfCoefficients);
+    for (unsigned int l=0; l<numberOfCoefficients; ++l) {
+        for (unsigned int m=0; m<numberOfCoefficients; ++m) { 
+            if (m<=l) {
+                gsl_matrix_set(covm,l,m,covar[l][m]);
+            } else {
+                gsl_matrix_set(covm,l,m,covar[m][l]);
+            }
+        }
+    }
+    return covm;
+}
+
+gsl_matrix * RadioScienceGravityData::getInverseCovarianceMatrix() const {
+    // first, find eigenvectors and eigenvalues of covariance matrix
+    gsl_eigen_symmv_workspace * workspace = gsl_eigen_symmv_alloc(numberOfCoefficients);
+    gsl_matrix * evec = gsl_matrix_alloc(numberOfCoefficients,numberOfCoefficients);
+    gsl_vector * eval = gsl_vector_alloc(numberOfCoefficients);
+    gsl_eigen_symmv(getCovarianceMatrix(),eval,evec,workspace);
+    // check if definite positive
+    for (size_t k=0;k<numberOfCoefficients;++k) {
+        if (gsl_vector_get(eval,k) <= 0.0) {
+            ORSA_DEBUG("problems... eval[%03i] = %g",k,gsl_vector_get(eval,k));
+            return 0;
+        }
+    }
+    // make a diagonal matrix with eigenvalues    
+    /* gsl_matrix * eval_matrix = gsl_matrix_alloc(numberOfCoefficients,numberOfCoefficients);
+       for (size_t i=0;i<numberOfCoefficients;++i) {
+       for (size_t j=0;j<numberOfCoefficients;++j) {
+       if (i==j) {
+       gsl_matrix_set(eval_matrix,i,j,gsl_vector_get(eval,i));
+       } else {
+       gsl_matrix_set(eval_matrix,i,j,0.0);
+       }
+       }
+       }
+    */
+    // inverse of eval matrix (diagonal with values 1/eigenval)
+    gsl_matrix * inverse_eval_matrix = gsl_matrix_alloc(numberOfCoefficients,numberOfCoefficients);
+    for (size_t i=0;i<numberOfCoefficients;++i) {
+        for (size_t j=0;j<numberOfCoefficients;++j) {
+            if (i==j) {
+                gsl_matrix_set(inverse_eval_matrix,i,j,1.0/gsl_vector_get(eval,i));
+            } else {
+                gsl_matrix_set(inverse_eval_matrix,i,j,0.0);
+            }
+        }
+    }
+    gsl_matrix * inv_covm = gsl_matrix_alloc(numberOfCoefficients,numberOfCoefficients);
+    gsl_matrix * tmp_matrix = gsl_matrix_alloc(numberOfCoefficients,numberOfCoefficients);
+    gsl_blas_dgemm(CblasNoTrans,CblasTrans,1.0,inverse_eval_matrix,evec,0.0,tmp_matrix);
+    gsl_blas_dgemm(CblasNoTrans,CblasNoTrans,1.0,evec,tmp_matrix,0.0,inv_covm);
+    
+    // free all gsl allocated vars, except inv_covm
+    gsl_eigen_symmv_free(workspace);    
+    gsl_matrix_free(evec);
+    gsl_vector_free(eval);
+    // gsl_matrix_free(eval_matrix);
+    gsl_matrix_free(inverse_eval_matrix);
+    // skip inv_covm
+    gsl_matrix_free(tmp_matrix);
+    
+    return inv_covm;
 }
 
 RadioScienceGravityFile::RadioScienceGravityFile(const std::string & fileName,
