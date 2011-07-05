@@ -7,6 +7,8 @@
 #include <orsaUtil/adaptiveInterval.h>
 #include <orsaUtil/adaptiveMonteCarlo.h>
 
+#include <orsaPDS/RadioScienceGravity.h>
+
 // Interior model part
 
 class CubicChebyshevMassDistribution : public orsa::MassDistribution {
