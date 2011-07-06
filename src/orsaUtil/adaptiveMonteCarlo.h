@@ -27,6 +27,8 @@ namespace orsaUtil {
             for (size_t k=0; k<N; ++k) {
                 ev[k].position = intervalVector[k]->sample();
                 ev[k].position.lock();
+            }
+            for (size_t k=0; k<N; ++k) {
                 intervalVector[k]->updateLevel(ev[k]);
             }
             return true;
