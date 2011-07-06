@@ -10,7 +10,11 @@
 
 #include <orsaPDS/RadioScienceGravity.h>
 
+#include <gsl/gsl_blas.h>
+
 // Interior model part
+
+#warning add CHECK FOR POSSIBLE NEGATIVE DENSITIES!!
 
 class CubicChebyshevMassDistribution : public orsa::MassDistribution {
 public:
@@ -86,12 +90,12 @@ protected:
 public:
     double density(const orsa::Vector & p) const {
         if (coeff.size() == 0) return 0.0;
-            const size_t degree = coeff.size()-1;
-        double density = 0.0;
+        const size_t degree = coeff.size()-1;
         std::vector<double> Tx, Ty, Tz;
         orsa::ChebyshevT(Tx,degree,p.getX()*oneOverR0);
         orsa::ChebyshevT(Ty,degree,p.getY()*oneOverR0);
         orsa::ChebyshevT(Tz,degree,p.getZ()*oneOverR0);
+        double density = 0.0;
         for (size_t i=0; i<=degree; ++i) {
             for (size_t j=0; j<=degree-i; ++j) {
                 for (size_t k=0; k<=degree-i-j; ++k) {
@@ -115,6 +119,10 @@ public:
     orsa::Cache<double> R0;
     orsa::Cache<size_t> numSamplePoints;
     orsa::Cache<size_t> intervalVectorSize;
+    osg::ref_ptr<orsaPDS::RadioScienceGravityData> pds_data;
+    orsa::Cache<size_t> pds_numberOfCoefficients;
+    gsl_vector * pds_coeff;
+    gsl_matrix * pds_inv_covm;
 };
 
 class Entry : public osg::Referenced {
@@ -165,6 +173,9 @@ public:
             new orsa::RandomPointsInShape(aux->shape,aux->numSamplePoints);
         
         // const double volume = orsa::volume(randomPointsInShape);
+
+        // check: all points inside shape have positive density?
+        
         
         const orsa::Vector centerOfMass = orsa::centerOfMass(randomPointsInShape,
                                                              massDistribution);
@@ -191,9 +202,25 @@ public:
                       paulMoment, 
                       aux->R0);
         
-        double chisq=0.0;
+#warning missing the GM value!!! *********************
+        gsl_vector * vec_coeff = gsl_vector_alloc(aux->pds_numberOfCoefficients);
+        for (size_t l=2; l<=aux->sphericalHarmonicDegree; ++l) {
+            for (size_t m=0; m<=l; ++m) {
+                gsl_vector_set(vec_coeff,aux->pds_data->index(orsaPDS::RadioScienceGravityData::keyC(l,m)),norm_C[l][m]);
+                if (m!=0) {
+                    gsl_vector_set(vec_coeff,aux->pds_data->index(orsaPDS::RadioScienceGravityData::keyS(l,m)),norm_S[l][m]);
+                }
+            }
+        }
         
+        gsl_vector * vec_tmp = gsl_vector_alloc(aux->pds_numberOfCoefficients);
+        double chisq; 
+        gsl_blas_dgemv(CblasNoTrans,1.0,aux->pds_inv_covm,vec_coeff,0.0,vec_tmp);
+        gsl_blas_ddot (vec_coeff,vec_tmp,&chisq);
         e.level = chisq;
+        
+        gsl_vector_free(vec_coeff);
+        gsl_vector_free(vec_tmp);
     }    
 };
 
@@ -212,6 +239,10 @@ protected:
 public:
     bool sample(ElementTypeVector & ev) const {
         ++iterCount;
+        ORSA_DEBUG("iter: %i",iterCount);
+        // debug only
+        // if (iterCount==3) exit(0);
+        // #warning ^^^^^^^^^^^^^^^comment out line above!
         for (size_t k=0; k<aux->intervalVectorSize; ++k) {
             ev[k].position = intervalVector[k]->sample();
             ev[k].position.lock();

@@ -10,6 +10,9 @@ std::vector< std::vector< std::vector<size_t> > > CubicChebyshevMassDistribution
 
 int main() {
     
+    // test specific cases, for debug purposes only!
+    // orsa::GlobalRNG::randomSeed = -800402816;
+    
     orsa::Debug::instance()->initTimer();
     
     osg::ref_ptr<orsaPDS::RadioScienceGravityFile> pds =
@@ -40,9 +43,10 @@ int main() {
     const size_t chebyshevDegree = 4;
 
     // test
-    CubicChebyshevMassDistribution::index(6,3,0);
-    CubicChebyshevMassDistribution::index(6,3,0);
-    CubicChebyshevMassDistribution::index(1,1,0);
+    /* CubicChebyshevMassDistribution::index(6,3,0);
+       CubicChebyshevMassDistribution::index(6,3,0);
+       CubicChebyshevMassDistribution::index(1,1,0);
+    */
     
     /* CubicChebyshevMassDistribution::CoefficientType coeff;
        CubicChebyshevMassDistribution::resize(coeff,chebyshevDegree);
@@ -81,8 +85,12 @@ int main() {
     auxiliaryData->sphericalHarmonicDegree = pds->data->degree;
     auxiliaryData->chebyshevDegree = chebyshevDegree;
     auxiliaryData->R0 = pds->data->R0;
-    auxiliaryData->numSamplePoints = 10000;
+    auxiliaryData->numSamplePoints = 1000;
     auxiliaryData->intervalVectorSize = CubicChebyshevMassDistribution::totalSize(chebyshevDegree);
+    auxiliaryData->pds_data = pds->data.get();
+    auxiliaryData->pds_numberOfCoefficients = pds->data->numberOfCoefficients;
+    auxiliaryData->pds_coeff = pds_coeff;
+    auxiliaryData->pds_inv_covm = pds_inv_covm;
     
     AdaptiveIntervalVector intervalVector;
     intervalVector.resize(auxiliaryData->intervalVectorSize);
