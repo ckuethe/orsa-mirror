@@ -15,7 +15,7 @@
 #include <gsl/gsl_matrix.h>
 
 namespace orsaPDS {
-
+    
     class RadioScienceGravityFile;
     
     class RadioScienceGravityData : public osg::Referenced {
@@ -36,6 +36,8 @@ namespace orsaPDS {
     public:
         static QString keyC(unsigned int l, unsigned int m);
         static QString keyS(unsigned int l, unsigned int m);
+    public:
+        unsigned int index(const QString &) const;
     protected:
         std::vector< orsa::Cache<double> >                coeff;
         std::vector< std::vector< orsa::Cache<double> > > covar; // triangular
