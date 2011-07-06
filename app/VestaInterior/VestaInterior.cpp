@@ -3,6 +3,8 @@
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_cdf.h>
 
+#include "vesta.h"
+
 // static variable
 std::vector< std::vector< std::vector<size_t> > > CubicChebyshevMassDistribution::indexTable;
 
@@ -27,6 +29,12 @@ int main() {
                 ORSA_DEBUG("identity[%03i][%03i] = %+20.9f",i,j,gsl_matrix_get(identity,i,j));
             }
         }
+    }
+    
+    osg::ref_ptr<VestaShape> shape = new VestaShape;
+    if (!shape->read("vesta_thomas.dat")) {
+        ORSA_ERROR("problems encountered while reading shape file...");
+        exit(0);
     }
     
     const size_t chebyshevDegree = 4;
@@ -67,19 +75,28 @@ int main() {
     const double intervalResidualProbability = 1.0e-10; // "1-confidence level" for this interval, different from the chisq-level
     const size_t targetSamples         = 1000;
     const size_t maxIter               = 1000000;
+
+    osg::ref_ptr<AuxiliaryData> auxiliaryData = new AuxiliaryData;
+    auxiliaryData->shape = shape;
+    auxiliaryData->sphericalHarmonicDegree = pds->data->degree;
+    auxiliaryData->chebyshevDegree = chebyshevDegree;
+    auxiliaryData->R0 = pds->data->R0;
+    auxiliaryData->numSamplePoints = 10000;
+    auxiliaryData->intervalVectorSize = CubicChebyshevMassDistribution::totalSize(chebyshevDegree);
     
     AdaptiveIntervalVector intervalVector;
-    intervalVector.resize(CubicChebyshevMassDistribution::totalSize(chebyshevDegree));
+    intervalVector.resize(auxiliaryData->intervalVectorSize);
     for (size_t i=0; i<intervalVector.size(); ++i) {
         intervalVector[i] = new AdaptiveIntervalType(minAdaptiveRange,
                                                      maxAdaptiveRange,
                                                      intervalResidualProbability,
                                                      initialThresholdLevel,
                                                      targetThresholdLevel,
-                                                     targetSamples);
+                                                     targetSamples,
+                                                     auxiliaryData.get());
     }
     
-    osg::ref_ptr<AdaptiveMonteCarloType> mc = new AdaptiveMonteCarloType;
+    osg::ref_ptr<AdaptiveMonteCarloType> mc = new AdaptiveMonteCarloType(auxiliaryData.get());
     
     mc->run(intervalVector,maxIter);
     
