@@ -89,6 +89,12 @@ protected:
     ~CubicChebyshevMassDistribution() { }
 public:
     double density(const orsa::Vector & p) const {
+        if (0) {
+            // debug
+            static size_t calls=0;
+            ++calls;
+            if (calls%1000==0) ORSA_DEBUG("calls: %i",calls);
+        }
         if (coeff.size() == 0) return 0.0;
         const size_t degree = coeff.size()-1;
         std::vector<double> Tx, Ty, Tz;
@@ -204,11 +210,20 @@ public:
         
 #warning missing the GM value!!! *********************
         gsl_vector * vec_coeff = gsl_vector_alloc(aux->pds_numberOfCoefficients);
-        for (size_t l=2; l<=aux->sphericalHarmonicDegree; ++l) {
-            for (size_t m=0; m<=l; ++m) {
-                gsl_vector_set(vec_coeff,aux->pds_data->index(orsaPDS::RadioScienceGravityData::keyC(l,m)),norm_C[l][m]);
-                if (m!=0) {
-                    gsl_vector_set(vec_coeff,aux->pds_data->index(orsaPDS::RadioScienceGravityData::keyS(l,m)),norm_S[l][m]);
+        {
+            size_t index;
+            for (size_t l=2; l<=aux->sphericalHarmonicDegree; ++l) {
+                for (size_t m=0; m<=l; ++m) {
+                    index = aux->pds_data->index(orsaPDS::RadioScienceGravityData::keyC(l,m));
+                    gsl_vector_set(vec_coeff,
+                                   index,
+                                   norm_C[l][m]-gsl_vector_get(aux->pds_coeff,index));
+                    if (m!=0) {
+                        index = aux->pds_data->index(orsaPDS::RadioScienceGravityData::keyS(l,m));
+                        gsl_vector_set(vec_coeff,
+                                       index,
+                                       norm_S[l][m]-gsl_vector_get(aux->pds_coeff,index));
+                    }
                 }
             }
         }

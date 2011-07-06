@@ -40,7 +40,7 @@ int main() {
         exit(0);
     }
     
-    const size_t chebyshevDegree = 4;
+    const size_t chebyshevDegree = 0;
 
     // test
     /* CubicChebyshevMassDistribution::index(6,3,0);
@@ -82,10 +82,10 @@ int main() {
 
     osg::ref_ptr<AuxiliaryData> auxiliaryData = new AuxiliaryData;
     auxiliaryData->shape = shape;
-    auxiliaryData->sphericalHarmonicDegree = pds->data->degree;
+    auxiliaryData->sphericalHarmonicDegree = 4; // pds->data->degree;
     auxiliaryData->chebyshevDegree = chebyshevDegree;
     auxiliaryData->R0 = pds->data->R0;
-    auxiliaryData->numSamplePoints = 1000;
+    auxiliaryData->numSamplePoints = 100; // MonteCarlo to determine spherical harmonics coefficients
     auxiliaryData->intervalVectorSize = CubicChebyshevMassDistribution::totalSize(chebyshevDegree);
     auxiliaryData->pds_data = pds->data.get();
     auxiliaryData->pds_numberOfCoefficients = pds->data->numberOfCoefficients;
