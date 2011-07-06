@@ -3,7 +3,12 @@
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_cdf.h>
 
+// static variable
+std::vector< std::vector< std::vector<size_t> > > CubicChebyshevMassDistribution::indexTable;
+
 int main() {
+    
+    orsa::Debug::instance()->initTimer();
     
     osg::ref_ptr<orsaPDS::RadioScienceGravityFile> pds =
         new orsaPDS::RadioScienceGravityFile("JGDAWN20SIMA.DAT",512,1518);
@@ -24,27 +29,25 @@ int main() {
         }
     }
     
-    const size_t chebyshevDegree = 20;
+    const size_t chebyshevDegree = 4;
+
+    // test
+    CubicChebyshevMassDistribution::index(6,3,0);
+    CubicChebyshevMassDistribution::index(6,3,0);
+    CubicChebyshevMassDistribution::index(1,1,0);
     
-    CubicChebyshevMassDistribution::CoefficientType coeff;
-    CubicChebyshevMassDistribution::resize(coeff,chebyshevDegree);
-    /* coeff.resize(chebyshevDegree+1);
+    /* CubicChebyshevMassDistribution::CoefficientType coeff;
+       CubicChebyshevMassDistribution::resize(coeff,chebyshevDegree);
+       
+       // reset
        for (size_t i=0; i<=chebyshevDegree; ++i) {
-       coeff[i].resize(chebyshevDegree+1-i);
        for (size_t j=0; j<=chebyshevDegree-i; ++j) {
-       coeff[i][j].resize(chebyshevDegree+1-i-j);
+       for (size_t k=0; k<=chebyshevDegree-i-j; ++k) {
+       coeff[i][j][k] = 0.0;
+       }
        }
        }
     */
-    
-    // reset
-    for (size_t i=0; i<=chebyshevDegree; ++i) {
-        for (size_t j=0; j<=chebyshevDegree-i; ++j) {
-            for (size_t k=0; k<=chebyshevDegree-i-j; ++k) {
-                coeff[i][j][k] = 0.0;
-            }
-        }
-    }
     
     const double chisq_50  = gsl_cdf_chisq_Pinv(0.50,pds->data->numberOfCoefficients);
     const double chisq_90  = gsl_cdf_chisq_Pinv(0.90,pds->data->numberOfCoefficients);
@@ -66,8 +69,8 @@ int main() {
     const size_t maxIter               = 1000000;
     
     AdaptiveIntervalVector intervalVector;
-    intervalVector.resize(chebyshevDegree+1);
-    for (size_t i=0; i<=chebyshevDegree; ++i) {
+    intervalVector.resize(CubicChebyshevMassDistribution::totalSize(chebyshevDegree));
+    for (size_t i=0; i<intervalVector.size(); ++i) {
         intervalVector[i] = new AdaptiveIntervalType(minAdaptiveRange,
                                                      maxAdaptiveRange,
                                                      intervalResidualProbability,
@@ -81,31 +84,30 @@ int main() {
     mc->run(intervalVector,maxIter);
     
     
-    
-    if (0) { 
-        // TEST ONLY
-        
-        // set values
-        coeff[0][0][0] = 1.0;
-        coeff[0][0][1] = 0.1;
-        coeff[0][1][1] = 0.2;
-        coeff[2][1][3] = 0.2;
-        
-        osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
-            new CubicChebyshevMassDistribution(coeff);
-        
-        {
-            double x,y,z;
-            for (size_t s=0; s<1000000; ++s) {
-                orsa::GlobalRNG::instance()->rng()->gsl_ran_dir_3d(&x,&y,&z);
-                const orsa::Vector p(x,y,z);
-                const double density = massDistribution->density(p);
-                ORSA_DEBUG("SAMPLE %+9.6f %+9.6f %+9.6f %+9.6f",x,y,z,density);
-            }
-        }
-    }
-    
-    
+    /* 
+       if (0) { 
+       // TEST ONLY
+       
+       // set values
+       coeff[0][0][0] = 1.0;
+       coeff[0][0][1] = 0.1;
+       coeff[0][1][1] = 0.2;
+       coeff[2][1][3] = 0.2;
+       
+       osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
+       new CubicChebyshevMassDistribution(coeff);
+       
+       {
+       double x,y,z;
+       for (size_t s=0; s<1000000; ++s) {
+       orsa::GlobalRNG::instance()->rng()->gsl_ran_dir_3d(&x,&y,&z);
+       const orsa::Vector p(x,y,z);
+       const double density = massDistribution->density(p);
+       ORSA_DEBUG("SAMPLE %+9.6f %+9.6f %+9.6f %+9.6f",x,y,z,density);
+       }
+       }
+       }
+    */
     
     
     // free GSL stuff
