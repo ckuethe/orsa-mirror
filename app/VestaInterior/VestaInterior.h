@@ -46,6 +46,14 @@ public:
     Entry() : osg::Referenced() { }
 protected:
     ~Entry() { }
+public:
+    mutable std::vector<double> Cx, Cy, Cz; // coefficient for Tx, Ty, Tz
+public:
+    void resize(const size_t & s) {
+        Cx.resize(s);
+        Cy.resize(s);
+        Cz.resize(s);
+    }
 };
 
 typedef Entry AdaptiveIntervalTemplateType;
@@ -56,21 +64,33 @@ class AdaptiveIntervalType : public orsaUtil::AdaptiveInterval<AdaptiveIntervalT
 public:
     AdaptiveIntervalType(const double & min,
                          const double & max,
-                         const double & confidenceLevel,
+                         const double & residualProbability,
                          const double & initialThresholdLevel,
                          const double & targetThresholdLevel,
                          const size_t & targetSamples) :
-        orsaUtil::AdaptiveInterval<AdaptiveIntervalTemplateType> (min,max,confidenceLevel,initialThresholdLevel,targetThresholdLevel,targetSamples)
+        orsaUtil::AdaptiveInterval<AdaptiveIntervalTemplateType> (min,max,residualProbability,initialThresholdLevel,targetThresholdLevel,targetSamples)
         { }
 public:
     void updateLevel(const AdaptiveIntervalElementType & e) const {
+        if (e.level.isSet()) return;
+        double chisq=0.0;
         
+        // ...
+        
+        
+        e.level = chisq;
     }    
 };
 
+typedef std::vector< osg::ref_ptr<AdaptiveIntervalType> > AdaptiveIntervalVector;
 
-
-
-
+class AdaptiveMonteCarloType : public orsaUtil::AdaptiveMonteCarlo<AdaptiveIntervalVector> {
+public:
+    AdaptiveMonteCarloType() : orsaUtil::AdaptiveMonteCarlo<AdaptiveIntervalVector>() { }
+protected:
+    ~AdaptiveMonteCarloType() { }
+    
+    
+};
 
 #endif // _VESTA_INTERIOR_H_
