@@ -27,13 +27,15 @@ int main() {
     const size_t chebyshevDegree = 20;
     
     CubicChebyshevMassDistribution::CoefficientType coeff;
-    coeff.resize(chebyshevDegree+1);
-    for (size_t i=0; i<=chebyshevDegree; ++i) {
-        coeff[i].resize(chebyshevDegree+1-i);
-        for (size_t j=0; j<=chebyshevDegree-i; ++j) {
-            coeff[i][j].resize(chebyshevDegree+1-i-j);
-        }
-    }
+    CubicChebyshevMassDistribution::resize(coeff,chebyshevDegree);
+    /* coeff.resize(chebyshevDegree+1);
+       for (size_t i=0; i<=chebyshevDegree; ++i) {
+       coeff[i].resize(chebyshevDegree+1-i);
+       for (size_t j=0; j<=chebyshevDegree-i; ++j) {
+       coeff[i][j].resize(chebyshevDegree+1-i-j);
+       }
+       }
+    */
     
     // reset
     for (size_t i=0; i<=chebyshevDegree; ++i) {

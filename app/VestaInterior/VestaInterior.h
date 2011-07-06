@@ -17,20 +17,30 @@ public:
 protected:
     CoefficientType coeff;
 public:
+    static void resize(CoefficientType & coeff, const size_t & degree) {
+        coeff.resize(degree+1);
+        for (size_t i=0; i<=degree; ++i) {
+            coeff[i].resize(degree+1-i);
+            for (size_t j=0; j<=degree-i; ++j) {
+                coeff[i][j].resize(degree+1-i-j);
+            }
+        }
+    }
+public:
     CubicChebyshevMassDistribution(const CoefficientType & coefficient) : orsa::MassDistribution(), coeff(coefficient) { }
 protected:
     ~CubicChebyshevMassDistribution() { }
 public:
     double density(const orsa::Vector & p) const {
-        const size_t order = coeff.size()-1;
+        const size_t degree = coeff.size()-1;
         double density = 0.0;
         std::vector<double> Tx, Ty, Tz;
-        orsa::ChebyshevT(Tx,order,p.getX());
-        orsa::ChebyshevT(Ty,order,p.getY());
-        orsa::ChebyshevT(Tz,order,p.getZ());
-        for (size_t i=0; i<=order; ++i) {
-            for (size_t j=0; j<=order-i; ++j) {
-                for (size_t k=0; k<=order-i-j; ++k) {
+        orsa::ChebyshevT(Tx,degree,p.getX());
+        orsa::ChebyshevT(Ty,degree,p.getY());
+        orsa::ChebyshevT(Tz,degree,p.getZ());
+        for (size_t i=0; i<=degree; ++i) {
+            for (size_t j=0; j<=degree-i; ++j) {
+                for (size_t k=0; k<=degree-i-j; ++k) {
                     density += coeff[i][j][k]*Tx[i]*Ty[j]*Tz[k];
                 }
             }
@@ -47,13 +57,7 @@ public:
 protected:
     ~Entry() { }
 public:
-    mutable std::vector<double> Cx, Cy, Cz; // coefficient for Tx, Ty, Tz
-public:
-    void resize(const size_t & s) {
-        Cx.resize(s);
-        Cy.resize(s);
-        Cz.resize(s);
-    }
+    CubicChebyshevMassDistribution::CoefficientType coeff;
 };
 
 typedef Entry AdaptiveIntervalTemplateType;
