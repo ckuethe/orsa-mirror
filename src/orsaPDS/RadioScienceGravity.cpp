@@ -147,13 +147,13 @@ RadioScienceGravityFile::RadioScienceGravityFile(const std::string & fileName,
     // read SHBDR_HEADER_TABLE
     {
         readD(data->R0);
-        orsa::FromUnits(data->R0,orsa::Unit::KM);
-        
+        data->R0 = orsa::FromUnits(data->R0,orsa::Unit::KM);
+
         readD(data->GM);
-        orsa::FromUnits(orsa::FromUnits(data->GM,orsa::Unit::KM,3),orsa::Unit::SECOND,-2);
+        data->GM = orsa::FromUnits(orsa::FromUnits(data->GM,orsa::Unit::KM,3),orsa::Unit::SECOND,-2);
         
         readD(data->sigmaGM);
-        orsa::FromUnits(orsa::FromUnits(data->sigmaGM,orsa::Unit::KM,3),orsa::Unit::SECOND,-2);
+        data->sigmaGM = orsa::FromUnits(orsa::FromUnits(data->sigmaGM,orsa::Unit::KM,3),orsa::Unit::SECOND,-2);
         
         readU(data->degree);
         
