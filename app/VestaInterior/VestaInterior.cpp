@@ -72,7 +72,7 @@ int main() {
     const double g_cm3 = orsa::FromUnits(orsa::FromUnits(1,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double maxDensity = 10.0*g_cm3;
     
-    const double initialThresholdLevel = 100*chisq_99;
+    const double initialThresholdLevel = 1e33; // 100*chisq_99;
     const double targetThresholdLevel  = chisq_99;
     const double minAdaptiveRange      = -maxDensity;
     const double maxAdaptiveRange      =  maxDensity;
@@ -82,10 +82,10 @@ int main() {
 
     osg::ref_ptr<AuxiliaryData> auxiliaryData = new AuxiliaryData;
     auxiliaryData->shape = shape;
-    auxiliaryData->sphericalHarmonicDegree = 4; // pds->data->degree;
+    auxiliaryData->sphericalHarmonicDegree = 0; // pds->data->degree;
     auxiliaryData->chebyshevDegree = chebyshevDegree;
     auxiliaryData->R0 = pds->data->R0;
-    auxiliaryData->numSamplePoints = 100; // MonteCarlo to determine spherical harmonics coefficients
+    auxiliaryData->numSamplePoints = 1000; // MonteCarlo to determine spherical harmonics coefficients
     auxiliaryData->storeSamplePoints = true;
     auxiliaryData->intervalVectorSize = CubicChebyshevMassDistribution::totalSize(chebyshevDegree);
     auxiliaryData->pds_data = pds->data.get();

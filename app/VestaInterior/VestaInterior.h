@@ -14,8 +14,6 @@
 
 // Interior model part
 
-#warning add CHECK FOR POSSIBLE NEGATIVE DENSITIES!!
-
 class CubicChebyshevMassDistribution : public orsa::MassDistribution {
 public:
     typedef std::vector< std::vector< std::vector<double> > > CoefficientType;
@@ -85,7 +83,7 @@ public:
         orsa::MassDistribution(),
         coeff(coefficient),
         oneOverR0(1.0/R0) {
-        ORSA_DEBUG("coeff[0][0][0] = %g",coeff[0][0][0]);
+        // ORSA_DEBUG("coeff[0][0][0] = %g",coeff[0][0][0]);
     }
 protected:
     ~CubicChebyshevMassDistribution() { }
@@ -172,20 +170,34 @@ public:
         osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
             new CubicChebyshevMassDistribution(e.data->coeff,aux->R0);
         
-        // orsa::Vector centerOfMass;
-        // orsa::Matrix shapeToLocal;
-        // orsa::Matrix localToShape;
-        // orsa::Matrix inertiaMatrix;
-        // osg::ref_ptr<orsa::PaulMoment> paulMoment;
-        
         osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
             new orsa::RandomPointsInShape(aux->shape,massDistribution,aux->numSamplePoints,aux->storeSamplePoints);
+
+        // test: any point with negative mass?
+        {
+            orsa::Vector v;
+            double density;
+            randomPointsInShape->reset();
+            while (randomPointsInShape->get(v,density)) { 
+                if (density < 0.0) {
+                    ORSA_DEBUG("negative density...");
+                    e.level = 1.e100;
+                    return;
+                }
+            }
+        }
         
         // const double volume = orsa::volume(randomPointsInShape);
         
         // check: all points inside shape have positive density?
         
         const double mass = orsa::mass(randomPointsInShape);
+
+        const double volume = orsa::volume(randomPointsInShape);
+        
+        ORSA_DEBUG("bulk density: %g [g/cm^3]   volume: %g [km^3]",
+                   orsa::FromUnits(orsa::FromUnits(mass/volume,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+                   orsa::FromUnits(volume,orsa::Unit::KM,-3));
         
         const double GM = orsa::Unit::G()*mass;
         
@@ -280,12 +292,14 @@ public:
             ORSA_DEBUG("vec_coeff[%03i] = %g",k,gsl_vector_get(vec_coeff,k));
         }
         
+        
         gsl_vector * vec_tmp = gsl_vector_alloc(view_size);
         double chisq; 
         // gsl_blas_dgemv(CblasNoTrans,1.0,aux->pds_inv_covm,vec_coeff,0.0,vec_tmp);
         gsl_blas_dgemv(CblasNoTrans,1.0,&inv_covm_view.matrix,&vec_coeff_view.vector,0.0,vec_tmp);
         // gsl_blas_ddot (vec_coeff,vec_tmp,&chisq);
         gsl_blas_ddot(&vec_coeff_view.vector,vec_tmp,&chisq);
+        
         e.level = chisq;
         
         ORSA_DEBUG("chisq = %g",chisq);
