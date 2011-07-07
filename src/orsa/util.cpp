@@ -397,10 +397,27 @@ orsa::Cache<int> orsa::GlobalRNG::randomSeed;
 const int RandomPointsInShape::maxRandomSeed = 1000000000;
 
 RandomPointsInShape::RandomPointsInShape(const orsa::Shape * s,
-                                         const unsigned int N) : osg::Referenced(), shape(s), size(N), randomSeed(orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform_int(maxRandomSeed)) {
+                                         const orsa::MassDistribution * massDistribution,
+                                         const size_t & samplePoints,
+                                         const bool & localStoreVector) :
+    osg::Referenced(),
+    shape(s),
+    md(massDistribution),
+    size(samplePoints),
+    saveVector(localStoreVector),
+    randomSeed(orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform_int(maxRandomSeed)) {
     reset();
+    //
     in.clear();
-    in.resize(N);
+    density.clear();
+    vec.clear();
+    //
+    in.resize(size);
+    density.resize(size);
+    if (saveVector) {
+        vec.resize(size);
+    }
+    //
     const Box boundingBox = shape->boundingBox();
     //
     if (0) {
@@ -412,21 +429,40 @@ RandomPointsInShape::RandomPointsInShape(const orsa::Shape * s,
     }
     //
     counter = 0;
-    while (counter < N) {
-        in[counter] = shape->isInside(__randomVectorUtil(rng.get(),boundingBox));
+    numInside = 0;
+    while (counter < size) {
+        const orsa::Vector v = __randomVectorUtil(rng.get(),boundingBox);
+        in[counter] = shape->isInside(v);
+        density[counter] = md->density(v);
+        if (saveVector) {
+            vec[counter] = v;
+        }
+        if (in[counter]) {
+            ++numInside;
+        }
         ++counter;
     }
     reset();
 }
 
-bool RandomPointsInShape::get(orsa::Vector & v) const {
+bool RandomPointsInShape::get(orsa::Vector & v, double & pointDensity) const {
     if (counter == size) {
         return false;
     }
-    do { 
-        v = __randomVectorUtil(rng,shape->boundingBox());
-        if (in[counter++]) { /* note, increasing counter here */
+    do {
+        if (!saveVector) {
+            // must sample, to keep the counter and the RNG in sync
+            v = __randomVectorUtil(rng,shape->boundingBox());
+        }
+        if (in[counter]) {
+            pointDensity = density[counter];
+            if (saveVector) {
+                v = vec[counter];
+            }
+            ++counter;
             return true;
+        } else {
+            ++counter;
         }
     } while (counter < size);
     return false;
@@ -441,18 +477,21 @@ orsa::Vector RandomPointsInShape::__randomVectorUtil(const orsa::RNG * rng, cons
 /***/
 
 double orsa::volume(const orsa::RandomPointsInShape * randomPointsInShape) {
-    size_t in=0;
-    orsa::Vector(v);
-    randomPointsInShape->reset();
-    while (randomPointsInShape->get(v)) {
-        ++in;
-    }
-    return ((randomPointsInShape->shape->boundingBox().volume()*in)/randomPointsInShape->size);
+    /* size_t in=0;
+       orsa::Vector v;
+       double density;
+       randomPointsInShape->reset();
+       while (randomPointsInShape->get(v,density)) {
+       ++in;
+       }
+       return ((randomPointsInShape->shape->boundingBox().volume()*in)/randomPointsInShape->size);
+    */
+    return ((randomPointsInShape->shape->boundingBox().volume()*randomPointsInShape->pointsInside())/randomPointsInShape->size);
 }
 
-orsa::Vector orsa::centerOfMass(const orsa::RandomPointsInShape * randomPointsInShape,
-                                const orsa::MassDistribution * massDistribution) {
-  
+orsa::Vector orsa::centerOfMass(const orsa::RandomPointsInShape * randomPointsInShape) {
+    // const orsa::MassDistribution * massDistribution) {
+    
     /* osg::ref_ptr<orsa::WeightedStatistic<double> > stat_CMx = new orsa::WeightedStatistic<double>;
        osg::ref_ptr<orsa::WeightedStatistic<double> > stat_CMy = new orsa::WeightedStatistic<double>;
        osg::ref_ptr<orsa::WeightedStatistic<double> > stat_CMz = new orsa::WeightedStatistic<double>;
@@ -479,25 +518,32 @@ orsa::Vector orsa::centerOfMass(const orsa::RandomPointsInShape * randomPointsIn
     osg::ref_ptr<orsa::WeightedStatistic<double> > stat = new orsa::WeightedStatistic<double>;
   
     orsa::Vector v;
+    double density;
     orsa::Vector center_of_mass;
     orsa::Vector center_of_mass_uncertainty;
   
     // x
     stat->reset();
     randomPointsInShape->reset();
-    while (randomPointsInShape->get(v)) {
-        const double density = massDistribution->density(v);
+    while (randomPointsInShape->get(v,density)) {
+        // const double density = massDistribution->density(v);
         if (density > 0) {
             stat->insert(v.getX(),density);
         }
     }
+    //
+    if (stat->entries() == 0) {
+        ORSA_DEBUG("no points with positive density, returning...");
+        return orsa::Vector(0,0,0);
+    }
+    //
     center_of_mass.setX(stat->average());
     center_of_mass_uncertainty.setX(stat->averageError());
     // y
     stat->reset();
     randomPointsInShape->reset();
-    while (randomPointsInShape->get(v)) {
-        const double density = massDistribution->density(v);
+    while (randomPointsInShape->get(v,density)) {
+        // const double density = massDistribution->density(v);
         if (density > 0) {
             stat->insert(v.getY(),density);
         }
@@ -507,8 +553,8 @@ orsa::Vector orsa::centerOfMass(const orsa::RandomPointsInShape * randomPointsIn
     // z
     stat->reset();
     randomPointsInShape->reset();
-    while (randomPointsInShape->get(v)) {
-        const double density = massDistribution->density(v);
+    while (randomPointsInShape->get(v,density)) {
+        // const double density = massDistribution->density(v);
         if (density > 0) {
             stat->insert(v.getZ(),density);
         }
@@ -536,9 +582,9 @@ void orsa::diagonalizedInertiaMatrix(orsa::Matrix & shapeToLocal,
                                      orsa::Matrix & localToShape,
                                      orsa::Matrix & inertiaMatrix,
                                      const orsa::Vector & centerOfMass,
-                                     const orsa::RandomPointsInShape * randomPointsInShape,
-                                     const orsa::MassDistribution * massDistribution) {
-  
+                                     const orsa::RandomPointsInShape * randomPointsInShape) {
+    // const orsa::MassDistribution * massDistribution) {
+    
     { 
         osg::ref_ptr<orsa::Statistic<double> > stat_Ixx = new orsa::Statistic<double>;
         osg::ref_ptr<orsa::Statistic<double> > stat_Iyy = new orsa::Statistic<double>;
@@ -548,9 +594,10 @@ void orsa::diagonalizedInertiaMatrix(orsa::Matrix & shapeToLocal,
         osg::ref_ptr<orsa::Statistic<double> > stat_Iyz = new orsa::Statistic<double>;
     
         orsa::Vector v;
+        double density;
         randomPointsInShape->reset();
-        while (randomPointsInShape->get(v)) {
-            const double density = massDistribution->density(v);
+        while (randomPointsInShape->get(v,density)) {
+            // const double density = massDistribution->density(v);
             if (density > 0) {
                 v -= centerOfMass;
                 // no rotation here, work in shape coordinates
@@ -602,17 +649,18 @@ orsa::PaulMoment * orsa::computePaulMoment(const unsigned int order,
                                            const orsa::Matrix & shapeToLocal,
                                            const orsa::Matrix & /* localToShape */,	
                                            const orsa::Vector & centerOfMass,
-                                           const orsa::RandomPointsInShape * randomPointsInShape,
-                                           const orsa::MassDistribution * massDistribution) {
-  
+                                           const orsa::RandomPointsInShape * randomPointsInShape) {
+    // const orsa::MassDistribution * massDistribution) {
+    
     orsa::PaulMoment * pm = new orsa::PaulMoment(order);
   
     const unsigned int order_plus_one = order+1;
   
     osg::ref_ptr< orsa::WeightedStatistic<double> > stat = new orsa::WeightedStatistic<double>;
-  
+    
     orsa::Vector v;
-  
+    double density;
+    
     for (unsigned int sum=0; sum<order_plus_one; ++sum) {
         for (unsigned int i=0; i<order_plus_one; ++i) {
             for (unsigned int j=0; j<order_plus_one; ++j) {
@@ -622,8 +670,8 @@ orsa::PaulMoment * orsa::computePaulMoment(const unsigned int order,
                         stat->reset();
 	    
                         randomPointsInShape->reset();
-                        while (randomPointsInShape->get(v)) {
-                            const double density = massDistribution->density(v);
+                        while (randomPointsInShape->get(v,density)) {
+                            // const double density = massDistribution->density(v);
                             if (density > 0) {
                                 v -= centerOfMass;
                                 v = shapeToLocal*v;
@@ -678,26 +726,30 @@ void orsa::bodyInertialComputations(double & volume,
                                     const unsigned int order,
                                     const orsa::Shape * shape,
                                     const orsa::MassDistribution * massDistribution,
-                                    const unsigned int N) {
+                                    const unsigned int N,
+                                    const bool & localStoreVector) {
     
-    osg::ref_ptr<RandomPointsInShape> randomPointsInShape = new RandomPointsInShape(shape,N);
-  
+    osg::ref_ptr<RandomPointsInShape> randomPointsInShape = new RandomPointsInShape(shape,
+                                                                                    massDistribution,
+                                                                                    N,
+                                                                                    localStoreVector);
+    
     volume = orsa::volume(randomPointsInShape);
   
-    centerOfMass = orsa::centerOfMass(randomPointsInShape,
-                                      massDistribution);
-
+    centerOfMass = orsa::centerOfMass(randomPointsInShape);
+    // massDistribution);
+    
     orsa::diagonalizedInertiaMatrix(shapeToLocal,
                                     localToShape,
                                     inertiaMatrix,
                                     centerOfMass,
-                                    randomPointsInShape,
-                                    massDistribution);
-  
+                                    randomPointsInShape);
+    // massDistribution);
+    
     (*paulMoment) = orsa::computePaulMoment(order,
                                             shapeToLocal,
                                             localToShape,
                                             centerOfMass,
-                                            randomPointsInShape,
-                                            massDistribution);
+                                            randomPointsInShape);
+    // massDistribution);
 }

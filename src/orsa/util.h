@@ -241,27 +241,68 @@ namespace orsa {
     
     /***/
   
+    /* class RandomPointsInShape : public osg::Referenced {
+       public:
+       RandomPointsInShape(const orsa::Shape * shape,
+       const unsigned int N);
+       protected:
+       virtual ~RandomPointsInShape() { } 
+       public:
+       osg::ref_ptr<const orsa::Shape> shape;
+       public:
+       const unsigned int size;
+       public:
+       // if get(v) fails, you used all vectors
+       // in order to use again all vectors, call reset()
+       bool get(orsa::Vector & v) const;
+       public:
+       void reset() const { 
+       rng = new orsa::RNG(randomSeed);
+       counter = 0; 
+       }
+       protected:
+       mutable unsigned int counter;
+       mutable osg::ref_ptr<orsa::RNG> rng;
+       static const int maxRandomSeed;
+       const int randomSeed;
+       protected:
+       static orsa::Vector __randomVectorUtil(const orsa::RNG * rng,
+       const Box & boundingBox);
+       protected:
+       std::vector<bool> in;
+       };
+    */
+    
     class RandomPointsInShape : public osg::Referenced {
     public:
         RandomPointsInShape(const orsa::Shape * shape,
-                            const unsigned int N);
+                            const orsa::MassDistribution * massDistribution,
+                            const size_t & samplePoints,
+                            const bool & localStoreVector=true);
     protected:
         virtual ~RandomPointsInShape() { } 
     public:
         osg::ref_ptr<const orsa::Shape> shape;
+        osg::ref_ptr<const orsa::MassDistribution> md;
     public:
-        const unsigned int size;
+        const size_t size;
+        const bool saveVector;
+    public:
+        size_t pointsInside() const { return numInside; }
+    protected:
+        size_t numInside;
     public:
         // if get(v) fails, you used all vectors
         // in order to use again all vectors, call reset()
-        bool get(orsa::Vector & v) const;
+        // bool get(orsa::Vector & v) const;
+        bool get(orsa::Vector & v, double & density) const;
     public:
         void reset() const { 
             rng = new orsa::RNG(randomSeed);
             counter = 0; 
         }
     protected:
-        mutable unsigned int counter;
+        mutable size_t counter;
         mutable osg::ref_ptr<orsa::RNG> rng;
         static const int maxRandomSeed;
         const int randomSeed;
@@ -270,13 +311,15 @@ namespace orsa {
                                                const Box & boundingBox);
     protected:
         std::vector<bool> in;
+        std::vector<double> density; 
+        std::vector<orsa::Vector> vec;
     };
-  
+    
     double volume(const orsa::RandomPointsInShape * randomPointsInShape);
   
-    orsa::Vector centerOfMass(const orsa::RandomPointsInShape * randomPointsInShape,
-                              const orsa::MassDistribution * massDistribution);
-  
+    orsa::Vector centerOfMass(const orsa::RandomPointsInShape * randomPointsInShape);
+    // const orsa::MassDistribution * massDistribution);
+    
     // InertiaMatrix about the centerOfMass, along the PrincipalAxis
     /* void principalAxisAndInertiaMatrix(orsa::Matrix & principalAxis,
        orsa::Matrix & inertiaMatrix,
@@ -291,16 +334,16 @@ namespace orsa {
                                    orsa::Matrix & localToShape,
                                    orsa::Matrix & inertiaMatrix,
                                    const orsa::Vector & centerOfMass,
-                                   const orsa::RandomPointsInShape * randomPointsInShape,
-                                   const orsa::MassDistribution * massDistribution);
-  
+                                   const orsa::RandomPointsInShape * randomPointsInShape);
+    // const orsa::MassDistribution * massDistribution);
+    
     orsa::PaulMoment * computePaulMoment(const unsigned int order,
                                          const orsa::Matrix & shapeToLocal,
                                          const orsa::Matrix & localToShape,
                                          const orsa::Vector & centerOfMass,
-                                         const orsa::RandomPointsInShape * randomPointsInShape,
-                                         const orsa::MassDistribution * massDistribution);
-  
+                                         const orsa::RandomPointsInShape * randomPointsInShape);
+    // const orsa::MassDistribution * massDistribution);
+    
     // utility, to perform all the computations above...
     void bodyInertialComputations(double & volume,
                                   orsa::Vector & centerOfMass,
@@ -311,7 +354,8 @@ namespace orsa {
                                   const unsigned int order,
                                   const orsa::Shape * shape,
                                   const orsa::MassDistribution * massDistribution,
-                                  const unsigned int N);
+                                  const unsigned int N,
+                                  const bool & localStoreVector=true);
     
 } // namespace orsa
 
