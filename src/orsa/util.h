@@ -240,38 +240,6 @@ namespace orsa {
     };
     
     /***/
-  
-    /* class RandomPointsInShape : public osg::Referenced {
-       public:
-       RandomPointsInShape(const orsa::Shape * shape,
-       const unsigned int N);
-       protected:
-       virtual ~RandomPointsInShape() { } 
-       public:
-       osg::ref_ptr<const orsa::Shape> shape;
-       public:
-       const unsigned int size;
-       public:
-       // if get(v) fails, you used all vectors
-       // in order to use again all vectors, call reset()
-       bool get(orsa::Vector & v) const;
-       public:
-       void reset() const { 
-       rng = new orsa::RNG(randomSeed);
-       counter = 0; 
-       }
-       protected:
-       mutable unsigned int counter;
-       mutable osg::ref_ptr<orsa::RNG> rng;
-       static const int maxRandomSeed;
-       const int randomSeed;
-       protected:
-       static orsa::Vector __randomVectorUtil(const orsa::RNG * rng,
-       const Box & boundingBox);
-       protected:
-       std::vector<bool> in;
-       };
-    */
     
     class RandomPointsInShape : public osg::Referenced {
     public:
@@ -301,6 +269,9 @@ namespace orsa {
             rng = new orsa::RNG(randomSeed);
             counter = 0; 
         }
+    public:
+        // keep list of vectors, just update the density
+        void updateMassDistribution(const orsa::MassDistribution * massDistribution);
     protected:
         mutable size_t counter;
         mutable osg::ref_ptr<orsa::RNG> rng;

@@ -446,10 +446,7 @@ RandomPointsInShape::RandomPointsInShape(const orsa::Shape * s,
 }
 
 bool RandomPointsInShape::get(orsa::Vector & v, double & pointDensity) const {
-    if (counter == size) {
-        return false;
-    }
-    do {
+    while (counter < size) {
         if (!saveVector) {
             // must sample, to keep the counter and the RNG in sync
             v = __randomVectorUtil(rng,shape->boundingBox());
@@ -464,8 +461,25 @@ bool RandomPointsInShape::get(orsa::Vector & v, double & pointDensity) const {
         } else {
             ++counter;
         }
-    } while (counter < size);
+    }
     return false;
+}
+
+void RandomPointsInShape::updateMassDistribution(const orsa::MassDistribution * massDistribution) {
+    md = massDistribution;
+    reset();
+    orsa::Vector v;
+    while (counter < size) {
+        if (saveVector) {
+            v = vec[counter];
+        } else {
+            v = __randomVectorUtil(rng,shape->boundingBox());
+        }
+        if (in[counter]) {
+            density[counter] = md->density(v);
+        }
+        ++counter;
+    }
 }
 
 orsa::Vector RandomPointsInShape::__randomVectorUtil(const orsa::RNG * rng, const Box & boundingBox) {
