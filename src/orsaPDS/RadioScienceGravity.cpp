@@ -216,6 +216,14 @@ RadioScienceGravityFile::RadioScienceGravityFile(const std::string & fileName,
             for (unsigned int r=0; r<=k; ++r) {
                 readD(d);
                 // ORSA_DEBUG("d: [%g]",d);
+                if (k == data->index("GM")) {
+                    // GM is in km^2/s^2
+                    d = orsa::FromUnits(orsa::FromUnits(d,orsa::Unit::KM,3),orsa::Unit::SECOND,-2);
+                }
+                if (r == data->index("GM")) {
+                    // GM is in km^2/s^2
+                    d = orsa::FromUnits(orsa::FromUnits(d,orsa::Unit::KM,3),orsa::Unit::SECOND,-2);
+                }
                 data->covar[k][r] = d;
             }
         }
