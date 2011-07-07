@@ -189,12 +189,12 @@ public:
         
         const double GM = orsa::Unit::G()*mass;
         
-        ORSA_DEBUG("mass: %g [kg] = %g [MSun]",
-                   orsa::FromUnits(mass,orsa::Unit::KG,-1),
-                   mass/orsaSolarSystem::Data::MSun());
-        
-        ORSA_DEBUG("GM: %g [km^3/s^2]",
-                   orsa::FromUnits(orsa::FromUnits(mass*orsa::Unit::G(),orsa::Unit::KM,-3),orsa::Unit::SECOND,2));
+        /* ORSA_DEBUG("mass: %g [kg] = %g [MSun]",
+           orsa::FromUnits(mass,orsa::Unit::KG,-1),
+           mass/orsaSolarSystem::Data::MSun());
+           ORSA_DEBUG("GM: %g [km^3/s^2]",
+           orsa::FromUnits(orsa::FromUnits(mass*orsa::Unit::G(),orsa::Unit::KM,-3),orsa::Unit::SECOND,2));
+        */
         
         const orsa::Vector centerOfMass = orsa::centerOfMass(randomPointsInShape);
         // massDistribution);
@@ -221,15 +221,19 @@ public:
                       paulMoment, 
                       aux->R0);
         
-        for (size_t k=0; k<aux->pds_numberOfCoefficients; ++k) {
-            ORSA_DEBUG("pds_coeff[%03i] = %g",k,gsl_vector_get(aux->pds_coeff,k));
-        }
+        /* for (size_t k=0; k<aux->pds_numberOfCoefficients; ++k) {
+           ORSA_DEBUG("pds_coeff[%03i] = %g",k,gsl_vector_get(aux->pds_coeff,k));
+           }
+        */
         
         gsl_vector * vec_coeff = gsl_vector_alloc(aux->pds_numberOfCoefficients);
+        orsa::Cache<size_t> minIndex, maxIndex;
         {
             size_t index;
             // first: GM
             index = aux->pds_data->index("GM");
+            minIndex.setIfSmaller(index);
+            maxIndex.setIfLarger(index);
             ORSA_DEBUG("index: %i",index);
             ORSA_DEBUG("GM: %g [km^3/s^2]",orsa::FromUnits(orsa::FromUnits(mass*orsa::Unit::G(),orsa::Unit::KM,-3),orsa::Unit::SECOND,2));
             ORSA_DEBUG("pds_coeff[%03i] = %g",index,gsl_vector_get(aux->pds_coeff,index));
@@ -239,6 +243,8 @@ public:
             for (size_t l=2; l<=aux->sphericalHarmonicDegree; ++l) {
                 for (size_t m=0; m<=l; ++m) {
                     index = aux->pds_data->index(orsaPDS::RadioScienceGravityData::keyC(l,m));
+                    minIndex.setIfSmaller(index);
+                    maxIndex.setIfLarger(index);
                     ORSA_DEBUG("index: %i",index);
                     ORSA_DEBUG("norm_C[%03i][%03i] = %g",l,m,norm_C[l][m]);
                     ORSA_DEBUG("pds_coeff[%03i] = %g",index,gsl_vector_get(aux->pds_coeff,index));
@@ -247,6 +253,8 @@ public:
                                    norm_C[l][m]-gsl_vector_get(aux->pds_coeff,index));
                     if (m!=0) {
                         index = aux->pds_data->index(orsaPDS::RadioScienceGravityData::keyS(l,m));
+                        minIndex.setIfSmaller(index);
+                        maxIndex.setIfLarger(index);
                         ORSA_DEBUG("index: %i",index);
                         ORSA_DEBUG("norm_S[%03i][%03i] = %g",l,m,norm_S[l][m]);
                         ORSA_DEBUG("pds_coeff[%03i] = %g",index,gsl_vector_get(aux->pds_coeff,index));
@@ -257,17 +265,29 @@ public:
                 }
             }
         }
-
-        for (size_t k=0; k<aux->pds_numberOfCoefficients; ++k) {
+        
+        // ORSA_DEBUG("index range: %i -> %i [inclusive]",(*minIndex),(*maxIndex));
+        
+        if (minIndex != 0) {
+            ORSA_DEBUG("this is unexpected...");
+        }
+        
+        const size_t view_size = maxIndex+1-minIndex;
+        gsl_vector_const_view vec_coeff_view = gsl_vector_const_subvector(vec_coeff,0,view_size);
+        gsl_matrix_const_view inv_covm_view = gsl_matrix_const_submatrix(aux->pds_inv_covm,0,0,view_size,view_size);
+        
+        for (size_t k=0; k<view_size; ++k) {
             ORSA_DEBUG("vec_coeff[%03i] = %g",k,gsl_vector_get(vec_coeff,k));
         }
         
-        gsl_vector * vec_tmp = gsl_vector_alloc(aux->pds_numberOfCoefficients);
+        gsl_vector * vec_tmp = gsl_vector_alloc(view_size);
         double chisq; 
-        gsl_blas_dgemv(CblasNoTrans,1.0,aux->pds_inv_covm,vec_coeff,0.0,vec_tmp);
-        gsl_blas_ddot (vec_coeff,vec_tmp,&chisq);
+        // gsl_blas_dgemv(CblasNoTrans,1.0,aux->pds_inv_covm,vec_coeff,0.0,vec_tmp);
+        gsl_blas_dgemv(CblasNoTrans,1.0,&inv_covm_view.matrix,&vec_coeff_view.vector,0.0,vec_tmp);
+        // gsl_blas_ddot (vec_coeff,vec_tmp,&chisq);
+        gsl_blas_ddot(&vec_coeff_view.vector,vec_tmp,&chisq);
         e.level = chisq;
-
+        
         ORSA_DEBUG("chisq = %g",chisq);
         
         gsl_vector_free(vec_coeff);
