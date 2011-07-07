@@ -39,10 +39,7 @@ protected:
 public:
     static size_t index(const size_t & nx, const size_t & ny, const size_t & nz) {
         const size_t requestedDegree=nx+ny+nz;
-        if (indexTable.size() >= (requestedDegree+1)) {
-            // ORSA_DEBUG("found: %i",indexTable[nx][ny][nz]);
-            return indexTable[nx][ny][nz];
-        } else {
+        if (indexTable.size() < (requestedDegree+1)) {
             indexTable.resize(requestedDegree+1);
             for (size_t i=0; i<=requestedDegree; ++i) {
                 indexTable[i].resize(requestedDegree+1-i);
@@ -52,30 +49,21 @@ public:
             }
             size_t idx=0;
             size_t degree=0;
-            bool done=false;
-            while (!done) {
+            while (degree <= requestedDegree) {
                 for (unsigned int i=0; i<=degree; ++i) {
                     for (unsigned int j=0; j<=degree; ++j) {
                         for (unsigned int k=0; k<=degree; ++k) {
                             if (i+j+k==degree) {
                                 // ORSA_DEBUG("inserting %i-%i-%i  index: %i",i,j,k,idx);
-                                indexTable[i][j][k] = idx;
-                                if ((i==nx) && (j==ny) && (k==nz)) {
-                                    done=true;
-                                } else {
-                                    ++idx;
-                                }
+                                indexTable[i][j][k] = idx++;
                             }
-                            if (done) break;
                         }
-                        if (done) break;
                     }
-                    if (done) break;
                 }
                 ++degree;
             }
-            return idx;
         }
+        return indexTable[nx][ny][nz];
     }
 public:
     CubicChebyshevMassDistribution(const CoefficientType & coefficient,
@@ -83,7 +71,18 @@ public:
         orsa::MassDistribution(),
         coeff(coefficient),
         oneOverR0(1.0/R0) {
-        // ORSA_DEBUG("coeff[0][0][0] = %g",coeff[0][0][0]);
+        const size_t degree = coeff.size()-1;
+        for (unsigned int printDegree=0; printDegree<=degree; ++printDegree) {
+            for (unsigned int i=0; i<=degree; ++i) {
+                for (unsigned int j=0; j<=degree; ++j) {
+                    for (unsigned int k=0; k<=degree; ++k) {
+                        if (i+j+k==printDegree) {
+                            ORSA_DEBUG("coeff[%i][%i][%i] = %g",i,j,k,coeff[i][j][k]);
+                        }
+                    }
+                }
+            }
+        }
     }
 protected:
     ~CubicChebyshevMassDistribution() { }
@@ -345,7 +344,8 @@ public:
                     for (unsigned int k=0; k<=aux->chebyshevDegree; ++k) {
                         if (i+j+k<=aux->chebyshevDegree) {
                             ev[k].data->coeff[i][j][k] = ev[CubicChebyshevMassDistribution::index(i,j,k)].position;
-                        }       
+                            // ORSA_DEBUG("i: %i  j: %i  k: %i  index: %i",i,j,k,CubicChebyshevMassDistribution::index(i,j,k));
+                        }
                     }
                 }
             }
