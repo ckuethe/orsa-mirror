@@ -182,9 +182,19 @@ public:
             new orsa::RandomPointsInShape(aux->shape,massDistribution,aux->numSamplePoints,aux->storeSamplePoints);
         
         // const double volume = orsa::volume(randomPointsInShape);
-
+        
         // check: all points inside shape have positive density?
         
+        const double mass = orsa::mass(randomPointsInShape);
+        
+        const double GM = orsa::Unit::G()*mass;
+        
+        ORSA_DEBUG("mass: %g [kg] = %g [MSun]",
+                   orsa::FromUnits(mass,orsa::Unit::KG,-1),
+                   mass/orsaSolarSystem::Data::MSun());
+        
+        ORSA_DEBUG("GM: %g [km^3/s^2]",
+                   orsa::FromUnits(orsa::FromUnits(mass*orsa::Unit::G(),orsa::Unit::KM,-3),orsa::Unit::SECOND,2));
         
         const orsa::Vector centerOfMass = orsa::centerOfMass(randomPointsInShape);
         // massDistribution);
@@ -215,10 +225,17 @@ public:
             ORSA_DEBUG("pds_coeff[%03i] = %g",k,gsl_vector_get(aux->pds_coeff,k));
         }
         
-#warning missing the GM value!!! *********************
         gsl_vector * vec_coeff = gsl_vector_alloc(aux->pds_numberOfCoefficients);
         {
             size_t index;
+            // first: GM
+            index = aux->pds_data->index("GM");
+            ORSA_DEBUG("index: %i",index);
+            ORSA_DEBUG("GM: %g [km^3/s^2]",orsa::FromUnits(orsa::FromUnits(mass*orsa::Unit::G(),orsa::Unit::KM,-3),orsa::Unit::SECOND,2));
+            ORSA_DEBUG("pds_coeff[%03i] = %g",index,gsl_vector_get(aux->pds_coeff,index));
+            gsl_vector_set(vec_coeff,
+                           index,
+                           GM-gsl_vector_get(aux->pds_coeff,index));
             for (size_t l=2; l<=aux->sphericalHarmonicDegree; ++l) {
                 for (size_t m=0; m<=l; ++m) {
                     index = aux->pds_data->index(orsaPDS::RadioScienceGravityData::keyC(l,m));
