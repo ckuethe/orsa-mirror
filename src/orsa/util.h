@@ -316,7 +316,9 @@ namespace orsa {
     };
     
     double volume(const orsa::RandomPointsInShape * randomPointsInShape);
-  
+    
+    double mass(const orsa::RandomPointsInShape * randomPointsInShape);
+    
     orsa::Vector centerOfMass(const orsa::RandomPointsInShape * randomPointsInShape);
     // const orsa::MassDistribution * massDistribution);
     

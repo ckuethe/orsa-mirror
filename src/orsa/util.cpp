@@ -477,16 +477,26 @@ orsa::Vector RandomPointsInShape::__randomVectorUtil(const orsa::RNG * rng, cons
 /***/
 
 double orsa::volume(const orsa::RandomPointsInShape * randomPointsInShape) {
-    /* size_t in=0;
-       orsa::Vector v;
-       double density;
-       randomPointsInShape->reset();
-       while (randomPointsInShape->get(v,density)) {
-       ++in;
-       }
-       return ((randomPointsInShape->shape->boundingBox().volume()*in)/randomPointsInShape->size);
-    */
     return ((randomPointsInShape->shape->boundingBox().volume()*randomPointsInShape->pointsInside())/randomPointsInShape->size);
+}
+
+double orsa::mass(const orsa::RandomPointsInShape * randomPointsInShape) {
+    osg::ref_ptr<orsa::Statistic<double> > stat = new orsa::Statistic<double>;
+    orsa::Vector v;
+    double density;
+    stat->reset();
+    randomPointsInShape->reset();
+    while (randomPointsInShape->get(v,density)) {
+        if (density > 0) {
+            stat->insert(density);
+        }
+    }
+    if (stat->entries() == 0) {
+        ORSA_DEBUG("no points with positive density, returning...");
+        return 0.0;
+    } else {
+        return stat->average()*orsa::volume(randomPointsInShape);
+    }
 }
 
 orsa::Vector orsa::centerOfMass(const orsa::RandomPointsInShape * randomPointsInShape) {
