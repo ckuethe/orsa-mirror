@@ -354,13 +354,13 @@ public:
             ev[k].position = intervalVector[k]->sample();
             ev[k].position.lock();
         }
-        for (unsigned int k=0; k<aux->intervalVectorSize; ++k) {
-            ev[k].data->resize(aux->chebyshevDegree);
+        for (unsigned int p=0; p<aux->intervalVectorSize; ++p) {
+            ev[p].data->resize(aux->chebyshevDegree);
             for (unsigned int i=0; i<=aux->chebyshevDegree; ++i) {
                 for (unsigned int j=0; j<=aux->chebyshevDegree; ++j) {
                     for (unsigned int k=0; k<=aux->chebyshevDegree; ++k) {
                         if (i+j+k<=aux->chebyshevDegree) {
-                            ev[k].data->coeff[i][j][k] = ev[CubicChebyshevMassDistribution::index(i,j,k)].position;
+                            ev[p].data->coeff[i][j][k] = ev[CubicChebyshevMassDistribution::index(i,j,k)].position;
                             // ORSA_DEBUG("i: %i  j: %i  k: %i  index: %i",i,j,k,CubicChebyshevMassDistribution::index(i,j,k));
                         }
                     }
@@ -369,8 +369,8 @@ public:
         }
         // compute level on one element, and copy it on all remaining elements
         intervalVector[0]->updateLevel(ev[0]);
-        for (size_t k=0; k<aux->intervalVectorSize; ++k) {
-            ev[k].level = ev[0].level;
+        for (size_t p=0; p<aux->intervalVectorSize; ++p) {
+            ev[p].level = ev[0].level;
         }
         return true;
     }

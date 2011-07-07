@@ -43,22 +43,13 @@ int main() {
     const double g_cm3 = orsa::FromUnits(orsa::FromUnits(1,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double maxDensity = 10.0*g_cm3;
     
-    /* const double initialThresholdLevel = 1e20; // 100*chisq_99;
-       const double targetThresholdLevel  = chisq_99;
-       const double minAdaptiveRange      = -maxDensity;
-       const double maxAdaptiveRange      =  maxDensity;
-       const double intervalResidualProbability = 1.0e-10; // "1-confidence level" for this interval, different from the chisq-level
-       const size_t targetSamples         = 1000;
-       const size_t maxIter               = 1000000;
-    */
-    
-    const size_t chebyshevDegree = 0;
+    const size_t chebyshevDegree = 2;
     osg::ref_ptr<AuxiliaryData> auxiliaryData = new AuxiliaryData;
     auxiliaryData->shape = shape;
-    auxiliaryData->sphericalHarmonicDegree = 0; // pds->data->degree;
+    auxiliaryData->sphericalHarmonicDegree = 4; // pds->data->degree;
     auxiliaryData->chebyshevDegree = chebyshevDegree;
     auxiliaryData->R0 = pds->data->R0;
-    auxiliaryData->numSamplePoints = 100; // MonteCarlo to determine spherical harmonics coefficients
+    auxiliaryData->numSamplePoints = 1000000; // MonteCarlo to determine spherical harmonics coefficients
     auxiliaryData->storeSamplePoints = true;
     auxiliaryData->intervalVectorSize = CubicChebyshevMassDistribution::totalSize(chebyshevDegree);
     auxiliaryData->pds_data = pds->data.get();
@@ -83,22 +74,42 @@ int main() {
     
     const double initialThresholdLevel = 1e20; // 100*chisq_99;
     const double targetThresholdLevel  = chisq_99;
-    const double minAdaptiveRange      = -maxDensity;
-    const double maxAdaptiveRange      =  maxDensity;
+    // const double minAdaptiveRange      = -maxDensity;
+    // const double maxAdaptiveRange      =  maxDensity;
     const double intervalResidualProbability = 1.0e-10; // "1-confidence level" for this interval, different from the chisq-level
     const size_t targetSamples         = 1000;
     const size_t maxIter               = 1000000;
     
     AdaptiveIntervalVector intervalVector;
     intervalVector.resize(auxiliaryData->intervalVectorSize);
-    for (size_t i=0; i<intervalVector.size(); ++i) {
-        intervalVector[i] = new AdaptiveIntervalType(minAdaptiveRange,
-                                                     maxAdaptiveRange,
-                                                     intervalResidualProbability,
-                                                     initialThresholdLevel,
-                                                     targetThresholdLevel,
-                                                     targetSamples,
-                                                     auxiliaryData.get());
+    for (unsigned int i=0; i<=auxiliaryData->chebyshevDegree; ++i) {
+        for (unsigned int j=0; j<=auxiliaryData->chebyshevDegree; ++j) {
+            for (unsigned int k=0; k<=auxiliaryData->chebyshevDegree; ++k) {
+                if (i+j+k<=auxiliaryData->chebyshevDegree) {
+                    const size_t index = CubicChebyshevMassDistribution::index(i,j,k);
+                    const size_t degree = i+j+k;
+#warning keep an eye on these limits
+                    double minAdaptiveRange      = -maxDensity/(degree+1);
+                    double maxAdaptiveRange      =  maxDensity/(degree+1);
+                    if (degree==0) {
+                        minAdaptiveRange = 0.0;
+                    }
+                    if ((i%2==1) || (j%2==1) || (k%2==1)) {
+                        // odd degree, or even degree with one odd index
+                        minAdaptiveRange *= 0.1;
+                        maxAdaptiveRange *= 0.1;
+                    }
+                    intervalVector[index] =
+                        new AdaptiveIntervalType(minAdaptiveRange,
+                                                 maxAdaptiveRange,
+                                                 intervalResidualProbability,
+                                                 initialThresholdLevel,
+                                                 targetThresholdLevel,
+                                                 targetSamples,
+                                                 auxiliaryData.get());
+                }
+            }
+        }
     }
     
     osg::ref_ptr<AdaptiveMonteCarloType> mc = new AdaptiveMonteCarloType(auxiliaryData.get());
