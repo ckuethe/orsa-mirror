@@ -148,7 +148,7 @@ RadioScienceGravityFile::RadioScienceGravityFile(const std::string & fileName,
     {
         readD(data->R0);
         data->R0 = orsa::FromUnits(data->R0,orsa::Unit::KM);
-
+        
         readD(data->GM);
         data->GM = orsa::FromUnits(orsa::FromUnits(data->GM,orsa::Unit::KM,3),orsa::Unit::SECOND,-2);
         
@@ -199,6 +199,10 @@ RadioScienceGravityFile::RadioScienceGravityFile(const std::string & fileName,
         for (unsigned int k=0; k<data->numberOfCoefficients; ++k) {
             readD(d);
             // ORSA_DEBUG("d: [%g]",d);
+            if (k == data->index("GM")) {
+                // GM is in km^2/s^2
+                d = orsa::FromUnits(orsa::FromUnits(d,orsa::Unit::KM,3),orsa::Unit::SECOND,-2);
+            }
             data->coeff[k] = d;
         }
         
