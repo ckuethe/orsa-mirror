@@ -71,18 +71,19 @@ public:
         orsa::MassDistribution(),
         coeff(coefficient),
         oneOverR0(1.0/R0) {
-        const size_t degree = coeff.size()-1;
-        for (unsigned int printDegree=0; printDegree<=degree; ++printDegree) {
-            for (unsigned int i=0; i<=degree; ++i) {
-                for (unsigned int j=0; j<=degree; ++j) {
-                    for (unsigned int k=0; k<=degree; ++k) {
-                        if (i+j+k==printDegree) {
-                            ORSA_DEBUG("coeff[%i][%i][%i] = %g",i,j,k,coeff[i][j][k]);
-                        }
-                    }
-                }
-            }
-        }
+        /* const size_t degree = coeff.size()-1;
+           for (unsigned int printDegree=0; printDegree<=degree; ++printDegree) {
+           for (unsigned int i=0; i<=degree; ++i) {
+           for (unsigned int j=0; j<=degree; ++j) {
+           for (unsigned int k=0; k<=degree; ++k) {
+           if (i+j+k==printDegree) {
+           ORSA_DEBUG("coeff[%i][%i][%i] = %g",i,j,k,coeff[i][j][k]);
+           }
+           }
+           }
+           }
+           }
+        */
     }
 protected:
     ~CubicChebyshevMassDistribution() { }
@@ -185,9 +186,25 @@ public:
             randomPointsInShape->reset();
             while (randomPointsInShape->get(v,density)) { 
                 if (density < 0.0) {
-                    ORSA_DEBUG("negative density...");
+                    // ORSA_DEBUG("negative density...");
                     e.level = 1.e100;
                     return;
+                }
+            }
+        }
+
+        {
+            // print out coeff
+            const size_t degree = e.data->coeff.size()-1;
+            for (unsigned int printDegree=0; printDegree<=degree; ++printDegree) {
+                for (unsigned int i=0; i<=degree; ++i) {
+                    for (unsigned int j=0; j<=degree; ++j) {
+                        for (unsigned int k=0; k<=degree; ++k) {
+                            if (i+j+k==printDegree) {
+                                ORSA_DEBUG("coeff[%i][%i][%i] = %g",i,j,k,e.data->coeff[i][j][k]);
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -251,8 +268,8 @@ public:
             index = aux->pds_data->index("GM");
             minIndex.setIfSmaller(index);
             maxIndex.setIfLarger(index);
-            ORSA_DEBUG("index: %i",index);
-            ORSA_DEBUG("GM: %g [km^3/s^2]",orsa::FromUnits(orsa::FromUnits(mass*orsa::Unit::G(),orsa::Unit::KM,-3),orsa::Unit::SECOND,2));
+            // ORSA_DEBUG("index: %i",index);
+            ORSA_DEBUG("GM: %g",GM);
             ORSA_DEBUG("pds_coeff[%03i] = %g",index,gsl_vector_get(aux->pds_coeff,index));
             gsl_vector_set(vec_coeff,
                            index,
@@ -262,7 +279,7 @@ public:
                     index = aux->pds_data->index(orsaPDS::RadioScienceGravityData::keyC(l,m));
                     minIndex.setIfSmaller(index);
                     maxIndex.setIfLarger(index);
-                    ORSA_DEBUG("index: %i",index);
+                    // ORSA_DEBUG("index: %i",index);
                     ORSA_DEBUG("norm_C[%03i][%03i] = %g",l,m,norm_C[l][m]);
                     ORSA_DEBUG("pds_coeff[%03i] = %g",index,gsl_vector_get(aux->pds_coeff,index));
                     gsl_vector_set(vec_coeff,
@@ -272,7 +289,7 @@ public:
                         index = aux->pds_data->index(orsaPDS::RadioScienceGravityData::keyS(l,m));
                         minIndex.setIfSmaller(index);
                         maxIndex.setIfLarger(index);
-                        ORSA_DEBUG("index: %i",index);
+                        // ORSA_DEBUG("index: %i",index);
                         ORSA_DEBUG("norm_S[%03i][%03i] = %g",l,m,norm_S[l][m]);
                         ORSA_DEBUG("pds_coeff[%03i] = %g",index,gsl_vector_get(aux->pds_coeff,index));
                         gsl_vector_set(vec_coeff,
@@ -329,7 +346,7 @@ protected:
 public:
     bool sample(ElementTypeVector & ev) const {
         ++iterCount;
-        ORSA_DEBUG("iter: %i",iterCount);
+        // ORSA_DEBUG("iter: %i",iterCount);
         // debug only
         // if (iterCount==3) exit(0);
         // #warning ^^^^^^^^^^^^^^^comment out line above!

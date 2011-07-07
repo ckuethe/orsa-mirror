@@ -40,32 +40,25 @@ int main() {
         exit(0);
     }
     
-    const double chisq_50  = gsl_cdf_chisq_Pinv(0.50,pds->data->numberOfCoefficients);
-    const double chisq_90  = gsl_cdf_chisq_Pinv(0.90,pds->data->numberOfCoefficients);
-    const double chisq_95  = gsl_cdf_chisq_Pinv(0.95,pds->data->numberOfCoefficients);
-    const double chisq_99  = gsl_cdf_chisq_Pinv(0.99,pds->data->numberOfCoefficients);
-    //
-    ORSA_DEBUG("chisq 50\%: %.2f  90\%: %.2f  95\%: %.2f  99\%: %.2f  [numberOfCoefficients=%i]",
-               chisq_50,chisq_90,chisq_95,chisq_99,pds->data->numberOfCoefficients);
-    
     const double g_cm3 = orsa::FromUnits(orsa::FromUnits(1,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double maxDensity = 10.0*g_cm3;
     
-    const double initialThresholdLevel = 1e33; // 100*chisq_99;
-    const double targetThresholdLevel  = chisq_99;
-    const double minAdaptiveRange      = -maxDensity;
-    const double maxAdaptiveRange      =  maxDensity;
-    const double intervalResidualProbability = 1.0e-10; // "1-confidence level" for this interval, different from the chisq-level
-    const size_t targetSamples         = 1000;
-    const size_t maxIter               = 1000000;
+    /* const double initialThresholdLevel = 1e20; // 100*chisq_99;
+       const double targetThresholdLevel  = chisq_99;
+       const double minAdaptiveRange      = -maxDensity;
+       const double maxAdaptiveRange      =  maxDensity;
+       const double intervalResidualProbability = 1.0e-10; // "1-confidence level" for this interval, different from the chisq-level
+       const size_t targetSamples         = 1000;
+       const size_t maxIter               = 1000000;
+    */
     
-    const size_t chebyshevDegree = 2;
+    const size_t chebyshevDegree = 0;
     osg::ref_ptr<AuxiliaryData> auxiliaryData = new AuxiliaryData;
     auxiliaryData->shape = shape;
-    auxiliaryData->sphericalHarmonicDegree = 2; // pds->data->degree;
+    auxiliaryData->sphericalHarmonicDegree = 0; // pds->data->degree;
     auxiliaryData->chebyshevDegree = chebyshevDegree;
     auxiliaryData->R0 = pds->data->R0;
-    auxiliaryData->numSamplePoints = 100000; // MonteCarlo to determine spherical harmonics coefficients
+    auxiliaryData->numSamplePoints = 100; // MonteCarlo to determine spherical harmonics coefficients
     auxiliaryData->storeSamplePoints = true;
     auxiliaryData->intervalVectorSize = CubicChebyshevMassDistribution::totalSize(chebyshevDegree);
     auxiliaryData->pds_data = pds->data.get();
@@ -74,6 +67,27 @@ int main() {
     auxiliaryData->pds_inv_covm = pds_inv_covm;
     
     ORSA_DEBUG("intervalVectorSize: %i",(*auxiliaryData->intervalVectorSize));
+
+#warning UPDATE DOF if you include more vars, i,e, center of mass position, body volume...
+#warning double-check this definition...
+    // DOF = (sphericalHarmonicDegree+1)^2 + 1 , this last +1 is due to the GM term
+    size_t chisq_DOF = (auxiliaryData->sphericalHarmonicDegree+1)*(auxiliaryData->sphericalHarmonicDegree+1)+1;
+    
+    const double chisq_50  = gsl_cdf_chisq_Pinv(0.50,chisq_DOF);
+    const double chisq_90  = gsl_cdf_chisq_Pinv(0.90,chisq_DOF);
+    const double chisq_95  = gsl_cdf_chisq_Pinv(0.95,chisq_DOF);
+    const double chisq_99  = gsl_cdf_chisq_Pinv(0.99,chisq_DOF);
+    //
+    ORSA_DEBUG("chisq 50\%: %.2f  90\%: %.2f  95\%: %.2f  99\%: %.2f  [DOF=%i]",
+               chisq_50,chisq_90,chisq_95,chisq_99,chisq_DOF);
+    
+    const double initialThresholdLevel = 1e20; // 100*chisq_99;
+    const double targetThresholdLevel  = chisq_99;
+    const double minAdaptiveRange      = -maxDensity;
+    const double maxAdaptiveRange      =  maxDensity;
+    const double intervalResidualProbability = 1.0e-10; // "1-confidence level" for this interval, different from the chisq-level
+    const size_t targetSamples         = 1000;
+    const size_t maxIter               = 1000000;
     
     AdaptiveIntervalVector intervalVector;
     intervalVector.resize(auxiliaryData->intervalVectorSize);
