@@ -26,28 +26,30 @@ int main() {
           
     const unsigned int order = 4;
     const unsigned int N = 100000;
+
+    const bool storeRandomVectors = true;
     
-    // osg::ref_ptr<RandomPointsInShape> randomPointsInShape = new RandomPointsInShape(shape,N,randomSeed);
-    osg::ref_ptr<RandomPointsInShape> randomPointsInShape = new RandomPointsInShape(shape,N);
+    osg::ref_ptr<RandomPointsInShape> randomPointsInShape =
+        new RandomPointsInShape(shape,massDistribution,N,storeRandomVectors);
     
     const double volume = orsa::volume(randomPointsInShape);
     
-    centerOfMass = orsa::centerOfMass(randomPointsInShape,
-                                      massDistribution);
+    centerOfMass = orsa::centerOfMass(randomPointsInShape);
+    // massDistribution);
     
     orsa::diagonalizedInertiaMatrix(shapeToLocal,
                                     localToShape,
                                     inertiaMatrix,
                                     centerOfMass,
-                                    randomPointsInShape,
-                                    massDistribution);
+                                    randomPointsInShape);
+    // massDistribution);
     
     paulMoment = orsa::computePaulMoment(order,
                                          shapeToLocal,
                                          localToShape,
                                          centerOfMass,
-                                         randomPointsInShape,
-                                         massDistribution);
+                                         randomPointsInShape);
+    // massDistribution);
     
 	std::vector< std::vector<double> > C, S, norm_C, norm_S;
 	std::vector<double> J;

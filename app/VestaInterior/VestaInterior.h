@@ -84,7 +84,9 @@ public:
                                    const double & R0) :
         orsa::MassDistribution(),
         coeff(coefficient),
-        oneOverR0(1.0/R0) { }
+        oneOverR0(1.0/R0) {
+        ORSA_DEBUG("coeff[0][0][0] = %g",coeff[0][0][0]);
+    }
 protected:
     ~CubicChebyshevMassDistribution() { }
 public:
@@ -124,6 +126,7 @@ public:
     orsa::Cache<size_t> chebyshevDegree;
     orsa::Cache<double> R0;
     orsa::Cache<size_t> numSamplePoints;
+    orsa::Cache<bool>   storeSamplePoints;
     orsa::Cache<size_t> intervalVectorSize;
     osg::ref_ptr<orsaPDS::RadioScienceGravityData> pds_data;
     orsa::Cache<size_t> pds_numberOfCoefficients;
@@ -176,15 +179,15 @@ public:
         // osg::ref_ptr<orsa::PaulMoment> paulMoment;
         
         osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
-            new orsa::RandomPointsInShape(aux->shape,aux->numSamplePoints);
+            new orsa::RandomPointsInShape(aux->shape,massDistribution,aux->numSamplePoints,aux->storeSamplePoints);
         
         // const double volume = orsa::volume(randomPointsInShape);
 
         // check: all points inside shape have positive density?
         
         
-        const orsa::Vector centerOfMass = orsa::centerOfMass(randomPointsInShape,
-                                                             massDistribution);
+        const orsa::Vector centerOfMass = orsa::centerOfMass(randomPointsInShape);
+        // massDistribution);
         
         /* orsa::diagonalizedInertiaMatrix(shapeToLocal,
            localToShape,
@@ -199,14 +202,18 @@ public:
                                     orsa::Matrix::identity(), // shapeToLocal,
                                     orsa::Matrix::identity(), // localToShape,
                                     centerOfMass,
-                                    randomPointsInShape,
-                                    massDistribution);
+                                    randomPointsInShape);
+        // massDistribution);
         
         std::vector< std::vector<double> > C, S, norm_C, norm_S;
         std::vector<double> J;
         orsa::convert(C, S, norm_C, norm_S, J,
                       paulMoment, 
                       aux->R0);
+        
+        for (size_t k=0; k<aux->pds_numberOfCoefficients; ++k) {
+            ORSA_DEBUG("pds_coeff[%03i] = %g",k,gsl_vector_get(aux->pds_coeff,k));
+        }
         
 #warning missing the GM value!!! *********************
         gsl_vector * vec_coeff = gsl_vector_alloc(aux->pds_numberOfCoefficients);
@@ -215,11 +222,17 @@ public:
             for (size_t l=2; l<=aux->sphericalHarmonicDegree; ++l) {
                 for (size_t m=0; m<=l; ++m) {
                     index = aux->pds_data->index(orsaPDS::RadioScienceGravityData::keyC(l,m));
+                    ORSA_DEBUG("index: %i",index);
+                    ORSA_DEBUG("norm_C[%03i][%03i] = %g",l,m,norm_C[l][m]);
+                    ORSA_DEBUG("pds_coeff[%03i] = %g",index,gsl_vector_get(aux->pds_coeff,index));
                     gsl_vector_set(vec_coeff,
                                    index,
                                    norm_C[l][m]-gsl_vector_get(aux->pds_coeff,index));
                     if (m!=0) {
                         index = aux->pds_data->index(orsaPDS::RadioScienceGravityData::keyS(l,m));
+                        ORSA_DEBUG("index: %i",index);
+                        ORSA_DEBUG("norm_S[%03i][%03i] = %g",l,m,norm_S[l][m]);
+                        ORSA_DEBUG("pds_coeff[%03i] = %g",index,gsl_vector_get(aux->pds_coeff,index));
                         gsl_vector_set(vec_coeff,
                                        index,
                                        norm_S[l][m]-gsl_vector_get(aux->pds_coeff,index));
@@ -227,12 +240,18 @@ public:
                 }
             }
         }
+
+        for (size_t k=0; k<aux->pds_numberOfCoefficients; ++k) {
+            ORSA_DEBUG("vec_coeff[%03i] = %g",k,gsl_vector_get(vec_coeff,k));
+        }
         
         gsl_vector * vec_tmp = gsl_vector_alloc(aux->pds_numberOfCoefficients);
         double chisq; 
         gsl_blas_dgemv(CblasNoTrans,1.0,aux->pds_inv_covm,vec_coeff,0.0,vec_tmp);
         gsl_blas_ddot (vec_coeff,vec_tmp,&chisq);
         e.level = chisq;
+
+        ORSA_DEBUG("chisq = %g",chisq);
         
         gsl_vector_free(vec_coeff);
         gsl_vector_free(vec_tmp);
