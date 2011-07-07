@@ -163,16 +163,22 @@ public:
         { }
 protected:
     osg::ref_ptr<const AuxiliaryData> aux;
+protected:
+    mutable osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape;
 public:
     void updateLevel(const AdaptiveIntervalElementType & e) const {
         if (e.level.isSet()) return;
         
         osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
             new CubicChebyshevMassDistribution(e.data->coeff,aux->R0);
-        
-        osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
-            new orsa::RandomPointsInShape(aux->shape,massDistribution,aux->numSamplePoints,aux->storeSamplePoints);
 
+        if (randomPointsInShape.get() == 0) {
+            // first call only
+            randomPointsInShape = new orsa::RandomPointsInShape(aux->shape,massDistribution,aux->numSamplePoints,aux->storeSamplePoints);
+        } else {
+            randomPointsInShape->updateMassDistribution(massDistribution);
+        }
+        
         // test: any point with negative mass?
         {
             orsa::Vector v;

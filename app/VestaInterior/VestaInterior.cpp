@@ -85,7 +85,7 @@ int main() {
     auxiliaryData->sphericalHarmonicDegree = 0; // pds->data->degree;
     auxiliaryData->chebyshevDegree = chebyshevDegree;
     auxiliaryData->R0 = pds->data->R0;
-    auxiliaryData->numSamplePoints = 1000; // MonteCarlo to determine spherical harmonics coefficients
+    auxiliaryData->numSamplePoints = 100000; // MonteCarlo to determine spherical harmonics coefficients
     auxiliaryData->storeSamplePoints = true;
     auxiliaryData->intervalVectorSize = CubicChebyshevMassDistribution::totalSize(chebyshevDegree);
     auxiliaryData->pds_data = pds->data.get();
