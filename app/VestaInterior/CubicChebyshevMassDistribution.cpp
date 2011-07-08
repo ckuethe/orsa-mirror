@@ -1,5 +1,7 @@
 #include "CubicChebyshevMassDistribution.h"
 
+std::vector< std::vector< std::vector<size_t> > > CubicChebyshevMassDistribution::indexTable;
+
 size_t CubicChebyshevMassDistribution::totalSize(const size_t & degree) {
     return (degree+1)*(degree+2)*(degree+3)/6;
 }

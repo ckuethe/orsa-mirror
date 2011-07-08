@@ -5,9 +5,6 @@
 
 #include "vesta.h"
 
-// static variable
-std::vector< std::vector< std::vector<size_t> > > CubicChebyshevMassDistribution::indexTable;
-
 int main() {
     
     // test specific cases, for debug purposes only!
