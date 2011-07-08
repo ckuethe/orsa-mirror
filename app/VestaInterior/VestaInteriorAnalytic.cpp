@@ -175,7 +175,7 @@ int main() {
 
      // S_lm coefficients
     //
-    for (int l=0; l<=(int)SH_degree; ++l) {
+    for (int l=2; l<=(int)SH_degree; ++l) {
         for (int m=1; m<=l; ++m) {
             
             // double pq_factor=0;
@@ -285,13 +285,18 @@ int main() {
         }
     }
     
+#warning FIX GM entry!!
+    
+#warning check for negative densities!
     
     for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
         for (size_t z_ijk=0; z_ijk<ijk_size; ++z_ijk) {
-            size_t nx,ny,nz;
-            CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);                
-            ORSA_DEBUG("sh2ijk[%02i][%02i] = %+12.3g   [%s -> N[%02i][%02i][%02i]]",
-                       z_sh,z_ijk,gsl_matrix_get(sh2ijk,z_sh,z_ijk),pds->data->key(z_sh).toStdString().c_str(),nx,ny,nz);
+            if (gsl_matrix_get(sh2ijk,z_sh,z_ijk)!=0.0) {
+                size_t nx,ny,nz;
+                CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);                
+                ORSA_DEBUG("sh2ijk[%02i][%02i] = %+12.3g   [%s -> N[%02i][%02i][%02i]]",
+                           z_sh,z_ijk,gsl_matrix_get(sh2ijk,z_sh,z_ijk),pds->data->key(z_sh).toStdString().c_str(),nx,ny,nz);
+            }
         }
     }
     
