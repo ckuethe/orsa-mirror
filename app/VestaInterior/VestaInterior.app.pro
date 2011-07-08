@@ -22,7 +22,7 @@ unix:!macx {
 }
 
 
-HEADERS += VestaInterior.h   vesta.h  
-SOURCES += VestaInterior.cpp 
+HEADERS += VestaInterior.h   vesta.h  CubicChebyshevMassDistribution.h
+SOURCES += VestaInterior.cpp CubicChebyshevMassDistribution.cpp
 
 
