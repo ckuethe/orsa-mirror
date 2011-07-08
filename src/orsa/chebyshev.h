@@ -3,11 +3,14 @@
 
 #include <vector>
 
+#include <orsa/debug.h>
+
 namespace orsa {
     
     inline void ChebyshevT(std::vector<double> & T,
                            const size_t & n,
                            const double & x) {
+        // ORSA_DEBUG("n: %2i x: %+6.3f",n,x);
         T.resize(n+1);
         T[0] = 1;
         if (n==0) return;
@@ -27,4 +30,4 @@ namespace orsa {
     
 } // namespace orsa
 
-#endif _ORSA_CHEBYSHEV_
+#endif // _ORSA_CHEBYSHEV_
