@@ -1,4 +1,4 @@
-#include "VestaInterior.h"
+#include "VestaInteriorMonteCarlo.h"
 
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_cdf.h>

@@ -1,5 +1,5 @@
-#ifndef _VESTA_INTERIOR_H_
-#define _VESTA_INTERIOR_H_
+#ifndef _VESTA_INTERIOR_MONTE_CARLO_H_
+#define _VESTA_INTERIOR_MONTE_CARLO_H_
 
 #include <orsa/chebyshev.h>
 #include <orsa/massDistribution.h>
@@ -277,4 +277,4 @@ public:
     }
 };
 
-#endif // _VESTA_INTERIOR_H_
+#endif // _VESTA_INTERIOR_MONTE_CARLO_H_

@@ -7,7 +7,7 @@ CONFIG += gmp_include gmp_lib gsl_include gsl_lib osg_include osg_lib qwt_includ
 
 include(../../orsa.pri)
 
-TARGET   = VestaInterior
+TARGET   = VestaInteriorMonteCarlo
 
 INCLUDEPATH += ../../src/
 DEPENDPATH  += ../../src/
@@ -22,7 +22,7 @@ unix:!macx {
 }
 
 
-HEADERS += VestaInterior.h   vesta.h  CubicChebyshevMassDistribution.h
-SOURCES += VestaInterior.cpp CubicChebyshevMassDistribution.cpp
+HEADERS += VestaInteriorMonteCarlo.h   vesta.h  CubicChebyshevMassDistribution.h
+SOURCES += VestaInteriorMonteCarlo.cpp CubicChebyshevMassDistribution.cpp
 
 
