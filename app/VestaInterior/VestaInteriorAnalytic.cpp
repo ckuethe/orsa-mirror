@@ -37,7 +37,7 @@ int main() {
         exit(0);
     }
     
-    const size_t SH_degree = 2; // shperical harmonics degree
+    const size_t SH_degree = 4; // shperical harmonics degree
     const size_t  T_degree = 2; // chebyshev polinomials degree
 
     const double R0 = pds->data->R0;
@@ -57,6 +57,8 @@ int main() {
         gsl_matrix_set(identity_sh,z_sh,z_sh,1.0);
     }
     
+    // C_lm coefficients
+    //
     for (int l=2; l<=(int)SH_degree; ++l) {
         for (int m=0; m<=l; ++m) {
             
@@ -111,7 +113,7 @@ int main() {
                     // nu_factor /= int_pow(R0,l);
                     // nu_factor_uncertainty /= int_pow(R0,l);
 
-#warning RESTORE
+#warning RESTORE?
                     // gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, nu_sh2ijk, 1.0/int_pow(R0,l), nu_sh2ijk);
                     gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, nu_sh2ijk, 1.0, nu_sh2ijk);
 
@@ -170,17 +172,130 @@ int main() {
             */
         }
     } 
+
+     // S_lm coefficients
+    //
+    for (int l=0; l<=(int)SH_degree; ++l) {
+        for (int m=1; m<=l; ++m) {
+            
+            // double pq_factor=0;
+            // double pq_factor_uncertainty=0;
+            //
+            // reset pq_sh2ijk to zero
+            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, 0.0, pq_sh2ijk);
+            
+            // integer division in limits
+            for (int p=0;p<=(l/2);++p) {
+                for (int q=0;q<=((m-1)/2);++q) {
+	  
+                    // double nu_factor=0;
+                    // double nu_factor_uncertainty=0;
+                    //
+                    gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, nu_sh2ijk, 0.0, nu_sh2ijk);
+                    
+                    for (int nu_x=0; nu_x<=p; ++nu_x) {
+                        for (int nu_y=0; nu_y<=(p-nu_x); ++nu_y) {
+	      
+                            const int M_i = m-2*q-1+2*nu_x;
+                            const int M_j = 2*q+1+2*nu_y;
+                            const int M_k = l-m-2*nu_x-2*nu_y;
+	      
+                            if (M_i+M_j+M_k!=l) {
+                                ORSA_DEBUG("WARNING!!!");
+                            }
+	      
+                            if ( (M_i>=0) && 
+                                 (M_j>=0) && 
+                                 (M_k>=0) && 
+                                 (M_i+M_j+M_k==l) ) {
+		
+                                // ORSA_DEBUG("requesting M[%i][%i][%i]...   l: %i",M_i, M_j, M_k, l);
+		
+                                const double nu_factor_base =
+                                    (orsa::factorial(p).get_d() /(orsa::factorial(nu_x).get_d()*orsa::factorial(nu_y).get_d()*orsa::factorial(p-nu_x-nu_y).get_d()));
+		
+                                // nu_factor += nu_factor_base * pm->M(M_i,M_j,M_k);
+                                // nu_factor_uncertainty += nu_factor_base * pm->M_uncertainty(M_i,M_j,M_k);
+                                
+                                const size_t z_sh  = pds->data->index(orsaPDS::RadioScienceGravityData::keyS(l,m));
+                                const size_t z_ijk = CubicChebyshevMassDistribution::index(M_i,M_j,M_k);
+                                // gsl_matrix_set(nu_sh2ijk,z_sh,z_ijk,gsl_matrix_get(nu_sh2ijk,z_sh,z_ijk)+nu_factor_base);
+                                gsl_matrix_set(nu_sh2ijk,z_sh,z_ijk,nu_factor_base);
+                                
+                            }
+                        }
+                    }
+                    // need this because using M(i,j,k) instead of N(i,j,k)
+                    // nu_factor /= int_pow(R0,l);
+                    // nu_factor_uncertainty /= int_pow(R0,l);
+	  
+#warning RESTORE?
+                    // gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, nu_sh2ijk, 1.0/int_pow(R0,l), nu_sh2ijk);
+                    gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, nu_sh2ijk, 1.0, nu_sh2ijk);
+                    
+                    
+                    const double pq_factor_base = 
+                        orsa::power_sign(p+q) *
+                        orsa::binomial(l,p).get_d() *
+                        orsa::binomial(2*l-2*p,l).get_d() *
+                        orsa::binomial(m,2*q+1).get_d() *
+                        orsa::pochhammer(l-m-2*p+1,m);
+	  
+                    /* pq_factor += 
+                       pq_factor_base *
+                       nu_factor;
+                       
+                       pq_factor_uncertainty += 
+                       pq_factor_base *
+                       nu_factor_uncertainty;
+                    */
+                    
+                    gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, nu_sh2ijk, pq_factor_base, nu_sh2ijk);
+                    gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, identity_sh, nu_sh2ijk, 1.0, pq_sh2ijk);
+                }
+            }
+            //
+            // pq_factor /= int_pow(2.0,l);
+            // pq_factor_uncertainty /= int_pow(2.0,l);
+            //
+            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, 1.0/int_pow(2.0,l), pq_sh2ijk);
+            
+            
+            
+            /* const double S_lm = pq_factor;
+               const double S_lm_uncertainty = fabs(pq_factor_uncertainty);
+               //      
+               const double norm_S_lm = S_lm*normalization(l,m);
+               const double norm_S_lm_uncertainty = fabs(S_lm_uncertainty*normalization(l,m));
+            */
+            
+            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, identity_sh, pq_sh2ijk, 1.0, sh2ijk);
+            
+            /* if (verbose) {
+               ORSA_DEBUG("     S[%i][%i] = %+16.12f +/- %16.12f",
+               l,m,     S_lm, S_lm_uncertainty);
+               ORSA_DEBUG("norm_S[%i][%i] = %+16.12f +/- %16.12f   norm: %f",
+               l,m,norm_S_lm,norm_S_lm_uncertainty,normalization(l,m));
+               }
+            */
+            
+            /* S[l][m]      = S_lm;
+               norm_S[l][m] = norm_S_lm;
+            */
+        }
+    }
+    
     
     for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
         for (size_t z_ijk=0; z_ijk<ijk_size; ++z_ijk) {
             size_t nx,ny,nz;
-            CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);
+            CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);                
             ORSA_DEBUG("sh2ijk[%02i][%02i] = %+12.3g   [%s -> N[%02i][%02i][%02i]]",
                        z_sh,z_ijk,gsl_matrix_get(sh2ijk,z_sh,z_ijk),pds->data->key(z_sh).toStdString().c_str(),nx,ny,nz);
         }
     }
-
-
+    
+    
     
     gsl_matrix * ijk2cT = gsl_matrix_alloc(ijk_size,T_size);
 
