@@ -37,7 +37,8 @@ namespace orsaPDS {
         static QString keyC(unsigned int l, unsigned int m);
         static QString keyS(unsigned int l, unsigned int m);
     public:
-        unsigned int index(const QString &) const;
+        unsigned int index(const QString & key) const;
+        QString key(const unsigned int & index) const;
     protected:
         std::vector< orsa::Cache<double> >                coeff;
         std::vector< std::vector< orsa::Cache<double> > > covar; // triangular

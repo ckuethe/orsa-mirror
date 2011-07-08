@@ -23,22 +23,26 @@ QString RadioScienceGravityData::keyS(unsigned int l, unsigned int m) {
     return qs;
 }
 
-unsigned int RadioScienceGravityData::index(const QString & s) const {
-    const HashType::const_iterator it = hash.constFind(s);
+unsigned int RadioScienceGravityData::index(const QString & key) const {
+    const HashType::const_iterator it = hash.constFind(key);
     if (it != hash.constEnd()) {
         return it.value();
     } else {
-        ORSA_DEBUG("problem: no hash found for [%s]",s.toStdString().c_str());
+        ORSA_DEBUG("problem: no hash found for [%s]",key.toStdString().c_str());
         return 0;
     }
 }
 
-double RadioScienceGravityData::getCoeff(const QString & s) const {
-    const HashType::const_iterator it = hash.constFind(s);
+QString RadioScienceGravityData::key(const unsigned int & index) const {
+    return hash.key(index);
+}
+
+double RadioScienceGravityData::getCoeff(const QString & key) const {
+    const HashType::const_iterator it = hash.constFind(key);
     if (it != hash.constEnd()) {
         return coeff[it.value()];
     } else {
-        ORSA_DEBUG("problem: no hash found for [%s]",s.toStdString().c_str());
+        ORSA_DEBUG("problem: no hash found for [%s]",key.toStdString().c_str());
         return 0;
     }
 }
