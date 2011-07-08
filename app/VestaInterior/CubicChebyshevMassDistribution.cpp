@@ -18,6 +18,28 @@ void CubicChebyshevMassDistribution::resize(CoefficientType & coeff, const size_
 
 size_t CubicChebyshevMassDistribution::index(const size_t & nx, const size_t & ny, const size_t & nz) {
     const size_t requestedDegree=nx+ny+nz;
+    updateIndexTable(requestedDegree);
+    return indexTable[nx][ny][nz];
+}
+
+void CubicChebyshevMassDistribution::triIndex(size_t & nx, size_t & ny, size_t & nz, const size_t & index) {
+    size_t degree=0;
+    while (CubicChebyshevMassDistribution::totalSize(degree)<=index) { ++degree; }
+    updateIndexTable(degree);
+    for (nx=0; nx<=degree; ++nx) {
+        for (ny=0; ny<=degree; ++ny) {
+            for (nz=0; nz<=degree; ++nz) {
+                if (nx+ny+nz==degree) {
+                    // ORSA_DEBUG("nx: %i  ny: %i  nz: %i  index: %i  degree: %i",nx,ny,nz,index,degree);
+                    if (indexTable[nx][ny][nz]==index) return;
+                }
+            }
+        }
+    }
+    ORSA_DEBUG("index [%i] not found",index);
+}
+
+void CubicChebyshevMassDistribution::updateIndexTable(const size_t & requestedDegree) {
     if (indexTable.size() < (requestedDegree+1)) {
         indexTable.resize(requestedDegree+1);
         for (size_t i=0; i<=requestedDegree; ++i) {
@@ -42,7 +64,6 @@ size_t CubicChebyshevMassDistribution::index(const size_t & nx, const size_t & n
             ++degree;
         }
     }
-    return indexTable[nx][ny][nz];
 }
 
 CubicChebyshevMassDistribution::CubicChebyshevMassDistribution(const CoefficientType & coefficient,

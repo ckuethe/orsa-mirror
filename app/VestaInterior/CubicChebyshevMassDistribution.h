@@ -15,9 +15,13 @@ public:
 public:
     static void resize(CoefficientType & coeff, const size_t & degree);
 protected:
-    static std::vector< std::vector< std::vector<size_t> > > indexTable;
+    typedef std::vector< std::vector< std::vector<size_t> > > IndexTableType;
+    static IndexTableType indexTable;
 public:
     static size_t index(const size_t & nx, const size_t & ny, const size_t & nz);
+    static void triIndex(size_t & nx, size_t & ny, size_t & nz, const size_t & index);
+protected:
+    static void updateIndexTable(const size_t & requestedDegree);
 public:
     CubicChebyshevMassDistribution(const CoefficientType & coefficient,
                                    const double & R0);
