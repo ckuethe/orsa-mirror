@@ -31,8 +31,11 @@ namespace orsa {
         std::vector< std::vector< std::vector<double> > > _M, _M_uncertainty;
     public:
         const unsigned int order;
+    public:
+        static double normalization(const unsigned int l,
+                                    const unsigned int m);
     };
-  
+    
     // utility, just printing out values for now
     void convert(std::vector< std::vector<double> > & C,
                  std::vector< std::vector<double> > & S,

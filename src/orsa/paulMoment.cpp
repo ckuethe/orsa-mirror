@@ -89,8 +89,8 @@ void PaulMoment::setM_uncertainty (const double & val,
    }
 */
 //
-static double normalization(const unsigned int l,
-                            const unsigned int m) {
+double PaulMoment::normalization(const unsigned int l,
+                                 const unsigned int m) {
     // Cross checked with NEAR-Eros papers
     return sqrt( ((2-orsa::kronecker(m,0))*orsa::factorial(l-m).get_d()) / 
                  ((2*l+1)*orsa::factorial(l+m).get_d()) );
@@ -194,14 +194,14 @@ void orsa::convert(std::vector< std::vector<double> > & C,
             const double C_lm = pq_factor;
             const double C_lm_uncertainty = fabs(pq_factor_uncertainty);
             //      
-            const double norm_C_lm = C_lm*normalization(l,m);
-            const double norm_C_lm_uncertainty = fabs(C_lm_uncertainty*normalization(l,m));
+            const double norm_C_lm = C_lm*PaulMoment::normalization(l,m);
+            const double norm_C_lm_uncertainty = fabs(C_lm_uncertainty*PaulMoment::normalization(l,m));
       
             if (verbose) {
                 ORSA_DEBUG("     C[%i][%i] = %+16.12f +/- %16.12f",
                            l,m,     C_lm, C_lm_uncertainty);
                 ORSA_DEBUG("norm_C[%i][%i] = %+16.12f +/- %16.12f   norm: %f",
-                           l,m,norm_C_lm,norm_C_lm_uncertainty,normalization(l,m));
+                           l,m,norm_C_lm,norm_C_lm_uncertainty,PaulMoment::normalization(l,m));
             }
             
             C[l][m]      = C_lm;
@@ -295,14 +295,14 @@ void orsa::convert(std::vector< std::vector<double> > & C,
             const double S_lm = pq_factor;
             const double S_lm_uncertainty = fabs(pq_factor_uncertainty);
             //      
-            const double norm_S_lm = S_lm*normalization(l,m);
-            const double norm_S_lm_uncertainty = fabs(S_lm_uncertainty*normalization(l,m));
+            const double norm_S_lm = S_lm*PaulMoment::normalization(l,m);
+            const double norm_S_lm_uncertainty = fabs(S_lm_uncertainty*PaulMoment::normalization(l,m));
       
             if (verbose) {
                 ORSA_DEBUG("     S[%i][%i] = %+16.12f +/- %16.12f",
                            l,m,     S_lm, S_lm_uncertainty);
                 ORSA_DEBUG("norm_S[%i][%i] = %+16.12f +/- %16.12f   norm: %f",
-                           l,m,norm_S_lm,norm_S_lm_uncertainty,normalization(l,m));
+                           l,m,norm_S_lm,norm_S_lm_uncertainty,PaulMoment::normalization(l,m));
             }
       
             S[l][m]      = S_lm;

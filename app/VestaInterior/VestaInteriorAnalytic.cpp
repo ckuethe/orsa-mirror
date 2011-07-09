@@ -150,11 +150,15 @@ int main() {
             gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, 1.0/int_pow(2.0,l), pq_sh2ijk);
             // gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, 1.0, pq_sh2ijk);
             
+            ORSA_DEBUG("PaulMoment::normalization(%i,%i) = %g",l,m,PaulMoment::normalization(l,m));
+            // normalization
+            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, PaulMoment::normalization(l,m), pq_sh2ijk);
+            
             /* const double C_lm = pq_factor;
                const double C_lm_uncertainty = fabs(pq_factor_uncertainty);
                //      
-               const double norm_C_lm = C_lm*normalization(l,m);
-               const double norm_C_lm_uncertainty = fabs(C_lm_uncertainty*normalization(l,m));
+               const double norm_C_lm = C_lm*PaulMoment::normalization(l,m);
+               const double norm_C_lm_uncertainty = fabs(C_lm_uncertainty*PaulMoment::normalization(l,m));
             */
             //
             gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, identity_sh, pq_sh2ijk, 1.0, sh2ijk);
@@ -163,7 +167,7 @@ int main() {
                ORSA_DEBUG("     C[%i][%i] = %+16.12f +/- %16.12f",
                l,m,     C_lm, C_lm_uncertainty);
                ORSA_DEBUG("norm_C[%i][%i] = %+16.12f +/- %16.12f   norm: %f",
-               l,m,norm_C_lm,norm_C_lm_uncertainty,normalization(l,m));
+               l,m,norm_C_lm,norm_C_lm_uncertainty,PaulMoment::normalization(l,m));
                }
             */
             
@@ -260,13 +264,15 @@ int main() {
             //
             gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, 1.0/int_pow(2.0,l), pq_sh2ijk);
             
-            
+            ORSA_DEBUG("PaulMoment::normalization(%i,%i) = %g",l,m,PaulMoment::normalization(l,m));
+            // normalization
+            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, PaulMoment::normalization(l,m), pq_sh2ijk);
             
             /* const double S_lm = pq_factor;
                const double S_lm_uncertainty = fabs(pq_factor_uncertainty);
                //      
-               const double norm_S_lm = S_lm*normalization(l,m);
-               const double norm_S_lm_uncertainty = fabs(S_lm_uncertainty*normalization(l,m));
+               const double norm_S_lm = S_lm*PaulMoment::normalization(l,m);
+               const double norm_S_lm_uncertainty = fabs(S_lm_uncertainty*PaulMoment::normalization(l,m));
             */
             
             gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, identity_sh, pq_sh2ijk, 1.0, sh2ijk);
@@ -275,7 +281,7 @@ int main() {
                ORSA_DEBUG("     S[%i][%i] = %+16.12f +/- %16.12f",
                l,m,     S_lm, S_lm_uncertainty);
                ORSA_DEBUG("norm_S[%i][%i] = %+16.12f +/- %16.12f   norm: %f",
-               l,m,norm_S_lm,norm_S_lm_uncertainty,normalization(l,m));
+               l,m,norm_S_lm,norm_S_lm_uncertainty,PaulMoment::normalization(l,m));
                }
             */
             
@@ -288,6 +294,10 @@ int main() {
 #warning FIX GM entry!!
     
 #warning check for negative densities!
+    
+#warning re-include factor 1/R0^l ?
+    
+#warning re-indlude normalization for Ckm Slm
     
     for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
         for (size_t z_ijk=0; z_ijk<ijk_size; ++z_ijk) {
