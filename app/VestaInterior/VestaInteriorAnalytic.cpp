@@ -421,6 +421,25 @@ int main() {
     }
     
     
+    gsl_matrix * sh2cT = gsl_matrix_alloc(SH_size,T_size);
+    gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, sh2ijk, ijk2cT, 0.0, sh2cT);
+    
+    
+    for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
+        for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
+            // if (gsl_matrix_get(sh2cT,z_sh,z_cT)!=0.0) {
+            {             
+                size_t Tx,Ty,Tz;
+                CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
+                ORSA_DEBUG("sh2cT[%02i][%02i] = %+12.3g   [%s ->  c*Tx[%i][%i][%i]]",
+                           z_sh,z_cT,gsl_matrix_get(sh2cT,z_sh,z_cT),pds->data->key(z_sh).toStdString().c_str(),Tx,Ty,Tz);
+            }
+        }
+    }
+    
+    
+    
+    
     // free GSL stuff
     gsl_vector_free(pds_coeff);
     gsl_matrix_free(pds_covm);
@@ -429,6 +448,7 @@ int main() {
     gsl_matrix_free(pq_sh2ijk);
     gsl_matrix_free(nu_sh2ijk);
     gsl_matrix_free(ijk2cT);
+    gsl_matrix_free(sh2cT);
     
 #warning call gsl_*_free as needed...
     
