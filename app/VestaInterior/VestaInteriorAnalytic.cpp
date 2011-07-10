@@ -4,6 +4,7 @@
 
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_cdf.h>
+#include <gsl/gsl_linalg.h>
 
 #include "vesta.h"
 
@@ -39,10 +40,12 @@ int main() {
         exit(0);
     }
     
-    const size_t SH_degree = 4; // shperical harmonics degree
-    const size_t  T_degree = 2; // chebyshev polinomials degree
+    const size_t SH_degree = 8; // shperical harmonics degree
+    const size_t  T_degree = 4; // chebyshev polinomials degree
 
     const double R0 = pds->data->R0;
+#warning which GM value to use? pds->data->GM  OR pds->data->getCoeff("GM") ??
+    const double GM = pds->data->GM; 
     
     // sh size: (l+1)^2 +1; +1 due to GM factor; -4 because C00, C10, C11, S11 are missing
     const size_t  SH_size = (SH_degree+1)*(SH_degree+1)+1-4;
@@ -63,7 +66,8 @@ int main() {
     // C_lm coefficients
     //
     for (int l=0; l<=(int)SH_degree; ++l) {
-        
+
+#warning remember: skipping all l==1 terms
         if (l==1) continue;
         
         for (int m=0; m<=l; ++m) {
@@ -107,7 +111,8 @@ int main() {
                                 // nu_factor += nu_factor_base * pm->M(M_i,M_j,M_k);
                                 // nu_factor_uncertainty += nu_factor_base * pm->M_uncertainty(M_i,M_j,M_k);
 
-                                const size_t z_sh  = pds->data->index(orsaPDS::RadioScienceGravityData::keyC(l,m));
+                                // z_sh is 0 if l==0, it's the GM term
+                                const size_t z_sh  = (l==0 ? 0 :  pds->data->index(orsaPDS::RadioScienceGravityData::keyC(l,m)));
                                 const size_t z_ijk = CubicChebyshevMassDistribution::index(M_i,M_j,M_k);
                                 // gsl_matrix_set(nu_sh2ijk,z_sh,z_ijk,gsl_matrix_get(nu_sh2ijk,z_sh,z_ijk)+nu_factor_base);
                                 gsl_matrix_set(nu_sh2ijk,z_sh,z_ijk,nu_factor_base);
@@ -159,6 +164,12 @@ int main() {
             ORSA_DEBUG("PaulMoment::normalization(%i,%i) = %g",l,m,PaulMoment::normalization(l,m));
             // normalization
             gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, PaulMoment::normalization(l,m), pq_sh2ijk);
+
+
+#warning scaling for l=0,m=0 term that is GM in the data...
+            if (l==0 && m==0) {
+                gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, GM, pq_sh2ijk);
+            }
             
             /* const double C_lm = pq_factor;
                const double C_lm_uncertainty = fabs(pq_factor_uncertainty);
@@ -341,17 +352,19 @@ int main() {
         new CubicChebyshevMassDistribution(coeff,R0);
     
 #warning use enough points...
-    const size_t numSamplePoints = 10000;
+    const size_t numSamplePoints = 100000;
     const bool storeSamplePoints = true;
 #warning how to manage centerOfMass??
     const double km = orsa::FromUnits(1.0,orsa::Unit::KM);                                      
-    const orsa::Vector centerOfMass = orsa::Vector(0.0*km,0.0*km,5.0*km);
+    const orsa::Vector centerOfMass = orsa::Vector(0.0*km,0.0*km,8.0*km);
     
     // at this point the mass distribution is not yet important
     osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
         new orsa::RandomPointsInShape(shape,massDistribution,numSamplePoints,storeSamplePoints);
     
     const double volume = orsa::volume(randomPointsInShape);
+
+    const double bulkDensity = GM/orsa::Unit::G()/volume;
     
     gsl_matrix * ijk2cT = gsl_matrix_calloc(ijk_size,T_size);
     
@@ -391,7 +404,7 @@ int main() {
             randomPointsInShape->reset();
             while (randomPointsInShape->get(v,density)) {
                 // const double density = massDistribution->density(v);
-                if (density > 0) {
+                if (density > 0.0) {
                     v -= centerOfMass;
                     // v = shapeToLocal*v;
                     stat->insert(int_pow(v.getX(),nx)*
@@ -401,7 +414,7 @@ int main() {
                 }
             }
             
-            gsl_matrix_set(ijk2cT,z_ijk,z_cT,stat->average());
+            gsl_matrix_set(ijk2cT,z_ijk,z_cT,stat->average()/int_pow(R0,nx+ny+nz));
         }
     }
     
@@ -414,7 +427,7 @@ int main() {
                 CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);                
                 size_t Tx,Ty,Tz;
                 CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-                ORSA_DEBUG("ijk2cT[%02i][%02i] = %+12.3g   [N[%02i][%02i][%02i] -> c*Tx[%i][%i][%i]]",
+                ORSA_DEBUG("ijk2cT[%02i][%02i] = %+12.3g   [N[%02i][%02i][%02i] -> cT[%i][%i][%i]]",
                            z_ijk,z_cT,gsl_matrix_get(ijk2cT,z_ijk,z_cT),nx,ny,nz,Tx,Ty,Tz);
             }
         }
@@ -431,13 +444,58 @@ int main() {
             {             
                 size_t Tx,Ty,Tz;
                 CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-                ORSA_DEBUG("sh2cT[%02i][%02i] = %+12.3g   [%s ->  c*Tx[%i][%i][%i]]",
+                ORSA_DEBUG("sh2cT[%02i][%02i] = %+12.3g   [%s ->  cT[%i][%i][%i]]",
                            z_sh,z_cT,gsl_matrix_get(sh2cT,z_sh,z_cT),pds->data->key(z_sh).toStdString().c_str(),Tx,Ty,Tz);
             }
         }
     }
     
     
+    {
+        
+#warning if M<N, need to do the SVD of the transposed matrix!!
+        
+        // SVD
+        const size_t M  = SH_size;
+        const size_t N  =  T_size;
+        gsl_matrix * U  = gsl_matrix_alloc(M,N);
+        gsl_matrix * V  = gsl_matrix_alloc(N,N);
+        gsl_vector * Sv = gsl_vector_alloc(N);
+        gsl_vector * work = gsl_vector_alloc(N);
+        //
+        gsl_matrix_memcpy(U,sh2cT);
+        //
+        gsl_linalg_SV_decomp(U,V,Sv,work);
+        // gsl_linalg_SV_decomp_jacobi(U,V,Sv);
+
+        for (size_t s=0; s<N; ++s) {
+            ORSA_DEBUG("Sv[%02i] = %+12.3g",s,gsl_vector_get(Sv,s));
+        }
+        
+        // solve A*x=b, with b=sh and x=cT
+        gsl_vector * sh = gsl_vector_calloc(M); 
+        for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
+            gsl_vector_set(sh,z_sh,pds->data->getCoeff(pds->data->key(z_sh)));
+            ORSA_DEBUG("%s =  %+12.3g",pds->data->key(z_sh).toStdString().c_str(),gsl_vector_get(sh,z_sh));
+        }
+        
+        gsl_vector * cT = gsl_vector_alloc(N);
+        gsl_linalg_SV_solve(U, V, Sv, sh, cT);
+
+        for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
+            size_t Tx,Ty,Tz;
+            CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
+            ORSA_DEBUG("cT[%i][%i][%i] = %+12.3f",
+                       Tx,Ty,Tz,gsl_vector_get(cT,z_cT));
+        }
+
+        for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
+            size_t Tx,Ty,Tz;
+            CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
+            ORSA_DEBUG("density_coeff_T[%i][%i][%i] = %+12.3f [g/cm^3]",
+                       Tx,Ty,Tz,orsa::FromUnits(orsa::FromUnits(bulkDensity*gsl_vector_get(cT,z_cT),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+        }
+    }
     
     
     // free GSL stuff
