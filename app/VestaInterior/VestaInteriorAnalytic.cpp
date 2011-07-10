@@ -1,5 +1,7 @@
 #include "VestaInteriorAnalytic.h"
 
+#include <orsa/statistic.h>
+
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_cdf.h>
 
@@ -56,10 +58,14 @@ int main() {
     for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
         gsl_matrix_set(identity_sh,z_sh,z_sh,1.0);
     }
+
     
     // C_lm coefficients
     //
-    for (int l=2; l<=(int)SH_degree; ++l) {
+    for (int l=0; l<=(int)SH_degree; ++l) {
+        
+        if (l==1) continue;
+        
         for (int m=0; m<=l; ++m) {
             
             // double pq_factor=0;
@@ -311,9 +317,109 @@ int main() {
     }
     
     
+    // gsl_matrix * cm2bf = gsl_matrix_calloc(ijk_size,ijk_size);
     
-    gsl_matrix * ijk2cT = gsl_matrix_alloc(ijk_size,T_size);
+    
+    CubicChebyshevMassDistribution::CoefficientType coeff;
+    CubicChebyshevMassDistribution::resize(coeff,T_degree);
+    // dummy coeff, for now
+    for (unsigned int i=0; i<=T_degree; ++i) {
+        for (unsigned int j=0; j<=T_degree; ++j) {
+            for (unsigned int k=0; k<=T_degree; ++k) {
+                if (i+j+k<=T_degree) {
+                    if ( (i==0) && (j==0) && (k==0) ) {
+                        coeff[i][j][k] = 1.0;
+                    } else {
+                        coeff[i][j][k] = 0.0;
+                    }
+                }
+            }            
+        }
+    }
+    
+    osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
+        new CubicChebyshevMassDistribution(coeff,R0);
+    
+#warning use enough points...
+    const size_t numSamplePoints = 10000;
+    const bool storeSamplePoints = true;
+#warning how to manage centerOfMass??
+    const double km = orsa::FromUnits(1.0,orsa::Unit::KM);                                      
+    const orsa::Vector centerOfMass = orsa::Vector(0.0*km,0.0*km,5.0*km);
+    
+    // at this point the mass distribution is not yet important
+    osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
+        new orsa::RandomPointsInShape(shape,massDistribution,numSamplePoints,storeSamplePoints);
+    
+    const double volume = orsa::volume(randomPointsInShape);
+    
+    gsl_matrix * ijk2cT = gsl_matrix_calloc(ijk_size,T_size);
+    
+    for (size_t z_ijk=0; z_ijk<ijk_size; ++z_ijk) {
+        
+        size_t nx,ny,nz;
+        CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);
+        
+        for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
+            
+            size_t Tx,Ty,Tz;
+            CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
+            
+            for (unsigned int i=0; i<=T_degree; ++i) {
+                for (unsigned int j=0; j<=T_degree; ++j) {
+                    for (unsigned int k=0; k<=T_degree; ++k) {
+                        if (i+j+k<=T_degree) {
+                            if ( (i==Tx) && (j==Ty) && (k==Tz) ) {
+                                coeff[i][j][k] = 1.0;
+                            } else {
+                                coeff[i][j][k] = 0.0;
+                            }
+                        }
+                    }            
+                }
+            }
+            massDistribution = new CubicChebyshevMassDistribution(coeff,R0);
+            randomPointsInShape->updateMassDistribution(massDistribution);
 
+            osg::ref_ptr< orsa::WeightedStatistic<double> > stat = new orsa::WeightedStatistic<double>;
+            
+            orsa::Vector v;
+            double density;
+            
+            stat->reset();
+            
+            randomPointsInShape->reset();
+            while (randomPointsInShape->get(v,density)) {
+                // const double density = massDistribution->density(v);
+                if (density > 0) {
+                    v -= centerOfMass;
+                    // v = shapeToLocal*v;
+                    stat->insert(int_pow(v.getX(),nx)*
+                                 int_pow(v.getY(),ny)*
+                                 int_pow(v.getZ(),nz),
+                                 density);
+                }
+            }
+            
+            gsl_matrix_set(ijk2cT,z_ijk,z_cT,stat->average());
+        }
+    }
+    
+    
+    for (size_t z_ijk=0; z_ijk<ijk_size; ++z_ijk) {
+        for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
+            // if (gsl_matrix_get(ijk2cT,z_ijk,z_cT)!=0.0) {
+            {
+                size_t nx,ny,nz;
+                CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);                
+                size_t Tx,Ty,Tz;
+                CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
+                ORSA_DEBUG("ijk2cT[%02i][%02i] = %+12.3g   [N[%02i][%02i][%02i] -> c*Tx[%i][%i][%i]]",
+                           z_ijk,z_cT,gsl_matrix_get(ijk2cT,z_ijk,z_cT),nx,ny,nz,Tx,Ty,Tz);
+            }
+        }
+    }
+    
     
     // free GSL stuff
     gsl_vector_free(pds_coeff);
@@ -323,6 +429,8 @@ int main() {
     gsl_matrix_free(pq_sh2ijk);
     gsl_matrix_free(nu_sh2ijk);
     gsl_matrix_free(ijk2cT);
+    
+#warning call gsl_*_free as needed...
     
     return 0;
 }
