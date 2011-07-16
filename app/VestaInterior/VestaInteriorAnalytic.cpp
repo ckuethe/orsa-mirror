@@ -320,7 +320,7 @@ int main() {
             if (gsl_matrix_get(sh2ijk,z_sh,z_ijk)!=0.0) {
                 size_t nx,ny,nz;
                 CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);                
-                ORSA_DEBUG("sh2ijk[%02i][%02i] = %+12.3g   [%s -> N[%02i][%02i][%02i]]",
+                ORSA_DEBUG("sh2ijk[%03i][%03i] = %+10.6f [%s -> N[%02i][%02i][%02i]]",
                            z_sh,z_ijk,gsl_matrix_get(sh2ijk,z_sh,z_ijk),pds->data->key(z_sh).toStdString().c_str(),nx,ny,nz);
             }
         }
@@ -351,12 +351,12 @@ int main() {
         new CubicChebyshevMassDistribution(coeff,R0);
     
 #warning use enough points...
-    const size_t numSamplePoints = 1000;
+    const size_t numSamplePoints = 400000;
     const bool storeSamplePoints = true;
 #warning how to manage centerOfMass??
     const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
 #warning must SAMPLE on centerOfMass as well! (or is uncertainty too small, and effect negligible?)
-    const orsa::Vector centerOfMass = orsa::Vector(0.0*km,0.0*km,8.0*km);
+    const orsa::Vector centerOfMass = orsa::Vector(0.11*km,-1.15*km,8.50*km);
     
     // at this point the mass distribution is not yet important
     osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
@@ -427,7 +427,7 @@ int main() {
                 CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);                
                 size_t Tx,Ty,Tz;
                 CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-                ORSA_DEBUG("ijk2cT[%02i][%02i] = %+12.3g   [N[%02i][%02i][%02i] -> cT[%i][%i][%i]]",
+                ORSA_DEBUG("ijk2cT[%03i][%03i] = %+9.6f [N[%02i][%02i][%02i] -> cT[%i][%i][%i]]",
                            z_ijk,z_cT,gsl_matrix_get(ijk2cT,z_ijk,z_cT),nx,ny,nz,Tx,Ty,Tz);
             }
         }
@@ -444,7 +444,7 @@ int main() {
             {             
                 size_t Tx,Ty,Tz;
                 CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-                ORSA_DEBUG("sh2cT[%02i][%02i] = %+12.3g   [%s ->  cT[%i][%i][%i]]",
+                ORSA_DEBUG("sh2cT[%03i][%03i] = %+9.6f [%s ->  cT[%i][%i][%i]]",
                            z_sh,z_cT,gsl_matrix_get(sh2cT,z_sh,z_cT),pds->data->key(z_sh).toStdString().c_str(),Tx,Ty,Tz);
             }
         }
@@ -469,7 +469,7 @@ int main() {
         // gsl_linalg_SV_decomp_jacobi(U,V,Sv);
 
         for (size_t s=0; s<N; ++s) {
-            ORSA_DEBUG("Sv[%02i] = %+12.3g",s,gsl_vector_get(Sv,s));
+            ORSA_DEBUG("Sv[%03i] = %+12.3g",s,gsl_vector_get(Sv,s));
         }
 
         // sample from SH covariance matrix
@@ -508,7 +508,7 @@ int main() {
             for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
                 // gsl_vector_set(sh,z_sh,pds->data->getCoeff(pds->data->key(z_sh)));
                 gsl_vector_set(sh,z_sh,gsl_vector_get(sampleCoeff_y,z_sh));
-                ORSA_DEBUG("%s =  %+12.3g [sampled]",pds->data->key(z_sh).toStdString().c_str(),gsl_vector_get(sh,z_sh));
+                ORSA_DEBUG("%7s =  %+12.3g [sampled]",pds->data->key(z_sh).toStdString().c_str(),gsl_vector_get(sh,z_sh));
             }
             
             gsl_vector * cT = gsl_vector_alloc(N);
@@ -519,16 +519,22 @@ int main() {
                 orsa::Vector v;
                 double density;
                 randomPointsInShape->reset();
-                bool negativeDensity=false;
+                // bool negativeDensity=false;
+                size_t numNegativeDensity=0;
                 while (randomPointsInShape->get(v,density)) {
                     if (density < 0.0) {
-                        ORSA_DEBUG("negative density...");
-                        negativeDensity=true;
-                        break;
+                        // ORSA_DEBUG("negative density...");
+                        // negativeDensity=true;
+                        ++numNegativeDensity;
+                        // don't break, to count all of them
+                        // break;
                     }
                 }
-                if (negativeDensity) {
+                if (numNegativeDensity!=0) {
 #warning re-enable this "continue" to skip solutions with negative density
+                    ORSA_DEBUG("negative density [%u/%u points = %7.3f\%]",
+                               numNegativeDensity,randomPointsInShape->size,
+                               100.0*(double)numNegativeDensity/(double)randomPointsInShape->size);
                     // continue;
                 }
             }
@@ -564,10 +570,10 @@ int main() {
             for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
                 size_t Tx,Ty,Tz;
                 CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-                fprintf(stdout,"%i %i %i %+9.6f ",
-                        Tx,Ty,Tz,orsa::FromUnits(orsa::FromUnits(bulkDensity*gsl_vector_get(cT,z_cT),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+                gmp_fprintf(stdout,"%u %u %u %+9.6f ",
+                            Tx,Ty,Tz,orsa::FromUnits(orsa::FromUnits(bulkDensity*gsl_vector_get(cT,z_cT),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
             }
-            fprintf(stdout,"\n");
+            gmp_fprintf(stdout,"\n");
             fflush(stdout);
         }
     }
