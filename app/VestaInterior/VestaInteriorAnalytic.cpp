@@ -41,8 +41,8 @@ int main() {
         exit(0);
     }
     
-    const size_t SH_degree = 4; // shperical harmonics degree
-    const size_t  T_degree = 4; // chebyshev polinomials degree
+    const size_t SH_degree = 8; // shperical harmonics degree
+    const size_t  T_degree = 8; // chebyshev polinomials degree
     
     const double R0 = pds->data->R0;
 #warning which GM value to use? pds->data->GM  OR pds->data->getCoeff("GM") ??
@@ -315,6 +315,8 @@ int main() {
     
 #warning re-indlude normalization for Ckm Slm
     
+#warning maybe rescale GM entries to 1.0 to have more homogeneous entries?
+    
     for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
         for (size_t z_ijk=0; z_ijk<ijk_size; ++z_ijk) {
             if (gsl_matrix_get(sh2ijk,z_sh,z_ijk)!=0.0) {
@@ -351,7 +353,7 @@ int main() {
         new CubicChebyshevMassDistribution(coeff,R0);
     
 #warning use enough points...
-    const size_t numSamplePoints = 10000;
+    const size_t numSamplePoints = 100000;
     const bool storeSamplePoints = true;
 #warning how to manage centerOfMass??
     const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
@@ -452,58 +454,50 @@ int main() {
     
     {
         
-#warning can this part skip over QR decomposition, and use directly A and A^T ? 
-        
-        // QR decomposition of A^T = Q R
         // A x = b
         // A = sh2cT
-        // then x = Q R (R^T R)^(-1) b
+        // x = A^T (A A^T)^(-1) b
         
         const size_t M = SH_size;
         const size_t N =  T_size;
 
+        // A
+        gsl_matrix * A = gsl_matrix_alloc(M,N);
+        
+        for (size_t j=0; j<M; ++j) {
+            for (size_t k=0; k<N; ++k) {
+                gsl_matrix_set(A,j,k,gsl_matrix_get(sh2cT,j,k));
+            }
+        }
+        
         // A^T
         gsl_matrix * AT = gsl_matrix_alloc(N,M);
-
+        
         for (size_t j=0; j<N; ++j) {
             for (size_t k=0; k<M; ++k) {
                 gsl_matrix_set(AT,j,k,gsl_matrix_get(sh2cT,k,j));
             }
         }
         
-        // QR of A^T
+        // (A A^T)
+        gsl_matrix * A_AT = gsl_matrix_alloc(M,M);
         
-        gsl_matrix * QR = gsl_matrix_alloc(N,M);
-        gsl_vector * tau = gsl_vector_alloc(std::min(M,N));
+        gsl_blas_dgemm(CblasNoTrans,CblasNoTrans,1.0,A,AT,0.0,A_AT);
         
-        gsl_matrix_memcpy(QR,AT);
-        
-        gsl_linalg_QR_decomp(QR,tau);
-
-        gsl_matrix * Q = gsl_matrix_alloc(N,N);
-        gsl_matrix * R = gsl_matrix_alloc(N,M);
-        
-        gsl_linalg_QR_unpack(QR,tau,Q,R);
-
-        // (R^T R)
-        gsl_matrix * RT_R = gsl_matrix_alloc(M,M);
-        
-        gsl_blas_dgemm(CblasTrans,CblasNoTrans,1.0,R,R,0.0,RT_R);
-
         for (size_t j=0; j<M; ++j) {
             for (size_t k=0; k<M; ++k) {
-                ORSA_DEBUG("(R^T R)[%03i][%03i] = %+12.6f",j,k,gsl_matrix_get(RT_R,j,k));
+                ORSA_DEBUG("(A A^T)[%03i][%03i] = %+12.6f",j,k,gsl_matrix_get(A_AT,j,k));
             }
         }
         
-        // compute (R^T R)^(-1)
-        gsl_matrix * inv_RT_R = gsl_matrix_alloc(M,M);
+        // compute (A_AT)^(-1)
+        gsl_matrix * inv_A_AT = gsl_matrix_alloc(M,M);
         {
             // first, find eigenvectors and eigenvalues of covariance matrix
             gsl_eigen_symmv_workspace * workspace = gsl_eigen_symmv_alloc(M);
             gsl_matrix * evec = gsl_matrix_alloc(M,M);
             gsl_vector * eval = gsl_vector_alloc(M);
-            gsl_eigen_symmv(RT_R,eval,evec,workspace);
+            gsl_eigen_symmv(A_AT,eval,evec,workspace);
             // check if definite positive
             for (size_t k=0;k<M;++k) {
                 if (gsl_vector_get(eval,k) <= 0.0) {
@@ -524,22 +518,131 @@ int main() {
             }
             gsl_matrix * tmp_matrix = gsl_matrix_alloc(M,M);
             gsl_blas_dgemm(CblasNoTrans,CblasTrans,1.0,inverse_eval_matrix,evec,0.0,tmp_matrix);
-            gsl_blas_dgemm(CblasNoTrans,CblasNoTrans,1.0,evec,tmp_matrix,0.0,inv_RT_R);
+            gsl_blas_dgemm(CblasNoTrans,CblasNoTrans,1.0,evec,tmp_matrix,0.0,inv_A_AT);
             
-            // free all gsl allocated vars, except inv_RT_R
+            // free all gsl allocated vars, except inv_A_AT
             gsl_eigen_symmv_free(workspace);    
             gsl_matrix_free(evec);
             gsl_vector_free(eval);
             // gsl_matrix_free(eval_matrix);
             gsl_matrix_free(inverse_eval_matrix);
-            // skip inv_RT_R
+            // skip inv_A_AT
             gsl_matrix_free(tmp_matrix);
         }
+
+        // pseudo inverse of A = A^T (A A^T)^(-1)
+        gsl_matrix * pseudoInvA = gsl_matrix_alloc(N,M);
         
-        gsl_vector * b = gsl_vector_calloc(M);
-        gsl_vector * x = gsl_vector_calloc(N);
+        gsl_blas_dgemm(CblasNoTrans,CblasNoTrans,1.0,AT,inv_A_AT,0.0,pseudoInvA);
         
         
+        gsl_vector * sh = gsl_vector_calloc(M); // b  of A x = b
+        gsl_vector * cT = gsl_vector_calloc(N); // x  of A x = b
+        
+        // sample from SH covariance matrix
+        gsl_eigen_symmv_workspace * w = gsl_eigen_symmv_alloc(pds->data->numberOfCoefficients); // workspace for eigenvectors/values
+        gsl_vector * eval = gsl_vector_alloc(pds->data->numberOfCoefficients);    // eigenvalues
+        gsl_matrix * evec = gsl_matrix_alloc(pds->data->numberOfCoefficients,pds->data->numberOfCoefficients);  // eigenvectors
+        //
+        gsl_eigen_symmv(pds_covm, eval, evec, w); // NOTE: The diagonal and lower triangular part of A are destroyed during the computation
+        //
+        double sigma[pds->data->numberOfCoefficients];
+        for (size_t i=0; i<pds->data->numberOfCoefficients; ++i) {
+            // ORSA_DEBUG("eval[%i] = %g",i,gsl_vector_get(eval,i));
+            if (gsl_vector_get(eval,i) == 0.0) {
+                ORSA_ERROR("problems with the covariance matrix: null eigenvalue found.");
+            }
+            sigma[i] = sqrt(fabs(gsl_vector_get(eval,i)));
+            // ORSA_DEBUG("sigma[%i] = %g",i,sigma[i]);
+        }
+        gsl_vector * sampleCoeff_x  = gsl_vector_alloc(pds->data->numberOfCoefficients);
+        gsl_vector * sampleCoeff_y  = gsl_vector_alloc(pds->data->numberOfCoefficients); 
+        
+        for (size_t gen=0; gen<1000; ++gen) {
+            
+            for (size_t i=0; i<pds->data->numberOfCoefficients; ++i) {
+                gsl_vector_set(sampleCoeff_x,i,orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(sigma[i]));
+            }
+            //
+            gsl_blas_dgemv(CblasNoTrans,1.0,evec,sampleCoeff_x,0.0,sampleCoeff_y);
+            //
+            for (size_t i=0; i<pds->data->numberOfCoefficients; ++i) {
+                gsl_vector_set(sampleCoeff_y,i,gsl_vector_get(sampleCoeff_y,i)+gsl_vector_get(pds_coeff,i));
+            }
+            
+            for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
+                // gsl_vector_set(sh,z_sh,pds->data->getCoeff(pds->data->key(z_sh)));
+                gsl_vector_set(sh,z_sh,gsl_vector_get(sampleCoeff_y,z_sh));
+                ORSA_DEBUG("%7s =  %+12.3g [sampled]",pds->data->key(z_sh).toStdString().c_str(),gsl_vector_get(sh,z_sh));
+            }
+
+            // solving here!
+            gsl_blas_dgemv(CblasNoTrans,1.0,pseudoInvA,sh,0.0,cT);
+            
+            // check for negative density
+            {
+                orsa::Vector v;
+                double density;
+                randomPointsInShape->reset();
+                // bool negativeDensity=false;
+                size_t numNegativeDensity=0;
+                while (randomPointsInShape->get(v,density)) {
+                    if (density < 0.0) {
+                        // ORSA_DEBUG("negative density...");
+                        // negativeDensity=true;
+                        ++numNegativeDensity;
+                        // don't break, to count all of them
+                        // break;
+                    }
+                }
+                if (numNegativeDensity!=0) {
+#warning re-enable this "continue" to skip solutions with negative density
+                    ORSA_DEBUG("negative density [%u/%u points = %7.3f\%]",
+                               numNegativeDensity,randomPointsInShape->size,
+                               100.0*(double)numNegativeDensity/(double)randomPointsInShape->size);
+                    // continue;
+                }
+            }
+            
+            for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
+                size_t Tx,Ty,Tz;
+                CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
+                ORSA_DEBUG("cT[%i][%i][%i] = %+12.3f",
+                           Tx,Ty,Tz,gsl_vector_get(cT,z_cT));
+            }
+            
+            for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
+                size_t Tx,Ty,Tz;
+                CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
+                ORSA_DEBUG("density_coeff_T[%i][%i][%i] = %+12.3f [g/cm^3]",
+                           Tx,Ty,Tz,orsa::FromUnits(orsa::FromUnits(bulkDensity*gsl_vector_get(cT,z_cT),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+            }
+            
+            {
+                // one more check, can comment out in production
+                // are the SH coefficient generatead actually those we started with? [sampleCoeff_y]
+                gsl_vector * shReconstructed = gsl_vector_calloc(M); 
+                gsl_blas_dgemv(CblasNoTrans,1.0,sh2cT,cT,0.0,shReconstructed);
+                for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
+                    ORSA_DEBUG("orig: %+12.3g  reconstructed: %+12.3g [%s]",
+                               gsl_vector_get(sh,z_sh),
+                               gsl_vector_get(shReconstructed,z_sh),
+                               pds->data->key(z_sh).toStdString().c_str());
+                }
+            }
+            
+            // output
+            for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
+                size_t Tx,Ty,Tz;
+                CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
+                gmp_fprintf(stdout,"%u %u %u %+9.6f ",
+                            Tx,Ty,Tz,orsa::FromUnits(orsa::FromUnits(bulkDensity*gsl_vector_get(cT,z_cT),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+            }
+            gmp_fprintf(stdout,"\n");
+            fflush(stdout);
+
+
+        }
         
     }
     
