@@ -41,8 +41,8 @@ int main() {
         exit(0);
     }
     
-    const size_t SH_degree = 8; // shperical harmonics degree
-    const size_t  T_degree = 8; // chebyshev polinomials degree
+    const size_t SH_degree = 4; // shperical harmonics degree
+    const size_t  T_degree = 4; // chebyshev polinomials degree
     
     const double R0 = pds->data->R0;
 #warning which GM value to use? pds->data->GM  OR pds->data->getCoeff("GM") ??
@@ -353,7 +353,7 @@ int main() {
         new CubicChebyshevMassDistribution(coeff,R0);
     
 #warning use enough points...
-    const size_t numSamplePoints = 100000;
+    const size_t numSamplePoints = 10000;
     const bool storeSamplePoints = true;
 #warning how to manage centerOfMass??
     const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
@@ -478,7 +478,36 @@ int main() {
                 gsl_matrix_set(AT,j,k,gsl_matrix_get(sh2cT,k,j));
             }
         }
+
         
+        // QR decomposition of A^T, to find basis of null space
+        
+        gsl_matrix * QR = gsl_matrix_alloc(N,M);
+        gsl_vector * tau = gsl_vector_alloc(std::min(M,N));
+        
+        gsl_matrix_memcpy(QR,AT);
+        
+        gsl_linalg_QR_decomp(QR,tau);
+
+        gsl_matrix * Q = gsl_matrix_alloc(N,N);
+        gsl_matrix * R = gsl_matrix_alloc(N,M);
+        
+        gsl_linalg_QR_unpack(QR,tau,Q,R);
+
+        // null space basis
+        gsl_vector * uK[N-M];
+        for (size_t b=0; b<(N-M); ++b) {
+            uK[b] = gsl_vector_alloc(N);
+            for (size_t s=0; s<N; ++s) {
+                gsl_vector_set(uK[b],s,gsl_matrix_get(Q,s,M+b));
+                //
+                size_t Tx,Ty,Tz;
+                CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,s);
+                ORSA_DEBUG("uK[%03i][%03i] =%+12.6f (null space base vector for cT[%i][%i][%i])",b,s,gsl_vector_get(uK[b],s),Tx,Ty,Tz);
+            }
+        }
+        
+
         // (A A^T)
         gsl_matrix * A_AT = gsl_matrix_alloc(M,M);
         
