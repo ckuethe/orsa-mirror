@@ -41,9 +41,9 @@ int main() {
         exit(0);
     }
     
-    const size_t SH_degree = 8; // shperical harmonics degree
+    const size_t SH_degree = 4; // shperical harmonics degree
     const size_t  T_degree = 4; // chebyshev polinomials degree
-
+    
     const double R0 = pds->data->R0;
 #warning which GM value to use? pds->data->GM  OR pds->data->getCoeff("GM") ??
     const double GM = pds->data->GM; 
@@ -351,7 +351,7 @@ int main() {
         new CubicChebyshevMassDistribution(coeff,R0);
     
 #warning use enough points...
-    const size_t numSamplePoints = 400000;
+    const size_t numSamplePoints = 10000;
     const bool storeSamplePoints = true;
 #warning how to manage centerOfMass??
     const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
@@ -450,8 +450,102 @@ int main() {
         }
     }
     
-    
     {
+        
+#warning can this part skip over QR decomposition, and use directly A and A^T ? 
+        
+        // QR decomposition of A^T = Q R
+        // A x = b
+        // A = sh2cT
+        // then x = Q R (R^T R)^(-1) b
+        
+        const size_t M = SH_size;
+        const size_t N =  T_size;
+
+        // A^T
+        gsl_matrix * AT = gsl_matrix_alloc(N,M);
+
+        for (size_t j=0; j<N; ++j) {
+            for (size_t k=0; k<M; ++k) {
+                gsl_matrix_set(AT,j,k,gsl_matrix_get(sh2cT,k,j));
+            }
+        }
+        
+        // QR of A^T
+        
+        gsl_matrix * QR = gsl_matrix_alloc(N,M);
+        gsl_vector * tau = gsl_vector_alloc(std::min(M,N));
+        
+        gsl_matrix_memcpy(QR,AT);
+        
+        gsl_linalg_QR_decomp(QR,tau);
+
+        gsl_matrix * Q = gsl_matrix_alloc(N,N);
+        gsl_matrix * R = gsl_matrix_alloc(N,M);
+        
+        gsl_linalg_QR_unpack(QR,tau,Q,R);
+
+        // (R^T R)
+        gsl_matrix * RT_R = gsl_matrix_alloc(M,M);
+        
+        gsl_blas_dgemm(CblasTrans,CblasNoTrans,1.0,R,R,0.0,RT_R);
+
+        for (size_t j=0; j<M; ++j) {
+            for (size_t k=0; k<M; ++k) {
+                ORSA_DEBUG("(R^T R)[%03i][%03i] = %+12.6f",j,k,gsl_matrix_get(RT_R,j,k));
+            }
+        }
+        
+        // compute (R^T R)^(-1)
+        gsl_matrix * inv_RT_R = gsl_matrix_alloc(M,M);
+        {
+            // first, find eigenvectors and eigenvalues of covariance matrix
+            gsl_eigen_symmv_workspace * workspace = gsl_eigen_symmv_alloc(M);
+            gsl_matrix * evec = gsl_matrix_alloc(M,M);
+            gsl_vector * eval = gsl_vector_alloc(M);
+            gsl_eigen_symmv(RT_R,eval,evec,workspace);
+            // check if definite positive
+            for (size_t k=0;k<M;++k) {
+                if (gsl_vector_get(eval,k) <= 0.0) {
+                    ORSA_DEBUG("problems... eval[%03i] = %g",k,gsl_vector_get(eval,k));
+                    return 0;
+                }
+            }
+            // inverse of eval matrix (diagonal with values 1/eigenval)
+            gsl_matrix * inverse_eval_matrix = gsl_matrix_alloc(M,M);
+            for (size_t i=0;i<M;++i) {
+                for (size_t j=0;j<M;++j) {
+                    if (i==j) {
+                        gsl_matrix_set(inverse_eval_matrix,i,j,1.0/gsl_vector_get(eval,i));
+                    } else {
+                        gsl_matrix_set(inverse_eval_matrix,i,j,0.0);
+                    }
+                }
+            }
+            gsl_matrix * tmp_matrix = gsl_matrix_alloc(M,M);
+            gsl_blas_dgemm(CblasNoTrans,CblasTrans,1.0,inverse_eval_matrix,evec,0.0,tmp_matrix);
+            gsl_blas_dgemm(CblasNoTrans,CblasNoTrans,1.0,evec,tmp_matrix,0.0,inv_RT_R);
+            
+            // free all gsl allocated vars, except inv_RT_R
+            gsl_eigen_symmv_free(workspace);    
+            gsl_matrix_free(evec);
+            gsl_vector_free(eval);
+            // gsl_matrix_free(eval_matrix);
+            gsl_matrix_free(inverse_eval_matrix);
+            // skip inv_RT_R
+            gsl_matrix_free(tmp_matrix);
+        }
+        
+        gsl_vector * b = gsl_vector_calloc(M);
+        gsl_vector * x = gsl_vector_calloc(N);
+        
+        
+        
+    }
+    
+    
+    
+    if (0) {
         
 #warning if M<N, need to do the SVD of the transposed matrix!!
         
