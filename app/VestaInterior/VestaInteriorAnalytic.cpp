@@ -608,69 +608,101 @@ int main() {
             // solving here!
             gsl_blas_dgemv(CblasNoTrans,1.0,pseudoInvA,sh,0.0,cT);
             
-            // check for negative density
-            {
-                orsa::Vector v;
-                double density;
-                randomPointsInShape->reset();
-                // bool negativeDensity=false;
-                size_t numNegativeDensity=0;
-                while (randomPointsInShape->get(v,density)) {
-                    if (density < 0.0) {
-                        // ORSA_DEBUG("negative density...");
-                        // negativeDensity=true;
-                        ++numNegativeDensity;
-                        // don't break, to count all of them
-                        // break;
+            gsl_vector * cT0 = gsl_vector_calloc(N);
+            gsl_vector_memcpy(cT0,cT);
+            
+            for (unsigned int zuk=0; zuk<1000; ++zuk) {
+
+                if (zuk!=0) {
+                    gsl_vector_memcpy(cT,cT0);
+                    for (unsigned int b=0; b<(N-M); ++b) {
+                        // factor ~ +/- 1000
+                        const double factor = -10.0 + 20.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+                        for (unsigned int fe=0; fe<N; ++fe) {
+                            gsl_vector_set(cT,fe,gsl_vector_get(cT,fe)+factor*gsl_vector_get(uK[b],fe));
+                        }
                     }
                 }
-                if (numNegativeDensity!=0) {
+                
+                
+                // check for negative density
+                {
+                    
+                    for (unsigned int i=0; i<=T_degree; ++i) {
+                        for (unsigned int j=0; j<=T_degree; ++j) {
+                            for (unsigned int k=0; k<=T_degree; ++k) {
+                                if (i+j+k<=T_degree) {
+                                    const size_t index = CubicChebyshevMassDistribution::index(i,j,k);
+                                    coeff[i][j][k] = gsl_vector_get(cT,index);
+                                }
+                            }            
+                        }
+                    }
+                    
+                    massDistribution = new CubicChebyshevMassDistribution(coeff,R0);
+                    randomPointsInShape->updateMassDistribution(massDistribution);
+                    randomPointsInShape->reset();
+                    // bool negativeDensity=false;
+                    orsa::Vector v;
+                    double density;
+                    size_t numNegativeDensity=0;
+                    while (randomPointsInShape->get(v,density)) {
+                        if (density < 0.0) {
+                            // ORSA_DEBUG("negative density...");
+                            // negativeDensity=true;
+                            ++numNegativeDensity;
+                            // don't break, to count all of them
+                            // break;
+                        }
+                    }
+                    if (numNegativeDensity!=0) {
 #warning re-enable this "continue" to skip solutions with negative density
-                    ORSA_DEBUG("negative density [%u/%u points = %7.3f\%]",
-                               numNegativeDensity,randomPointsInShape->size,
-                               100.0*(double)numNegativeDensity/(double)randomPointsInShape->size);
-                    // continue;
+                        ORSA_DEBUG("negative density [%u/%u points = %7.3f\%]",
+                                   numNegativeDensity,randomPointsInShape->size,
+                                   100.0*(double)numNegativeDensity/(double)randomPointsInShape->size);
+                        continue;
+                    }
                 }
-            }
-            
-            for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
-                size_t Tx,Ty,Tz;
-                CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-                ORSA_DEBUG("cT[%i][%i][%i] = %+12.3f",
-                           Tx,Ty,Tz,gsl_vector_get(cT,z_cT));
-            }
-            
-            for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
-                size_t Tx,Ty,Tz;
-                CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-                ORSA_DEBUG("density_coeff_T[%i][%i][%i] = %+12.3f [g/cm^3]",
-                           Tx,Ty,Tz,orsa::FromUnits(orsa::FromUnits(bulkDensity*gsl_vector_get(cT,z_cT),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
-            }
-            
-            {
-                // one more check, can comment out in production
-                // are the SH coefficient generatead actually those we started with? [sampleCoeff_y]
-                gsl_vector * shReconstructed = gsl_vector_calloc(M); 
-                gsl_blas_dgemv(CblasNoTrans,1.0,sh2cT,cT,0.0,shReconstructed);
-                for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
-                    ORSA_DEBUG("orig: %+12.3g  reconstructed: %+12.3g [%s]",
-                               gsl_vector_get(sh,z_sh),
-                               gsl_vector_get(shReconstructed,z_sh),
-                               pds->data->key(z_sh).toStdString().c_str());
+                
+                for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
+                    size_t Tx,Ty,Tz;
+                    CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
+                    ORSA_DEBUG("cT[%i][%i][%i] = %+12.3f",
+                               Tx,Ty,Tz,gsl_vector_get(cT,z_cT));
                 }
+                
+                for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
+                    size_t Tx,Ty,Tz;
+                    CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
+                    ORSA_DEBUG("density_coeff_T[%i][%i][%i] = %+12.3f [g/cm^3]",
+                               Tx,Ty,Tz,orsa::FromUnits(orsa::FromUnits(bulkDensity*gsl_vector_get(cT,z_cT),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+                }
+                
+                {
+                    // one more check, can comment out in production
+                    // are the SH coefficient generatead actually those we started with? [sampleCoeff_y]
+                    gsl_vector * shReconstructed = gsl_vector_calloc(M); 
+                    gsl_blas_dgemv(CblasNoTrans,1.0,sh2cT,cT,0.0,shReconstructed);
+                    for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
+                        ORSA_DEBUG("orig: %+12.3g  reconstructed: %+12.3g [%s]",
+                                   gsl_vector_get(sh,z_sh),
+                                   gsl_vector_get(shReconstructed,z_sh),
+                                   pds->data->key(z_sh).toStdString().c_str());
+                    }
+                }
+                
+                // output
+                for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
+                    size_t Tx,Ty,Tz;
+                    CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
+                    gmp_fprintf(stdout,"%u %u %u %+9.6f ",
+                                Tx,Ty,Tz,orsa::FromUnits(orsa::FromUnits(bulkDensity*gsl_vector_get(cT,z_cT),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+                }
+                gmp_fprintf(stdout,"\n");
+                fflush(stdout);
+                
             }
             
-            // output
-            for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
-                size_t Tx,Ty,Tz;
-                CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-                gmp_fprintf(stdout,"%u %u %u %+9.6f ",
-                            Tx,Ty,Tz,orsa::FromUnits(orsa::FromUnits(bulkDensity*gsl_vector_get(cT,z_cT),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
-            }
-            gmp_fprintf(stdout,"\n");
-            fflush(stdout);
-
-
         }
         
     }
