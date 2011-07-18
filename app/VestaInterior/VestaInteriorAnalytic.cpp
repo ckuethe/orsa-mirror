@@ -353,7 +353,7 @@ int main() {
         new CubicChebyshevMassDistribution(coeff,R0);
     
 #warning use enough points...
-    const size_t numSamplePoints = 10000;
+    const size_t numSamplePoints = 100;
     const bool storeSamplePoints = true;
 #warning how to manage centerOfMass??
     const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
@@ -367,6 +367,10 @@ int main() {
     const double volume = orsa::volume(randomPointsInShape);
 
     const double bulkDensity = GM/orsa::Unit::G()/volume;
+
+    ORSA_DEBUG("bulkDensity coeff: %g",bulkDensity);
+    
+#warning fix how bulkDensity is used in this code...
     
     gsl_matrix * ijk2cT = gsl_matrix_calloc(ijk_size,T_size);
     
@@ -406,6 +410,8 @@ int main() {
             randomPointsInShape->reset();
             while (randomPointsInShape->get(v,density)) {
                 // const double density = massDistribution->density(v);
+
+#warning do we need to check this here? or just later?
                 if (density > 0.0) {
                     v -= centerOfMass;
                     // v = shapeToLocal*v;
@@ -413,10 +419,21 @@ int main() {
                                  int_pow(v.getY(),ny)*
                                  int_pow(v.getZ(),nz),
                                  density);
+                    ORSA_DEBUG("density: %g",density);
                 }
             }
             
             gsl_matrix_set(ijk2cT,z_ijk,z_cT,stat->average()/int_pow(R0,nx+ny+nz));
+
+
+            {
+                size_t nx,ny,nz;
+                CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);                
+                size_t Tx,Ty,Tz;
+                CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
+                ORSA_DEBUG("ijk2cT[%03i][%03i] = %+9.6f [N[%02i][%02i][%02i] -> cT[%i][%i][%i]]",
+                           z_ijk,z_cT,gsl_matrix_get(ijk2cT,z_ijk,z_cT),nx,ny,nz,Tx,Ty,Tz);
+            }
         }
     }
     
@@ -645,8 +662,10 @@ int main() {
                     // bool negativeDensity=false;
                     orsa::Vector v;
                     double density;
+                    osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
                     size_t numNegativeDensity=0;
                     while (randomPointsInShape->get(v,density)) {
+                        stat->insert(density);
                         if (density < 0.0) {
                             // ORSA_DEBUG("negative density...");
                             // negativeDensity=true;
@@ -656,11 +675,14 @@ int main() {
                         }
                     }
                     if (numNegativeDensity!=0) {
-#warning re-enable this "continue" to skip solutions with negative density
-                        ORSA_DEBUG("negative density [%u/%u points = %7.3f\%]",
+                        ORSA_DEBUG("negative density [%6u/%u points = %7.3f\%] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]",
                                    numNegativeDensity,randomPointsInShape->size,
-                                   100.0*(double)numNegativeDensity/(double)randomPointsInShape->size);
+                                   100.0*(double)numNegativeDensity/(double)randomPointsInShape->size,
+                                   stat->min(),stat->max(),stat->average());
                         continue;
+                    } else {
+                        ORSA_DEBUG("good sample: min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]",
+                                   stat->min(),stat->max(),stat->average());
                     }
                 }
                 
