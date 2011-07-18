@@ -53,6 +53,13 @@ int main() {
     const size_t ijk_size = CubicChebyshevMassDistribution::totalSize(SH_degree);
     const size_t   T_size = CubicChebyshevMassDistribution::totalSize( T_degree);
     
+    ORSA_DEBUG("SH_size: %d  T_size: %d",SH_size,T_size);
+    
+    if (T_size <= SH_size) {
+        ORSA_DEBUG("this method works only when the problem is under-determined, exiting");
+        exit(0);
+    }
+    
     gsl_matrix *      sh2ijk = gsl_matrix_calloc(SH_size,ijk_size);
     //
     gsl_matrix *   pq_sh2ijk =  gsl_matrix_alloc(SH_size,ijk_size);
@@ -162,7 +169,7 @@ int main() {
             gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, 1.0/int_pow(2.0,l), pq_sh2ijk);
             // gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, 1.0, pq_sh2ijk);
             
-            ORSA_DEBUG("PaulMoment::normalization(%i,%i) = %g",l,m,PaulMoment::normalization(l,m));
+            // ORSA_DEBUG("PaulMoment::normalization(%i,%i) = %g",l,m,PaulMoment::normalization(l,m));
             // normalization
             gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, PaulMoment::normalization(l,m), pq_sh2ijk);
 
@@ -282,7 +289,7 @@ int main() {
             //
             gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, 1.0/int_pow(2.0,l), pq_sh2ijk);
             
-            ORSA_DEBUG("PaulMoment::normalization(%i,%i) = %g",l,m,PaulMoment::normalization(l,m));
+            // ORSA_DEBUG("PaulMoment::normalization(%i,%i) = %g",l,m,PaulMoment::normalization(l,m));
             // normalization
             gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, PaulMoment::normalization(l,m), pq_sh2ijk);
             
@@ -353,7 +360,7 @@ int main() {
         new CubicChebyshevMassDistribution(coeff,R0);
     
 #warning use enough points...
-    const size_t numSamplePoints = 100;
+    const size_t numSamplePoints = 100000;
     const bool storeSamplePoints = true;
 #warning how to manage centerOfMass??
     const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
@@ -365,9 +372,10 @@ int main() {
         new orsa::RandomPointsInShape(shape,massDistribution,numSamplePoints,storeSamplePoints);
     
     const double volume = orsa::volume(randomPointsInShape);
-
+    
     const double bulkDensity = GM/orsa::Unit::G()/volume;
-
+    const double bulkDensity_gcm3 = orsa::FromUnits(orsa::FromUnits(bulkDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3);
+    
     ORSA_DEBUG("bulkDensity coeff: %g",bulkDensity);
     
 #warning fix how bulkDensity is used in this code...
@@ -411,9 +419,9 @@ int main() {
             randomPointsInShape->reset();
             while (randomPointsInShape->get(v,density)) {
                 // const double density = massDistribution->density(v);
-
-#warning do we need to check this here? or just later?
-                if (density > 0.0) {
+                
+                // if (density > 0.0) {
+                {
                     v -= centerOfMass;
                     // v = shapeToLocal*v;
                     stat->insert(int_pow(v.getX(),nx)*
@@ -640,7 +648,8 @@ int main() {
                     gsl_vector_memcpy(cT,cT0);
                     for (unsigned int b=0; b<(N-M); ++b) {
                         // factor ~ +/- 1000
-                        const double factor = -10.0 + 20.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+                        const double maxFactor = 2.0;
+                        const double factor = -maxFactor + 2*maxFactor*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
                         for (unsigned int fe=0; fe<N; ++fe) {
                             gsl_vector_set(cT,fe,gsl_vector_get(cT,fe)+factor*gsl_vector_get(uK[b],fe));
                         }
@@ -681,14 +690,21 @@ int main() {
                         }
                     }
                     if (numNegativeDensity!=0) {
-                        ORSA_DEBUG("negative density [%6u/%u points = %7.3f\%] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]",
-                                   numNegativeDensity,randomPointsInShape->size,
-                                   100.0*(double)numNegativeDensity/(double)randomPointsInShape->size,
-                                   stat->min(),stat->max(),stat->average());
+                        /* ORSA_DEBUG("negative density [%6u/%u points = %7.3f\%] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]",
+                           numNegativeDensity,randomPointsInShape->size,
+                           100.0*(double)numNegativeDensity/(double)randomPointsInShape->size,
+                           stat->min(),stat->max(),stat->average());
+                        */
+                        ORSA_DEBUG("negative density: min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]",
+                                   bulkDensity_gcm3*stat->min(),
+                                   bulkDensity_gcm3*stat->max(),
+                                   bulkDensity_gcm3*stat->average());
                         continue;
                     } else {
                         ORSA_DEBUG("good sample: min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]",
-                                   stat->min(),stat->max(),stat->average());
+                                   bulkDensity_gcm3*stat->min(),
+                                   bulkDensity_gcm3*stat->max(),
+                                   bulkDensity_gcm3*stat->average());
                     }
                 }
                 
@@ -703,7 +719,7 @@ int main() {
                     size_t Tx,Ty,Tz;
                     CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
                     ORSA_DEBUG("density_coeff_T[%i][%i][%i] = %+12.3f [g/cm^3]",
-                               Tx,Ty,Tz,orsa::FromUnits(orsa::FromUnits(bulkDensity*gsl_vector_get(cT,z_cT),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+                               Tx,Ty,Tz,bulkDensity_gcm3*gsl_vector_get(cT,z_cT));
                 }
                 
                 {
@@ -724,7 +740,7 @@ int main() {
                     size_t Tx,Ty,Tz;
                     CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
                     gmp_fprintf(stdout,"%u %u %u %+9.6f ",
-                                Tx,Ty,Tz,orsa::FromUnits(orsa::FromUnits(bulkDensity*gsl_vector_get(cT,z_cT),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+                                Tx,Ty,Tz,bulkDensity_gcm3*gsl_vector_get(cT,z_cT));
                 }
                 gmp_fprintf(stdout,"\n");
                 fflush(stdout);
@@ -836,7 +852,7 @@ int main() {
                 size_t Tx,Ty,Tz;
                 CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
                 ORSA_DEBUG("density_coeff_T[%i][%i][%i] = %+12.3f [g/cm^3]",
-                           Tx,Ty,Tz,orsa::FromUnits(orsa::FromUnits(bulkDensity*gsl_vector_get(cT,z_cT),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+                           Tx,Ty,Tz,bulkDensity_gcm3*gsl_vector_get(cT,z_cT));
             }
             
             {
@@ -857,7 +873,7 @@ int main() {
                 size_t Tx,Ty,Tz;
                 CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
                 gmp_fprintf(stdout,"%u %u %u %+9.6f ",
-                            Tx,Ty,Tz,orsa::FromUnits(orsa::FromUnits(bulkDensity*gsl_vector_get(cT,z_cT),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+                            Tx,Ty,Tz,bulkDensity_gcm3*gsl_vector_get(cT,z_cT));
             }
             gmp_fprintf(stdout,"\n");
             fflush(stdout);
