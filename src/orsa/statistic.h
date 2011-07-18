@@ -24,17 +24,39 @@ namespace orsa {
         void reset() {
             _s  = 0;
             _s2 = 0;
+            _min.reset();
+            _max.reset();
             _n  = 0;
         }
     public:
         void insert(const T & val) {
             _s  += val;
             _s2 += val*val;
+            _min.setIfSmaller(val);
+            _max.setIfLarger(val);
             ++_n;
         }
     public:
         T sum() const {
             return _s;
+        }
+    public:
+        T min() const {
+            if (_min.isSet()) {
+                return (*_min);
+            } else {
+                ORSA_DEBUG("problem: min value not set");
+                return 0;
+            }   
+        }
+    public:
+        T max() const {
+            if (_max.isSet()) {
+                return (*_max);
+            } else {
+                ORSA_DEBUG("problem: max value not set");
+                return 0;
+            }
         }
     public:
         T average() const {
@@ -80,9 +102,10 @@ namespace orsa {
         }
     protected:
         T _s, _s2;
+        orsa::Cache<T> _min, _max; // min, Max
         mpz_class _n;
     };
-  
+    
     // http://en.wikipedia.org/wiki/Weighted_mean
     template <class T> class WeightedStatistic : public osg::Referenced {
     public:
