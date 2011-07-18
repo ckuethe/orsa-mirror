@@ -400,7 +400,8 @@ int main() {
             size_t nx,ny,nz;
             CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);
             
-            osg::ref_ptr< orsa::WeightedStatistic<double> > stat = new orsa::WeightedStatistic<double>;
+            osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
+            // osg::ref_ptr< orsa::WeightedStatistic<double> > stat = new orsa::WeightedStatistic<double>;
             
             orsa::Vector v;
             double density;
@@ -417,9 +418,14 @@ int main() {
                     // v = shapeToLocal*v;
                     stat->insert(int_pow(v.getX(),nx)*
                                  int_pow(v.getY(),ny)*
-                                 int_pow(v.getZ(),nz),
+                                 int_pow(v.getZ(),nz)*
                                  density);
-                    ORSA_DEBUG("density: %g",density);
+                    /* stat->insert(int_pow(v.getX(),nx)*
+                       int_pow(v.getY(),ny)*
+                       int_pow(v.getZ(),nz),
+                       density);
+                    */
+                    // ORSA_DEBUG("density: %g",density);
                 }
             }
             
