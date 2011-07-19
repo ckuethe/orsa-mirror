@@ -744,7 +744,29 @@ int main() {
                 }
                 gmp_fprintf(stdout,"\n");
                 fflush(stdout);
-                
+
+                {
+                    // raw output of density on file
+                    static size_t ID = 0;
+                    char filename[1024];
+                    sprintf(filename,"density_%06d.dat",ID);
+                    ORSA_DEBUG("dumped density to file [%s]",filename);
+                    FILE * fp = fopen(filename,"w");
+                    if (fp) {
+                        orsa::Vector v;
+                        double density;
+                        randomPointsInShape->reset();
+                        while (randomPointsInShape->get(v,density)) {
+                            gmp_fprintf(fp,"%+8.3f %+8.3f %+8.3f %+7.3f\n",
+                                        orsa::FromUnits(v.getX(),orsa::Unit::KM,-1),
+                                        orsa::FromUnits(v.getY(),orsa::Unit::KM,-1),
+                                        orsa::FromUnits(v.getZ(),orsa::Unit::KM,-1),
+                                        bulkDensity_gcm3*density);
+                        }
+                        fclose(fp);
+                    }
+                    ++ID;
+                }
             }
             
         }
@@ -877,6 +899,7 @@ int main() {
             }
             gmp_fprintf(stdout,"\n");
             fflush(stdout);
+            
         }
     }
     
