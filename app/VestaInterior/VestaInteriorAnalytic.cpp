@@ -41,8 +41,8 @@ int main() {
         exit(0);
     }
     
-    const size_t SH_degree = 10; // shperical harmonics degree
-    const size_t  T_degree =  8; // chebyshev polinomials degree
+    const size_t SH_degree = 8; // shperical harmonics degree
+    const size_t  T_degree = 6; // chebyshev polinomials degree
     
     const double R0 = pds->data->R0;
 #warning which GM value to use? pds->data->GM  OR pds->data->getCoeff("GM") ??
@@ -360,7 +360,7 @@ int main() {
         new CubicChebyshevMassDistribution(coeff,R0);
     
 #warning use enough points...
-    const size_t numSamplePoints = 100000;
+    const size_t numSamplePoints = 1000;
     const bool storeSamplePoints = true;
 #warning how to manage centerOfMass??
     const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
@@ -491,7 +491,7 @@ int main() {
         
         const size_t M = SH_size;
         const size_t N =  T_size;
-
+        
         // A
         gsl_matrix * A = gsl_matrix_alloc(M,N);
         
@@ -641,6 +641,66 @@ int main() {
             
             gsl_vector * cT0 = gsl_vector_calloc(N);
             gsl_vector_memcpy(cT0,cT);
+
+            if (1) {
+                // Adaptive Monte Carlo
+                osg::ref_ptr<AuxiliaryData> aux = new AuxiliaryData;
+                aux->R0 = R0;
+                aux->randomPointsInShape = randomPointsInShape;
+                aux->bulkDensity = bulkDensity;
+                aux->bulkDensity_gcm3 = bulkDensity_gcm3;
+                aux->chebyshevDegree = T_degree;
+                aux->T_size = T_size;
+                aux->cT0 = cT0;
+                aux->uK = &uK[0];
+                aux->intervalVectorSize = N-M;
+
+                // test
+                /* for (size_t z=0; z<N-M; ++z) {
+                   for (size_t l=0; l<N; ++l) {
+                   ORSA_DEBUG("uK: %g aux->uK: %g",
+                   gsl_vector_get(uK[z],l),
+                   gsl_vector_get(aux->uK[z],l));
+                   }
+                   }
+                */
+                
+#warning check this value for DOF!
+                size_t chisq_DOF = T_size-SH_size;
+                const double chisq_50  = gsl_cdf_chisq_Pinv(0.50,chisq_DOF);
+                const double chisq_90  = gsl_cdf_chisq_Pinv(0.90,chisq_DOF);
+                const double chisq_95  = gsl_cdf_chisq_Pinv(0.95,chisq_DOF);
+                const double chisq_99  = gsl_cdf_chisq_Pinv(0.99,chisq_DOF);
+                //
+                ORSA_DEBUG("chisq 50\%: %.2f  90\%: %.2f  95\%: %.2f  99\%: %.2f  [DOF=%i]",
+                           chisq_50,chisq_90,chisq_95,chisq_99,chisq_DOF);
+                
+                const double initialThresholdLevel = 1e3; // 100*chisq_99;
+                const double targetThresholdLevel  = 0.0; // chisq_99;
+                const double maxFactor             = 3.0;
+                const double minAdaptiveRange      = -maxFactor;
+                const double maxAdaptiveRange      =  maxFactor;
+                const double intervalResidualProbability = 1.0e-3; // 1.0e-10; // "1-confidence level" for this interval, different from the chisq-level
+                const size_t targetSamples         = 100;
+                const size_t maxIter               = 100000;
+                
+                AdaptiveIntervalVector intervalVector;
+                intervalVector.resize(aux->intervalVectorSize);
+                for (size_t k=0; k<aux->intervalVectorSize; ++k) {
+                    intervalVector[k] =
+                        new AdaptiveIntervalType(minAdaptiveRange,
+                                                 maxAdaptiveRange,
+                                                 intervalResidualProbability,
+                                                 initialThresholdLevel,
+                                                 targetThresholdLevel,
+                                                 targetSamples,
+                                                 aux.get());
+                }
+                
+                osg::ref_ptr<AdaptiveMonteCarloType> mc = new AdaptiveMonteCarloType(aux.get());
+                
+                mc->run(intervalVector,maxIter);
+            }
             
             for (unsigned int zuk=0; zuk<1000; ++zuk) {
 
