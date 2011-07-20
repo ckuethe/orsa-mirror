@@ -77,6 +77,8 @@ namespace orsaUtil {
 #warning parameters...
                         // const size_t minSize = 50;
                         const double thresholdIncreaseFactor = 1.2;
+                        // needed to avoid problems when target threshold is 0.0 or negative
+                        const double thresholdIncreaseConstant = 0.001*(intervalVector[k]->getThreshold()-intervalVector[k]->getTargetThreshold());
                         // if (intervalVector[k]->size()<minSize) continue;
                         double testThreshold = intervalVector[k]->getTargetThreshold();
                         double testSampleRange = currentSampleRange;
@@ -127,7 +129,11 @@ namespace orsaUtil {
                                 ORSA_DEBUG("QUICK EXIT for intervalVector[%i] ****************************",k);
                                 break;
                             }
-                            testThreshold *= thresholdIncreaseFactor;
+                            if (testThreshold <= 0.0) {
+                                testThreshold += thresholdIncreaseConstant;
+                            } else {
+                                testThreshold *= thresholdIncreaseFactor;
+                            }
                         }
                         bool reduceThreshold=false;
                         if ( (testSampleRange < currentSampleRange) && 
