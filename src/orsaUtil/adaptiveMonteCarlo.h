@@ -78,7 +78,7 @@ namespace orsaUtil {
                         // const size_t minSize = 50;
                         const double thresholdIncreaseFactor = 1.2;
                         // needed to avoid problems when target threshold is 0.0 or negative
-                        const double thresholdIncreaseConstant = 0.001*(intervalVector[k]->getThreshold()-intervalVector[k]->getTargetThreshold());
+                        const double thresholdIncreaseConstant = 1.0e-6*(intervalVector[k]->getThreshold()-intervalVector[k]->getTargetThreshold());
                         // if (intervalVector[k]->size()<minSize) continue;
                         double testThreshold = intervalVector[k]->getTargetThreshold();
                         double testSampleRange = currentSampleRange;
