@@ -41,8 +41,8 @@ int main() {
         exit(0);
     }
     
-    const size_t SH_degree = 8; // shperical harmonics degree
-    const size_t  T_degree = 6; // chebyshev polinomials degree
+    const size_t SH_degree = 4; // shperical harmonics degree
+    const size_t  T_degree = 4; // chebyshev polinomials degree
     
     const double R0 = pds->data->R0;
 #warning which GM value to use? pds->data->GM  OR pds->data->getCoeff("GM") ??
@@ -360,7 +360,7 @@ int main() {
         new CubicChebyshevMassDistribution(coeff,R0);
     
 #warning use enough points...
-    const size_t numSamplePoints = 1000;
+    const size_t numSamplePoints = 10000;
     const bool storeSamplePoints = true;
 #warning how to manage centerOfMass??
     const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
@@ -641,14 +641,99 @@ int main() {
             
             gsl_vector * cT0 = gsl_vector_calloc(N);
             gsl_vector_memcpy(cT0,cT);
-
-            if (1) {
+            
+            if (0) {
+                // test: find better cT0, with maximum value of cT_000 and minimum (absolute) value for any other cT_ijk
+                gsl_vector * cT_000 = gsl_vector_calloc(N);
+                gsl_vector_set(cT_000,0,1.0);
+                
+                gsl_vector * orig_cT0 = gsl_vector_calloc(N);
+                gsl_vector_memcpy(orig_cT0,cT0);
+                
+                // only one iteration is enough?
+                while (1) {
+                    // first: try to project cT0 over uK, should give all zeros
+                    /* for (size_t b=0; b<(N-M); ++b) {
+                       double scalarProduct = 0.0;
+                       for (size_t s=0; s<N; ++s) {
+                       scalarProduct += gsl_vector_get(cT0,s)*gsl_vector_get(uK[b],s);
+                       }
+                       ORSA_DEBUG("cT0*uK[%02i] = %+8.3f",b,scalarProduct);                   
+                       }
+                    */
+                    
+                    // now progect vector parallel to cT_000 over uK
+                    /* for (size_t b=0; b<(N-M); ++b) {
+                       double scalarProduct = 0.0;
+                       for (size_t s=0; s<N; ++s) {
+                       scalarProduct += gsl_vector_get(cT_000,s)*gsl_vector_get(uK[b],s);
+                       }
+                       ORSA_DEBUG("cT_000*uK[%02i] = %+8.3f",b,scalarProduct);                   
+                       }
+                    */
+                    
+                    gsl_vector * diff = gsl_vector_calloc(N);
+                    for (size_t s=0; s<N; ++s) {
+                        gsl_vector_set(diff,s,gsl_vector_get(cT_000,s)-gsl_vector_get(orig_cT0,s));
+                        ORSA_DEBUG("diff[%02i]: %+8.3f  unit[%02i]: %+8.3f",s,gsl_vector_get(diff,s),s,gsl_vector_get(cT_000,s));
+                    }
+                    
+                    // project diff over the uK space
+                    std::vector<double> projection;
+                    projection.resize(N-M);
+                    for (size_t b=0; b<(N-M); ++b) {
+                        projection[b] = 0.0;
+                        for (size_t s=0; s<N; ++s) {
+                            projection[b] = gsl_vector_get(diff,s)*gsl_vector_get(uK[b],s);
+                        }
+                    }
+                    
+                    // distance vector of diff from its projection over uK, positive in same direction of cT0
+                    gsl_vector * new_cT0 = gsl_vector_calloc(N);
+                    gsl_vector_memcpy(new_cT0,orig_cT0);
+                    for (size_t b=0; b<(N-M); ++b) {
+                        for (size_t s=0; s<N; ++s) {
+                            gsl_vector_set(new_cT0,s,gsl_vector_get(new_cT0,s)+projection[b]*gsl_vector_get(uK[b],s));
+                        }
+                    }
+                    double distance = 0.0;
+                    for (size_t s=0; s<N; ++s) {
+                        distance += orsa::square(gsl_vector_get(new_cT0,s)-gsl_vector_get(cT_000,s));
+                    }
+                    distance = sqrt(distance);
+                    ORSA_DEBUG("distance: %+8.3f",distance);
+                    
+                    // scalar product between cT0 and cT_000
+                    double mainScalarProduct = 0.0;
+                    double cT0_length = 0.0;
+                    for (size_t s=0; s<N; ++s) {
+                        mainScalarProduct += gsl_vector_get(cT_000,s)*gsl_vector_get(orig_cT0,s);
+                        cT0_length += orsa::square(gsl_vector_get(orig_cT0,s)); // this one should be moved outside loop
+                    }
+                    cT0_length = sqrt(cT0_length);
+                    ORSA_DEBUG("scalar product between cT0 and cT_000: %+8.3f   cT0 length: %+8.3f",mainScalarProduct,cT0_length);
+                    
+                    const double scaleFactor = (mainScalarProduct>0.0) ? (cT0_length/(cT0_length-distance)) : (-cT0_length/(cT0_length-distance));
+                    ORSA_DEBUG("cT_000 scale factor: %+8.3f",scaleFactor);
+                    for (size_t s=0; s<N; ++s) {
+                        gsl_vector_set(cT_000,s,scaleFactor*gsl_vector_get(cT_000,s));
+                    }
+                    
+                    gsl_vector_memcpy(cT0,new_cT0);
+                    for (size_t s=0; s<N; ++s) {
+                        ORSA_DEBUG("new_cT0[%02i] = %+8.3f",s,gsl_vector_get(new_cT0,s));
+                    }
+                    
+                }
+            }
+            
+            if (0) {
                 // Adaptive Monte Carlo
                 osg::ref_ptr<AuxiliaryData> aux = new AuxiliaryData;
                 aux->R0 = R0;
                 aux->randomPointsInShape = randomPointsInShape;
-                aux->bulkDensity = bulkDensity;
-                aux->bulkDensity_gcm3 = bulkDensity_gcm3;
+                // aux->bulkDensity = bulkDensity;
+                // aux->bulkDensity_gcm3 = bulkDensity_gcm3;
                 aux->chebyshevDegree = T_degree;
                 aux->T_size = T_size;
                 aux->cT0 = cT0;
@@ -677,12 +762,12 @@ int main() {
                 
                 const double initialThresholdLevel = 1e3; // 100*chisq_99;
                 const double targetThresholdLevel  = 0.0; // chisq_99;
-                const double maxFactor             = 3.0;
+                const double maxFactor             = 10.0; // 1.0; // 4.0;
                 const double minAdaptiveRange      = -maxFactor;
                 const double maxAdaptiveRange      =  maxFactor;
-                const double intervalResidualProbability = 1.0e-3; // 1.0e-10; // "1-confidence level" for this interval, different from the chisq-level
-                const size_t targetSamples         = 100;
-                const size_t maxIter               = 100000;
+                const double intervalResidualProbability = 1.0e-2; // 1.0e-10; // "1-confidence level" for this interval, different from the chisq-level
+                const size_t targetSamples         = 1000;
+                const size_t maxIter               = 1000000;
                 
                 AdaptiveIntervalVector intervalVector;
                 intervalVector.resize(aux->intervalVectorSize);
@@ -700,7 +785,11 @@ int main() {
                 osg::ref_ptr<AdaptiveMonteCarloType> mc = new AdaptiveMonteCarloType(aux.get());
                 
                 mc->run(intervalVector,maxIter);
+                
+                
+                
             }
+            
             
             for (unsigned int zuk=0; zuk<1000; ++zuk) {
 
@@ -708,8 +797,16 @@ int main() {
                     gsl_vector_memcpy(cT,cT0);
                     for (unsigned int b=0; b<(N-M); ++b) {
                         // factor ~ +/- 1000
-                        const double maxFactor = 2.0;
-                        const double factor = -maxFactor + 2*maxFactor*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+#warning keep an eye on this!
+                        const double maxFactor = 0.5;
+                        // const double factor = -maxFactor + 2*maxFactor*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+                        // test
+                        double factor; 
+                        if (gsl_vector_get(uK[b],0) < 0.0) {
+                            factor =  maxFactor*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+                        } else {
+                            factor = -maxFactor*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+                        }
                         for (unsigned int fe=0; fe<N; ++fe) {
                             gsl_vector_set(cT,fe,gsl_vector_get(cT,fe)+factor*gsl_vector_get(uK[b],fe));
                         }
