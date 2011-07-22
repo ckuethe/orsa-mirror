@@ -6,6 +6,7 @@
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_eigen.h>
 #include <gsl/gsl_linalg.h>
+#include <gsl/gsl_rng.h>
 
 #include "vesta.h"
 
@@ -41,8 +42,8 @@ int main() {
         exit(0);
     }
     
-    const size_t SH_degree = 4; // shperical harmonics degree
-    const size_t  T_degree = 4; // chebyshev polinomials degree
+    const size_t SH_degree = 2; // shperical harmonics degree
+    const size_t  T_degree = 2; // chebyshev polinomials degree
     
     const double R0 = pds->data->R0;
 #warning which GM value to use? pds->data->GM  OR pds->data->getCoeff("GM") ??
@@ -360,7 +361,7 @@ int main() {
         new CubicChebyshevMassDistribution(coeff,R0);
     
 #warning use enough points...
-    const size_t numSamplePoints = 10000;
+    const size_t numSamplePoints = 100000;
     const bool storeSamplePoints = true;
 #warning how to manage centerOfMass??
     const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
@@ -641,6 +642,35 @@ int main() {
             
             gsl_vector * cT0 = gsl_vector_calloc(N);
             gsl_vector_memcpy(cT0,cT);
+
+            if (1) {
+
+                // trying simulated annealing approach
+                
+                gsl_rng * rng = ::gsl_rng_alloc(gsl_rng_gfsr4);
+                const int randomSeed = time(NULL)*getpid();
+                ::gsl_rng_set(rng,randomSeed);
+                ORSA_DEBUG("simulated annealing random seed: %d",randomSeed);
+
+                SIMAN_xp x0;
+                x0.R0 = R0;
+                x0.bulkDensity_gcm3 = bulkDensity_gcm3;
+                x0.randomPointsInShape = randomPointsInShape;
+                x0.T_degree = T_degree;
+                x0.T_size = T_size;
+                x0.cT0 = cT0;
+                x0.uK = &uK[0];
+                x0.uK_size = N-M;
+                x0.factor.resize(x0.uK_size);
+                for (size_t b=0; b<x0.uK_size; ++b) {
+                    x0.factor[b] = 0.0;
+                }
+                
+                gsl_siman_solve(rng, &x0, E1, S1, M1, P1,
+                                SIMAN_copy, SIMAN_copy_construct, SIMAN_destroy,
+                                0, params);
+                
+            }
             
             if (0) {
                 // test: find better cT0, with maximum value of cT_000 and minimum (absolute) value for any other cT_ijk

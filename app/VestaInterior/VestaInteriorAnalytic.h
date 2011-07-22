@@ -147,10 +147,10 @@ public:
 // GSL Simulated Annealing
 
 /* how many points do we try before stepping */
-#define N_TRIES 200             
+#define N_TRIES 100 // 200             
 
 /* how many iterations for each T? */
-#define ITERS_FIXED_T 1000
+#define ITERS_FIXED_T 100 // 1000 // 
 
 /* max step size in random walk */
 #define STEP_SIZE 1.0            
@@ -165,13 +165,13 @@ public:
 #define MU_T 1.003              
 #define T_MIN 2.0e-6
 
-gsl_siman_params_t params 
-= {N_TRIES, ITERS_FIXED_T, STEP_SIZE,
-   K, T_INITIAL, MU_T, T_MIN};
+gsl_siman_params_t params  = {N_TRIES, ITERS_FIXED_T, STEP_SIZE,
+                              K, T_INITIAL, MU_T, T_MIN};
 
 class SIMAN_xp {
 public:
     orsa::Cache<double> R0;
+    orsa::Cache<double> bulkDensity_gcm3;
     osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape;
     orsa::Cache<size_t> T_degree;
     orsa::Cache<size_t> T_size;
@@ -186,6 +186,7 @@ void SIMAN_copy (void * source, void * dest) {
     SIMAN_xp * s = (SIMAN_xp *) source;
     SIMAN_xp * d = (SIMAN_xp *) dest;
     d->R0                  = s->R0;
+    d->bulkDensity_gcm3    = s->bulkDensity_gcm3;
     d->randomPointsInShape = s->randomPointsInShape;
     d->T_degree            = s->T_degree;
     d->T_size              = s->T_size;
@@ -239,13 +240,28 @@ double E1(void * xp) {
     
     orsa::Vector v;
     double density;
+    osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
     orsa::Cache<double> minDensity;
     x->randomPointsInShape->reset();
     while (x->randomPointsInShape->get(v,density)) { 
+        stat->insert(density);
         minDensity.setIfSmaller(density);
     }
     
+    /* if (minDensity > 0.0) {
+       ORSA_DEBUG("minDensity: %g",(*minDensity));
+       }
+    */
+
+    ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]",
+               x->bulkDensity_gcm3*stat->min(),
+               x->bulkDensity_gcm3*stat->max(),
+               x->bulkDensity_gcm3*stat->average());
+
+    // first approach: maximize the minimum density
     return (-minDensity);
+    // alternative: minimize density range
+    // return (stat->max()-stat->min());
 }
 
 double M1(void * xp, void * yp) {
