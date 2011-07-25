@@ -16,7 +16,19 @@ int main() {
     
     osg::ref_ptr<SimplexIntegration> si = new SimplexIntegration(vestaShape.get());
 
-    ORSA_DEBUG("integral [0,0,0]: %g",si->getIntegral(0,0,0));
+
+    const size_t maxDegree = 2;
+    for (size_t degree=0; degree<=maxDegree; ++degree) {
+        for (size_t i=0; i<=degree; ++i) {
+            for (size_t j=0; j<=degree; ++j) {
+                for (size_t k=0; k<=degree; ++k) {
+                    if (i+j+k==degree) {
+                        ORSA_DEBUG("integral [%i,%i,%i]: %g",i,j,k,si->getIntegral(i,j,k));
+                    }
+                }
+            }
+        }
+    }
     
     return 0;
 }
