@@ -759,21 +759,18 @@ void orsa::bodyInertialComputations(double & volume,
                                                                                     localStoreVector);
     
     volume = orsa::volume(randomPointsInShape);
-  
+    
     centerOfMass = orsa::centerOfMass(randomPointsInShape);
-    // massDistribution);
     
     orsa::diagonalizedInertiaMatrix(shapeToLocal,
                                     localToShape,
                                     inertiaMatrix,
                                     centerOfMass,
                                     randomPointsInShape);
-    // massDistribution);
     
     (*paulMoment) = orsa::computePaulMoment(order,
                                             shapeToLocal,
                                             localToShape,
                                             centerOfMass,
                                             randomPointsInShape);
-    // massDistribution);
 }
