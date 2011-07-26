@@ -336,9 +336,9 @@ void MainThread::run() {
       
       osg::ref_ptr<orsa::Shape> shape;
       if (vestaShapeModel == ComboShapeModel::smt_ellipsoid) {
-	shape = new EllipsoidShape(FromUnits(280,Unit::KM),
-				   FromUnits(272,Unit::KM),
-				   FromUnits(227,Unit::KM));
+       shape = new EllipsoidShape(FromUnits(280,Unit::KM),
+                                  FromUnits(272,Unit::KM),
+                                  FromUnits(227,Unit::KM));
       } else if (vestaShapeModel == ComboShapeModel::smt_thomas) {
 	osg::ref_ptr<VestaShape> vestaShapeThomas = new VestaShape;
 	if (!vestaShapeThomas->read("vesta_thomas.dat")) {
