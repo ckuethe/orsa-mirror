@@ -51,8 +51,8 @@ int main() {
                                          randomPointsInShape);
     // massDistribution);
     
-	std::vector< std::vector<double> > C, S, norm_C, norm_S;
-	std::vector<double> J;
+	std::vector< std::vector<mpf_class> > C, S, norm_C, norm_S;
+	std::vector<mpf_class> J;
 	orsa::convert(C, S, norm_C, norm_S, J,
                   paulMoment, 
                   FromUnits(300,orsa::Unit::KM));
