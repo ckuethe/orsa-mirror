@@ -31,17 +31,14 @@ namespace orsa {
         std::vector< std::vector< std::vector<double> > > _M, _M_uncertainty;
     public:
         const unsigned int order;
-    public:
-        static double normalization(const unsigned int l,
-                                    const unsigned int m);
     };
     
     // utility, just printing out values for now
-    void convert(std::vector< std::vector<double> > & C,
-                 std::vector< std::vector<double> > & S,
-                 std::vector< std::vector<double> > & norm_C,
-                 std::vector< std::vector<double> > & norm_S,
-                 std::vector<double> & J,
+    void convert(std::vector< std::vector<mpf_class> > & C,
+                 std::vector< std::vector<mpf_class> > & S,
+                 std::vector< std::vector<mpf_class> > & norm_C,
+                 std::vector< std::vector<mpf_class> > & norm_S,
+                 std::vector<mpf_class> & J,
                  const PaulMoment * const pm,
                  const double     & R0,
                  const bool         verbose=false);
@@ -49,8 +46,8 @@ namespace orsa {
     // tries to find a set of PaulMoments that matches the normalized C and S
     // the order of pm must be <= the order of norm_C and norm_S
     bool solve(PaulMoment * pm,
-               const std::vector< std::vector<double> > & norm_C,
-               const std::vector< std::vector<double> > & norm_S,
+               const std::vector< std::vector<mpf_class> > & norm_C,
+               const std::vector< std::vector<mpf_class> > & norm_S,
                const double     & R0);
   
     // a,b,c are the 3 semiaxes along x,y,z respectively
