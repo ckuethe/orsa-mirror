@@ -30,9 +30,11 @@ namespace orsa {
     
     template <class T> T int_pow(const T & x, const int & p);
     
-    inline double square(const double & x) { return (x*x); }
+    // inline double square(const double & x) { return (x*x); }
+    template <class T> T square(const T & x) { return (x*x); }
     
-    inline double cube(const double & x) { return (x*x*x); }
+    // inline double cube(const double & x) { return (x*x*x); }
+    template <class T> T cube(const T & x) { return (x*x*x); }
     
     const double & epsilon();
     
