@@ -432,8 +432,8 @@ void MainThread::run() {
       
       if (1) {
 	// print out...
-	std::vector< std::vector<double> > C, S, norm_C, norm_S;
-	std::vector<double> J;
+	std::vector< std::vector<mpf_class> > C, S, norm_C, norm_S;
+	std::vector<mpf_class> J;
 	orsa::convert(C, S, norm_C, norm_S, J,
 		      paulMoment, 
 		      FromUnits(300,orsa::Unit::KM));
@@ -452,15 +452,15 @@ void MainThread::run() {
 	ORSA_DEBUG("\%\\hline");
 	for (unsigned int l=2; l<=order; ++l) {
 	  // J_l is minus C_l0, where C_l0 is not normalized
-	  ORSA_DEBUG("$J_{%i}$    & $%+9.6f$ \\\\",l,-C[l][0]);
+        ORSA_DEBUG("$J_{%i}$    & $%+9.6Ff$ \\\\",l,mpf_class(-C[l][0]).get_mpf_t());
 	}
 	ORSA_DEBUG("\%\\hline");
 	for (unsigned int l=2; l<=order; ++l) {
 	  for (unsigned int m=0; m<=l; ++m) {
 	    // LaTeX Tabular style
-	    ORSA_DEBUG("$C_{%i%i}$   & $%+9.6f$ \\\\",l,m,norm_C[l][m]);
+	    ORSA_DEBUG("$C_{%i%i}$   & $%+9.6Ff$ \\\\",l,m,norm_C[l][m].get_mpf_t());
 	    if (m!=0) {
-	      ORSA_DEBUG("$S_{%i%i}$   & $%+9.6f$ \\\\",l,m,norm_S[l][m]);
+	      ORSA_DEBUG("$S_{%i%i}$   & $%+9.6Ff$ \\\\",l,m,norm_S[l][m].get_mpf_t());
 	    }
 	  }
 	}
