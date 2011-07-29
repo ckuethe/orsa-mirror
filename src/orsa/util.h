@@ -285,6 +285,25 @@ namespace orsa {
         std::vector<double> density; 
         std::vector<orsa::Vector> vec;
     };
+
+    //! this is the normalization coefficient needed to use the
+    //! non-normalized spherical harmonics coefficients
+    //! directly in the potential expansion formula
+    inline mpf_class normalization_integralToSphericalHarmonics(const size_t & l, const size_t & m) {
+        return mpf_class(mpq_class((2-orsa::kronecker(0,m))*orsa::factorial(l-m),
+                                   (orsa::factorial(l+m))));
+    }
+    //! this converts SH coeff to normalized SH coeff
+    inline mpf_class normalization_sphericalHarmonicsToNormalizedSphericalHarmonics(const size_t & l, const size_t & m) {
+        return sqrt(mpf_class(mpq_class((orsa::factorial(l+m)),
+                                        (2-orsa::kronecker(0,m))*(2*l+1)*orsa::factorial(l-m))));
+    }
+    //! this converts integrated coeff to normalized coeff, and is the product of the above two
+    //! useful when converting from/to paul moments
+    inline mpf_class normalization_integralToNormalizedSphericalHarmonics(const size_t & l, const size_t & m) {
+        return sqrt(mpf_class(mpq_class((2-orsa::kronecker(m,0))*orsa::factorial(l-m), 
+                                        (2*l+1)*orsa::factorial(l+m))));
+    }
     
     double volume(const orsa::RandomPointsInShape * randomPointsInShape);
     

@@ -208,34 +208,7 @@ namespace orsa {
             __check_dP__(l,m);
             return _dP[l][m];
         }
-    public:
-        /* 
-           static double norm(const unsigned int l,
-           const unsigned int m) {
-        */
-        //
-        static double norm(const mpz_class & l,
-                           const mpz_class & m);
-        /* 
-           static double norm(const mpz_class & l,
-           const mpz_class & m) {
-           // return sqrt((__fact__(l-m)*(2.0*l+1.0)*(2.0-__kronecker__(0,m)))/(__fact__(l+m)));
-           // return sqrt((factorial(l-m)*(2.0*l+1.0)*(2.0-__kronecker__(0,m)))/(__fact__(l+m)));
-           //
-           // return sqrt(double(factorial(l-m)*(2-kronecker(0,m)))/double(factorial(l+m)));
-           //
-           // return sqrt(double(factorial(l-m)*(2-kronecker(0,m))*(2*l-1))/double(factorial(l+m)));
-           //
-           // ORSA_DEBUG("pre-sqrt: %Fg",double(double(factorial(l+m))/double(factorial(l-m)*(2-kronecker(0,m))*(2*l+1)))());
-           //
-           // almost same as paper
-           // return sqrt(double(factorial(l+m))/double(factorial(l-m)*(2-kronecker(0,m))*(2*l+1)));
-           //
-           // another test
-           return sqrt(1/double((2-kronecker(0,m))*(2*l+1)));
-           } 
-        */
-   
+        
     private:
         // Legendre(l,m)
         mutable std::vector<std::vector<orsa::Cache<double> > > _P;
