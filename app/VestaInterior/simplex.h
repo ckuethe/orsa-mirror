@@ -17,6 +17,39 @@ protected:
     virtual ~SimplexIntegration() { }
 protected:
     osg::ref_ptr<const orsa::TriShape> triShape;
+public:
+    static double H(const size_t & nx, const size_t & ny, const size_t & nz,
+                    const std::vector<orsa::Vector> & simplexVertexVector) {
+        const size_t N = simplexVertexVector.size();
+        const size_t maxCount = 1<<N; // 2^N
+        std::vector<bool> I;
+        I.resize(N);
+        double retVal = 0.0;
+        for (size_t count=0; count<maxCount; ++count) {
+            for (size_t i=0; i<N; ++i) {
+                I[i] = (count & (1<<i));
+                // ORSA_DEBUG("count: %d   I[%d] = %i",count,i,I[i]==true);
+            }
+            orsa::Vector vertex_I(0,0,0);
+            size_t num_I = 0;
+            for (size_t i=0; i<N; ++i) {
+                if (I[i]) {
+                    vertex_I += simplexVertexVector[i];  
+                    ++num_I;
+                }
+            }
+            const int sign = orsa::power_sign(N-num_I);
+            const double p =
+                orsa::int_pow(vertex_I.getX(),nx)*
+                orsa::int_pow(vertex_I.getY(),ny)*
+                orsa::int_pow(vertex_I.getZ(),nz);
+            retVal += sign*p;
+            // ORSA_DEBUG("sign: %+i   p: %16.6e",sign,p);
+        }
+        retVal /= orsa::factorial(nx+ny+nz).get_d();
+        // ORSA_DEBUG("retVal: %16.6e",retVal);
+        return retVal;
+    }
 protected:
     mutable std::vector< orsa::Cache<double> > val;
 public:
@@ -30,6 +63,8 @@ public:
             // compute it
             const orsa::TriShape::VertexVector & vv = triShape->getVertexVector();
             const orsa::TriShape::FaceVector   & fv = triShape->getFaceVector();
+            std::vector<orsa::Vector> simplexVertexVector;
+            simplexVertexVector.resize(4);
             double sum = 0.0;
             for (size_t fi=0; fi<fv.size(); ++fi) {
                 // simplex by simplex...
@@ -38,64 +73,13 @@ public:
                 // also if shape is strongly concave and a simplex covers volume outside the body shape, then the results are incorrect
                 const double volume = (vv[fv[fi].i()]*orsa::externalProduct(vv[fv[fi].j()],vv[fv[fi].k()])) / 6;
                 
-                double H_sum = 0.0;
-                for (size_t i=0; i<=degree; ++i) {
-                    for (size_t j=0; j<=degree; ++j) {
-                        for (size_t k=0; k<=degree; ++k) {
-                            for (size_t l=0; l<degree; ++l) {
-                                if (i+j+k+l==degree) {
-                                    
-                                    double factor;
-                                    
-                                    factor = 1.0;
-                                    for (size_t px=0; px<=nx; ++px) {
-                                        for (size_t py=0; py<=ny; ++py) {
-                                            for (size_t pz=0; pz<=nz; ++pz) {
-                                                if (px+py+pz==degree) {
-                                                    factor *= orsa::int_pow(vv[fv[fi].i()].getX(),px);
-                                                    factor *= orsa::int_pow(vv[fv[fi].i()].getY(),py);
-                                                    factor *= orsa::int_pow(vv[fv[fi].i()].getZ(),pz);
-                                                }
-                                            }
-                                        }
-                                    }
-                                    H_sum += factor;
-                                    //
-                                    factor = 1.0;
-                                    for (size_t px=0; px<=nx; ++px) {
-                                        for (size_t py=0; py<=ny; ++py) {
-                                            for (size_t pz=0; pz<=nz; ++pz) {
-                                                if (px+py+pz==degree) {
-                                                    factor *= orsa::int_pow(vv[fv[fi].j()].getX(),px);
-                                                    factor *= orsa::int_pow(vv[fv[fi].j()].getY(),py);
-                                                    factor *= orsa::int_pow(vv[fv[fi].j()].getZ(),pz);
-                                                }
-                                            }
-                                        }
-                                    }
-                                    H_sum += factor;
-                                    //
-                                    factor = 1.0;
-                                    for (size_t px=0; px<=nx; ++px) {
-                                        for (size_t py=0; py<=ny; ++py) {
-                                            for (size_t pz=0; pz<=nz; ++pz) {
-                                                if (px+py+pz==degree) {
-                                                    factor *= orsa::int_pow(vv[fv[fi].k()].getX(),px);
-                                                    factor *= orsa::int_pow(vv[fv[fi].k()].getY(),py);
-                                                    factor *= orsa::int_pow(vv[fv[fi].k()].getZ(),pz);
-                                                }
-                                            }
-                                        }
-                                    }
-                                    
-                                    H_sum += factor;
-                                }
-                            }
-                        }
-                    }
-                }
+#warning default oriting for 4th simplex vertex, should be a parameter of the class??
+                simplexVertexVector[0] = orsa::Vector(0,0,0);
+                simplexVertexVector[1] = vv[fv[fi].i()];
+                simplexVertexVector[2] = vv[fv[fi].j()];
+                simplexVertexVector[3] = vv[fv[fi].k()];
                 
-                sum += volume*H_sum;
+                sum += volume*H(nx,ny,nz,simplexVertexVector);
             }
             val[index] = sum / orsa::binomial(3+degree,degree).get_d();
         }
