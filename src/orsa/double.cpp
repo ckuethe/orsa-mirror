@@ -69,7 +69,7 @@ mpz_class orsa::binomial(const mpz_class & n,
 }
 
 int orsa::power_sign(const mpz_class & l) {
-    if ((l%2)==1) {
+    if ((((l%2)+2)%2)==1) {
         return -1;
     } else {
         return  1;
