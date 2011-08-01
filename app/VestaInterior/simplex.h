@@ -111,13 +111,8 @@ public:
                 // also if shape is strongly concave and a simplex covers volume outside the body shape, then the results are incorrect
                 const double volume = (vv[fv[fi].i()]*orsa::externalProduct(vv[fv[fi].j()],vv[fv[fi].k()])) / 6;
                 
-#warning ONE SUMMATION IS MISSING HERE, either on sum alpha_i = q OR on 0 <= i1 <= i2 ... <= iq <= n
-#warning ALSO, MUST RESIZE simplexVertexVector, from (dim+1)=4 to the degree!! (q-homogeneous...)
+#warning default origin for 4th simplex vertex, should be a parameter of the class??                
                 
-#warning default origin for 4th simplex vertex, should be a parameter of the class??
-                
-                
-#warning RESIZE to DEGREE, and do all the combinations!
                 simplexVertexVector[0] = orsa::Vector(0,0,0);
                 simplexVertexVector[1] = vv[fv[fi].i()];
                 simplexVertexVector[2] = vv[fv[fi].j()];
