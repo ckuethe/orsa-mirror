@@ -42,8 +42,8 @@ int main() {
         exit(0);
     }
     
-    const size_t SH_degree = 4; // shperical harmonics degree
-    const size_t  T_degree = 4; // chebyshev polinomials degree
+    const size_t SH_degree = 8; // shperical harmonics degree
+    const size_t  T_degree = 8; // chebyshev polinomials degree
     
     const double R0 = pds->data->R0;
 #warning which GM value to use? pds->data->GM  OR pds->data->getCoeff("GM") ??
@@ -172,7 +172,8 @@ int main() {
             
             // ORSA_DEBUG("PaulMoment::normalization(%i,%i) = %g",l,m,PaulMoment::normalization(l,m));
             // normalization
-            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, PaulMoment::normalization(l,m), pq_sh2ijk);
+            // gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, PaulMoment::normalization(l,m), pq_sh2ijk);
+            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, orsa::normalization_integralToNormalizedSphericalHarmonics(l,m).get_d(), pq_sh2ijk);
 
 
 #warning scaling for l=0,m=0 term that is GM in the data...
@@ -292,7 +293,8 @@ int main() {
             
             // ORSA_DEBUG("PaulMoment::normalization(%i,%i) = %g",l,m,PaulMoment::normalization(l,m));
             // normalization
-            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, PaulMoment::normalization(l,m), pq_sh2ijk);
+            // gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, PaulMoment::normalization(l,m), pq_sh2ijk);
+            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, orsa::normalization_integralToNormalizedSphericalHarmonics(l,m).get_d(), pq_sh2ijk);
             
             /* const double S_lm = pq_factor;
                const double S_lm_uncertainty = fabs(pq_factor_uncertainty);
@@ -317,6 +319,8 @@ int main() {
         }
     }
     
+#warning check if there is any ROTATION between reference systems
+    
 #warning FIX GM entry!!
     
 #warning re-include factor 1/R0^l ?
@@ -324,6 +328,10 @@ int main() {
 #warning re-indlude normalization for Ckm Slm
     
 #warning maybe rescale GM entries to 1.0 to have more homogeneous entries?
+    
+#warning CHECK ALL NORMALIZATIONS!
+    
+#warning check code for HIGH degree, might have to rewrite linear algebra...
     
     for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
         for (size_t z_ijk=0; z_ijk<ijk_size; ++z_ijk) {
@@ -361,7 +369,7 @@ int main() {
         new CubicChebyshevMassDistribution(coeff,R0);
     
 #warning use enough points...
-    const size_t numSamplePoints = 100000;
+    const size_t numSamplePoints = 1000000;
     const bool storeSamplePoints = true;
 #warning how to manage centerOfMass??
     const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
