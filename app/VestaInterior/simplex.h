@@ -55,37 +55,99 @@ public:
                         const std::vector<orsa::Vector> & simplexVertexVector) {
         const size_t N = simplexVertexVector.size();
         const size_t degree = nx+ny+nz;
-
-        mpz_class z = 1;
-        for (size_t q=0; q<degree; ++q) {
-            z *= N;
-        }
-        const mpz_class maxCount = z; // N^q
-
+        
         std::vector<size_t> indexVector;
         indexVector.resize(degree);
+        
+        for (size_t q=0; q<degree; ++q) {
+            indexVector[q] = 0;
+        }
         
         std::vector<orsa::Vector> simplexVertexVector_Degree;
         simplexVertexVector_Degree.resize(degree);
         
-#warning maybe use mpf_class? (at least internally, before returning value?)
+#warning maybe use mpf_class for retVal?
         double retVal = 0.0;
-        for (mpz_class z=0; z<maxCount; ++z) {
-            for (size_t q=0; q<degree; ++q) {
-                mpz_class local_z = z;
-                for (size_t s=0; s<q; ++s) {
-                    local_z /= N;
-                }
-                indexVector[q] = mpz_class(local_z % N).get_ui();
-                // ORSA_DEBUG("z: %Zd   indexVector[%d] = %i",z.get_mpz_t(),q,indexVector[q]);
-            }
+        // size_t calls = 0;
+        bool done = false;
+        do {
             
+            /* for (size_t q=0; q<degree; ++q) {
+               ORSA_DEBUG("indexVector[%d] = %i",q,indexVector[q]);
+               }
+            */
+            
+            // first iter with indexVector={0,0...,0}
             for (size_t q=0; q<degree; ++q) {
                 simplexVertexVector_Degree[q] = simplexVertexVector[indexVector[q]];
             }
             
             retVal += H(nx,ny,nz,simplexVertexVector_Degree);           
-        }
+            
+            // ++calls;
+            
+            bool increased = false;
+            for (size_t q=0; q<degree; ++q) {
+                if (indexVector[q]<(N-1)) {
+                    ++indexVector[q];
+                    increased = true;
+                    for (size_t s=0; s<q; ++s) {
+                        indexVector[s] = indexVector[q];
+                    }
+                    break;
+                }
+            }
+            // ORSA_DEBUG("increased: %i",increased);
+            
+            if (!increased) {
+                done = true;
+            }
+            
+        } while (!done);
+        
+        // ORSA_DEBUG("calls: %d",calls);
+        
+        /* 
+           for (mpz_class z=0; z<maxCount; ++z) {
+           for (size_t q=0; q<degree; ++q) {
+           mpz_class local_z = z;
+           for (size_t s=0; s<q; ++s) {
+           local_z /= N;
+           }
+           indexVector[q] = mpz_class(local_z % N).get_ui();
+           // ORSA_DEBUG("z: %Zd   indexVector[%d] = %i",z.get_mpz_t(),q,indexVector[q]);
+           }
+           
+           {
+           bool increasingIndex = true;
+           for (size_t q=1; q<degree; ++q) {
+           if (indexVector[q]<indexVector[q-1]) {
+           increasingIndex = false;
+           // ORSA_DEBUG("skipping one...");
+           break;
+           }
+           }
+           if (!increasingIndex) {
+           ++skipped;
+           continue;
+           }
+           }
+           
+           for (size_t q=0; q<degree; ++q) {
+           simplexVertexVector_Degree[q] = simplexVertexVector[indexVector[q]];
+           }
+           
+           retVal += H(nx,ny,nz,simplexVertexVector_Degree);           
+           }
+        */
+        
+        /* ORSA_DEBUG("skipped: %Zd/%Zd   good: %Zd/%Zd",
+           skipped.get_mpz_t(),
+           maxCount.get_mpz_t(),
+           mpz_class(maxCount-skipped).get_mpz_t(),
+           maxCount.get_mpz_t());
+        */
+        
         return retVal;
     }
 protected:
@@ -117,7 +179,6 @@ public:
                 simplexVertexVector[1] = vv[fv[fi].i()];
                 simplexVertexVector[2] = vv[fv[fi].j()];
                 simplexVertexVector[3] = vv[fv[fi].k()];
-                
                 
                 // sum += volume*H(nx,ny,nz,simplexVertexVector);
                 sum += volume*sum_H(nx,ny,nz,simplexVertexVector);
