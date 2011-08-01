@@ -23,7 +23,7 @@ int main() {
             for (size_t j=0; j<=degree; ++j) {
                 for (size_t k=0; k<=degree; ++k) {
                     if (i+j+k==degree) {
-                        ORSA_DEBUG("integral [%i,%i,%i]: %g",i,j,k,si->getIntegral(i,j,k));
+                        ORSA_DEBUG("integral [%i,%i,%i]: %+16.6e",i,j,k,si->getIntegral(i,j,k));
                     }
                 }
             }

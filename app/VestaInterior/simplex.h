@@ -50,6 +50,44 @@ public:
         // ORSA_DEBUG("retVal: %16.6e",retVal);
         return retVal;
     }
+public:
+    static double sum_H(const size_t & nx, const size_t & ny, const size_t & nz,
+                        const std::vector<orsa::Vector> & simplexVertexVector) {
+        const size_t N = simplexVertexVector.size();
+        const size_t degree = nx+ny+nz;
+
+        mpz_class z = 1;
+        for (size_t q=0; q<degree; ++q) {
+            z *= N;
+        }
+        const mpz_class maxCount = z; // N^q
+
+        std::vector<size_t> indexVector;
+        indexVector.resize(degree);
+        
+        std::vector<orsa::Vector> simplexVertexVector_Degree;
+        simplexVertexVector_Degree.resize(degree);
+        
+#warning maybe use mpf_class? (at least internally, before returning value?)
+        double retVal = 0.0;
+        for (mpz_class z=0; z<maxCount; ++z) {
+            for (size_t q=0; q<degree; ++q) {
+                mpz_class local_z = z;
+                for (size_t s=0; s<q; ++s) {
+                    local_z /= N;
+                }
+                indexVector[q] = mpz_class(local_z % N).get_ui();
+                // ORSA_DEBUG("z: %Zd   indexVector[%d] = %i",z.get_mpz_t(),q,indexVector[q]);
+            }
+            
+            for (size_t q=0; q<degree; ++q) {
+                simplexVertexVector_Degree[q] = simplexVertexVector[indexVector[q]];
+            }
+            
+            retVal += H(nx,ny,nz,simplexVertexVector_Degree);           
+        }
+        return retVal;
+    }
 protected:
     mutable std::vector< orsa::Cache<double> > val;
 public:
@@ -73,13 +111,21 @@ public:
                 // also if shape is strongly concave and a simplex covers volume outside the body shape, then the results are incorrect
                 const double volume = (vv[fv[fi].i()]*orsa::externalProduct(vv[fv[fi].j()],vv[fv[fi].k()])) / 6;
                 
-#warning default oriting for 4th simplex vertex, should be a parameter of the class??
+#warning ONE SUMMATION IS MISSING HERE, either on sum alpha_i = q OR on 0 <= i1 <= i2 ... <= iq <= n
+#warning ALSO, MUST RESIZE simplexVertexVector, from (dim+1)=4 to the degree!! (q-homogeneous...)
+                
+#warning default origin for 4th simplex vertex, should be a parameter of the class??
+                
+                
+#warning RESIZE to DEGREE, and do all the combinations!
                 simplexVertexVector[0] = orsa::Vector(0,0,0);
                 simplexVertexVector[1] = vv[fv[fi].i()];
                 simplexVertexVector[2] = vv[fv[fi].j()];
                 simplexVertexVector[3] = vv[fv[fi].k()];
                 
-                sum += volume*H(nx,ny,nz,simplexVertexVector);
+                
+                // sum += volume*H(nx,ny,nz,simplexVertexVector);
+                sum += volume*sum_H(nx,ny,nz,simplexVertexVector);
             }
             val[index] = sum / orsa::binomial(3+degree,degree).get_d();
         }
