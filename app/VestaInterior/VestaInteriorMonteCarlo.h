@@ -150,8 +150,8 @@ public:
                                     randomPointsInShape);
         // massDistribution);
         
-        std::vector< std::vector<double> > C, S, norm_C, norm_S;
-        std::vector<double> J;
+        std::vector< std::vector<mpf_class> > C, S, norm_C, norm_S;
+        std::vector<mpf_class> J;
         orsa::convert(C, S, norm_C, norm_S, J,
                       paulMoment, 
                       aux->R0);
@@ -181,21 +181,21 @@ public:
                     minIndex.setIfSmaller(index);
                     maxIndex.setIfLarger(index);
                     // ORSA_DEBUG("index: %i",index);
-                    ORSA_DEBUG("norm_C[%03i][%03i] = %g",l,m,norm_C[l][m]);
+                    ORSA_DEBUG("norm_C[%03i][%03i] = %Fg",l,m,norm_C[l][m].get_mpf_t());
                     ORSA_DEBUG("pds_coeff[%03i] = %g",index,gsl_vector_get(aux->pds_coeff,index));
                     gsl_vector_set(vec_coeff,
                                    index,
-                                   norm_C[l][m]-gsl_vector_get(aux->pds_coeff,index));
+                                   norm_C[l][m].get_d()-gsl_vector_get(aux->pds_coeff,index));
                     if (m!=0) {
                         index = aux->pds_data->index(orsaPDS::RadioScienceGravityData::keyS(l,m));
                         minIndex.setIfSmaller(index);
                         maxIndex.setIfLarger(index);
                         // ORSA_DEBUG("index: %i",index);
-                        ORSA_DEBUG("norm_S[%03i][%03i] = %g",l,m,norm_S[l][m]);
+                        ORSA_DEBUG("norm_S[%03i][%03i] = %Fg",l,m,norm_S[l][m].get_mpf_t());
                         ORSA_DEBUG("pds_coeff[%03i] = %g",index,gsl_vector_get(aux->pds_coeff,index));
                         gsl_vector_set(vec_coeff,
                                        index,
-                                       norm_S[l][m]-gsl_vector_get(aux->pds_coeff,index));
+                                       norm_S[l][m].get_d()-gsl_vector_get(aux->pds_coeff,index));
                     }
                 }
             }
