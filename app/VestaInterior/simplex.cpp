@@ -17,7 +17,7 @@ int main() {
     osg::ref_ptr<SimplexIntegration> si = new SimplexIntegration(vestaShape.get());
 
 
-    const size_t maxDegree = 2;
+    const size_t maxDegree = 10;
     for (size_t degree=0; degree<=maxDegree; ++degree) {
         for (size_t i=0; i<=degree; ++i) {
             for (size_t j=0; j<=degree; ++j) {
