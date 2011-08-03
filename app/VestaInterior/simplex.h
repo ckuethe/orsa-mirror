@@ -11,49 +11,99 @@ public:
     SimplexIntegration(const orsa::TriShape * s) :
         osg::Referenced(),
         triShape(s) {
-        
+        const orsa::TriShape::VertexVector & vv = triShape->getVertexVector();
+        const orsa::TriShape::FaceVector   & fv = triShape->getFaceVector();
+        aux.resize(fv.size());
+        for (size_t fi=0; fi<fv.size(); ++fi) {
+            aux[fi].volume = (vv[fv[fi].i()]*orsa::externalProduct(vv[fv[fi].j()],vv[fv[fi].k()])) / 6;
+            aux[fi].simplexVertexVector.resize(4);
+            aux[fi].simplexVertexVector[0] = orsa::Vector(0,0,0);
+            aux[fi].simplexVertexVector[1] = vv[fv[fi].i()];
+            aux[fi].simplexVertexVector[2] = vv[fv[fi].j()];
+            aux[fi].simplexVertexVector[3] = vv[fv[fi].k()];
+        }
     }
 protected:
     virtual ~SimplexIntegration() { }
 protected:
     osg::ref_ptr<const orsa::TriShape> triShape;
+protected:
+    class SimplexInternals {
+    public:
+        // val_H[index][index4]...
+        mutable std::vector< std::vector< orsa::Cache<double> > > val_H;
+        std::vector<orsa::Vector> simplexVertexVector;
+        orsa::Cache<double> volume;
+    };
 public:
     static double H(const size_t & nx, const size_t & ny, const size_t & nz,
-                    const std::vector<orsa::Vector> & simplexVertexVector) {
-        const size_t N = simplexVertexVector.size();
-        const size_t maxCount = 1<<N; // 2^N
-        std::vector<bool> I;
-        I.resize(N);
-        double retVal = 0.0;
-        for (size_t count=0; count<maxCount; ++count) {
-            for (size_t i=0; i<N; ++i) {
-                I[i] = (count & (1<<i));
-                // ORSA_DEBUG("count: %d   I[%d] = %i",count,i,I[i]==true);
-            }
-            orsa::Vector vertex_I(0,0,0);
-            size_t num_I = 0;
-            for (size_t i=0; i<N; ++i) {
-                if (I[i]) {
-                    vertex_I += simplexVertexVector[i];  
-                    ++num_I;
-                }
-            }
-            const int sign = orsa::power_sign(N-num_I);
-            const double p =
-                orsa::int_pow(vertex_I.getX(),nx)*
-                orsa::int_pow(vertex_I.getY(),ny)*
-                orsa::int_pow(vertex_I.getZ(),nz);
-            retVal += sign*p;
-            // ORSA_DEBUG("sign: %+i   p: %16.6e",sign,p);
+                    const std::vector<size_t> indexVector,
+                    SimplexInternals & aux) {
+        const size_t degree = nx+ny+nz;
+        // ORSA_DEBUG("degree: %d",degree);
+        std::vector<size_t> i4;
+        i4.resize(4);
+        for (size_t s=0; s<4; ++s) {
+            i4[s] = 0;
         }
-        retVal /= orsa::factorial(nx+ny+nz).get_d();
-        // ORSA_DEBUG("retVal: %16.6e",retVal);
-        return retVal;
+        for (size_t q=0; q<degree; ++q) {
+            ++i4[indexVector[q]];
+        }
+        /* for (size_t s=0; s<4; ++s) {
+           ORSA_DEBUG("i4[%d] = %d",s,i4[s]);
+           }
+        */
+        const size_t index  = getIndex(nx,ny,nz);
+        const size_t index4 = getIndex4(i4[0],i4[1],i4[2],i4[3]);
+        if (aux.val_H.size() <= index) {
+            aux.val_H.resize(index+1);
+            if (aux.val_H[index].size() <= index4) {
+                aux.val_H[index].resize(index4+1);
+            }
+        }
+        // ORSA_DEBUG("val_H[%i][%i] set: %i",index,index4,aux.val_H[index][index4].isSet());
+        if (!aux.val_H[index][index4].isSet()) {
+            const size_t maxCount = 1<<degree; // 2^degree
+            std::vector<bool> I;
+            I.resize(degree);
+            std::vector<orsa::Vector> localSimplexVertexVector;
+            localSimplexVertexVector.resize(degree);
+            for (size_t q=0; q<degree; ++q) {
+                localSimplexVertexVector[q] = aux.simplexVertexVector[indexVector[q]];
+            }
+            double retVal = 0.0;
+            for (size_t count=0; count<maxCount; ++count) {
+                for (size_t i=0; i<degree; ++i) {
+                    I[i] = (count & (1<<i));
+                    // ORSA_DEBUG("count: %d   I[%d] = %i",count,i,I[i]==true);
+                }
+                orsa::Vector vertex_I(0,0,0);
+                size_t num_I = 0;
+                for (size_t i=0; i<degree; ++i) {
+                    if (I[i]) {
+                        vertex_I += localSimplexVertexVector[i];  
+                        ++num_I;
+                    }
+                }
+                const int sign = orsa::power_sign(degree-num_I);
+                const double p =
+                    orsa::int_pow(vertex_I.getX(),nx)*
+                    orsa::int_pow(vertex_I.getY(),ny)*
+                    orsa::int_pow(vertex_I.getZ(),nz);
+                retVal += sign*p;
+                // ORSA_DEBUG("sign: %+i   p: %16.6e",sign,p);
+            }
+            retVal /= orsa::factorial(nx+ny+nz).get_d();
+            // ORSA_DEBUG("retVal: %16.6e",retVal);
+            aux.val_H[index][index4] = retVal;
+            // ORSA_DEBUG("setting val_H[%d][%d]",index,index4);
+        }
+        return aux.val_H[index][index4];
     }
 public:
     static double sum_H(const size_t & nx, const size_t & ny, const size_t & nz,
-                        const std::vector<orsa::Vector> & simplexVertexVector) {
-        const size_t N = simplexVertexVector.size();
+                        SimplexInternals & aux) {
+        const size_t N = aux.simplexVertexVector.size(); // N here is 4
         const size_t degree = nx+ny+nz;
         
         std::vector<size_t> indexVector;
@@ -63,26 +113,28 @@ public:
             indexVector[q] = 0;
         }
         
-        std::vector<orsa::Vector> simplexVertexVector_Degree;
-        simplexVertexVector_Degree.resize(degree);
+        // std::vector<orsa::Vector> simplexVertexVector_Degree;
+        // simplexVertexVector_Degree.resize(degree);
         
 #warning maybe use mpf_class for retVal?
         double retVal = 0.0;
         // size_t calls = 0;
         bool done = false;
         do {
+            // first iter with indexVector={0,0...,0}
             
             /* for (size_t q=0; q<degree; ++q) {
                ORSA_DEBUG("indexVector[%d] = %i",q,indexVector[q]);
                }
             */
             
-            // first iter with indexVector={0,0...,0}
-            for (size_t q=0; q<degree; ++q) {
-                simplexVertexVector_Degree[q] = simplexVertexVector[indexVector[q]];
-            }
+            /* for (size_t q=0; q<degree; ++q) {
+               simplexVertexVector_Degree[q] = simplexVertexVector[indexVector[q]];
+               }
+            */
             
-            retVal += H(nx,ny,nz,simplexVertexVector_Degree);           
+            // retVal += H(nx,ny,nz,simplexVertexVector_Degree);    
+            retVal += H(nx,ny,nz,indexVector,aux);
             
             // ++calls;
             
@@ -105,53 +157,11 @@ public:
             
         } while (!done);
         
-        // ORSA_DEBUG("calls: %d",calls);
-        
-        /* 
-           for (mpz_class z=0; z<maxCount; ++z) {
-           for (size_t q=0; q<degree; ++q) {
-           mpz_class local_z = z;
-           for (size_t s=0; s<q; ++s) {
-           local_z /= N;
-           }
-           indexVector[q] = mpz_class(local_z % N).get_ui();
-           // ORSA_DEBUG("z: %Zd   indexVector[%d] = %i",z.get_mpz_t(),q,indexVector[q]);
-           }
-           
-           {
-           bool increasingIndex = true;
-           for (size_t q=1; q<degree; ++q) {
-           if (indexVector[q]<indexVector[q-1]) {
-           increasingIndex = false;
-           // ORSA_DEBUG("skipping one...");
-           break;
-           }
-           }
-           if (!increasingIndex) {
-           ++skipped;
-           continue;
-           }
-           }
-           
-           for (size_t q=0; q<degree; ++q) {
-           simplexVertexVector_Degree[q] = simplexVertexVector[indexVector[q]];
-           }
-           
-           retVal += H(nx,ny,nz,simplexVertexVector_Degree);           
-           }
-        */
-        
-        /* ORSA_DEBUG("skipped: %Zd/%Zd   good: %Zd/%Zd",
-           skipped.get_mpz_t(),
-           maxCount.get_mpz_t(),
-           mpz_class(maxCount-skipped).get_mpz_t(),
-           maxCount.get_mpz_t());
-        */
-        
         return retVal;
     }
 protected:
     mutable std::vector< orsa::Cache<double> > val;
+    mutable std::vector< SimplexInternals > aux;
 public:
     double getIntegral(const size_t & nx, const size_t & ny, const size_t & nz) const {
         const size_t degree = nx+ny+nz;
@@ -161,32 +171,37 @@ public:
         }
         if (!val[index].isSet()) {
             // compute it
-            const orsa::TriShape::VertexVector & vv = triShape->getVertexVector();
+            // const orsa::TriShape::VertexVector & vv = triShape->getVertexVector();
             const orsa::TriShape::FaceVector   & fv = triShape->getFaceVector();
-            std::vector<orsa::Vector> simplexVertexVector;
-            simplexVertexVector.resize(4);
+            // std::vector<orsa::Vector> simplexVertexVector;
+            // simplexVertexVector.resize(4);
             double sum = 0.0;
             for (size_t fi=0; fi<fv.size(); ++fi) {
                 // simplex by simplex...
                 // volume of simplex with the face as base and the origin as 4th vertex
                 // if moving 4th point away from origin, more terms must be added
                 // also if shape is strongly concave and a simplex covers volume outside the body shape, then the results are incorrect
-                const double volume = (vv[fv[fi].i()]*orsa::externalProduct(vv[fv[fi].j()],vv[fv[fi].k()])) / 6;
+                // const double volume = (vv[fv[fi].i()]*orsa::externalProduct(vv[fv[fi].j()],vv[fv[fi].k()])) / 6;
                 
 #warning default origin for 4th simplex vertex, should be a parameter of the class??                
                 
-                simplexVertexVector[0] = orsa::Vector(0,0,0);
-                simplexVertexVector[1] = vv[fv[fi].i()];
-                simplexVertexVector[2] = vv[fv[fi].j()];
-                simplexVertexVector[3] = vv[fv[fi].k()];
+                /* simplexVertexVector[0] = orsa::Vector(0,0,0);
+                   simplexVertexVector[1] = vv[fv[fi].i()];
+                   simplexVertexVector[2] = vv[fv[fi].j()];
+                   simplexVertexVector[3] = vv[fv[fi].k()];
+                */
+                // sum += volume*sum_H(nx,ny,nz,simplexVertexVector);
+                sum += aux[fi].volume*sum_H(nx,ny,nz,aux[fi]);
                 
-                // sum += volume*H(nx,ny,nz,simplexVertexVector);
-                sum += volume*sum_H(nx,ny,nz,simplexVertexVector);
+                // #warning REMOVE THIS!!!!!!!!!!!
+                // if (fi == 0) break;
             }
             val[index] = sum / orsa::binomial(3+degree,degree).get_d();
         }
         return val[index];
     }
+
+    
 public:
     typedef std::vector< std::vector< std::vector<size_t> > > IndexTableType;
     static IndexTableType indexTable;
@@ -222,6 +237,49 @@ public:
         const size_t requestedDegree=nx+ny+nz;
         updateIndexTable(requestedDegree);
         return indexTable[nx][ny][nz]; 
+    }
+
+    // same as above, but for 4 indices
+public:
+    typedef std::vector< std::vector< std::vector< std::vector<size_t> > > > Index4TableType;
+    static Index4TableType index4Table;
+public:
+    static void updateIndex4Table(const size_t & requestedDegree) {
+        if (index4Table.size() < (requestedDegree+1)) {
+            index4Table.resize(requestedDegree+1);
+            for (size_t i=0; i<=requestedDegree; ++i) {
+                index4Table[i].resize(requestedDegree+1-i);
+                for (size_t j=0; j<=requestedDegree-i; ++j) {
+                    index4Table[i][j].resize(requestedDegree+1-i-j);
+                    for (size_t k=0; k<=requestedDegree-i-j; ++k) {
+                        index4Table[i][j][k].resize(requestedDegree+1-i-j-k);
+                    }
+                }
+            }
+            size_t idx=0;
+            size_t degree=0;
+            while (degree <= requestedDegree) {
+                for (unsigned int i=0; i<=degree; ++i) {
+                    for (unsigned int j=0; j<=degree; ++j) {
+                        for (unsigned int k=0; k<=degree; ++k) {
+                            for (unsigned int l=0; l<=degree; ++l) {
+                                if (i+j+k+l==degree) {
+                                    // ORSA_DEBUG("inserting %i-%i-%i-%i  index4: %i",i,j,k,l,idx);
+                                    index4Table[i][j][k][l] = idx++;
+                                }
+                            }
+                        }
+                    }
+                }
+                ++degree;
+            }
+        }
+    }
+public:
+    static size_t getIndex4(const size_t & i, const size_t & j, const size_t & k, const size_t & l) {
+        const size_t requestedDegree=i+j+k+l;
+        updateIndex4Table(requestedDegree);
+        return index4Table[i][j][k][l]; 
     }
 };
 

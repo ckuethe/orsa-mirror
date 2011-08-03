@@ -2,7 +2,9 @@
 
 #include "vesta.h"
 
-SimplexIntegration::IndexTableType SimplexIntegration::indexTable;
+SimplexIntegration::IndexTableType  SimplexIntegration::indexTable;
+SimplexIntegration::Index4TableType SimplexIntegration::index4Table;
+
 
 int main() {
     
@@ -17,7 +19,7 @@ int main() {
     osg::ref_ptr<SimplexIntegration> si = new SimplexIntegration(vestaShape.get());
 
 
-    const size_t maxDegree = 10;
+    const size_t maxDegree = 20;
     for (size_t degree=0; degree<=maxDegree; ++degree) {
         for (size_t i=0; i<=degree; ++i) {
             for (size_t j=0; j<=degree; ++j) {
