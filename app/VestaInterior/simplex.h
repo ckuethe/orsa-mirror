@@ -30,8 +30,8 @@ protected:
 protected:
     class SimplexInternals {
     public:
-        // val_H[index][index4]...
-        mutable std::vector< std::vector< orsa::Cache<double> > > val_H;
+        // val_p[index][index4]...
+        mutable std::vector< std::vector< orsa::Cache<double> > > val_p;
         std::vector<orsa::Vector> simplexVertexVector;
         orsa::Cache<double> volume;
     };
@@ -55,28 +55,50 @@ public:
         */
         const size_t index  = getIndex(nx,ny,nz);
         const size_t index4 = getIndex4(i4[0],i4[1],i4[2],i4[3]);
-        if (aux.val_H.size() <= index) {
-            aux.val_H.resize(index+1);
-            if (aux.val_H[index].size() <= index4) {
-                aux.val_H[index].resize(index4+1);
+        if (aux.val_p.size() <= index) {
+            aux.val_p.resize(index+1);
+            if (aux.val_p[index].size() <= index4) {
+                aux.val_p[index].resize(index4+1);
             }
         }
-        // ORSA_DEBUG("val_H[%i][%i] set: %i",index,index4,aux.val_H[index][index4].isSet());
-        if (!aux.val_H[index][index4].isSet()) {
-            const size_t maxCount = 1<<degree; // 2^degree
-            std::vector<bool> I;
-            I.resize(degree);
-            std::vector<orsa::Vector> localSimplexVertexVector;
-            localSimplexVertexVector.resize(degree);
-            for (size_t q=0; q<degree; ++q) {
-                localSimplexVertexVector[q] = aux.simplexVertexVector[indexVector[q]];
+        // ORSA_DEBUG("val_p[%i][%i] set: %i",index,index4,aux.val_p[index][index4].isSet());
+        const size_t maxCount = 1<<degree; // 2^degree
+        std::vector<bool> I;
+        I.resize(degree);
+        std::vector<orsa::Vector> localSimplexVertexVector;
+        localSimplexVertexVector.resize(degree);
+        for (size_t q=0; q<degree; ++q) {
+            localSimplexVertexVector[q] = aux.simplexVertexVector[indexVector[q]];
+        }
+        std::vector<size_t> t4;
+        t4.resize(4);
+        double retVal = 0.0;
+        for (size_t count=0; count<maxCount; ++count) {
+            for (size_t s=0; s<4; ++s) {
+                t4[s] = 0;
             }
-            double retVal = 0.0;
-            for (size_t count=0; count<maxCount; ++count) {
-                for (size_t i=0; i<degree; ++i) {
-                    I[i] = (count & (1<<i));
-                    // ORSA_DEBUG("count: %d   I[%d] = %i",count,i,I[i]==true);
+            for (size_t i=0; i<degree; ++i) {
+                I[i] = (count & (1<<i));
+                if (I[i]) {
+                    ++t4[indexVector[i]];
                 }
+                // ORSA_DEBUG("count: %d   I[%d] = %i",count,i,I[i]==true);
+            }
+            /* for (size_t s=0; s<4; ++s) {
+               ORSA_DEBUG("t4[%d] = %d",s,t4[s]);
+               }
+            */
+            const size_t it4 = getIndex4(t4[0],t4[1],t4[2],t4[3]);
+            if (aux.val_p[index].size() <= it4) {
+                // is this needed?
+                aux.val_p[index].resize(it4+1);
+            }
+            const int sign = orsa::power_sign(degree-(t4[0]+t4[1]+t4[2]+t4[3]));
+            if (aux.val_p[index][it4].isSet()) {
+                retVal += aux.val_p[index][it4];
+                // ORSA_DEBUG("--cached--");
+            } else {
+                // ORSA_DEBUG("--NOT-cached--");
                 orsa::Vector vertex_I(0,0,0);
                 size_t num_I = 0;
                 for (size_t i=0; i<degree; ++i) {
@@ -85,20 +107,23 @@ public:
                         ++num_I;
                     }
                 }
-                const int sign = orsa::power_sign(degree-num_I);
+                // const int sign = orsa::power_sign(degree-num_I);
                 const double p =
                     orsa::int_pow(vertex_I.getX(),nx)*
                     orsa::int_pow(vertex_I.getY(),ny)*
                     orsa::int_pow(vertex_I.getZ(),nz);
+                aux.val_p[index][it4] = p;
                 retVal += sign*p;
                 // ORSA_DEBUG("sign: %+i   p: %16.6e",sign,p);
             }
-            retVal /= orsa::factorial(nx+ny+nz).get_d();
-            // ORSA_DEBUG("retVal: %16.6e",retVal);
-            aux.val_H[index][index4] = retVal;
-            // ORSA_DEBUG("setting val_H[%d][%d]",index,index4);
         }
-        return aux.val_H[index][index4];
+        retVal /= orsa::factorial(nx+ny+nz).get_d();
+        // ORSA_DEBUG("retVal: %16.6e",retVal);
+        // aux.val_p[index][index4] = retVal;
+        // ORSA_DEBUG("setting val_p[%d][%d]",index,index4);
+        return retVal;                
+        // return aux.val_p[index][index4];
+        // return retVal;
     }
 public:
     static double sum_H(const size_t & nx, const size_t & ny, const size_t & nz,
