@@ -15,12 +15,20 @@ public:
         const orsa::TriShape::FaceVector   & fv = triShape->getFaceVector();
         aux.resize(fv.size());
         for (size_t fi=0; fi<fv.size(); ++fi) {
-            aux[fi].volume = (vv[fv[fi].i()]*orsa::externalProduct(vv[fv[fi].j()],vv[fv[fi].k()])) / 6;
             aux[fi].simplexVertexVector.resize(4);
             aux[fi].simplexVertexVector[0] = orsa::Vector(0,0,0);
             aux[fi].simplexVertexVector[1] = vv[fv[fi].i()];
             aux[fi].simplexVertexVector[2] = vv[fv[fi].j()];
             aux[fi].simplexVertexVector[3] = vv[fv[fi].k()];
+            //
+            // volume of simplex with the face as base and the origin as 4th vertex
+            // if moving 4th point away from origin, more terms must be added
+            // aux[fi].volume = (vv[fv[fi].i()]*orsa::externalProduct(vv[fv[fi].j()],vv[fv[fi].k()])) / 6;
+            // generic, just in case
+            aux[fi].volume =
+                (aux[fi].simplexVertexVector[1]-aux[fi].simplexVertexVector[0]) *
+                orsa::externalProduct(aux[fi].simplexVertexVector[2]-aux[fi].simplexVertexVector[0],
+                                      aux[fi].simplexVertexVector[3]-aux[fi].simplexVertexVector[0]) / 6.0;
         }
     }
 protected:
@@ -203,23 +211,12 @@ public:
             double sum = 0.0;
             for (size_t fi=0; fi<fv.size(); ++fi) {
                 // simplex by simplex...
-                // volume of simplex with the face as base and the origin as 4th vertex
-                // if moving 4th point away from origin, more terms must be added
-                // also if shape is strongly concave and a simplex covers volume outside the body shape, then the results are incorrect
-                // const double volume = (vv[fv[fi].i()]*orsa::externalProduct(vv[fv[fi].j()],vv[fv[fi].k()])) / 6;
+                
+#warning if shape is strongly concave and a simplex covers volume outside the body shape, then the results are incorrect (including volume computations...)
                 
 #warning default origin for 4th simplex vertex, should be a parameter of the class??                
                 
-                /* simplexVertexVector[0] = orsa::Vector(0,0,0);
-                   simplexVertexVector[1] = vv[fv[fi].i()];
-                   simplexVertexVector[2] = vv[fv[fi].j()];
-                   simplexVertexVector[3] = vv[fv[fi].k()];
-                */
-                // sum += volume*sum_H(nx,ny,nz,simplexVertexVector);
                 sum += aux[fi].volume*sum_H(nx,ny,nz,aux[fi]);
-                
-                // #warning REMOVE THIS!!!!!!!!!!!
-                // if (fi == 0) break;
             }
             val[index] = sum / orsa::binomial(3+degree,degree).get_d();
         }
