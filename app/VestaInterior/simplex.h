@@ -126,19 +126,19 @@ public:
             }
             double retVal = 0.0;
             for (size_t q=0; q<=degree; ++q) {
-                const double sum_vol_fun_factor = orsa::binomial(degree+N,degree+N-q).get_d();
+                const double sum_vol_fun_factor = orsa::binomial(degree+N,degree+N-(degree-q)).get_d();
                 const int sign = orsa::power_sign(degree-q);
                 retVal += sign*sum_vol_fun_factor*val_vol_sum_fun[index][q];
-                ORSA_DEBUG("degree: %i  q: %i  factor = binomial(%i,%i): : %g  sign: %i  term: %g",
-                           degree,
-                           q,
-                           degree+N,
-                           degree+N-q,
-                           sum_vol_fun_factor,sign,
-                           (*val_vol_sum_fun[index][q]));
+                /* ORSA_DEBUG("degree: %i  q: %i  factor = binomial(%i,%i): : %g  sign: %i  term: %g",
+                   degree,
+                   q,
+                   degree+N,
+                   degree+N-(degree-q),
+                   sum_vol_fun_factor,sign,
+                   (*val_vol_sum_fun[index][q]));
+                */
             }
-            // val[index] = retVal / orsa::binomial(3+degree,degree).get_d() / orsa::factorial(degree).get_d();
-            val[index] = retVal / orsa::binomial(3+degree,degree).get_d();
+            val[index] = retVal / orsa::binomial(3+degree,degree).get_d() / orsa::factorial(degree).get_d();
         }
         return val[index];
     }
