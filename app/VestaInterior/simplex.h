@@ -28,13 +28,14 @@ public:
             //
             // volume of simplex with the face as base and the origin as 4th vertex
             // if moving 4th point away from origin, more terms must be added
-            // aux[fi].volume = (vv[fv[fi].i()]*orsa::externalProduct(vv[fv[fi].j()],vv[fv[fi].k()])) / 6;
+            // aux[fi].volume = fabs((vv[fv[fi].i()]*orsa::externalProduct(vv[fv[fi].j()],vv[fv[fi].k()])) / 6);
             //
             // generic, just in case
             aux[fi].volume =
-                (aux[fi].simplexVertexVector[1]-aux[fi].simplexVertexVector[0]) *
-                orsa::externalProduct(aux[fi].simplexVertexVector[2]-aux[fi].simplexVertexVector[0],
-                                      aux[fi].simplexVertexVector[3]-aux[fi].simplexVertexVector[0]) / 6.0;
+                fabs((aux[fi].simplexVertexVector[1]-aux[fi].simplexVertexVector[0]) *
+                     orsa::externalProduct(aux[fi].simplexVertexVector[2]-aux[fi].simplexVertexVector[0],
+                                           aux[fi].simplexVertexVector[3]-aux[fi].simplexVertexVector[0]) / 6.0);
+            ORSA_DEBUG("fi: %02i  volume: %g",fi,(*aux[fi].volume));
         }
     }
 protected:
@@ -108,7 +109,9 @@ public:
                                     ++indexVector[i];
                                     increased = true;
                                     for (size_t s=0; s<i; ++s) {
-                                        indexVector[s] = indexVector[i];
+#warning IMPORTANT: which rule is correct?
+                                        // indexVector[s] = indexVector[i]; // this one avoids repetitions, i.e. {1,0}, {0,1}
+                                        indexVector[s] = 0; // this one includes repetitions
                                     }
                                     break;
                                 }
@@ -119,24 +122,23 @@ public:
                             }                                
                         }
                         sum_vol_fun += sum_vol_fi*aux[fi].volume;
-                        // ORSA_DEBUG("degree: %i  q: %i sum_vol_fun: %g",degree,q,sum_vol_fun);
+                        ORSA_DEBUG("degree: %02i  q: %02i sum_vol_fi: %+16.6e",degree,q,sum_vol_fi);
                     }
                     val_vol_sum_fun[index][q] = sum_vol_fun;
                 }
             }
             double retVal = 0.0;
             for (size_t q=0; q<=degree; ++q) {
-                const double sum_vol_fun_factor = orsa::binomial(degree+N,degree+N-(degree-q)).get_d();
+                const double sum_vol_fun_factor = orsa::binomial(N+degree,q+N).get_d();
                 const int sign = orsa::power_sign(degree-q);
                 retVal += sign*sum_vol_fun_factor*val_vol_sum_fun[index][q];
-                /* ORSA_DEBUG("degree: %i  q: %i  factor = binomial(%i,%i): : %g  sign: %i  term: %g",
-                   degree,
-                   q,
-                   degree+N,
-                   degree+N-(degree-q),
-                   sum_vol_fun_factor,sign,
-                   (*val_vol_sum_fun[index][q]));
-                */
+                ORSA_DEBUG("degree: %i  q: %i  factor = binomial(%i,%i): : %g  sign: %i  term: %g",
+                           degree,
+                           q,
+                           N+degree,
+                           N+q,
+                           sum_vol_fun_factor,sign,
+                           (*val_vol_sum_fun[index][q]));
             }
             val[index] = retVal / orsa::binomial(3+degree,degree).get_d() / orsa::factorial(degree).get_d();
         }

@@ -10,8 +10,15 @@ int main() {
     
     orsa::Debug::instance()->initTimer();
     
+    /* osg::ref_ptr<VestaShape> vestaShape = new VestaShape;
+       if (!vestaShape->read("vesta_thomas.dat")) {
+       ORSA_ERROR("problems encountered while reading shape file...");
+       exit(0);
+       }
+    */
+    
     osg::ref_ptr<VestaShape> vestaShape = new VestaShape;
-    if (!vestaShape->read("vesta_thomas.dat")) {
+    if (!vestaShape->read("cube.dat")) {
         ORSA_ERROR("problems encountered while reading shape file...");
         exit(0);
     }
