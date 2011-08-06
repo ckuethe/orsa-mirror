@@ -12,19 +12,22 @@
 
 class SimplexIntegration : public osg::Referenced {
 public:
-    SimplexIntegration(const orsa::TriShape * s) :
+    SimplexIntegration(const orsa::TriShape * s,
+                       const double & R0_) :
         osg::Referenced(),
         N(3),
-        triShape(s) {
+        triShape(s),
+        R0(R0_),
+        oneOverR0(1.0/R0) {
         const orsa::TriShape::VertexVector & vv = triShape->getVertexVector();
         const orsa::TriShape::FaceVector   & fv = triShape->getFaceVector();
         aux.resize(fv.size());
         for (size_t fi=0; fi<fv.size(); ++fi) {
             aux[fi].simplexVertexVector.resize(N+1);
-            aux[fi].simplexVertexVector[0] = orsa::Vector(0,0,0);
-            aux[fi].simplexVertexVector[1] = vv[fv[fi].i()];
-            aux[fi].simplexVertexVector[2] = vv[fv[fi].j()];
-            aux[fi].simplexVertexVector[3] = vv[fv[fi].k()];
+            aux[fi].simplexVertexVector[0] = oneOverR0*orsa::Vector(0,0,0);
+            aux[fi].simplexVertexVector[1] = oneOverR0*vv[fv[fi].i()];
+            aux[fi].simplexVertexVector[2] = oneOverR0*vv[fv[fi].j()];
+            aux[fi].simplexVertexVector[3] = oneOverR0*vv[fv[fi].k()];
             //
             // volume of simplex with the face as base and the origin as 4th vertex
             // if moving 4th point away from origin, more terms must be added
@@ -58,6 +61,8 @@ protected:
 protected:
     const size_t N; // N = 3 = dimension of space = number of vertexes in n-dim simplex + 1
     osg::ref_ptr<const orsa::TriShape> triShape;
+    const double R0;
+    const double oneOverR0;
     mutable std::vector< orsa::Cache<double> > val; // integral value
     mutable std::vector< SimplexInternals > aux;
     // val_vol_sum_fun is the sum over all simplexes of the funciton of given q times the volume of each simplex
