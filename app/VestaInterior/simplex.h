@@ -85,8 +85,10 @@ public:
         if (!val[index].isSet()) {
             const orsa::TriShape::FaceVector & fv = triShape->getFaceVector();
             std::vector<size_t> indexVector;
+#warning can skip q=0 if degree>0 ...
             for (size_t q=0; q<=degree; ++q) {
                 if (!val_vol_sum_fun[index][q].isSet()) {
+                    // ORSA_DEBUG("computing val_vol_sum_fun[%02i][%02i]",index,q);
                     double sum_vol_fun = 0.0;
                     indexVector.resize(q);
                     for (size_t fi=0; fi<fv.size(); ++fi) {
@@ -95,14 +97,20 @@ public:
                         }
                         double sum_vol_fi = 0.0;
                         while (1) {
-                            orsa::Vector vertex_I(0,0,0);
+                            orsa::Vector vI(0,0,0);
                             for (size_t i=0; i<q; ++i) {
-                                vertex_I += aux[fi].simplexVertexVector[indexVector[i]];  
-                            }                            
+                                vI += aux[fi].simplexVertexVector[indexVector[i]];
+                                // ORSA_DEBUG("iV[%02i] = %i",i,indexVector[i]);
+                            }
                             sum_vol_fi +=
-                                orsa::int_pow(vertex_I.getX(),nx)*
-                                orsa::int_pow(vertex_I.getY(),ny)*
-                                orsa::int_pow(vertex_I.getZ(),nz);
+                                orsa::int_pow(vI.getX(),nx)*
+                                orsa::int_pow(vI.getY(),ny)*
+                                orsa::int_pow(vI.getZ(),nz);
+                            /* ORSA_DEBUG("vI = %+g %+g %+g sum term: %+16.6e",vI.getX(),vI.getY(),vI.getZ(),
+                               orsa::int_pow(vI.getX(),nx)*
+                               orsa::int_pow(vI.getY(),ny)*
+                               orsa::int_pow(vI.getZ(),nz));
+                            */
                             bool increased = false;
                             for (size_t i=0; i<q; ++i) {
                                 if (indexVector[i]<(N-1)) {
@@ -110,8 +118,8 @@ public:
                                     increased = true;
                                     for (size_t s=0; s<i; ++s) {
 #warning IMPORTANT: which rule is correct?
-                                        // indexVector[s] = indexVector[i]; // this one avoids repetitions, i.e. {1,0}, {0,1}
-                                        indexVector[s] = 0; // this one includes repetitions
+                                        indexVector[s] = indexVector[i]; // this one avoids repetitions, i.e. {1,0}, {0,1}
+                                        // indexVector[s] = 0; // this one includes repetitions
                                     }
                                     break;
                                 }
@@ -122,25 +130,33 @@ public:
                             }                                
                         }
                         sum_vol_fun += sum_vol_fi*aux[fi].volume;
-                        ORSA_DEBUG("degree: %02i  q: %02i sum_vol_fi: %+16.6e",degree,q,sum_vol_fi);
+                        /* ORSA_DEBUG("degree: %02i  q: %02i sum_vol_fi: %+16.6e  partial sum_vol_fun: %+16.6e",
+                           degree,q,sum_vol_fi,sum_vol_fun);
+                        */
                     }
                     val_vol_sum_fun[index][q] = sum_vol_fun;
                 }
             }
             double retVal = 0.0;
             for (size_t q=0; q<=degree; ++q) {
-                const double sum_vol_fun_factor = orsa::binomial(N+degree,q+N).get_d();
+                const double sum_vol_fun_factor = orsa::binomial(N+degree-1,q+N-1).get_d();
                 const int sign = orsa::power_sign(degree-q);
                 retVal += sign*sum_vol_fun_factor*val_vol_sum_fun[index][q];
-                ORSA_DEBUG("degree: %i  q: %i  factor = binomial(%i,%i): : %g  sign: %i  term: %g",
-                           degree,
-                           q,
-                           N+degree,
-                           N+q,
-                           sum_vol_fun_factor,sign,
-                           (*val_vol_sum_fun[index][q]));
+                // ORSA_DEBUG("using val_vol_sum_fun[%02i][%02i]",index,q);
+                // test
+                // retVal /= orsa::factorial(q).get_d();
+                
+                /* ORSA_DEBUG("degree: %i  q: %i  factor = binomial(%i,%i): : %g  sign: %i  term: %g",
+                   degree,
+                   q,
+                   N+degree-1,
+                   N+q-1,
+                   sum_vol_fun_factor,sign,
+                   (*val_vol_sum_fun[index][q]));
+                */
             }
-            val[index] = retVal / orsa::binomial(3+degree,degree).get_d() / orsa::factorial(degree).get_d();
+            val[index] = retVal / orsa::binomial(N-1+degree,degree).get_d() / orsa::factorial(degree).get_d();
+            // val[index] = retVal / orsa::binomial(N-1+degree,degree).get_d();
         }
         return val[index];
     }
