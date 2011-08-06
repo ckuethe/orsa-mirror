@@ -14,13 +14,13 @@ class SimplexIntegration : public osg::Referenced {
 public:
     SimplexIntegration(const orsa::TriShape * s) :
         osg::Referenced(),
-        N(4),
+        N(3),
         triShape(s) {
         const orsa::TriShape::VertexVector & vv = triShape->getVertexVector();
         const orsa::TriShape::FaceVector   & fv = triShape->getFaceVector();
         aux.resize(fv.size());
         for (size_t fi=0; fi<fv.size(); ++fi) {
-            aux[fi].simplexVertexVector.resize(N);
+            aux[fi].simplexVertexVector.resize(N+1);
             aux[fi].simplexVertexVector[0] = orsa::Vector(0,0,0);
             aux[fi].simplexVertexVector[1] = vv[fv[fi].i()];
             aux[fi].simplexVertexVector[2] = vv[fv[fi].j()];
@@ -35,7 +35,7 @@ public:
                 fabs((aux[fi].simplexVertexVector[1]-aux[fi].simplexVertexVector[0]) *
                      orsa::externalProduct(aux[fi].simplexVertexVector[2]-aux[fi].simplexVertexVector[0],
                                            aux[fi].simplexVertexVector[3]-aux[fi].simplexVertexVector[0]) / 6.0);
-            ORSA_DEBUG("fi: %02i  volume: %g",fi,(*aux[fi].volume));
+            // ORSA_DEBUG("fi: %02i  volume: %g",fi,(*aux[fi].volume));
         }
     }
 protected:
@@ -44,14 +44,10 @@ protected:
 public:
     void reserve(const size_t maxDegree) {
         const size_t maxIndex = std::max(getIndex(maxDegree,0,0),
-                                std::max(getIndex(0,maxDegree,0),
-                                         getIndex(0,0,maxDegree)));
+                                         std::max(getIndex(0,maxDegree,0),
+                                                  getIndex(0,0,maxDegree)));
         val.reserve(maxIndex+1);
         val_vol_sum_fun.reserve(maxIndex+1); 
-        for (size_t j=0; j<=maxIndex; ++j) {
-            val_vol_sum_fun[j].reserve(j+1);
-#warning correct j+1? other sizes correct?
-        }
     }
 protected:
     class SimplexInternals {
@@ -60,7 +56,7 @@ protected:
         orsa::Cache<double> volume;
     };
 protected:
-    const size_t N; // N = 4 = dimension of space + 1 = number of vertexes in n-dim simplex
+    const size_t N; // N = 3 = dimension of space = number of vertexes in n-dim simplex + 1
     osg::ref_ptr<const orsa::TriShape> triShape;
     mutable std::vector< orsa::Cache<double> > val; // integral value
     mutable std::vector< SimplexInternals > aux;
@@ -75,18 +71,13 @@ public:
         }
         if (val_vol_sum_fun.size() <= index) {
             val_vol_sum_fun.resize(index+1);
-            for (size_t j=0; j<=index; ++j) {
-                if (val_vol_sum_fun[j].size() <= degree) {
-                    val_vol_sum_fun[j].resize(degree+1);
-#warning size of degree is too big here, should use exact size...
-                }
-            }
+            val_vol_sum_fun[index].resize(degree+1);
         }
+        const size_t q_min = (degree==0) ? 0 : 1;
         if (!val[index].isSet()) {
             const orsa::TriShape::FaceVector & fv = triShape->getFaceVector();
             std::vector<size_t> indexVector;
-#warning can skip q=0 if degree>0 ...
-            for (size_t q=0; q<=degree; ++q) {
+            for (size_t q=q_min; q<=degree; ++q) {
                 if (!val_vol_sum_fun[index][q].isSet()) {
                     // ORSA_DEBUG("computing val_vol_sum_fun[%02i][%02i]",index,q);
                     double sum_vol_fun = 0.0;
@@ -113,7 +104,7 @@ public:
                             */
                             bool increased = false;
                             for (size_t i=0; i<q; ++i) {
-                                if (indexVector[i]<(N-1)) {
+                                if (indexVector[i]<N) {
                                     ++indexVector[i];
                                     increased = true;
                                     for (size_t s=0; s<i; ++s) {
@@ -138,8 +129,8 @@ public:
                 }
             }
             double retVal = 0.0;
-            for (size_t q=0; q<=degree; ++q) {
-                const double sum_vol_fun_factor = orsa::binomial(N+degree-1,q+N-1).get_d();
+            for (size_t q=q_min; q<=degree; ++q) {
+                const double sum_vol_fun_factor = orsa::binomial(N+degree,N+q).get_d();
                 const int sign = orsa::power_sign(degree-q);
                 retVal += sign*sum_vol_fun_factor*val_vol_sum_fun[index][q];
                 // ORSA_DEBUG("using val_vol_sum_fun[%02i][%02i]",index,q);
@@ -149,14 +140,13 @@ public:
                 /* ORSA_DEBUG("degree: %i  q: %i  factor = binomial(%i,%i): : %g  sign: %i  term: %g",
                    degree,
                    q,
-                   N+degree-1,
-                   N+q-1,
+                   N+degree,
+                   N+q,
                    sum_vol_fun_factor,sign,
                    (*val_vol_sum_fun[index][q]));
                 */
             }
-            val[index] = retVal / orsa::binomial(N-1+degree,degree).get_d() / orsa::factorial(degree).get_d();
-            // val[index] = retVal / orsa::binomial(N-1+degree,degree).get_d();
+            val[index] = retVal / orsa::binomial(N+degree,degree).get_d() / orsa::factorial(degree).get_d();
         }
         return val[index];
     }
