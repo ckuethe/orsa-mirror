@@ -180,29 +180,52 @@ int orsa::kronecker(const mpz_class & i,
     }
 }
 
-double orsa::pochhammer(const double & a, const mpz_class & n) {
+mpf_class orsa::pochhammer(const mpf_class & x,
+                           const mpz_class & n) {
     if (n == 0) {
         return 1;
-    }
-    if (n == 1) {
-        return a;
-    }
-    double _result = 1;
-    mpz_class _k = 0;
-    if (n > 0) {
-        do { 
-            // ORSA_DEBUG("PH+: k: %Zi n: %Zi",_k.get_mpz_t(),n.get_mpz_t());
-            _result *= (a+_k.get_d());
+    } else if (n == 1) {
+        return x;
+    } else if (n > 0) {
+        mpf_class _result("1");
+        mpz_class _k("0");
+        while (_k<n) {
+            _result *= (x+_k);
             ++_k;
-        } while (_k != n);
+        }
+        return _result;
     } else {
-        do { 
-            // ORSA_DEBUG("PH-: k: %Zi n: %Zi",_k.get_mpz_t(),n.get_mpz_t());
-            _result *= (a+_k.get_d());
+        mpf_class _result("1");
+        mpz_class _k("-1");
+        while (_k>=n) {
+            // ORSA_DEBUG("k: %Zi n: %Zi",_k.get_mpz_t(),n.get_mpz_t());
+            _result /= (x+_k);
             --_k;
-        } while (_k != n);
+        }      
+        return _result;
     }
-    return _result;
+}
+
+mpz_class orsa::pochhammer(const mpz_class & a,
+                           const mpz_class & n,
+                           const bool & cache) {
+    if (n < 0) {
+        ORSA_DEBUG("must use the mpf version of pochhammer for negative n");
+        return 0;
+    } else if (n == 0) {
+        return 1;
+    } else if (n == 1) {
+        return a;
+    } else {
+        mpz_class _result("1");
+        mpz_class _k("0");
+        while (_k < n) { 
+            // ORSA_DEBUG("k: %Zi n: %Zi",_k.get_mpz_t(),n.get_mpz_t());
+            _result *= (a+_k);
+            ++_k;
+        }
+        return _result;
+    }
 }
 
 void orsa::check(const double & x) {

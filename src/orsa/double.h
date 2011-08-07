@@ -30,10 +30,8 @@ namespace orsa {
     
     template <class T> T int_pow(const T & x, const int & p);
     
-    // inline double square(const double & x) { return (x*x); }
     template <class T> T square(const T & x) { return (x*x); }
     
-    // inline double cube(const double & x) { return (x*x*x); }
     template <class T> T cube(const T & x) { return (x*x*x); }
     
     const double & epsilon();
@@ -61,8 +59,12 @@ namespace orsa {
     int kronecker(const mpz_class & i,
                   const mpz_class & j);
     
-    double pochhammer(const double    & a, 
-                      const mpz_class & n);
+    mpf_class pochhammer(const mpf_class & x, 
+                         const mpz_class & n);
+    
+    mpz_class pochhammer(const mpz_class & a, 
+                         const mpz_class & n,
+                         const bool & cache=true);
     
     // call orsa::crash() if x is not finite (+-Inf or NaN), useful for debugging
     void check(const double & x);
