@@ -63,8 +63,7 @@ namespace orsa {
                          const mpz_class & n);
     
     mpz_class pochhammer(const mpz_class & a, 
-                         const mpz_class & n,
-                         const bool & cache=true);
+                         const mpz_class & n);
     
     // call orsa::crash() if x is not finite (+-Inf or NaN), useful for debugging
     void check(const double & x);

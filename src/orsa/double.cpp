@@ -207,8 +207,7 @@ mpf_class orsa::pochhammer(const mpf_class & x,
 }
 
 mpz_class orsa::pochhammer(const mpz_class & a,
-                           const mpz_class & n,
-                           const bool & cache) {
+                           const mpz_class & n) {
     if (n < 0) {
         ORSA_DEBUG("must use the mpf version of pochhammer for negative n");
         return 0;
