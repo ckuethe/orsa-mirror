@@ -56,7 +56,7 @@ protected:
     class SimplexInternals {
     public:
         std::vector<orsa::Vector> simplexVertexVector;
-        orsa::Cache<double> volume;
+        orsa::Cache<mpf_class> volume;
     };
 protected:
     const size_t N; // N = 3 = dimension of space = number of vertexes in n-dim simplex + 1
@@ -66,7 +66,7 @@ protected:
     mutable std::vector< orsa::Cache<double> > val; // integral value
     mutable std::vector< SimplexInternals > aux;
     // val_vol_sum_fun is the sum over all simplexes of the funciton of given q times the volume of each simplex
-    mutable std::vector< std::vector< orsa::Cache<double> > > val_vol_sum_fun;
+    mutable std::vector< std::vector< orsa::Cache<mpf_class> > > val_vol_sum_fun;
 public:
     double getIntegral(const size_t & nx, const size_t & ny, const size_t & nz) const {
         const size_t degree = nx+ny+nz;
@@ -85,23 +85,35 @@ public:
             for (size_t q=q_min; q<=degree; ++q) {
                 if (!val_vol_sum_fun[index][q].isSet()) {
                     // ORSA_DEBUG("computing val_vol_sum_fun[%02i][%02i]",index,q);
-                    double sum_vol_fun = 0.0;
+                    mpf_class sum_vol_fun("0.0");
                     indexVector.resize(q);
                     for (size_t fi=0; fi<fv.size(); ++fi) {
                         for (size_t i=0; i<q; ++i) {
                             indexVector[i] = 0;
                         }
-                        double sum_vol_fi = 0.0;
+                        mpf_class sum_vol_fi("0.0");
                         while (1) {
-                            orsa::Vector vI(0,0,0);
+                            // orsa::Vector vI(0,0,0);
+                            mpf_class vIx = mpf_class("0.0");
+                            mpf_class vIy = mpf_class("0.0");
+                            mpf_class vIz = mpf_class("0.0");
                             for (size_t i=0; i<q; ++i) {
-                                vI += aux[fi].simplexVertexVector[indexVector[i]];
+                                // vI += aux[fi].simplexVertexVector[indexVector[i]];
                                 // ORSA_DEBUG("iV[%02i] = %i",i,indexVector[i]);
+                                vIx += aux[fi].simplexVertexVector[indexVector[i]].getX();
+                                vIy += aux[fi].simplexVertexVector[indexVector[i]].getY();
+                                vIz += aux[fi].simplexVertexVector[indexVector[i]].getZ();
                             }
-                            sum_vol_fi +=
-                                orsa::int_pow(vI.getX(),nx)*
-                                orsa::int_pow(vI.getY(),ny)*
-                                orsa::int_pow(vI.getZ(),nz);
+                            /* sum_vol_fi +=
+                               orsa::int_pow(vI.getX(),nx)*
+                               orsa::int_pow(vI.getY(),ny)*
+                               orsa::int_pow(vI.getZ(),nz);
+                            */
+                            mpf_class vI_pow("1.0");
+                            for (size_t p=0; p<nx; ++p) { vI_pow *= vIx; }
+                            for (size_t p=0; p<ny; ++p) { vI_pow *= vIy; }
+                            for (size_t p=0; p<nz; ++p) { vI_pow *= vIz; }
+                            sum_vol_fi += vI_pow;
                             /* ORSA_DEBUG("vI = %+g %+g %+g sum term: %+16.6e",vI.getX(),vI.getY(),vI.getZ(),
                                orsa::int_pow(vI.getX(),nx)*
                                orsa::int_pow(vI.getY(),ny)*
@@ -125,7 +137,7 @@ public:
                                 break;
                             }                                
                         }
-                        sum_vol_fun += sum_vol_fi*aux[fi].volume;
+                        sum_vol_fun += sum_vol_fi*(*aux[fi].volume);
                         /* ORSA_DEBUG("degree: %02i  q: %02i sum_vol_fi: %+16.6e  partial sum_vol_fun: %+16.6e",
                            degree,q,sum_vol_fi,sum_vol_fun);
                         */
@@ -133,15 +145,15 @@ public:
                     val_vol_sum_fun[index][q] = sum_vol_fun;
                 }
             }
-            double retVal = 0.0;
+            mpf_class retVal("0.0");
             for (size_t q=q_min; q<=degree; ++q) {
-                const double sum_vol_fun_factor = orsa::binomial(N+degree,N+q).get_d();
-                const int sign = orsa::power_sign(degree-q);
-                retVal += sign*sum_vol_fun_factor*val_vol_sum_fun[index][q];
-                // ORSA_DEBUG("using val_vol_sum_fun[%02i][%02i]",index,q);
-                // test
-                // retVal /= orsa::factorial(q).get_d();
-                
+                // const double sum_vol_fun_factor = orsa::binomial(N+degree,N+q).get_d();
+                // const int sign = orsa::power_sign(degree-q);
+                // retVal += sign*sum_vol_fun_factor*(*val_vol_sum_fun[index][q]);
+                retVal +=
+                    orsa::power_sign(degree-q) *
+                    orsa::binomial(N+degree,N+q) *
+                    (*val_vol_sum_fun[index][q]);
                 /* ORSA_DEBUG("degree: %i  q: %i  factor = binomial(%i,%i): : %g  sign: %i  term: %g",
                    degree,
                    q,
@@ -151,7 +163,8 @@ public:
                    (*val_vol_sum_fun[index][q]));
                 */
             }
-            val[index] = retVal / orsa::binomial(N+degree,degree).get_d() / orsa::factorial(degree).get_d();
+            // val[index] = mpf_class(retVal / orsa::binomial(N+degree,degree) / orsa::factorial(degree)).get_d();
+            val[index] = mpf_class(retVal / (orsa::binomial(N+degree,degree)*orsa::factorial(degree))).get_d();
         }
         return val[index];
     }
