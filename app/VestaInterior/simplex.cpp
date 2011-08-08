@@ -2,16 +2,29 @@
 
 #include "vesta.h"
 
-SimplexIntegration::IndexTableType  SimplexIntegration::indexTable;
-SimplexIntegration::Index4TableType SimplexIntegration::index4Table;
+#include <qd/dd_real.h>
+#include <qd/qd_real.h>
 
+// Choose one
+// typedef double T;
+typedef mpf_class T;
+// typedef dd_real T;
+// typedef qd_real T;
+
+#warning how to write this using the typedef inside the class?
+template <typename T> std::vector< std::vector< std::vector<size_t> > > SimplexIntegration<T>::indexTable;
+template <typename T> std::vector< std::vector< std::vector< std::vector<size_t> > > > SimplexIntegration<T>::index4Table;
 
 int main() {
+
+    // QD
+    unsigned int oldcw;
+    fpu_fix_start(&oldcw);
     
     orsa::Debug::instance()->initTimer();
     
     ORSA_DEBUG("current mpf precision: %i",mpf_get_default_prec());
-    mpf_set_default_prec(128);
+    // mpf_set_default_prec(128);
     // mpf_set_default_prec(256);
     // mpf_set_default_prec(512);
     ORSA_DEBUG("updated mpf precision: %i",mpf_get_default_prec());
@@ -31,10 +44,10 @@ int main() {
     }
     const double R0 = orsa::FromUnits(1.0,orsa::Unit::KM);
     
-    osg::ref_ptr<SimplexIntegration> si = new SimplexIntegration(vestaShape.get(), R0);
+    osg::ref_ptr<SimplexIntegration<T> > si = new SimplexIntegration<T>(vestaShape.get(), R0);
     // osg::ref_ptr<SimplexIntegration> si_unit_R0 = new SimplexIntegration(vestaShape.get(),1.0);
     
-    const size_t maxDegree = 200;
+    const size_t maxDegree = 10;
     si->reserve(maxDegree);
     // si_unit_R0->reserve(maxDegree);
     for (size_t degree=0; degree<=maxDegree; ++degree) {
@@ -51,6 +64,9 @@ int main() {
             }
         }
     }
+
+    // QD
+    fpu_fix_end(&oldcw);
     
     return 0;
 }

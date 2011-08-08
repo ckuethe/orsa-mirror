@@ -7,6 +7,9 @@
 #include <orsa/double.h>
 #include <orsa/shape.h>
 
+#include <qd/dd_real.h>
+#include <qd/qd_real.h>
+
 #warning if shape is strongly concave and a simplex covers volume outside the body shape, then the results are incorrect (including volume computations...)
 
 #warning default origin for 4th simplex vertex, should be a parameter of the class??                
@@ -72,17 +75,65 @@ protected:
     // mutable std::vector< orsa::Cache<mpz_class> > pochhammer_Np1; // pochhammer_Np1[deg] = pochhammer(N+1,deg)
 protected:
     // utility functions to allow the use of templates
-    template <class U> T to_T(const U & x) const;
-    double to_T(const double & x) const { return x; }
-    double to_T(const mpf_class & x) const { return x.get_d(); }
-    double to_T(const mpz_class & n) const { return n.get_d(); }
+    /* template <class QD> QD mpzToQD(const mpz_class & z) const {
+       char * str = (char *)malloc(mpz_sizeinbase(z.get_mpz_t(),10)+2);
+       mpz_get_str(str,10,z.get_mpz_t());
+       // ORSA_DEBUG("z: [%Zi]  STR: [%s]",z.get_mpz_t(),str);
+       QD x(str);
+       free(str);
+       return x;
+       }
+       dd_real mpzToQD(const mpz_class & z) const;
+       qd_real mpzToQD(const mpz_class & z) const;
+    */
+    dd_real mpzToDD(const mpz_class & z) const {
+        char * str = (char *)malloc(mpz_sizeinbase(z.get_mpz_t(),10)+2);
+        mpz_get_str(str,10,z.get_mpz_t());
+        // ORSA_DEBUG("z: [%Zi]  STR: [%s]",z.get_mpz_t(),str);
+        dd_real x(str);
+        free(str);
+        return x;
+    }
+    qd_real mpzToQD(const mpz_class & z) const {
+        char * str = (char *)malloc(mpz_sizeinbase(z.get_mpz_t(),10)+2);
+        mpz_get_str(str,10,z.get_mpz_t());
+        // ORSA_DEBUG("z: [%Zi]  STR: [%s]",z.get_mpz_t(),str);
+        qd_real x(str);
+        free(str);
+        return x;
+    }
     //
-    double to_double(const double & x) const { return x; }
-    double to_double(const mpf_class & x) const { return x.get_d(); }
+    /* template <class U> T to_T(const U & x) const;
+       double to_T(const double & x) const { return x; }
+       double to_T(const mpf_class & x) const { return x.get_d(); }
+       double to_T(const mpz_class & n) const { return n.get_d(); }
+    */
+    //
+    /* double to_double(const double & x) const { return x; }
+       double to_double(const mpf_class & x) const { return x.get_d(); }
+    */
     //
     template <class U> T aux_01(const int & sign, const mpz_class & binomial, const U & val) const;
     double aux_01(const int & sign, const mpz_class & binomial, const double & val) const { return sign*binomial.get_d()*val; }   
     mpf_class aux_01(const int & sign, const mpz_class & binomial, const mpf_class & val) const { return sign*binomial*val; }   
+    dd_real aux_01(const int & sign, const mpz_class & binomial, const dd_real & val) const { return sign*mpzToDD(binomial)*val; }  
+    qd_real aux_01(const int & sign, const mpz_class & binomial, const qd_real & val) const { return sign*mpzToQD(binomial)*val; }   
+    //
+    template <class U> T aux_02(const U & x, const mpz_class & pochhammer) const;
+    double aux_02 (const double & x, const mpz_class & pochhammer) const {
+        return x/pochhammer.get_d();
+    }
+    double aux_02 (const mpf_class & x, const mpz_class & pochhammer) const {
+        return mpf_class(x/pochhammer).get_d();
+    }
+    double aux_02 (const dd_real & x, const mpz_class & pochhammer) const {
+        dd_real y = x / mpzToDD(pochhammer);
+        return ::to_double(y);
+    }
+    double aux_02 (const qd_real & x, const mpz_class & pochhammer) const {
+        qd_real y = x / mpzToQD(pochhammer);
+        return ::to_double(y);
+    }
     
 public:
     double getIntegral(const size_t & nx, const size_t & ny, const size_t & nz) const {
@@ -193,7 +244,8 @@ public:
             //
             // or even more simply (slightly slower...)
             // val[index] = to_double((T)(retVal) / (T)(mpf_class(orsa::pochhammer(mpz_class(N+1),degree)).get_d()));
-            val[index] = to_double(retVal / mpf_class(orsa::pochhammer(mpz_class(N+1),degree)));
+            // val[index] = to_double(retVal / mpf_class(orsa::pochhammer(mpz_class(N+1),degree)));
+            val[index] = aux_02(retVal,orsa::pochhammer(mpz_class(N+1),degree));
         }
         return val[index];
     }
