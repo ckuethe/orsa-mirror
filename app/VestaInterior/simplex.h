@@ -4,6 +4,7 @@
 #include <osg/Referenced>
 #include <osg/ref_ptr>
 
+#include <orsa/double.h>
 #include <orsa/shape.h>
 
 #warning if shape is strongly concave and a simplex covers volume outside the body shape, then the results are incorrect (including volume computations...)
@@ -51,6 +52,7 @@ public:
                                                   getIndex(0,0,maxDegree)));
         val.reserve(maxIndex+1);
         // val_vol_sum_fun.reserve(maxIndex+1); 
+        // pochhammer_Np1.reserve(maxDegree+1);
     }
 protected:
     class SimplexInternals {
@@ -67,6 +69,7 @@ protected:
     mutable std::vector< SimplexInternals > aux;
     // val_vol_sum_fun is the sum over all simplexes of the funciton of given q times the volume of each simplex
     // mutable std::vector< std::vector< orsa::Cache<mpf_class> > > val_vol_sum_fun;
+    // mutable std::vector< orsa::Cache<mpz_class> > pochhammer_Np1; // pochhammer_Np1[deg] = pochhammer(N+1,deg)
 public:
     double getIntegral(const size_t & nx, const size_t & ny, const size_t & nz) const {
         const size_t degree = nx+ny+nz;
@@ -142,9 +145,6 @@ public:
             }
             mpf_class retVal("0.0");
             for (size_t q=q_min; q<=degree; ++q) {
-                // const double sum_vol_fun_factor = orsa::binomial(N+degree,N+q).get_d();
-                // const int sign = orsa::power_sign(degree-q);
-                // retVal += sign*sum_vol_fun_factor*(*val_vol_sum_fun[q]);
                 retVal +=
                     orsa::power_sign(degree-q) *
                     orsa::binomial(N+degree,N+q) *
@@ -158,8 +158,21 @@ public:
                    val_vol_sum_fun[q]);
                 */
             }
-            // val[index] = mpf_class(retVal / orsa::binomial(N+degree,degree) / orsa::factorial(degree)).get_d();
-            val[index] = mpf_class(retVal / (orsa::binomial(N+degree,degree)*orsa::factorial(degree))).get_d();
+            // val[index] = mpf_class(retVal / (orsa::binomial(N+degree,degree)*orsa::factorial(degree))).get_d();
+            //
+            // the above binomial x factorial can be expressed more compactly with pochhammer(N+1,degree) = pochhammer_Np1[degree]
+            /* if (pochhammer_Np1.size() < (degree+1)) {
+               pochhammer_Np1.resize(degree+1);
+               }
+               if (!pochhammer_Np1[degree].isSet()) {
+               pochhammer_Np1[degree] = orsa::pochhammer(mpz_class(N+1),degree);
+               }
+               val[index] = mpf_class(retVal / (*pochhammer_Np1[degree])).get_d();
+            */
+            //
+            // or even more simply (slightly slower...)
+            val[index] = mpf_class(retVal / orsa::pochhammer(mpz_class(N+1),degree)).get_d();
+
         }
         return val[index];
     }
