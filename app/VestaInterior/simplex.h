@@ -11,7 +11,7 @@
 
 #warning default origin for 4th simplex vertex, should be a parameter of the class??                
 
-class SimplexIntegration : public osg::Referenced {
+template <typename T> class SimplexIntegration : public osg::Referenced {
 public:
     SimplexIntegration(const orsa::TriShape * s,
                        const double & R0_) :
@@ -58,7 +58,7 @@ protected:
     class SimplexInternals {
     public:
         std::vector<orsa::Vector> simplexVertexVector;
-        orsa::Cache<mpf_class> volume;
+        orsa::Cache<T> volume;
     };
 protected:
     const size_t N; // N = 3 = dimension of space = number of vertexes in n-dim simplex + 1
@@ -68,8 +68,22 @@ protected:
     mutable std::vector< orsa::Cache<double> > val; // integral value
     mutable std::vector< SimplexInternals > aux;
     // val_vol_sum_fun is the sum over all simplexes of the funciton of given q times the volume of each simplex
-    // mutable std::vector< std::vector< orsa::Cache<mpf_class> > > val_vol_sum_fun;
+    // mutable std::vector< std::vector< orsa::Cache<T> > > val_vol_sum_fun;
     // mutable std::vector< orsa::Cache<mpz_class> > pochhammer_Np1; // pochhammer_Np1[deg] = pochhammer(N+1,deg)
+protected:
+    // utility functions to allow the use of templates
+    template <class U> T to_T(const U & x) const;
+    double to_T(const double & x) const { return x; }
+    double to_T(const mpf_class & x) const { return x.get_d(); }
+    double to_T(const mpz_class & n) const { return n.get_d(); }
+    //
+    double to_double(const double & x) const { return x; }
+    double to_double(const mpf_class & x) const { return x.get_d(); }
+    //
+    template <class U> T aux_01(const int & sign, const mpz_class & binomial, const U & val) const;
+    double aux_01(const int & sign, const mpz_class & binomial, const double & val) const { return sign*binomial.get_d()*val; }   
+    mpf_class aux_01(const int & sign, const mpz_class & binomial, const mpf_class & val) const { return sign*binomial*val; }   
+    
 public:
     double getIntegral(const size_t & nx, const size_t & ny, const size_t & nz) const {
         const size_t degree = nx+ny+nz;
@@ -78,24 +92,24 @@ public:
             val.resize(index+1);
         }
         if (!val[index].isSet()) {
-            std::vector<mpf_class> val_vol_sum_fun;
+            std::vector<T> val_vol_sum_fun;
             val_vol_sum_fun.resize(degree+1);
             const size_t q_min = (degree==0) ? 0 : 1;
             const orsa::TriShape::FaceVector & fv = triShape->getFaceVector();
             std::vector<size_t> indexVector;
             for (size_t q=q_min; q<=degree; ++q) {
-                mpf_class sum_vol_fun("0.0");
+                T sum_vol_fun = 0;
                 indexVector.resize(q);
                 for (size_t fi=0; fi<fv.size(); ++fi) {
                     for (size_t i=0; i<q; ++i) {
                         indexVector[i] = 0;
                     }
-                    mpf_class sum_vol_fi("0.0");
+                    T sum_vol_fi = 0;
                     while (1) {
                         // orsa::Vector vI(0,0,0);
-                        mpf_class vIx = mpf_class("0.0");
-                        mpf_class vIy = mpf_class("0.0");
-                        mpf_class vIz = mpf_class("0.0");
+                        T vIx = 0;
+                        T vIy = 0;
+                        T vIz = 0;
                         for (size_t i=0; i<q; ++i) {
                             // vI += aux[fi].simplexVertexVector[indexVector[i]];
                             // ORSA_DEBUG("iV[%02i] = %i",i,indexVector[i]);
@@ -108,7 +122,7 @@ public:
                            orsa::int_pow(vI.getY(),ny)*
                            orsa::int_pow(vI.getZ(),nz);
                         */
-                        mpf_class vI_pow("1.0");
+                        T vI_pow = 1;
                         for (size_t p=0; p<nx; ++p) { vI_pow *= vIx; }
                         for (size_t p=0; p<ny; ++p) { vI_pow *= vIy; }
                         for (size_t p=0; p<nz; ++p) { vI_pow *= vIz; }
@@ -143,12 +157,19 @@ public:
                 }
                 val_vol_sum_fun[q] = sum_vol_fun;
             }
-            mpf_class retVal("0.0");
+            T retVal = 0;
             for (size_t q=q_min; q<=degree; ++q) {
-                retVal +=
-                    orsa::power_sign(degree-q) *
-                    orsa::binomial(N+degree,N+q) *
-                    val_vol_sum_fun[q];
+                /* retVal += to_T(mpf_class(orsa::power_sign(degree-q) *
+                   orsa::binomial(N+degree,N+q) *
+                   val_vol_sum_fun[q]));
+                */
+                /* retVal += to_T(orsa::power_sign(degree-q) *
+                   orsa::binomial(N+degree,N+q) *
+                   val_vol_sum_fun[q]);
+                */
+                retVal += aux_01(orsa::power_sign(degree-q),
+                                 orsa::binomial(N+degree,N+q),
+                                 val_vol_sum_fun[q]);
                 /* ORSA_DEBUG("degree: %i  q: %i  factor = binomial(%i,%i): : %g  sign: %i  term: %g",
                    degree,
                    q,
@@ -158,7 +179,7 @@ public:
                    val_vol_sum_fun[q]);
                 */
             }
-            // val[index] = mpf_class(retVal / (orsa::binomial(N+degree,degree)*orsa::factorial(degree))).get_d();
+            // val[index] = T(retVal / (orsa::binomial(N+degree,degree)*orsa::factorial(degree))).get_d();
             //
             // the above binomial x factorial can be expressed more compactly with pochhammer(N+1,degree) = pochhammer_Np1[degree]
             /* if (pochhammer_Np1.size() < (degree+1)) {
@@ -167,12 +188,12 @@ public:
                if (!pochhammer_Np1[degree].isSet()) {
                pochhammer_Np1[degree] = orsa::pochhammer(mpz_class(N+1),degree);
                }
-               val[index] = mpf_class(retVal / (*pochhammer_Np1[degree])).get_d();
+               val[index] = T(retVal / (*pochhammer_Np1[degree])).get_d();
             */
             //
             // or even more simply (slightly slower...)
-            val[index] = mpf_class(retVal / orsa::pochhammer(mpz_class(N+1),degree)).get_d();
-
+            // val[index] = to_double((T)(retVal) / (T)(mpf_class(orsa::pochhammer(mpz_class(N+1),degree)).get_d()));
+            val[index] = to_double(retVal / mpf_class(orsa::pochhammer(mpz_class(N+1),degree)));
         }
         return val[index];
     }
