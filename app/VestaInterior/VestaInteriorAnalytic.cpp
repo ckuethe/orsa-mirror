@@ -145,7 +145,7 @@ int main() {
                         orsa::binomial(l,p).get_d() *
                         orsa::binomial(2*l-2*p,l).get_d() *
                         orsa::binomial(m,2*q).get_d() *
-                        orsa::pochhammer(l-m-2*p+1,m);
+                        orsa::pochhammer(mpz_class(l-m-2*p+1),m).get_d();
                     // const double pq_factor_base = 1.0;
                     
                     /* pq_factor += 
@@ -270,7 +270,7 @@ int main() {
                         orsa::binomial(l,p).get_d() *
                         orsa::binomial(2*l-2*p,l).get_d() *
                         orsa::binomial(m,2*q+1).get_d() *
-                        orsa::pochhammer(l-m-2*p+1,m);
+                        orsa::pochhammer(mpz_class(l-m-2*p+1),m).get_d();
 	  
                     /* pq_factor += 
                        pq_factor_base *
