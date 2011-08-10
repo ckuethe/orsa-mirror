@@ -93,9 +93,8 @@ MainThread::MainThread() :
 
   SPICE::instance()->setDefaultObserver("SSB");
   //
-  SPICE::instance()->loadKernel("de405.bsp");
-  // SPICE::instance()->loadKernel("vesta_1900_2100.bsp");
-  SPICE::instance()->loadKernel("vesta-2003-2013.bsp");
+  SPICE::instance()->loadKernel("de421.bsp");
+  SPICE::instance()->loadKernel("sb_vesta_110211.bsp");
 }
 
 void MainThread::run() {
@@ -107,14 +106,6 @@ void MainThread::run() {
   // DON'T change this
   const bool accurateSPICE = true;
   // const bool accurateSPICE = false;
-  
-  /* 
-     SPICE::instance()->setDefaultObserver("SSB");
-     //
-     SPICE::instance()->loadKernel("de405.bsp");
-     // SPICE::instance()->loadKernel("vesta_1900_2100.bsp");
-     SPICE::instance()->loadKernel("vesta-2003-2013.bsp");
-  */
   
   // osg::ref_ptr<BodyGroup> bg = new BodyGroup;
   bg = new BodyGroup;
@@ -341,8 +332,9 @@ void MainThread::run() {
                                   FromUnits(227,Unit::KM));
       } else if (vestaShapeModel == ComboShapeModel::smt_thomas) {
 	osg::ref_ptr<VestaShape> vestaShapeThomas = new VestaShape;
-	if (!vestaShapeThomas->read("vesta_thomas.dat")) {
-	  ORSA_ERROR("problems encountered while reading shape file...");
+    if (!vestaShapeThomas->read("vesta_thomas.dat")) {
+        // if (!vestaShapeThomas->read("cube.dat")) {
+        ORSA_ERROR("problems encountered while reading shape file...");
 	}
 	shape = vestaShapeThomas.get();
       } else {
@@ -1190,12 +1182,6 @@ void MainThread::run() {
     }
   }
   
-  // cannot unload kernels if I'm using OpenGL visualization
-  /*
-     SPICE::instance()->unloadKernel("de405.bsp");
-     // SPICE::instance()->unloadKernel("vesta_1900_2100.bsp");
-     SPICE::instance()->unloadKernel("vesta-2003-2013.bsp");
-  */
 }
 
 void MainThread::abort() {

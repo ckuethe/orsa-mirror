@@ -18,7 +18,7 @@ OBJECTS_DIR = .obj/$${PLATFORM_NAME}
 DESTDIR     = .
 
 unix:!macx {
-        LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaSPICE -lorsaSolarSystem -lorsaEssentialOSG -lOpenThreads 
+        LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaSPICE -lorsaSolarSystem -lorsaEssentialOSG
 }
 
 macx {
