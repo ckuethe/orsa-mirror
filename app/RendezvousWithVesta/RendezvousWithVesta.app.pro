@@ -18,11 +18,11 @@ OBJECTS_DIR = .obj/$${PLATFORM_NAME}
 DESTDIR     = ../../bin/$${PLATFORM_NAME}
 
 unix:!macx {
-	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaOSG -lorsaQt -lorsaSolarSystem -lorsaSPICE -losgViewer -losgDB -losgdb_freetype -losgText -losgUtil -losgGA -losg -lOpenThreads -lgmp -lgmpxx
+	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaOSG -lorsaQt -lorsaSolarSystem -lorsaSPICE -losgViewer -losgDB -losgdb_freetype -losgText -losgUtil -losgGA -losg -lOpenThreads -lgmp -lgmpxx -losgText -losgdb_freetype -losgUtil -losg
 }
 
 macx {
-        LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaOSG -lorsaQt -lorsaSolarSystem -lorsaSPICE -losgViewer -losgdb_freetype /opt/local/lib/libfreetype.a -losgText -losgUtil -losgGA -losg -lOpenThreads -losgDB 
+        LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaOSG -lorsaQt -lorsaSolarSystem -lorsaSPICE -losgViewer -losgdb_freetype /opt/local/lib/libfreetype.a -losgText -losgUtil -losgGA -losg -lOpenThreads -losgDB -losg
 }
 
 win32 {
