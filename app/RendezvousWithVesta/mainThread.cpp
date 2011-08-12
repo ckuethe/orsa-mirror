@@ -22,6 +22,7 @@
 
 #include "vesta.h"
 // #include "kleopatrashape.h"
+#include "gaskell.h"
 
 using namespace orsa;
 using namespace orsaSolarSystem;
@@ -331,12 +332,18 @@ void MainThread::run() {
                                   FromUnits(272,Unit::KM),
                                   FromUnits(227,Unit::KM));
       } else if (vestaShapeModel == ComboShapeModel::smt_thomas) {
-	osg::ref_ptr<VestaShape> vestaShapeThomas = new VestaShape;
-    if (!vestaShapeThomas->read("vesta_thomas.dat")) {
-        // if (!vestaShapeThomas->read("cube.dat")) {
-        ORSA_ERROR("problems encountered while reading shape file...");
-	}
-	shape = vestaShapeThomas.get();
+          osg::ref_ptr<VestaShape> vestaShapeThomas = new VestaShape;
+          if (!vestaShapeThomas->read("vesta_thomas.dat")) {
+              // if (!vestaShapeThomas->read("cube.dat")) {
+              ORSA_ERROR("problems encountered while reading shape file...");
+          }
+          shape = vestaShapeThomas.get();
+      } else if (vestaShapeModel == ComboShapeModel::smt_gaskell) {
+          osg::ref_ptr<GaskellPlateModel> gaskellPlateModel = new GaskellPlateModel;
+          if (!gaskellPlateModel->read("Gaskell.Vesta.plate.dat")) {
+              ORSA_ERROR("problems encountered while reading shape file...");
+          }
+          shape = gaskellPlateModel.get();
       } else {
 	ORSA_ERROR("problems");
       }
@@ -697,7 +704,7 @@ void MainThread::run() {
     //
     orbit.mu = orsa::Unit::G() * vestaMass;
     orbit.a  = orbitRadius;
-    orbit.e  = 0.15;
+    orbit.e  = 0.0;
     orbit.i  = orbitInclination;
     orbit.omega_node       = alpha;
     orbit.omega_pericenter = 270.0*orsa::degToRad();

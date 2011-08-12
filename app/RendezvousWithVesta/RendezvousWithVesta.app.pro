@@ -29,7 +29,7 @@ win32 {
         LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaOSG -lorsaQt -lorsaSolarSystem -lorsaSPICE -losg -losgViewer -losgGA
 }
 
-HEADERS += RendezvousWithVesta.h   RendezvousWithVestaVersion.h   mainThread.h   multiminPhase.h   vestaViz.h   plot.h vesta.h 
+HEADERS += RendezvousWithVesta.h   RendezvousWithVestaVersion.h   mainThread.h   multiminPhase.h   vestaViz.h   plot.h vesta.h gaskell.h
 SOURCES += RendezvousWithVesta.cpp RendezvousWithVestaVersion.cpp mainThread.cpp multiminPhase.cpp plot.cpp     main.cpp
 
 # Kleopatra stuff

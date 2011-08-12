@@ -37,11 +37,13 @@ class ComboShapeModel : public QComboBox {
     QComboBox(parent) {
     insertItem(smt_ellipsoid,tr("ellipsoid"));
     insertItem(smt_thomas,   tr("Thomas et al. (1997)"));
+    insertItem(smt_gaskell,  tr("Gaskell (2011)"));
   }
  public:
   enum ShapeModelType {
     smt_ellipsoid = 0,
-    smt_thomas    = 1
+    smt_thomas    = 1,
+    smt_gaskell   = 2
   };
 };
 
