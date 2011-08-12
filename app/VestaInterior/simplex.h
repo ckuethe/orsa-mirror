@@ -14,10 +14,14 @@
 
 #warning default origin for 4th simplex vertex, should be a parameter of the class??                
 
+// SQLite3
+#include "sqlite3.h"
+
 template <typename T> class SimplexIntegration : public osg::Referenced {
 public:
     SimplexIntegration(const orsa::TriShape * s,
-                       const double & R0_) :
+                       const double & R0_,
+                       const std::string & SQLiteDBFileName) :
         osg::Referenced(),
         N(3),
         triShape(s),
@@ -44,9 +48,66 @@ public:
                                            aux[fi].simplexVertexVector[3]-aux[fi].simplexVertexVector[0]) / 6.0);
             // ORSA_DEBUG("fi: %02i  volume: %g",fi,(*aux[fi].volume));
         }
+        
+        int rc = sqlite3_open(SQLiteDBFileName.c_str(),&db);
+        //
+        if (rc) {
+            fprintf(stderr,"Can't open db: %s\n",sqlite3_errmsg(db));
+            sqlite3_close(db);
+        }
+        
+        {
+            // get list of tables, to see if some results have been obtained already
+            // if no table is present, create it
+            char **result;
+            int nrows, ncols;
+            char * zErr;
+            std::string sql = "SELECT name FROM sqlite_master";
+            rc = sqlite3_get_table(db,sql.c_str(),&result,&nrows,&ncols,&zErr);
+            //
+            if (rc != SQLITE_OK) {
+                if (zErr != NULL) {
+                    fprintf(stderr,"SQL error: %s\n",zErr);
+                    sqlite3_free(zErr);
+                }
+            }
+            // ORSA_DEBUG("nrows: %i  ncols: %i",nrows, ncols);
+            //
+            /* for (int i=0; i<nrows; ++i) {
+               for (int j=0; j<ncols; ++j) {
+               // i=0 is the header
+               const int index = (i+1)*ncols+j;
+               ORSA_DEBUG("result[%i] = %s",index, result[index]);
+               }
+               }
+            */
+            //
+            bool createTable=true;
+            //
+            if (nrows==2) {
+                createTable=false;
+            }
+            //
+            sqlite3_free_table(result);
+            
+            if (createTable) {
+                // create results table
+                sql = "CREATE TABLE simplex(id INTEGER PRIMARY KEY, nx INTEGER, ny INTEGER, nz INTEGER, integral REAL)";
+                rc = sqlite3_exec(db,sql.c_str(),NULL,NULL,&zErr);
+                //
+                if (rc != SQLITE_OK) {
+                    if (zErr != NULL) {
+                        fprintf(stderr,"SQL error: %s\n",zErr);
+                        sqlite3_free(zErr);
+                    }
+                }
+            }
+        }
     }
 protected:
-    virtual ~SimplexIntegration() { }
+    virtual ~SimplexIntegration() {
+        sqlite3_close(db);
+    }
 
 public:
     void reserve(const size_t maxDegree) {
@@ -73,6 +134,9 @@ protected:
     // val_vol_sum_fun is the sum over all simplexes of the funciton of given q times the volume of each simplex
     // mutable std::vector< std::vector< orsa::Cache<T> > > val_vol_sum_fun;
     // mutable std::vector< orsa::Cache<mpz_class> > pochhammer_Np1; // pochhammer_Np1[deg] = pochhammer(N+1,deg)
+protected:
+    // needed to work with SQLite database
+    sqlite3 * db;
 protected:
     // utility functions to allow the use of templates
     /* template <class QD> QD mpzToQD(const mpz_class & z) const {
@@ -143,109 +207,174 @@ public:
             val.resize(index+1);
         }
         if (!val[index].isSet()) {
-            std::vector<T> val_vol_sum_fun;
-            val_vol_sum_fun.resize(degree+1);
-            const size_t q_min = (degree==0) ? 0 : 1;
-            const orsa::TriShape::FaceVector & fv = triShape->getFaceVector();
-            std::vector<size_t> indexVector;
-            for (size_t q=q_min; q<=degree; ++q) {
-                T sum_vol_fun = 0;
-                indexVector.resize(q);
-                for (size_t fi=0; fi<fv.size(); ++fi) {
-                    for (size_t i=0; i<q; ++i) {
-                        indexVector[i] = 0;
+
+            bool needToCompute=true;
+            {
+                // first check if it is in the SQLite db
+                char **result;
+                int nrows, ncols;
+                char * zErr;
+                char sql_line[1024];
+                sprintf(sql_line,
+                        "SELECT * FROM simplex WHERE id=%i",
+                        index);
+                int rc = sqlite3_get_table(db,sql_line,&result,&nrows,&ncols,&zErr);
+                //
+                if (rc != SQLITE_OK) {
+                    if (zErr != NULL) {
+                        fprintf(stderr,"SQL error: %s\n",zErr);
+                        sqlite3_free(zErr);
                     }
-                    T sum_vol_fi = 0;
-                    while (1) {
-                        // orsa::Vector vI(0,0,0);
-                        T vIx = 0;
-                        T vIy = 0;
-                        T vIz = 0;
+                }
+                // ORSA_DEBUG("nrows: %i  ncols: %i",nrows, ncols);
+                //
+                /* for (int i=0; i<nrows; ++i) {
+                   for (int j=0; j<ncols; ++j) {
+                   // i=0 is the header
+                   const int index = (i+1)*ncols+j;
+                   ORSA_DEBUG("result[%i] = %s",index, result[index]);
+                   }
+                   }
+                */
+                //
+                if (nrows==0) {
+                    // nothing, but must keep this case!
+                } else if (nrows==1) {
+                    val[index] = atof(result[9]);
+                    needToCompute = false;
+                } else { // if (nrows>size_H) {
+                    ORSA_ERROR("database corrupted, only 1 entry per index is admitted");
+                }
+                //
+                sqlite3_free_table(result);
+            }
+
+            if (needToCompute) {
+                std::vector<T> val_vol_sum_fun;
+                val_vol_sum_fun.resize(degree+1);
+                const size_t q_min = (degree==0) ? 0 : 1;
+                const orsa::TriShape::FaceVector & fv = triShape->getFaceVector();
+                std::vector<size_t> indexVector;
+                for (size_t q=q_min; q<=degree; ++q) {
+                    T sum_vol_fun = 0;
+                    indexVector.resize(q);
+                    for (size_t fi=0; fi<fv.size(); ++fi) {
                         for (size_t i=0; i<q; ++i) {
-                            // vI += aux[fi].simplexVertexVector[indexVector[i]];
-                            // ORSA_DEBUG("iV[%02i] = %i",i,indexVector[i]);
-                            vIx += aux[fi].simplexVertexVector[indexVector[i]].getX();
-                            vIy += aux[fi].simplexVertexVector[indexVector[i]].getY();
-                            vIz += aux[fi].simplexVertexVector[indexVector[i]].getZ();
+                            indexVector[i] = 0;
                         }
-                        /* sum_vol_fi +=
-                           orsa::int_pow(vI.getX(),nx)*
-                           orsa::int_pow(vI.getY(),ny)*
-                           orsa::int_pow(vI.getZ(),nz);
-                        */
-                        T vI_pow = 1;
-                        for (size_t p=0; p<nx; ++p) { vI_pow *= vIx; }
-                        for (size_t p=0; p<ny; ++p) { vI_pow *= vIy; }
-                        for (size_t p=0; p<nz; ++p) { vI_pow *= vIz; }
-                        sum_vol_fi += vI_pow;
-                        /* ORSA_DEBUG("vI = %+g %+g %+g sum term: %+16.6e",vI.getX(),vI.getY(),vI.getZ(),
-                           orsa::int_pow(vI.getX(),nx)*
-                           orsa::int_pow(vI.getY(),ny)*
-                           orsa::int_pow(vI.getZ(),nz));
-                        */
-                        bool increased = false;
-                        for (size_t i=0; i<q; ++i) {
-                            if (indexVector[i]<N) {
-                                ++indexVector[i];
-                                increased = true;
-                                for (size_t s=0; s<i; ++s) {
-#warning IMPORTANT: which rule is correct?
-                                    indexVector[s] = indexVector[i]; // this one avoids repetitions, i.e. {1,0}, {0,1}
-                                    // indexVector[s] = 0; // this one includes repetitions
-                                }
-                                break;
+                        T sum_vol_fi = 0;
+                        while (1) {
+                            // orsa::Vector vI(0,0,0);
+                            T vIx = 0;
+                            T vIy = 0;
+                            T vIz = 0;
+                            for (size_t i=0; i<q; ++i) {
+                                // vI += aux[fi].simplexVertexVector[indexVector[i]];
+                                // ORSA_DEBUG("iV[%02i] = %i",i,indexVector[i]);
+                                vIx += aux[fi].simplexVertexVector[indexVector[i]].getX();
+                                vIy += aux[fi].simplexVertexVector[indexVector[i]].getY();
+                                vIz += aux[fi].simplexVertexVector[indexVector[i]].getZ();
                             }
+                            /* sum_vol_fi +=
+                               orsa::int_pow(vI.getX(),nx)*
+                               orsa::int_pow(vI.getY(),ny)*
+                               orsa::int_pow(vI.getZ(),nz);
+                            */
+                            T vI_pow = 1;
+                            for (size_t p=0; p<nx; ++p) { vI_pow *= vIx; }
+                            for (size_t p=0; p<ny; ++p) { vI_pow *= vIy; }
+                            for (size_t p=0; p<nz; ++p) { vI_pow *= vIz; }
+                            sum_vol_fi += vI_pow;
+                            /* ORSA_DEBUG("vI = %+g %+g %+g sum term: %+16.6e",vI.getX(),vI.getY(),vI.getZ(),
+                               orsa::int_pow(vI.getX(),nx)*
+                               orsa::int_pow(vI.getY(),ny)*
+                               orsa::int_pow(vI.getZ(),nz));
+                            */
+                            bool increased = false;
+                            for (size_t i=0; i<q; ++i) {
+                                if (indexVector[i]<N) {
+                                    ++indexVector[i];
+                                    increased = true;
+                                    for (size_t s=0; s<i; ++s) {
+#warning IMPORTANT: which rule is correct?
+                                        indexVector[s] = indexVector[i]; // this one avoids repetitions, i.e. {1,0}, {0,1}
+                                        // indexVector[s] = 0; // this one includes repetitions
+                                    }
+                                    break;
+                                }
+                            }
+                            // ORSA_DEBUG("increased: %i",increased);
+                            if (!increased) {
+                                break;
+                            }                                
                         }
-                        // ORSA_DEBUG("increased: %i",increased);
-                        if (!increased) {
-                            break;
-                        }                                
+                        sum_vol_fun += sum_vol_fi*(*aux[fi].volume);
+                        /* ORSA_DEBUG("degree: %02i  q: %02i sum_vol_fi: %+16.6e  partial sum_vol_fun: %+16.6e",
+                           degree,q,sum_vol_fi,sum_vol_fun);
+                        */
                     }
-                    sum_vol_fun += sum_vol_fi*(*aux[fi].volume);
-                    /* ORSA_DEBUG("degree: %02i  q: %02i sum_vol_fi: %+16.6e  partial sum_vol_fun: %+16.6e",
-                       degree,q,sum_vol_fi,sum_vol_fun);
+                    val_vol_sum_fun[q] = sum_vol_fun;
+                }
+                T retVal = 0;
+                for (size_t q=q_min; q<=degree; ++q) {
+                    /* retVal += to_T(mpf_class(orsa::power_sign(degree-q) *
+                       orsa::binomial(N+degree,N+q) *
+                       val_vol_sum_fun[q]));
+                    */
+                    /* retVal += to_T(orsa::power_sign(degree-q) *
+                       orsa::binomial(N+degree,N+q) *
+                       val_vol_sum_fun[q]);
+                    */
+                    retVal += aux_01(orsa::power_sign(degree-q),
+                                     orsa::binomial(N+degree,N+q),
+                                     val_vol_sum_fun[q]);
+                    /* ORSA_DEBUG("degree: %i  q: %i  factor = binomial(%i,%i): : %g  sign: %i  term: %g",
+                       degree,
+                       q,
+                       N+degree,
+                       N+q,
+                       sum_vol_fun_factor,sign,
+                       val_vol_sum_fun[q]);
                     */
                 }
-                val_vol_sum_fun[q] = sum_vol_fun;
+                // val[index] = T(retVal / (orsa::binomial(N+degree,degree)*orsa::factorial(degree))).get_d();
+                //
+                // the above binomial x factorial can be expressed more compactly with pochhammer(N+1,degree) = pochhammer_Np1[degree]
+                /* if (pochhammer_Np1.size() < (degree+1)) {
+                   pochhammer_Np1.resize(degree+1);
+                   }
+                   if (!pochhammer_Np1[degree].isSet()) {
+                   pochhammer_Np1[degree] = orsa::pochhammer(mpz_class(N+1),degree);
+                   }
+                   val[index] = T(retVal / (*pochhammer_Np1[degree])).get_d();
+                */
+                //
+                // or even more simply (slightly slower...)
+                // val[index] = to_double((T)(retVal) / (T)(mpf_class(orsa::pochhammer(mpz_class(N+1),degree)).get_d()));
+                // val[index] = to_double(retVal / mpf_class(orsa::pochhammer(mpz_class(N+1),degree)));
+                val[index] = aux_02(retVal,orsa::pochhammer(mpz_class(N+1),degree));
+                
+                char * zErr;
+                char sql_line[1024];
+                sprintf(sql_line,
+                        "INSERT INTO simplex VALUES(%i,%i,%i,%i,%.12e)",
+                        index,nx,ny,nz,
+                        (*val[index]));
+                int rc;
+                do {
+                    rc = sqlite3_exec(db,sql_line,NULL,NULL,&zErr);
+                    if (rc==SQLITE_BUSY) {
+                        ORSA_DEBUG("database busy, retrying...");
+                        usleep(100000);
+                    }
+                } while (rc==SQLITE_BUSY);
+                if (rc != SQLITE_OK) {
+                    if (zErr != NULL) {
+                        fprintf(stderr,"SQL error: %s\n",zErr);
+                        sqlite3_free(zErr);
+                    }
+                }
             }
-            T retVal = 0;
-            for (size_t q=q_min; q<=degree; ++q) {
-                /* retVal += to_T(mpf_class(orsa::power_sign(degree-q) *
-                   orsa::binomial(N+degree,N+q) *
-                   val_vol_sum_fun[q]));
-                */
-                /* retVal += to_T(orsa::power_sign(degree-q) *
-                   orsa::binomial(N+degree,N+q) *
-                   val_vol_sum_fun[q]);
-                */
-                retVal += aux_01(orsa::power_sign(degree-q),
-                                 orsa::binomial(N+degree,N+q),
-                                 val_vol_sum_fun[q]);
-                /* ORSA_DEBUG("degree: %i  q: %i  factor = binomial(%i,%i): : %g  sign: %i  term: %g",
-                   degree,
-                   q,
-                   N+degree,
-                   N+q,
-                   sum_vol_fun_factor,sign,
-                   val_vol_sum_fun[q]);
-                */
-            }
-            // val[index] = T(retVal / (orsa::binomial(N+degree,degree)*orsa::factorial(degree))).get_d();
-            //
-            // the above binomial x factorial can be expressed more compactly with pochhammer(N+1,degree) = pochhammer_Np1[degree]
-            /* if (pochhammer_Np1.size() < (degree+1)) {
-               pochhammer_Np1.resize(degree+1);
-               }
-               if (!pochhammer_Np1[degree].isSet()) {
-               pochhammer_Np1[degree] = orsa::pochhammer(mpz_class(N+1),degree);
-               }
-               val[index] = T(retVal / (*pochhammer_Np1[degree])).get_d();
-            */
-            //
-            // or even more simply (slightly slower...)
-            // val[index] = to_double((T)(retVal) / (T)(mpf_class(orsa::pochhammer(mpz_class(N+1),degree)).get_d()));
-            // val[index] = to_double(retVal / mpf_class(orsa::pochhammer(mpz_class(N+1),degree)));
-            val[index] = aux_02(retVal,orsa::pochhammer(mpz_class(N+1),degree));
         }
         return val[index];
     }
@@ -285,7 +414,7 @@ public:
         updateIndexTable(requestedDegree);
         return indexTable[nx][ny][nz]; 
     }
-
+    
     // same as above, but for 4 indices
 public:
     typedef std::vector< std::vector< std::vector< std::vector<size_t> > > > Index4TableType;

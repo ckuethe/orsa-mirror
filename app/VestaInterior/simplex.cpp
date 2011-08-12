@@ -38,6 +38,8 @@ int main(int argc, char **argv) {
         exit(0);
     }
     
+    const std::string SQLiteDBFileName = "simplex.sqlite";
+    
     // QD
     unsigned int oldcw;
     fpu_fix_start(&oldcw);
@@ -63,7 +65,7 @@ int main(int argc, char **argv) {
        }
     */
     
-    osg::ref_ptr<SimplexIntegration<T> > si = new SimplexIntegration<T>(vestaShape.get(), R0);
+    osg::ref_ptr<SimplexIntegration<T> > si = new SimplexIntegration<T>(vestaShape.get(), R0, SQLiteDBFileName);
     // osg::ref_ptr<SimplexIntegration> si_unit_R0 = new SimplexIntegration(vestaShape.get(),1.0);
     
     si->reserve(maxDegree);
@@ -75,12 +77,10 @@ int main(int argc, char **argv) {
                     if (i+j+k==degree) {
                         const size_t index = SimplexIntegration<T>::getIndex(i,j,k);
                         if ((index%mod_N)==mod_i) {
-                            
-                            // ORSA_DEBUG("integral [%02i,%02i,%02i]: %+16.6e",i,j,k,si->getIntegral(i,j,k));
-                            // ORSA_DEBUG("integral [%02i,%02i,%02i]: %+16.9g",i,j,k,si->getIntegral(i,j,k));
-                            ORSA_DEBUG("integral [%02i,%02i,%02i]: %+20.12f",i,j,k,si->getIntegral(i,j,k));
-                            // ORSA_DEBUG("integral [%02i,%02i,%02i]: %+16.9e   [R0=1.0]",i,j,k,si_unit_R0->getIntegral(i,j,k));
-                            // ORSA_DEBUG("scaled: %+16.6e",si->getIntegral(i,j,k)*orsa::int_pow(R0,3+degree)); // 3=jacobian, degree=transformation
+
+                            const double integral_ijk = si->getIntegral(i,j,k);
+                            ORSA_DEBUG("integral [%02i,%02i,%02i]: %+20.12f",i,j,k,integral_ijk);
+                            // ORSA_DEBUG("scaled: %+16.6e",integral_ijk*orsa::int_pow(R0,3+degree)); // 3=jacobian, degree=transformation
                         }
                     }
                 }
