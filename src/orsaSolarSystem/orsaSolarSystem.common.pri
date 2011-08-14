@@ -36,7 +36,8 @@ HEADERS = attitude.h \
           observation.h \
           observatory.h \
           orbit.h \
-          print.h
+          print.h \ 
+          sdncal.h 
 
 SOURCES = attitude.cpp \
           datetime.cpp \
@@ -46,7 +47,6 @@ SOURCES = attitude.cpp \
           observation.cpp \
           observatory.cpp \
           orbit.cpp \
-          sdncal.h \
           dow.c \
           gregor.c \
           julian.c

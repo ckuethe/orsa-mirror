@@ -22,6 +22,6 @@ unix:!macx {
 }
 
 
-HEADERS += simplex.h   vesta.h	 sqlite3.h
+HEADERS += simplex.h   vesta.h	gaskell.h  sqlite3.h
 SOURCES += simplex.cpp 
 

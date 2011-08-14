@@ -1,6 +1,7 @@
 #include "simplex.h"
 
 #include "vesta.h"
+#include "gaskell.h"
 
 #include <qd/dd_real.h>
 #include <qd/qd_real.h>
@@ -53,8 +54,15 @@ int main(int argc, char **argv) {
     // mpf_set_default_prec(512);
     // ORSA_DEBUG("updated mpf precision: %i",mpf_get_default_prec());
     
-    osg::ref_ptr<VestaShape> vestaShape = new VestaShape;
-    if (!vestaShape->read("vesta_thomas.dat")) {
+    /* osg::ref_ptr<VestaShape> vestaShape = new VestaShape;
+       if (!vestaShape->read(inputFile)) {
+       ORSA_ERROR("problems encountered while reading shape file...");
+       exit(0);
+       }
+    */
+    
+    osg::ref_ptr<GaskellPlateModel> shapeModel = new GaskellPlateModel;
+    if (!shapeModel->read(inputFile)) {
         ORSA_ERROR("problems encountered while reading shape file...");
         exit(0);
     }
@@ -66,7 +74,7 @@ int main(int argc, char **argv) {
        }
     */
     
-    osg::ref_ptr<SimplexIntegration<T> > si = new SimplexIntegration<T>(vestaShape.get(), R0, SQLiteDBFileName);
+    osg::ref_ptr<SimplexIntegration<T> > si = new SimplexIntegration<T>(shapeModel.get(), R0, SQLiteDBFileName);
     // osg::ref_ptr<SimplexIntegration> si_unit_R0 = new SimplexIntegration(vestaShape.get(),1.0);
     
     si->reserve(maxDegree);
