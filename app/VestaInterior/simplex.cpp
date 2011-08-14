@@ -17,16 +17,17 @@ template <typename T> std::vector< std::vector< std::vector< std::vector<size_t>
 
 int main(int argc, char **argv) {
     
-    if (argc != 6) {
-        ORSA_DEBUG("Usage: %s <R0_km> <min-degree> <max-degree> <mod-N> <mod-i> ");
+    if (argc != 7) {
+        ORSA_DEBUG("Usage: %s <plate-model-file> <R0_km> <min-degree> <max-degree> <mod-N> <mod-i> ");
         exit(0);
     }
     
-    const double R0 = orsa::FromUnits(atof(argv[1]),orsa::Unit::KM);
-    const int minDegree = atoi(argv[2]);
-    const int maxDegree = atoi(argv[3]);
-    const int mod_N = atoi(argv[4]);
-    const int mod_i = atoi(argv[5]);
+    const std::string inputFile = argv[1];
+    const double R0 = orsa::FromUnits(atof(argv[2]),orsa::Unit::KM);
+    const int minDegree = atoi(argv[3]);
+    const int maxDegree = atoi(argv[4]);
+    const int mod_N = atoi(argv[5]);
+    const int mod_i = atoi(argv[6]);
     
     if ( (R0 <= 0.0) ||
          (minDegree < 0) ||
@@ -38,7 +39,7 @@ int main(int argc, char **argv) {
         exit(0);
     }
     
-    const std::string SQLiteDBFileName = "simplex.sqlite";
+    const std::string SQLiteDBFileName = getSqliteDBFileName(inputFile,R0);
     
     // QD
     unsigned int oldcw;
@@ -70,13 +71,13 @@ int main(int argc, char **argv) {
     
     si->reserve(maxDegree);
     // si_unit_R0->reserve(maxDegree);
-    for (size_t degree=minDegree; degree<=maxDegree; ++degree) {
+    for (size_t degree=minDegree; degree<=(size_t)maxDegree; ++degree) {
         for (size_t i=0; i<=degree; ++i) {
             for (size_t j=0; j<=degree; ++j) {
                 for (size_t k=0; k<=degree; ++k) {
                     if (i+j+k==degree) {
                         const size_t index = SimplexIntegration<T>::getIndex(i,j,k);
-                        if ((index%mod_N)==mod_i) {
+                        if ((index%mod_N)==(size_t)mod_i) {
 
                             const double integral_ijk = si->getIntegral(i,j,k);
                             ORSA_DEBUG("integral [%02i,%02i,%02i]: %+20.12f",i,j,k,integral_ijk);

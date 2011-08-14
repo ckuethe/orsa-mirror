@@ -6,6 +6,7 @@
 
 #include <orsa/double.h>
 #include <orsa/shape.h>
+#include <orsa/unit.h>
 
 #include <qd/dd_real.h>
 #include <qd/qd_real.h>
@@ -16,6 +17,13 @@
 
 // SQLite3
 #include "sqlite3.h"
+
+std::string getSqliteDBFileName(const std::string & inputFile,
+                                const double & R0) {
+    char line[1024];
+    sprintf(line,"%s_simplex_%gkm.sqlite",inputFile.c_str(),orsa::FromUnits(R0,orsa::Unit::KM,-1));
+    return line;
+}
 
 template <typename T> class SimplexIntegration : public osg::Referenced {
 public:
