@@ -1,5 +1,7 @@
 #include <orsa/shape.h>
 #include <orsa/unit.h>
+#include <orsa/debug.h>
+#include <orsa/util.h>
 
 #include <algorithm>
 
@@ -42,17 +44,32 @@ using namespace orsa;
 const Vector & TriShape::_getVertexNormal(const unsigned int vertex_index) const {
     if (_vertex_normal.size() != _vertex.size()) {
         _vertex_normal.resize(_vertex.size());
+        
+        if (vertexInFace.size() != _vertex.size()) {
+            vertexInFace.resize(_vertex.size());
+            for (unsigned int _f=0; _f<_face.size(); ++_f) {
+                vertexInFace[_face[_f].i()].push_back(_f);
+                vertexInFace[_face[_f].j()].push_back(_f);
+                vertexInFace[_face[_f].k()].push_back(_f);
+            }
+        }
+        
         Vector _n;
         for (unsigned int _v=0; _v<_vertex.size(); ++_v) {
-            _n.set(0,0,0);
-            for (unsigned int _f=0; _f<_face.size(); ++_f) {
-                if ( (_face[_f].i() == _v) ||
-                     (_face[_f].j() == _v) ||
-                     (_face[_f].k() == _v) ) {
-                    _n += _getFaceNormal(_f);
+            if (vertexInFace[_v].size() == 0) {
+                ORSA_DEBUG("PROBLEM: vertex %d is not contained in any face... v:",_v);
+            } else {
+                _n.set(0,0,0);
+                std::list<unsigned int>::const_iterator it = vertexInFace[_v].begin();
+                while (it != vertexInFace[_v].end()) {
+                    _n += _getFaceNormal((*it));
+                    ++it;
                 }
+                _vertex_normal[_v] = _n.normalized();
             }
-            _vertex_normal[_v] = _n.normalized();
+            /* if (vertexInFace[_v].size() != 6) ORSA_DEBUG("vertex %i contained in %i faces  (printing only when != 6)",
+               _v,vertexInFace[_v].size());
+            */
         }
     }
     return _vertex_normal[vertex_index];

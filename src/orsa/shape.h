@@ -115,7 +115,7 @@ namespace orsa {
         */
     
     };
-  
+    
     class TriShape : public orsa::Shape {
     public:
         class TriIndex {
@@ -217,7 +217,10 @@ namespace orsa {
         const FaceVector & getFaceVector() const {
             return _face;
         }  
-    
+        
+    protected:
+        mutable std::vector< std::list<unsigned int > > vertexInFace;
+        
     public:
         //! This normal is the average of the normals of all the faces containing this vertex
         const Vector & _getVertexNormal(const unsigned int vertex_index) const;
@@ -241,11 +244,11 @@ namespace orsa {
         //! delta is the angle, at the observer, between the center of the shape and the vertex
         bool vertexIlluminationAngles(const orsa::Vector & lightSource,
                                       const orsa::Vector & observerPosition,
-                                      double       & phase,
+                                      double             & phase,
                                       AngleVector        & i, 
                                       AngleVector        & e,
                                       AngleVector        & delta,
-                                      const double & deltaMax,
+                                      const double       & deltaMax,
                                       const bool includeShadows = false) const;
     public:
         /* // this needs to be perfectioned before use
