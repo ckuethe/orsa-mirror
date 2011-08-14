@@ -26,7 +26,7 @@ public:
         char line[1024];
         size_t nv;
         if (fgets(line,1024,fp_model) != 0) {
-            sscanf(line,"%i",&nv);
+            sscanf(line,"%ui",&nv);
         }
         // _vertex.resize(nv);
         size_t id;
@@ -35,7 +35,7 @@ public:
         while (fgets(line,1024,fp_model) != 0) {
             ++count_v;
             if (count_v <= nv) {
-                if (4 == sscanf(line,"%i %lf %lf %lf",&id,&x,&y,&z)) {
+                if (4 == sscanf(line,"%ui %lf %lf %lf",&id,&x,&y,&z)) {
                     _vertex.push_back(orsa::Vector(FromUnits(x,Unit::KM),
                                                    FromUnits(y,Unit::KM),
                                                    FromUnits(z,Unit::KM)));
@@ -45,12 +45,12 @@ public:
         }
         size_t nt;
         if (fgets(line,1024,fp_model) != 0) {
-            sscanf(line,"%i",&nt);
+            sscanf(line,"%ui",&nt);
         }
         // _face.resize(nt);
         size_t i,j,k;
         while (fgets(line,1024,fp_model) != 0)  {
-            if (4 == sscanf(line,"%i %i %i %i",&id,&i,&j,&k)) {
+            if (4 == sscanf(line,"%ui %ui %ui %ui",&id,&i,&j,&k)) {
                 // this is needed sometimes...
                 // a flag fould be useful
                 --i; --j; --k; // 1,2,3... to 0,1,2...
