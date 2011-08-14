@@ -224,7 +224,7 @@ public:
                 char * zErr;
                 char sql_line[1024];
                 sprintf(sql_line,
-                        "SELECT * FROM simplex WHERE id=%ui",
+                        "SELECT * FROM simplex WHERE id=%zi",
                         index);
                 int rc = sqlite3_get_table(db,sql_line,&result,&nrows,&ncols,&zErr);
                 //
@@ -365,7 +365,7 @@ public:
                 char * zErr;
                 char sql_line[1024];
                 sprintf(sql_line,
-                        "INSERT INTO simplex VALUES(%ui,%ui,%ui,%ui,%.12e)",
+                        "INSERT INTO simplex VALUES(%zi,%zi,%zi,%zi,%.12e)",
                         index,nx,ny,nz,
                         (*val[index]));
                 int rc;
