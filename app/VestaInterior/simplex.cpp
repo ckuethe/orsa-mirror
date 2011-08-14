@@ -19,7 +19,7 @@ template <typename T> std::vector< std::vector< std::vector< std::vector<size_t>
 int main(int argc, char **argv) {
     
     if (argc != 7) {
-        ORSA_DEBUG("Usage: %s <plate-model-file> <R0_km> <min-degree> <max-degree> <mod-N> <mod-i> ");
+        ORSA_DEBUG("Usage: %s <plate-model-file> <R0_km> <min-degree> <max-degree> <mod-N> <mod-i>",argv[0]);
         exit(0);
     }
     
