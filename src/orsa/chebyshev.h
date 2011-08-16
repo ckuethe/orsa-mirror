@@ -3,6 +3,7 @@
 
 #include <vector>
 
+#include <orsa/double.h>
 #include <orsa/debug.h>
 
 namespace orsa {
@@ -26,6 +27,28 @@ namespace orsa {
         orsa::ChebyshevT(T,n,x);
         const double retVal = T[n];
         return retVal;
+    }
+    
+    inline const std::vector<mpz_class> & ChebyshevTcoeff(const size_t & n) {
+        static std::vector< std::vector<mpz_class> > coeff;
+        const size_t oldSize = coeff.size();
+        if (coeff.size() <= n) coeff.resize(n+1);
+        for (size_t k=oldSize; k<=n; ++k) {
+            coeff[k].resize(k+1);
+            if (k==0) {
+                coeff[0][0] = 1;
+            } else if (k==1) {
+                coeff[1][0] = 0;
+                coeff[1][1] = 1;
+            } else {
+                for (size_t j=0; j<=k; ++j) {
+                    coeff[k][j] = 0;
+                    if (j>0) coeff[k][j] += 2*coeff[k-1][j-1];
+                    if (j<=k-2) coeff[k][j] -= coeff[k-2][j];
+                }
+            }
+        }
+        return coeff[n];
     }
     
 } // namespace orsa
