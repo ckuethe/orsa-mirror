@@ -10,7 +10,20 @@
 
 #include "vesta.h"
 
-int main() {
+int main(int argc, char **argv) {
+    
+    /* // test
+       {
+       for (size_t n=0; n<=10; ++n) {
+       const std::vector<mpz_class> & coeff = ChebyshevTcoeff(n);
+       gmp_printf("cT[n=%03i]: ",n);
+       for (size_t k=0; k<=n; ++k) {
+       gmp_printf("%+9Zi ",coeff[k].get_mpz_t());
+       }
+       gmp_printf("\n");
+       }
+       }
+    */
     
     // test specific cases, for debug purposes only!
     // orsa::GlobalRNG::randomSeed = -800402816;
@@ -369,7 +382,7 @@ int main() {
         new CubicChebyshevMassDistribution(coeff,R0);
     
 #warning use enough points...
-    const size_t numSamplePoints = 1000000;
+    const size_t numSamplePoints = 1000;
     const bool storeSamplePoints = true;
 #warning how to manage centerOfMass??
     const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
@@ -851,7 +864,7 @@ int main() {
                         // raw output of density on file
                         static size_t ID = 0;
                         char filename[1024];
-                        sprintf(filename,"density_%06d.dat",ID);
+                        sprintf(filename,"density_%06i.dat",ID);
                         ORSA_DEBUG("dumped density to file [%s]",filename);
                         FILE * fp = fopen(filename,"w");
                         if (fp) {

@@ -22,8 +22,6 @@ protected:
 public:
     orsa::Cache<double> R0;
     osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape;
-    // orsa::Cache<double> bulkDensity;
-    // orsa::Cache<double> bulkDensity_gcm3;
     orsa::Cache<size_t> chebyshevDegree;
     orsa::Cache<size_t> T_size;
     gsl_vector * cT0;
