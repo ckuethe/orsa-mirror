@@ -8,9 +8,27 @@
 #include <gsl/gsl_linalg.h>
 #include <gsl/gsl_rng.h>
 
-#include "vesta.h"
+// #include "vesta.h"
+#include "gaskell.h"
 
 int main(int argc, char **argv) {
+
+    if (argc != 12) {
+        printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> \n",argv[0]);
+        exit(0);
+    }   
+    
+    const std::string radioScienceGravityFile = argv[1];
+    const std::string plateModelFile = argv[2];
+    const double plateModelR0 = orsa::FromUnits(atof(argv[3]),orsa::Unit::KM);
+    const int gravityDegree = atoi(argv[4]);
+    const int polynomialDegree = atoi(argv[5]);
+    const double CM_x = orsa::FromUnits(atof(argv[6]),orsa::Unit::KM);
+    const double CM_y = orsa::FromUnits(atof(argv[7]),orsa::Unit::KM);
+    const double CM_z = orsa::FromUnits(atof(argv[8]),orsa::Unit::KM);
+    const double CM_dx = orsa::FromUnits(atof(argv[9]),orsa::Unit::KM);
+    const double CM_dy = orsa::FromUnits(atof(argv[10]),orsa::Unit::KM);
+    const double CM_dz = orsa::FromUnits(atof(argv[11]),orsa::Unit::KM);
     
     /* // test
        {
@@ -31,7 +49,8 @@ int main(int argc, char **argv) {
     orsa::Debug::instance()->initTimer();
     
     osg::ref_ptr<orsaPDS::RadioScienceGravityFile> pds =
-        new orsaPDS::RadioScienceGravityFile("JGDAWN20SIMA.DAT",512,1518);
+        // new orsaPDS::RadioScienceGravityFile("JGDAWN20SIMA.DAT",512,1518);
+        new orsaPDS::RadioScienceGravityFile(radioScienceGravityFile,512,1518);
     
     gsl_vector * pds_coeff    = pds->data->getCoefficientVector();
     gsl_matrix * pds_covm     = pds->data->getCovarianceMatrix();
@@ -49,14 +68,21 @@ int main(int argc, char **argv) {
        }
     */
     
-    osg::ref_ptr<VestaShape> shape = new VestaShape;
-    if (!shape->read("vesta_thomas.dat")) {
+    /* osg::ref_ptr<VestaShape> shape = new VestaShape;
+       if (!shape->read("vesta_thomas.dat")) {
+       ORSA_ERROR("problems encountered while reading shape file...");
+       exit(0);
+       }
+    */
+    
+    osg::ref_ptr<GaskellPlateModel> shapeModel = new GaskellPlateModel;
+    if (!shapeModel->read(plateModelFile)) {
         ORSA_ERROR("problems encountered while reading shape file...");
         exit(0);
     }
     
-    const size_t SH_degree = 8; // shperical harmonics degree
-    const size_t  T_degree = 8; // chebyshev polinomials degree
+    const size_t SH_degree = gravityDegree; // shperical harmonics degree
+    const size_t  T_degree = polynomialDegree; // chebyshev polinomials degree
     
     const double R0 = pds->data->R0;
 #warning which GM value to use? pds->data->GM  OR pds->data->getCoeff("GM") ??
@@ -151,7 +177,6 @@ int main(int argc, char **argv) {
                     gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, nu_sh2ijk, 1.0, nu_sh2ijk);
 
                     
-                    
                     // #warning RESTORE
                     const double pq_factor_base = 
                         orsa::power_sign(p+q) *
@@ -180,7 +205,7 @@ int main(int argc, char **argv) {
             //
             
             // #warning RESTORE
-            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, 1.0/int_pow(2.0,l), pq_sh2ijk);
+            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, 1.0/orsa::int_pow(2.0,l), pq_sh2ijk);
             // gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, 1.0, pq_sh2ijk);
             
             // ORSA_DEBUG("PaulMoment::normalization(%i,%i) = %g",l,m,PaulMoment::normalization(l,m));
@@ -302,7 +327,7 @@ int main(int argc, char **argv) {
             // pq_factor /= int_pow(2.0,l);
             // pq_factor_uncertainty /= int_pow(2.0,l);
             //
-            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, 1.0/int_pow(2.0,l), pq_sh2ijk);
+            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, 1.0/orsa::int_pow(2.0,l), pq_sh2ijk);
             
             // ORSA_DEBUG("PaulMoment::normalization(%i,%i) = %g",l,m,PaulMoment::normalization(l,m));
             // normalization
@@ -387,11 +412,14 @@ int main(int argc, char **argv) {
 #warning how to manage centerOfMass??
     const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
 #warning must SAMPLE on centerOfMass as well! (or is uncertainty too small, and effect negligible?)
-    const orsa::Vector centerOfMass = orsa::Vector(0.11*km,-1.15*km,8.50*km);
+    // const orsa::Vector centerOfMass = orsa::Vector(0.11*km,-1.15*km,8.50*km);
+    const orsa::Vector centerOfMass(CM_x,CM_y,CM_z);
+
+#warning remember to use CM_sigma
     
     // at this point the mass distribution is not yet important
     osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
-        new orsa::RandomPointsInShape(shape,massDistribution,numSamplePoints,storeSamplePoints);
+        new orsa::RandomPointsInShape(shapeModel,massDistribution,numSamplePoints,storeSamplePoints);
     
     const double volume = orsa::volume(randomPointsInShape);
     
@@ -446,9 +474,9 @@ int main(int argc, char **argv) {
                 {
                     v -= centerOfMass;
                     // v = shapeToLocal*v;
-                    stat->insert(int_pow(v.getX(),nx)*
-                                 int_pow(v.getY(),ny)*
-                                 int_pow(v.getZ(),nz)*
+                    stat->insert(orsa::int_pow(v.getX(),nx)*
+                                 orsa::int_pow(v.getY(),ny)*
+                                 orsa::int_pow(v.getZ(),nz)*
                                  density);
                     /* stat->insert(int_pow(v.getX(),nx)*
                        int_pow(v.getY(),ny)*
@@ -459,7 +487,7 @@ int main(int argc, char **argv) {
                 }
             }
             
-            gsl_matrix_set(ijk2cT,z_ijk,z_cT,stat->average()/int_pow(R0,nx+ny+nz));
+            gsl_matrix_set(ijk2cT,z_ijk,z_cT,stat->average()/orsa::int_pow(R0,nx+ny+nz));
 
 
             {
