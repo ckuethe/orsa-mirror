@@ -36,9 +36,9 @@ public:
             ++count_v;
             if (count_v <= nv) {
                 if (4 == sscanf(line,"%zi %lf %lf %lf",&id,&x,&y,&z)) {
-                    _vertex.push_back(orsa::Vector(FromUnits(x,Unit::KM),
-                                                   FromUnits(y,Unit::KM),
-                                                   FromUnits(z,Unit::KM)));
+                    _vertex.push_back(orsa::Vector(FromUnits(x,orsa::Unit::KM),
+                                                   FromUnits(y,orsa::Unit::KM),
+                                                   FromUnits(z,orsa::Unit::KM)));
                 }
             }
             if (count_v == nv) break;
