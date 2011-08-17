@@ -11,8 +11,33 @@
 // #include "vesta.h"
 #include "gaskell.h"
 
-int main(int argc, char **argv) {
+#include "simplex.h"
 
+/*** CHOOSE ONE ***/
+// typedef double simplex_T;
+// typedef mpf_class simplex_T;
+typedef dd_real simplex_T;
+// typedef qd_real simplex_T;
+
+#warning how to write this using the typedef inside the class?
+template <typename T> std::vector< std::vector< std::vector<size_t> > > SimplexIntegration<T>::indexTable;
+template <typename T> std::vector< std::vector< std::vector< std::vector<size_t> > > > SimplexIntegration<T>::index4Table;
+
+
+int main(int argc, char **argv) {
+    
+    orsa::Debug::instance()->initTimer();
+    
+    // QD
+    unsigned int oldcw;
+    fpu_fix_start(&oldcw);
+    
+    //ORSA_DEBUG("current mpf precision: %i",mpf_get_default_prec());
+    mpf_set_default_prec(128);
+    // mpf_set_default_prec(256);
+    // mpf_set_default_prec(512);
+    // ORSA_DEBUG("updated mpf precision: %i",mpf_get_default_prec());
+    
     if (argc != 12) {
         printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> \n",argv[0]);
         exit(0);
@@ -30,6 +55,8 @@ int main(int argc, char **argv) {
     const double CM_dy = orsa::FromUnits(atof(argv[10]),orsa::Unit::KM);
     const double CM_dz = orsa::FromUnits(atof(argv[11]),orsa::Unit::KM);
     
+    const std::string SQLiteDBFileName = getSqliteDBFileName(plateModelFile,plateModelR0);
+    
     /* // test
        {
        for (size_t n=0; n<=10; ++n) {
@@ -45,8 +72,6 @@ int main(int argc, char **argv) {
     
     // test specific cases, for debug purposes only!
     // orsa::GlobalRNG::randomSeed = -800402816;
-    
-    orsa::Debug::instance()->initTimer();
     
     osg::ref_ptr<orsaPDS::RadioScienceGravityFile> pds =
         // new orsaPDS::RadioScienceGravityFile("JGDAWN20SIMA.DAT",512,1518);
@@ -80,6 +105,11 @@ int main(int argc, char **argv) {
         ORSA_ERROR("problems encountered while reading shape file...");
         exit(0);
     }
+    
+    osg::ref_ptr<SimplexIntegration<simplex_T> > si = new SimplexIntegration<simplex_T>(shapeModel.get(), plateModelR0, SQLiteDBFileName);
+    si->reserve(polynomialDegree);
+    
+#warning CORRECT FOR DIFFERENCE BETWEEN plateModelR0 and radioScienceGravityR0
     
     const size_t SH_degree = gravityDegree; // shperical harmonics degree
     const size_t  T_degree = polynomialDegree; // chebyshev polinomials degree
@@ -382,9 +412,7 @@ int main(int argc, char **argv) {
         }
     }
     
-    
     // gsl_matrix * cm2bf = gsl_matrix_calloc(ijk_size,ijk_size);
-    
     
     CubicChebyshevMassDistribution::CoefficientType coeff;
     CubicChebyshevMassDistribution::resize(coeff,T_degree);
@@ -409,8 +437,8 @@ int main(int argc, char **argv) {
 #warning use enough points...
     const size_t numSamplePoints = 1000;
     const bool storeSamplePoints = true;
-#warning how to manage centerOfMass??
-    const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
+    // #warning how to manage centerOfMass??
+    // const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
 #warning must SAMPLE on centerOfMass as well! (or is uncertainty too small, and effect negligible?)
     // const orsa::Vector centerOfMass = orsa::Vector(0.11*km,-1.15*km,8.50*km);
     const orsa::Vector centerOfMass(CM_x,CM_y,CM_z);
