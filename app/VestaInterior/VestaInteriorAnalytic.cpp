@@ -1,5 +1,6 @@
 #include "VestaInteriorAnalytic.h"
 
+#include <orsa/chebyshev.h>
 #include <orsa/statistic.h>
 
 #include <gsl/gsl_blas.h>
@@ -60,10 +61,21 @@ int main(int argc, char **argv) {
     /* // test
        {
        for (size_t n=0; n<=10; ++n) {
-       const std::vector<mpz_class> & coeff = ChebyshevTcoeff(n);
+       const std::vector<mpz_class> & coeff = orsa::ChebyshevTcoeff(n);
        gmp_printf("cT[n=%03i]: ",n);
        for (size_t k=0; k<=n; ++k) {
        gmp_printf("%+9Zi ",coeff[k].get_mpz_t());
+       }
+       gmp_printf("\n");
+       }
+       }
+    */
+    /* {
+       for (size_t n=0; n<=10; ++n) {
+       const std::vector<double> & ext = orsa::ChebyshevTextrema(n);
+       gmp_printf("cText[n=%03i]: ",n);
+       for (size_t k=0; k<=n; ++k) {
+       gmp_printf("%+12.9f ",ext[k]);
        }
        gmp_printf("\n");
        }
