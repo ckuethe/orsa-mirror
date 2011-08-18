@@ -239,18 +239,14 @@ double E1(void * xp) {
     orsa::Vector v;
     double density;
     osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
-    orsa::Cache<double> minDensity;
+    orsa::Cache<double> minDensity, maxDensity;
     x->randomPointsInShape->reset();
     while (x->randomPointsInShape->get(v,density)) { 
         stat->insert(density);
         minDensity.setIfSmaller(density);
+        maxDensity.setIfLarger(density);
     }
     
-    /* if (minDensity > 0.0) {
-       ORSA_DEBUG("minDensity: %g",(*minDensity));
-       }
-    */
-
     ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]",
                x->bulkDensity_gcm3*stat->min(),
                x->bulkDensity_gcm3*stat->max(),
@@ -275,9 +271,14 @@ double E1(void * xp) {
     
     
     // first approach: maximize the minimum density
-    return (-minDensity);
+    // return (-minDensity);
     // alternative: minimize density range
     // return (stat->max()-stat->min());
+    // more versions
+    // return std::max(0.0,-minDensity);
+    // return std::max(0.0,-minDensity)*(maxDensity-minDensity);
+    // return -minDensity*(maxDensity-minDensity);
+    return -minDensity/(maxDensity-minDensity);
 }
 
 double M1(void * xp, void * yp) {
