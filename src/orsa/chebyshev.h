@@ -55,6 +55,27 @@ namespace orsa {
         }
     }
     
+    inline const std::vector<double> & ChebyshevTextrema(const size_t & n) {
+        static std::vector< std::vector<double> > ext;
+        if (ext.size() > n) {
+            return ext[n];
+        } else {
+            const size_t oldSize = ext.size();
+            ext.resize(n+1);
+            for (size_t k=oldSize; k<=n; ++k) {
+                ext[k].resize(k+1);
+                if (k==0) {
+                    ext[0][0] = 1.0; // T_0=1 flat, so just pick a point
+                } else {
+                    for (size_t j=0; j<=k; ++j) {
+                        ext[k][j] = cos(orsa::pi()*j/k);
+                    }
+                }
+            }
+            return ext[n];
+        }
+    }
+    
 } // namespace orsa
 
 #endif // _ORSA_CHEBYSHEV_
