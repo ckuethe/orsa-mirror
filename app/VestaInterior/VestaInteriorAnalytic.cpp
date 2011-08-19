@@ -52,9 +52,9 @@ int main(int argc, char **argv) {
     const double CM_x = orsa::FromUnits(atof(argv[6]),orsa::Unit::KM);
     const double CM_y = orsa::FromUnits(atof(argv[7]),orsa::Unit::KM);
     const double CM_z = orsa::FromUnits(atof(argv[8]),orsa::Unit::KM);
-    const double CM_dx = orsa::FromUnits(atof(argv[9]),orsa::Unit::KM);
-    const double CM_dy = orsa::FromUnits(atof(argv[10]),orsa::Unit::KM);
-    const double CM_dz = orsa::FromUnits(atof(argv[11]),orsa::Unit::KM);
+    const double CM_sx = orsa::FromUnits(atof(argv[9]),orsa::Unit::KM);
+    const double CM_sy = orsa::FromUnits(atof(argv[10]),orsa::Unit::KM);
+    const double CM_sz = orsa::FromUnits(atof(argv[11]),orsa::Unit::KM);
     
     const std::string SQLiteDBFileName = getSqliteDBFileName(plateModelFile,plateModelR0);
     
@@ -122,6 +122,8 @@ int main(int argc, char **argv) {
     si->reserve(polynomialDegree);
     
 #warning CORRECT FOR DIFFERENCE BETWEEN plateModelR0 and radioScienceGravityR0
+
+#warning check all R0 is they are plate_R0 or gravity_R0 !!!
     
     const size_t SH_degree = gravityDegree; // shperical harmonics degree
     const size_t  T_degree = polynomialDegree; // chebyshev polinomials degree
@@ -426,47 +428,51 @@ int main(int argc, char **argv) {
     
     // gsl_matrix * cm2bf = gsl_matrix_calloc(ijk_size,ijk_size);
     
-    CubicChebyshevMassDistribution::CoefficientType coeff;
-    CubicChebyshevMassDistribution::resize(coeff,T_degree);
-    // dummy coeff, for now
-    for (unsigned int i=0; i<=T_degree; ++i) {
-        for (unsigned int j=0; j<=T_degree; ++j) {
-            for (unsigned int k=0; k<=T_degree; ++k) {
-                if (i+j+k<=T_degree) {
-                    if ( (i==0) && (j==0) && (k==0) ) {
-                        coeff[i][j][k] = 1.0;
-                    } else {
-                        coeff[i][j][k] = 0.0;
-                    }
-                }
-            }            
-        }
-    }
+    /* CubicChebyshevMassDistribution::CoefficientType coeff;
+       CubicChebyshevMassDistribution::resize(coeff,T_degree);
+       // dummy coeff, for now
+       for (unsigned int i=0; i<=T_degree; ++i) {
+       for (unsigned int j=0; j<=T_degree; ++j) {
+       for (unsigned int k=0; k<=T_degree; ++k) {
+       if (i+j+k<=T_degree) {
+       if ( (i==0) && (j==0) && (k==0) ) {
+       coeff[i][j][k] = 1.0;
+       } else {
+       coeff[i][j][k] = 0.0;
+       }
+       }
+       }            
+       }
+       }
+    */
     
-    osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
-        new CubicChebyshevMassDistribution(coeff,R0);
+    /* osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
+       new CubicChebyshevMassDistribution(coeff,R0);
+    */
     
-#warning use enough points...
-    const size_t numSamplePoints = 1000;
-    const bool storeSamplePoints = true;
+    // #warning use enough points...
+    // const size_t numSamplePoints = 1000;
+    // const bool storeSamplePoints = true;
     // #warning how to manage centerOfMass??
     // const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
-#warning must SAMPLE on centerOfMass as well! (or is uncertainty too small, and effect negligible?)
+    // #warning must SAMPLE on centerOfMass as well! (or is uncertainty too small, and effect negligible?)
     // const orsa::Vector centerOfMass = orsa::Vector(0.11*km,-1.15*km,8.50*km);
-    const orsa::Vector centerOfMass(CM_x,CM_y,CM_z);
-
-#warning remember to use CM_sigma
+    const orsa::Vector sampled_CM(CM_x+orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(CM_sx),  
+                                  CM_y+orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(CM_sy),
+                                  CM_z+orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(CM_sz));
     
     // at this point the mass distribution is not yet important
-    osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
-        new orsa::RandomPointsInShape(shapeModel,massDistribution,numSamplePoints,storeSamplePoints);
+    /* osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
+       new orsa::RandomPointsInShape(shapeModel,massDistribution,numSamplePoints,storeSamplePoints);
+    */
     
-    const double volume = orsa::volume(randomPointsInShape);
+    // const double volume = orsa::volume(randomPointsInShape);
+    const double volume = si->getIntegral(0,0,0)*orsa::cube(plateModelR0);
     
     const double bulkDensity = GM/orsa::Unit::G()/volume;
     const double bulkDensity_gcm3 = orsa::FromUnits(orsa::FromUnits(bulkDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3);
     
-    ORSA_DEBUG("bulkDensity coeff: %g",bulkDensity);
+    ORSA_DEBUG("bulkDensity: %g",bulkDensity);
     
 #warning fix how bulkDensity is used in this code...
     
@@ -477,59 +483,116 @@ int main(int argc, char **argv) {
         size_t Tx,Ty,Tz;
         CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
         
-        for (unsigned int i=0; i<=T_degree; ++i) {
-            for (unsigned int j=0; j<=T_degree; ++j) {
-                for (unsigned int k=0; k<=T_degree; ++k) {
-                    if (i+j+k<=T_degree) {
-                        if ( (i==Tx) && (j==Ty) && (k==Tz) ) {
-                            coeff[i][j][k] = 1.0;
-                        } else {
-                            coeff[i][j][k] = 0.0;
-                        }
-                    }
-                }            
-            }
-        }
-        massDistribution = new CubicChebyshevMassDistribution(coeff,R0);
-        randomPointsInShape->updateMassDistribution(massDistribution);
+        /* for (unsigned int i=0; i<=T_degree; ++i) {
+           for (unsigned int j=0; j<=T_degree; ++j) {
+           for (unsigned int k=0; k<=T_degree; ++k) {
+           if (i+j+k<=T_degree) {
+           if ( (i==Tx) && (j==Ty) && (k==Tz) ) {
+           coeff[i][j][k] = 1.0;
+           } else {
+           coeff[i][j][k] = 0.0;
+           }
+           }
+           }            
+           }
+           }
+        */
+        
+        // massDistribution = new CubicChebyshevMassDistribution(coeff,R0);
+        // randomPointsInShape->updateMassDistribution(massDistribution);
+        
+        const std::vector<mpz_class> & cTx = orsa::ChebyshevTcoeff(Tx);
+        const std::vector<mpz_class> & cTy = orsa::ChebyshevTcoeff(Ty);
+        const std::vector<mpz_class> & cTz = orsa::ChebyshevTcoeff(Tz);
         
         for (size_t z_ijk=0; z_ijk<ijk_size; ++z_ijk) {
             
             size_t nx,ny,nz;
             CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);
             
-            osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
+            // osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
             // osg::ref_ptr< orsa::WeightedStatistic<double> > stat = new orsa::WeightedStatistic<double>;
             
-            orsa::Vector v;
-            double density;
+            // orsa::Vector v;
+            // double density;
             
-            stat->reset();
+            // stat->reset();
+
             
-            randomPointsInShape->reset();
-            while (randomPointsInShape->get(v,density)) {
-                // const double density = massDistribution->density(v);
-                
-                // if (density > 0.0) {
-                {
-                    v -= centerOfMass;
-                    // v = shapeToLocal*v;
-                    stat->insert(orsa::int_pow(v.getX(),nx)*
-                                 orsa::int_pow(v.getY(),ny)*
-                                 orsa::int_pow(v.getZ(),nz)*
-                                 density);
-                    /* stat->insert(int_pow(v.getX(),nx)*
-                       int_pow(v.getY(),ny)*
-                       int_pow(v.getZ(),nz),
-                       density);
-                    */
-                    // ORSA_DEBUG("density: %g",density);
+#warning THIS should be a SUM of long FACTORS!
+            
+            double sum = 0;
+            // binomial expansion of (vec-vec_CM)
+            for (size_t bx=0; bx<=nx; ++bx) {
+                // factor *= orsa::binomial(nx,bx);
+                for (size_t by=0; by<=ny; ++by) {
+                    // factor *= orsa::binomial(ny,by);
+                    for (size_t bz=0; bz<=nz; ++bz) {
+                        // factor *= orsa::binomial(nz,bz);
+                        
+                        // expansion of Chebyshev
+                        for (size_t cx=0; cx<=Tx; ++cx) {
+                            // factor *= cTx[cx];
+                            if (cTx[cx] == 0) continue;
+                            for (size_t cy=0; cy<=Ty; ++cy) {
+                                // factor *= cTy[cy];
+                                if (cTy[cy] == 0) continue;
+                                for (size_t cz=0; cz<=Tz; ++cz) {
+                                    // factor *= cTz[cz];
+                                    if (cTz[cz] == 0) continue;
+                                    
+                                    // ORSA_DEBUG("cTx[%i]: %Zi",cx,cTx[cx].get_mpz_t());
+                                    
+                                    /* ORSA_DEBUG("test val: %g",
+                                       mpf_class(mpz_class(orsa::binomial(nx,bx) *
+                                       orsa::binomial(ny,by) *
+                                       orsa::binomial(nz,bz) *
+                                       cTx[cx] *
+                                       cTy[cy] *
+                                       cTz[cz]).get_d() *
+                                       orsa::int_pow(sampled_CM.getX()/plateModelR0,bx) *
+                                       orsa::int_pow(sampled_CM.getY()/plateModelR0,by) *
+                                       orsa::int_pow(sampled_CM.getZ()/plateModelR0,bz) *
+                                       si->getIntegral(nx-bx+cx,ny-by+cy,nz-bz+cz)).get_d());
+                                    */
+                                    
+                                    sum += mpz_class(orsa::binomial(nx,bx) *
+                                                     orsa::binomial(ny,by) *
+                                                     orsa::binomial(nz,bz) *
+                                                     cTx[cx] *
+                                                     cTy[cy] *
+                                                     cTz[cz]).get_d() *
+                                        orsa::int_pow(sampled_CM.getX()/plateModelR0,bx) *
+                                        orsa::int_pow(sampled_CM.getY()/plateModelR0,by) *
+                                        orsa::int_pow(sampled_CM.getZ()/plateModelR0,bz) *
+                                        si->getIntegral(nx-bx+cx,ny-by+cy,nz-bz+cz);
+                                }
+                            }
+                        }
+                    }
                 }
             }
+
+            gsl_matrix_set(ijk2cT,z_ijk,z_cT,sum);
             
-            gsl_matrix_set(ijk2cT,z_ijk,z_cT,stat->average()/orsa::int_pow(R0,nx+ny+nz));
-
-
+            /* 
+               randomPointsInShape->reset();
+               while (randomPointsInShape->get(v,density)) {
+               // const double density = massDistribution->density(v);
+               // if (density > 0.0) {
+               {
+               v -= centerOfMass;
+               // v = shapeToLocal*v;
+               stat->insert(orsa::int_pow(v.getX(),nx)*
+               orsa::int_pow(v.getY(),ny)*
+               orsa::int_pow(v.getZ(),nz)*
+               density);
+               // ORSA_DEBUG("density: %g",density);
+               }
+               }
+               gsl_matrix_set(ijk2cT,z_ijk,z_cT,stat->average()/orsa::int_pow(R0,nx+ny+nz));
+            */
+            
             {
                 size_t nx,ny,nz;
                 CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);                
@@ -600,7 +663,6 @@ int main(int argc, char **argv) {
             }
         }
 
-        
         // QR decomposition of A^T, to find basis of null space
         
         gsl_matrix * QR = gsl_matrix_alloc(N,M);
@@ -732,34 +794,36 @@ int main(int argc, char **argv) {
             gsl_vector * cT0 = gsl_vector_calloc(N);
             gsl_vector_memcpy(cT0,cT);
 
-            if (1) {
-
-                // trying simulated annealing approach
-                
-                gsl_rng * rng = ::gsl_rng_alloc(gsl_rng_gfsr4);
-                const int randomSeed = time(NULL)*getpid();
-                ::gsl_rng_set(rng,randomSeed);
-                ORSA_DEBUG("simulated annealing random seed: %d",randomSeed);
-
-                SIMAN_xp x0;
-                x0.R0 = R0;
-                x0.bulkDensity_gcm3 = bulkDensity_gcm3;
-                x0.randomPointsInShape = randomPointsInShape;
-                x0.T_degree = T_degree;
-                x0.T_size = T_size;
-                x0.cT0 = cT0;
-                x0.uK = &uK[0];
-                x0.uK_size = N-M;
-                x0.factor.resize(x0.uK_size);
-                for (size_t b=0; b<x0.uK_size; ++b) {
-                    x0.factor[b] = 0.0;
-                }
-                
-                gsl_siman_solve(rng, &x0, E1, S1, M1, P1,
-                                SIMAN_copy, SIMAN_copy_construct, SIMAN_destroy,
-                                0, params);
-                
+#warning re-enable this!
+            /* if (1) {
+               
+            // trying simulated annealing approach
+            
+            gsl_rng * rng = ::gsl_rng_alloc(gsl_rng_gfsr4);
+            const int randomSeed = time(NULL)*getpid();
+            ::gsl_rng_set(rng,randomSeed);
+            ORSA_DEBUG("simulated annealing random seed: %d",randomSeed);
+            
+            SIMAN_xp x0;
+            x0.R0 = R0;
+            x0.bulkDensity_gcm3 = bulkDensity_gcm3;
+            x0.randomPointsInShape = randomPointsInShape;
+            x0.T_degree = T_degree;
+            x0.T_size = T_size;
+            x0.cT0 = cT0;
+            x0.uK = &uK[0];
+            x0.uK_size = N-M;
+            x0.factor.resize(x0.uK_size);
+            for (size_t b=0; b<x0.uK_size; ++b) {
+            x0.factor[b] = 0.0;
             }
+            
+            gsl_siman_solve(rng, &x0, E1, S1, M1, P1,
+            SIMAN_copy, SIMAN_copy_construct, SIMAN_destroy,
+            0, params);
+            
+            }
+            */
         }
     }
     

@@ -124,24 +124,24 @@ double E1(void * xp) {
                x->bulkDensity_gcm3*stat->max(),
                x->bulkDensity_gcm3*stat->average());
 
-    {
-        // quick output
-        char filename[1024];
-        sprintf(filename,"quickProfile_%+.6f_%d.dat",x->bulkDensity_gcm3*stat->min(),(*orsa::GlobalRNG::randomSeed));
-        ORSA_DEBUG("writing file [%s]",filename);
-        FILE * fp = fopen(filename,"w");
-        double PP = -285.0;
-        while (PP < 285.0) {
-            v = orsa::Vector(orsa::FromUnits(PP,orsa::Unit::KM),0,0);
-            density = massDistribution->density(v);
-            gmp_fprintf(fp,"%g %g\n",PP,x->bulkDensity_gcm3*density);
-            PP += 1.0;
-        }
+    /* 
+       {
+       // quick output
+       char filename[1024];
+       sprintf(filename,"quickProfile_%+.6f_%d.dat",x->bulkDensity_gcm3*stat->min(),(*orsa::GlobalRNG::randomSeed));
+       ORSA_DEBUG("writing file [%s]",filename);
+       FILE * fp = fopen(filename,"w");
+       double PP = -285.0;
+       while (PP < 285.0) {
+       v = orsa::Vector(orsa::FromUnits(PP,orsa::Unit::KM),0,0);
+       density = massDistribution->density(v);
+       gmp_fprintf(fp,"%g %g\n",PP,x->bulkDensity_gcm3*density);
+       PP += 1.0;
+       }
+       fclose(fp);
+       }
+    */
         
-        fclose(fp);
-    }
-    
-    
     // first approach: maximize the minimum density
     // return (-minDensity);
     // alternative: minimize density range
@@ -151,6 +151,7 @@ double E1(void * xp) {
     // return std::max(0.0,-minDensity)*(maxDensity-minDensity);
     // return -minDensity*(maxDensity-minDensity);
     return -minDensity/(maxDensity-minDensity);
+    // return maxDensity;
 }
 
 double M1(void * xp, void * yp) {
