@@ -1,6 +1,7 @@
 #ifndef _ORSA_CHEBYSHEV_
 #define _ORSA_CHEBYSHEV_
 
+#include <deque>
 #include <vector>
 
 #include <orsa/double.h>
@@ -30,7 +31,7 @@ namespace orsa {
     }
     
     inline const std::vector<mpz_class> & ChebyshevTcoeff(const size_t & n) {
-        static std::vector< std::vector<mpz_class> > coeff;
+        static std::deque< std::vector<mpz_class> > coeff;
         if (coeff.size() > n) {
             return coeff[n];
         } else {
@@ -56,7 +57,7 @@ namespace orsa {
     }
     
     inline const std::vector<double> & ChebyshevTextrema(const size_t & n) {
-        static std::vector< std::vector<double> > ext;
+        static std::deque< std::vector<double> > ext;
         if (ext.size() > n) {
             return ext[n];
         } else {
