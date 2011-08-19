@@ -572,8 +572,11 @@ int main(int argc, char **argv) {
                     }
                 }
             }
-
-            gsl_matrix_set(ijk2cT,z_ijk,z_cT,sum);
+            
+#warning how to normalize this?
+            // gsl_matrix_set(ijk2cT,z_ijk,z_cT,sum);
+            // gsl_matrix_set(ijk2cT,z_ijk,z_cT,sum/(volume*orsa::int_pow(plateModelR0,-3)));
+            gsl_matrix_set(ijk2cT,z_ijk,z_cT,sum/si->getIntegral(0,0,0));
             
             /* 
                randomPointsInShape->reset();
