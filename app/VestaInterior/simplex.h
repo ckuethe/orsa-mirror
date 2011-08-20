@@ -92,7 +92,8 @@ public:
             //
             bool createTable=true;
             //
-            if (nrows==2) {
+            // if nrows == number of tables, don't need to create them
+            if (nrows==1) {
                 createTable=false;
             }
             //
