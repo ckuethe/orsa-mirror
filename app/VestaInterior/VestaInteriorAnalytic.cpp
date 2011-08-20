@@ -608,20 +608,20 @@ int main(int argc, char **argv) {
     }
     
     
-    for (size_t z_ijk=0; z_ijk<ijk_size; ++z_ijk) {
-        for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
-            // if (gsl_matrix_get(ijk2cT,z_ijk,z_cT)!=0.0) {
-            {
-                size_t nx,ny,nz;
-                CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);                
-                size_t Tx,Ty,Tz;
-                CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-                ORSA_DEBUG("ijk2cT[%03i][%03i] = %+9.6f [N[%02i][%02i][%02i] -> cT[%i][%i][%i]]",
-                           z_ijk,z_cT,gsl_matrix_get(ijk2cT,z_ijk,z_cT),nx,ny,nz,Tx,Ty,Tz);
-            }
-        }
-    }
-    
+    /* for (size_t z_ijk=0; z_ijk<ijk_size; ++z_ijk) {
+       for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
+       // if (gsl_matrix_get(ijk2cT,z_ijk,z_cT)!=0.0) {
+       {
+       size_t nx,ny,nz;
+       CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);                
+       size_t Tx,Ty,Tz;
+       CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
+       ORSA_DEBUG("ijk2cT[%03i][%03i] = %+9.6f [N[%02i][%02i][%02i] -> cT[%i][%i][%i]]",
+       z_ijk,z_cT,gsl_matrix_get(ijk2cT,z_ijk,z_cT),nx,ny,nz,Tx,Ty,Tz);
+       }
+       }
+       }
+    */
     
     gsl_matrix * sh2cT = gsl_matrix_alloc(SH_size,T_size);
     gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, sh2ijk, ijk2cT, 0.0, sh2cT);
@@ -687,9 +687,10 @@ int main(int argc, char **argv) {
             for (size_t s=0; s<N; ++s) {
                 gsl_vector_set(uK[b],s,gsl_matrix_get(Q,s,M+b));
                 //
-                size_t Tx,Ty,Tz;
-                CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,s);
-                ORSA_DEBUG("uK[%03i][%03i] =%+12.6f (null space base vector for cT[%i][%i][%i])",b,s,gsl_vector_get(uK[b],s),Tx,Ty,Tz);
+                /* size_t Tx,Ty,Tz;
+                   CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,s);
+                   ORSA_DEBUG("uK[%03i][%03i] =%+12.6f (null space base vector for cT[%i][%i][%i])",b,s,gsl_vector_get(uK[b],s),Tx,Ty,Tz);
+                */
             }
         }
         
@@ -797,36 +798,44 @@ int main(int argc, char **argv) {
             gsl_vector * cT0 = gsl_vector_calloc(N);
             gsl_vector_memcpy(cT0,cT);
 
-#warning re-enable this!
-            /* if (1) {
-               
-            // trying simulated annealing approach
-            
-            gsl_rng * rng = ::gsl_rng_alloc(gsl_rng_gfsr4);
-            const int randomSeed = time(NULL)*getpid();
-            ::gsl_rng_set(rng,randomSeed);
-            ORSA_DEBUG("simulated annealing random seed: %d",randomSeed);
-            
-            SIMAN_xp x0;
-            x0.R0 = R0;
-            x0.bulkDensity_gcm3 = bulkDensity_gcm3;
-            x0.randomPointsInShape = randomPointsInShape;
-            x0.T_degree = T_degree;
-            x0.T_size = T_size;
-            x0.cT0 = cT0;
-            x0.uK = &uK[0];
-            x0.uK_size = N-M;
-            x0.factor.resize(x0.uK_size);
-            for (size_t b=0; b<x0.uK_size; ++b) {
-            x0.factor[b] = 0.0;
+
+            if (1) {
+                
+                // trying simulated annealing approach
+                
+                gsl_rng * rng = ::gsl_rng_alloc(gsl_rng_gfsr4);
+                const int randomSeed = time(NULL)*getpid();
+                ::gsl_rng_set(rng,randomSeed);
+                ORSA_DEBUG("simulated annealing random seed: %d",randomSeed);
+                
+                const size_t numSamplePoints = 10000;
+                const bool storeSamplePoints = true;
+                osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
+                    new orsa::RandomPointsInShape(shapeModel,
+                                                  0,
+                                                  numSamplePoints,
+                                                  storeSamplePoints);
+                
+                SIMAN_xp x0;
+                x0.R0 = R0;
+                x0.bulkDensity_gcm3 = bulkDensity_gcm3;
+                x0.randomPointsInShape = randomPointsInShape;
+                x0.T_degree = T_degree;
+                x0.T_size = T_size;
+                x0.cT0 = cT0;
+                x0.uK = &uK[0];
+                x0.uK_size = N-M;
+                x0.factor.resize(x0.uK_size);
+                for (size_t b=0; b<x0.uK_size; ++b) {
+                    x0.factor[b] = 0.0;
+                }
+                
+                gsl_siman_solve(rng, &x0, E1, S1, M1, P1,
+                                SIMAN_copy, SIMAN_copy_construct, SIMAN_destroy,
+                                0, params);
+                
             }
             
-            gsl_siman_solve(rng, &x0, E1, S1, M1, P1,
-            SIMAN_copy, SIMAN_copy_construct, SIMAN_destroy,
-            0, params);
-            
-            }
-            */
         }
     }
     

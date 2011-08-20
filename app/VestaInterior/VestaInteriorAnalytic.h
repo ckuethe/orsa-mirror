@@ -16,24 +16,25 @@
 
 // GSL Simulated Annealing
 
-/* how many points do we try before stepping */
-#define N_TRIES 100 // 200             
+/* how many points do we try before stepping */      
+#define N_TRIES 200 // 100 // 200             
 
 /* how many iterations for each T? */
-#define ITERS_FIXED_T 100 // 1000 // 
+#define ITERS_FIXED_T 200 // 100 // 1000 // 
 
 /* max step size in random walk */
-#define STEP_SIZE 1.0            
+#define STEP_SIZE 1.0           
 
 /* Boltzmann constant */
 #define K 1.0                   
 
 /* initial temperature */
-#define T_INITIAL 0.008         
+// #define T_INITIAL 0.008     
+#define T_INITIAL 0.500         
 
-/* damping factor for temperature */
-#define MU_T 1.003              
-#define T_MIN 2.0e-6
+/* damping factor for temperature */        
+#define MU_T 1.100 // 1.010 // 1.003      
+#define T_MIN 1.0e-5 // 2.0e-6
 
 gsl_siman_params_t params  = {N_TRIES, ITERS_FIXED_T, STEP_SIZE,
                               K, T_INITIAL, MU_T, T_MIN};
@@ -87,13 +88,13 @@ double E1(void * xp) {
             gsl_vector_set(cT,j,gsl_vector_get(cT,j)+x->factor[b]*gsl_vector_get(x->uK[b],j));
         }
     }
-
+    
     CubicChebyshevMassDistribution::CoefficientType coeff;
     CubicChebyshevMassDistribution::resize(coeff,x->T_degree); 
 
     for (unsigned int i=0; i<=x->T_degree; ++i) {
-        for (unsigned int j=0; j<=x->T_degree; ++j) {
-            for (unsigned int k=0; k<=x->T_degree; ++k) {
+        for (unsigned int j=0; j<=x->T_degree-i; ++j) {
+            for (unsigned int k=0; k<=x->T_degree-i-j; ++k) {
                 if (i+j+k<=x->T_degree) {
                     const size_t index = CubicChebyshevMassDistribution::index(i,j,k);
                     coeff[i][j][k] = gsl_vector_get(cT,index);
@@ -101,7 +102,6 @@ double E1(void * xp) {
             }            
         }
     }
-    
     
     osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
         new CubicChebyshevMassDistribution(coeff,x->R0);
@@ -118,6 +118,8 @@ double E1(void * xp) {
         minDensity.setIfSmaller(density);
         maxDensity.setIfLarger(density);
     }
+
+#warning better way to compute average density? (based on simplexIntegral and not on randomPointsInShape)
     
     ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]",
                x->bulkDensity_gcm3*stat->min(),
@@ -143,15 +145,16 @@ double E1(void * xp) {
     */
         
     // first approach: maximize the minimum density
-    // return (-minDensity);
+    // return -minDensity;
     // alternative: minimize density range
     // return (stat->max()-stat->min());
     // more versions
     // return std::max(0.0,-minDensity);
     // return std::max(0.0,-minDensity)*(maxDensity-minDensity);
     // return -minDensity*(maxDensity-minDensity);
-    return -minDensity/(maxDensity-minDensity);
-    // return maxDensity;
+    return maxDensity-minDensity;
+    // return -minDensity*(maxDensity-minDensity);
+    // return -minDensity/(maxDensity-minDensity);
 }
 
 double M1(void * xp, void * yp) {
