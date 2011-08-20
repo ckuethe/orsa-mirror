@@ -433,7 +433,7 @@ RandomPointsInShape::RandomPointsInShape(const orsa::Shape * s,
     while (counter < size) {
         const orsa::Vector v = __randomVectorUtil(rng.get(),boundingBox);
         in[counter] = shape->isInside(v);
-        density[counter] = md->density(v);
+        if (md.get() != 0) density[counter] = md->density(v);
         if (saveVector) {
             vec[counter] = v;
         }

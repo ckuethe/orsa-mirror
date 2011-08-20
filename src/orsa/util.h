@@ -282,7 +282,7 @@ namespace orsa {
                                                const Box & boundingBox);
     protected:
         std::vector<bool> in;
-        std::vector<double> density; 
+        std::vector< orsa::Cache<double> > density; 
         std::vector<orsa::Vector> vec;
     };
 
