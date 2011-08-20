@@ -17,10 +17,10 @@
 // GSL Simulated Annealing
 
 /* how many points do we try before stepping */      
-#define N_TRIES 200 // 100 // 200             
+#define N_TRIES 100 // 100 // 200             
 
 /* how many iterations for each T? */
-#define ITERS_FIXED_T 200 // 100 // 1000 // 
+#define ITERS_FIXED_T 100 // 200 // 100 // 1000 // 
 
 /* max step size in random walk */
 #define STEP_SIZE 1.0           
@@ -30,10 +30,10 @@
 
 /* initial temperature */
 // #define T_INITIAL 0.008     
-#define T_INITIAL 0.500         
+#define T_INITIAL 0.010         
 
 /* damping factor for temperature */        
-#define MU_T 1.100 // 1.010 // 1.003      
+#define MU_T 1.010 // 1.010 // 1.003      
 #define T_MIN 1.0e-5 // 2.0e-6
 
 gsl_siman_params_t params  = {N_TRIES, ITERS_FIXED_T, STEP_SIZE,
@@ -154,7 +154,7 @@ double E1(void * xp) {
     // return -minDensity*(maxDensity-minDensity);
     return maxDensity-minDensity;
     // return -minDensity*(maxDensity-minDensity);
-    // return -minDensity/(maxDensity-minDensity);
+    // return minDensity*(maxDensity-minDensity);
 }
 
 double M1(void * xp, void * yp) {
@@ -165,6 +165,7 @@ double M1(void * xp, void * yp) {
     for (size_t b=0; b<x->uK_size; ++b) {
         distance += orsa::square(y->factor[b]-x->factor[b]);
     }
+    distance /= x->uK_size;
     distance = sqrt(distance);
 
     return distance;

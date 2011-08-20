@@ -39,8 +39,8 @@ int main(int argc, char **argv) {
     // mpf_set_default_prec(512);
     // ORSA_DEBUG("updated mpf precision: %i",mpf_get_default_prec());
     
-    if (argc != 12) {
-        printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> \n",argv[0]);
+    if (argc != 13) {
+        printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> <num-sample-points>\n",argv[0]);
         exit(0);
     }   
     
@@ -55,6 +55,7 @@ int main(int argc, char **argv) {
     const double CM_sx = orsa::FromUnits(atof(argv[9]),orsa::Unit::KM);
     const double CM_sy = orsa::FromUnits(atof(argv[10]),orsa::Unit::KM);
     const double CM_sz = orsa::FromUnits(atof(argv[11]),orsa::Unit::KM);
+    const int numSamplePoints = atoi(argv[12]);
     
     const std::string SQLiteDBFileName = getSqliteDBFileName(plateModelFile,plateModelR0);
     
@@ -596,7 +597,7 @@ int main(int argc, char **argv) {
                gsl_matrix_set(ijk2cT,z_ijk,z_cT,stat->average()/orsa::int_pow(R0,nx+ny+nz));
             */
             
-            {
+            if (0) {
                 size_t nx,ny,nz;
                 CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);                
                 size_t Tx,Ty,Tz;
@@ -808,7 +809,7 @@ int main(int argc, char **argv) {
                 ::gsl_rng_set(rng,randomSeed);
                 ORSA_DEBUG("simulated annealing random seed: %d",randomSeed);
                 
-                const size_t numSamplePoints = 10000;
+                // const size_t numSamplePoints = 100000;
                 const bool storeSamplePoints = true;
                 osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
                     new orsa::RandomPointsInShape(shapeModel,
