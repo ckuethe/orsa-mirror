@@ -45,15 +45,6 @@ const Vector & TriShape::_getVertexNormal(const unsigned int vertex_index) const
     if (_vertex_normal.size() != _vertex.size()) {
         _vertex_normal.resize(_vertex.size());
         
-        if (vertexInFace.size() != _vertex.size()) {
-            vertexInFace.resize(_vertex.size());
-            for (unsigned int _f=0; _f<_face.size(); ++_f) {
-                vertexInFace[_face[_f].i()].push_back(_f);
-                vertexInFace[_face[_f].j()].push_back(_f);
-                vertexInFace[_face[_f].k()].push_back(_f);
-            }
-        }
-        
         Vector _n;
         for (unsigned int _v=0; _v<_vertex.size(); ++_v) {
             if (vertexInFace[_v].size() == 0) {
@@ -82,6 +73,10 @@ const Vector & TriShape::_getFaceNormal(const unsigned int face_index) const {
             const TriIndex & _t = _face[_f];
             _face_normal[_f] = externalProduct(_vertex[_t.k()]-_vertex[_t.j()],
                                                _vertex[_t.i()]-_vertex[_t.j()]).normalized();
+            // test: pointing "out" ? (extreme shapes can fail this test, that's OK
+            if (_face_normal[_f]*(_vertex[_t.i()]+_vertex[_t.j()]+_vertex[_t.k()]) < 0) {
+                ORSA_DEBUG("warning: basic face-normal test not passed...");
+            }
         }
     }
     return _face_normal[face_index];
@@ -175,7 +170,16 @@ bool TriShape::_updateCache() const {
         }
         _delta_min = sqrt(_d2_min);
         _delta_max = sqrt(_d2_max);
-    } 
+    }
+    //
+    if (vertexInFace.size() != _vertex.size()) {
+        vertexInFace.resize(_vertex.size());
+        for (unsigned int _f=0; _f<_face.size(); ++_f) {
+            vertexInFace[_face[_f].i()].push_back(_f);
+            vertexInFace[_face[_f].j()].push_back(_f);
+            vertexInFace[_face[_f].k()].push_back(_f);
+        }
+    }
     //
     // ORSA_DEBUG("need to fill the _ref_point_inside_model vector somewhere...");
     //
@@ -188,6 +192,7 @@ bool TriShape::isInside(const Vector & v) const {
     // return _isInside_useLineMethod(v);
     // return _isInside_useNormalMethod(v);
     return _isInside_useFaceMethod(v);
+    // return _isInside_usePointInTetrahedronMethod(v);
 }
 
 bool TriShape::_isInside_useLineMethod(const Vector & v) const {
@@ -301,14 +306,8 @@ bool TriShape::_isInside_useLineMethod(const Vector & v) const {
 bool TriShape::_isInside_useNormalMethod(const Vector & v) const {
     _updateCache();
     if (v.lengthSquared() > (_r_max*_r_max)) {
-        /* 
-           ORSA_DEBUG("fast out: v.length()=%f > _r_max=%f",
-           v.length(),
-           _r_max);
-        */
         return false;
     } else if (v.lengthSquared() < (_r_min*_r_min)) {
-        // ORSA_DEBUG("fast in");
         return true;
     }
   
@@ -344,34 +343,46 @@ bool TriShape::_isInside_useNormalMethod(const Vector & v) const {
 bool TriShape::_isInside_useFaceMethod(const Vector & v) const {
     _updateCache();
     if (v.lengthSquared() > (_r_max*_r_max)) {
-        /* 
-           ORSA_DEBUG("fast out: v.length()=%f > _r_max=%f",
-           v.length(),
-           _r_max);
-        */
         return false;
     } else if (v.lengthSquared() < (_r_min*_r_min)) {
-        // ORSA_DEBUG("fast in");
         return true;
     }
-  
-    // for all faces containing the vertex closet to "v", check that
+    
+    // for all faces containing the vertex closest to "v", check that
     // the relative distance between "v" and each face vertex lays inside the face
-    unsigned int id = closestVertexIndex(v);
-    for (unsigned int fi=0; fi<_face.size(); ++fi) {
-        if ( (_face[fi].i() == id) ||
-             (_face[fi].j() == id) ||
-             (_face[fi].k() == id) ) {
-            if (_getFaceNormal(fi)*(_vertex[_face[fi].i()]-v) > 0) { return true; }
-            if (_getFaceNormal(fi)*(_vertex[_face[fi].j()]-v) > 0) { return true; }
-            if (_getFaceNormal(fi)*(_vertex[_face[fi].k()]-v) > 0) { return true; }
-        }
+    /* unsigned int id = closestVertexIndex(v);
+       for (unsigned int fi=0; fi<_face.size(); ++fi) {
+       if ( (_face[fi].i() == id) ||
+       (_face[fi].j() == id) ||
+       (_face[fi].k() == id) ) {
+       if (_getFaceNormal(fi)*(_vertex[_face[fi].i()]-v) > 0) { return true; }
+       if (_getFaceNormal(fi)*(_vertex[_face[fi].j()]-v) > 0) { return true; }
+       if (_getFaceNormal(fi)*(_vertex[_face[fi].k()]-v) > 0) { return true; }
+       }
+       }
+    */
+    const unsigned int id = closestVertexIndex(v);
+    std::list<unsigned int>::const_iterator it = vertexInFace[id].begin();
+    while (it != vertexInFace[id].end()) {
+        if (_getFaceNormal(*it)*(_vertex[_face[*it].i()]-v) > 0) { return true; }
+        if (_getFaceNormal(*it)*(_vertex[_face[*it].j()]-v) > 0) { return true; }
+        if (_getFaceNormal(*it)*(_vertex[_face[*it].k()]-v) > 0) { return true; }
+        ++it;
     }
-  
+    
     return false;
 }
 
-
+/* bool TriShape::_isInside_usePointInTetrahedronMethod(const Vector & v) const {
+   _updateCache();
+   if (v.lengthSquared() > (_r_max*_r_max)) {
+   return false;
+   } else if (v.lengthSquared() < (_r_min*_r_min)) {
+   return true;
+   }
+   #warning CONITNUE...
+   }
+*/
 
 const Vector & TriShape::closestVertex(const Vector & v) const {
     return _vertex[closestVertexIndex(v)];

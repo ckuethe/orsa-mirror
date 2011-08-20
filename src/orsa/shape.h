@@ -183,7 +183,10 @@ namespace orsa {
     protected:    
         //
         bool _isInside_useFaceMethod(const Vector &) const;
-    
+    protected:
+        //
+        // bool _isInside_usePointInTetrahedronMethod(const Vector &) const;
+        
     public:
         const Vector & closestVertex(const Vector &) const;   
         unsigned int   closestVertexIndex(const Vector &) const;   
