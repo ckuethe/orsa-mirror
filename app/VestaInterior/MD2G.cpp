@@ -32,7 +32,7 @@ int main() {
     osg::ref_ptr<RandomPointsInShape> randomPointsInShape =
         new RandomPointsInShape(shape,massDistribution,N,storeRandomVectors);
     
-    const double volume = orsa::volume(randomPointsInShape);
+    // const double volume = orsa::volume(randomPointsInShape);
     
     centerOfMass = orsa::centerOfMass(randomPointsInShape);
     // massDistribution);
@@ -64,15 +64,15 @@ int main() {
 	ORSA_DEBUG("\%\\hline");
 	for (unsigned int l=2; l<=order; ++l) {
         // J_l is minus C_l0, where C_l0 is not normalized
-        ORSA_DEBUG("$J_{%i}$    & $%+9.6f$ \\\\",l,-C[l][0]);
-	}
+        ORSA_DEBUG("$J_{%i}$    & $%+9.6Ff$ \\\\",l,mpf_class(-C[l][0]).get_mpf_t());
+    }
 	ORSA_DEBUG("\%\\hline");
 	for (unsigned int l=2; l<=order; ++l) {
         for (unsigned int m=0; m<=l; ++m) {
             // LaTeX Tabular style
-            ORSA_DEBUG("$C_{%i%i}$   & $%+9.6f$ \\\\",l,m,norm_C[l][m]);
+            ORSA_DEBUG("$C_{%i%i}$   & $%+9.6Ff$ \\\\",l,m,norm_C[l][m].get_mpf_t());
             if (m!=0) {
-                ORSA_DEBUG("$S_{%i%i}$   & $%+9.6f$ \\\\",l,m,norm_S[l][m]);
+                ORSA_DEBUG("$S_{%i%i}$   & $%+9.6Ff$ \\\\",l,m,norm_S[l][m].get_mpf_t());
             }
         }
 	}

@@ -119,7 +119,7 @@ double E1(void * xp) {
         maxDensity.setIfLarger(density);
     }
 
-#warning better way to compute average density? (based on simplexIntegral and not on randomPointsInShape)
+#warning find a better way to compute average density? (based on simplexIntegral and not on randomPointsInShape)
     
     ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]",
                x->bulkDensity_gcm3*stat->min(),
