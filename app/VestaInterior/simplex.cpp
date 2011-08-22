@@ -39,6 +39,9 @@ int main(int argc, char **argv) {
         ORSA_DEBUG("invalid input...");
         exit(0);
     }
+
+    // safer over NFS
+    sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
     
     const std::string SQLiteDBFileName = getSqliteDBFileName(inputFile,R0);
     

@@ -57,6 +57,9 @@ int main(int argc, char **argv) {
     const double CM_sz = orsa::FromUnits(atof(argv[11]),orsa::Unit::KM);
     const int numSamplePoints = atoi(argv[12]);
     
+    // safer over NFS
+    sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
+    
     const std::string SQLiteDBFileName = getSqliteDBFileName(plateModelFile,plateModelR0);
     
     /* // test
