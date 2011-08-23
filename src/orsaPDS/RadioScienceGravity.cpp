@@ -393,8 +393,8 @@ bool RadioScienceGravityFile::writeU(const unsigned int & u, FILE * fp) {
 }
 
 bool RadioScienceGravityFile::writeS(const std::string & s, FILE * fp) {
-    char line[8];
-    sprintf(line,"%8s",s.c_str());
+    char line[9]; // 8+1 for trailing \0
+    sprintf(line,"%-8s",s.c_str());
     const bool retVal = (8 == fwrite(&line,sizeof(char),8,fp));
     if (!retVal) {
         ORSA_DEBUG("problems...");
@@ -403,7 +403,16 @@ bool RadioScienceGravityFile::writeS(const std::string & s, FILE * fp) {
 }
 
 void RadioScienceGravityFile::padToNextRow(const size_t & RECORD_BYTES, FILE * fp) {
-    if ((ftell(fp)%RECORD_BYTES) != 0) {
-        fseek(fp,RECORD_BYTES-(ftell(fp)%RECORD_BYTES),SEEK_CUR);
-    }
+    while ((ftell(fp)%RECORD_BYTES) != 0) {
+        fputc(0,fp);
+    }   
+    /* 
+       if ((ftell(fp)%RECORD_BYTES) != 0) {
+       // fseek(fp,RECORD_BYTES-(ftell(fp)%RECORD_BYTES),SEEK_CUR);
+       unsigned char c = '\0';
+       const size_t s = sizeof(unsigned char);
+       ORSA_DEBUG("s: %i chunk: %i",s,RECORD_BYTES-(ftell(fp)%RECORD_BYTES));
+       fwrite(&c,s,RECORD_BYTES-(ftell(fp)%RECORD_BYTES),fp);
+       }
+    */
 }
