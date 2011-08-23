@@ -89,20 +89,24 @@ int main(int argc, char **argv) {
     // test specific cases, for debug purposes only!
     // orsa::GlobalRNG::randomSeed = -800402816;
     
-    osg::ref_ptr<orsaPDS::RadioScienceGravityFile> pds =
-        // new orsaPDS::RadioScienceGravityFile("JGDAWN20SIMA.DAT",512,1518);
-        new orsaPDS::RadioScienceGravityFile(radioScienceGravityFile,512,1518);
+    osg::ref_ptr<orsaPDS::RadioScienceGravityData> gravityData = new orsaPDS::RadioScienceGravityData;
+    orsaPDS::RadioScienceGravityFile::read(gravityData.get(),radioScienceGravityFile,512,1518);
     
-    gsl_vector * pds_coeff    = pds->data->getCoefficientVector();
-    gsl_matrix * pds_covm     = pds->data->getCovarianceMatrix();
-    gsl_matrix * pds_inv_covm = pds->data->getInverseCovarianceMatrix();
+    /* osg::ref_ptr<orsaPDS::RadioScienceGravityFile> pds =
+    // new orsaPDS::RadioScienceGravityFile("JGDAWN20SIMA.DAT",512,1518);
+    new orsaPDS::RadioScienceGravityFile(radioScienceGravityFile,512,1518);
+    */
+    
+    gsl_vector * pds_coeff    = gravityData->getCoefficientVector();
+    gsl_matrix * pds_covm     = gravityData->getCovarianceMatrix();
+    gsl_matrix * pds_inv_covm = gravityData->getInverseCovarianceMatrix();
     
     /* if (0) {
-       gsl_matrix * identity = gsl_matrix_alloc(pds->data->numberOfCoefficients,pds->data->numberOfCoefficients);
+       gsl_matrix * identity = gsl_matrix_alloc(gravityData->numberOfCoefficients,gravityData->numberOfCoefficients);
        // gsl_blas_dgemm(CblasNoTrans,CblasNoTrans,1.0,pds_covm,pds_inv_covm,0.0,identity);
        gsl_blas_dgemm(CblasNoTrans,CblasNoTrans,1.0,pds_inv_covm,pds_covm,0.0,identity);
-       for (size_t i=0; i<pds->data->numberOfCoefficients; ++i) {
-       for (size_t j=0; j<pds->data->numberOfCoefficients; ++j) {
+       for (size_t i=0; i<gravityData->numberOfCoefficients; ++i) {
+       for (size_t j=0; j<gravityData->numberOfCoefficients; ++j) {
        ORSA_DEBUG("identity[%03i][%03i] = %+20.9f",i,j,gsl_matrix_get(identity,i,j));
        }
        }
@@ -132,9 +136,9 @@ int main(int argc, char **argv) {
     const size_t SH_degree = gravityDegree; // shperical harmonics degree
     const size_t  T_degree = polynomialDegree; // chebyshev polinomials degree
     
-    const double R0 = pds->data->R0;
-#warning which GM value to use? pds->data->GM  OR pds->data->getCoeff("GM") ??
-    const double GM = pds->data->GM; 
+    const double R0 = gravityData->R0;
+#warning which GM value to use? gravityData->GM  OR gravityData->getCoeff("GM") ??
+    const double GM = gravityData->GM; 
     
     // sh size: (l+1)^2 +1; +1 due to GM factor; -4 because C00, C10, C11, S11 are missing
     const size_t  SH_size = (SH_degree+1)*(SH_degree+1)+1-4;
@@ -208,7 +212,7 @@ int main(int argc, char **argv) {
                                 // nu_factor_uncertainty += nu_factor_base * pm->M_uncertainty(M_i,M_j,M_k);
 
                                 // z_sh is 0 if l==0, it's the GM term
-                                const size_t z_sh  = (l==0 ? 0 :  pds->data->index(orsaPDS::RadioScienceGravityData::keyC(l,m)));
+                                const size_t z_sh  = (l==0 ? 0 :  gravityData->index(orsaPDS::RadioScienceGravityData::keyC(l,m)));
                                 const size_t z_ijk = CubicChebyshevMassDistribution::index(M_i,M_j,M_k);
                                 // gsl_matrix_set(nu_sh2ijk,z_sh,z_ijk,gsl_matrix_get(nu_sh2ijk,z_sh,z_ijk)+nu_factor_base);
                                 gsl_matrix_set(nu_sh2ijk,z_sh,z_ijk,nu_factor_base);
@@ -339,7 +343,7 @@ int main(int argc, char **argv) {
                                 // nu_factor += nu_factor_base * pm->M(M_i,M_j,M_k);
                                 // nu_factor_uncertainty += nu_factor_base * pm->M_uncertainty(M_i,M_j,M_k);
                                 
-                                const size_t z_sh  = pds->data->index(orsaPDS::RadioScienceGravityData::keyS(l,m));
+                                const size_t z_sh  = gravityData->index(orsaPDS::RadioScienceGravityData::keyS(l,m));
                                 const size_t z_ijk = CubicChebyshevMassDistribution::index(M_i,M_j,M_k);
                                 // gsl_matrix_set(nu_sh2ijk,z_sh,z_ijk,gsl_matrix_get(nu_sh2ijk,z_sh,z_ijk)+nu_factor_base);
                                 gsl_matrix_set(nu_sh2ijk,z_sh,z_ijk,nu_factor_base);
@@ -437,7 +441,7 @@ int main(int argc, char **argv) {
                 size_t nx,ny,nz;
                 CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);                
                 ORSA_DEBUG("sh2ijk[%03i][%03i] = %+10.6f [%s -> N[%02i][%02i][%02i]]",
-                           z_sh,z_ijk,gsl_matrix_get(sh2ijk,z_sh,z_ijk),pds->data->key(z_sh).toStdString().c_str(),nx,ny,nz);
+                           z_sh,z_ijk,gsl_matrix_get(sh2ijk,z_sh,z_ijk),gravityData->key(z_sh).toStdString().c_str(),nx,ny,nz);
             }
         }
     }
@@ -542,7 +546,7 @@ int main(int argc, char **argv) {
             size_t Tx,Ty,Tz;
             CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
             ORSA_DEBUG("sh2cT[%03i][%03i] = %+9.6f [%s ->  cT[%i][%i][%i]]",
-                       z_sh,z_cT,gsl_matrix_get(sh2cT,z_sh,z_cT),pds->data->key(z_sh).toStdString().c_str(),Tx,Ty,Tz);
+                       z_sh,z_cT,gsl_matrix_get(sh2cT,z_sh,z_cT),gravityData->key(z_sh).toStdString().c_str(),Tx,Ty,Tz);
         }
     }
     
@@ -663,14 +667,14 @@ int main(int argc, char **argv) {
         gsl_vector * cT = gsl_vector_calloc(N); // x  of A x = b
         
         // sample from SH covariance matrix
-        gsl_eigen_symmv_workspace * w = gsl_eigen_symmv_alloc(pds->data->numberOfCoefficients); // workspace for eigenvectors/values
-        gsl_vector * eval = gsl_vector_alloc(pds->data->numberOfCoefficients);    // eigenvalues
-        gsl_matrix * evec = gsl_matrix_alloc(pds->data->numberOfCoefficients,pds->data->numberOfCoefficients);  // eigenvectors
+        gsl_eigen_symmv_workspace * w = gsl_eigen_symmv_alloc(gravityData->numberOfCoefficients); // workspace for eigenvectors/values
+        gsl_vector * eval = gsl_vector_alloc(gravityData->numberOfCoefficients);    // eigenvalues
+        gsl_matrix * evec = gsl_matrix_alloc(gravityData->numberOfCoefficients,gravityData->numberOfCoefficients);  // eigenvectors
         //
         gsl_eigen_symmv(pds_covm, eval, evec, w); // NOTE: The diagonal and lower triangular part of A are destroyed during the computation
         //
-        double sigma[pds->data->numberOfCoefficients];
-        for (size_t i=0; i<pds->data->numberOfCoefficients; ++i) {
+        double sigma[gravityData->numberOfCoefficients];
+        for (size_t i=0; i<gravityData->numberOfCoefficients; ++i) {
             // ORSA_DEBUG("eval[%i] = %g",i,gsl_vector_get(eval,i));
             if (gsl_vector_get(eval,i) == 0.0) {
                 ORSA_ERROR("problems with the covariance matrix: null eigenvalue found.");
@@ -678,25 +682,25 @@ int main(int argc, char **argv) {
             sigma[i] = sqrt(fabs(gsl_vector_get(eval,i)));
             // ORSA_DEBUG("sigma[%i] = %g",i,sigma[i]);
         }
-        gsl_vector * sampleCoeff_x  = gsl_vector_alloc(pds->data->numberOfCoefficients);
-        gsl_vector * sampleCoeff_y  = gsl_vector_alloc(pds->data->numberOfCoefficients); 
+        gsl_vector * sampleCoeff_x  = gsl_vector_alloc(gravityData->numberOfCoefficients);
+        gsl_vector * sampleCoeff_y  = gsl_vector_alloc(gravityData->numberOfCoefficients); 
         
         for (size_t gen=0; gen<1000; ++gen) {
             
-            for (size_t i=0; i<pds->data->numberOfCoefficients; ++i) {
+            for (size_t i=0; i<gravityData->numberOfCoefficients; ++i) {
                 gsl_vector_set(sampleCoeff_x,i,orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(sigma[i]));
             }
             //
             gsl_blas_dgemv(CblasNoTrans,1.0,evec,sampleCoeff_x,0.0,sampleCoeff_y);
             //
-            for (size_t i=0; i<pds->data->numberOfCoefficients; ++i) {
+            for (size_t i=0; i<gravityData->numberOfCoefficients; ++i) {
                 gsl_vector_set(sampleCoeff_y,i,gsl_vector_get(sampleCoeff_y,i)+gsl_vector_get(pds_coeff,i));
             }
             
             for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
-                // gsl_vector_set(sh,z_sh,pds->data->getCoeff(pds->data->key(z_sh)));
+                // gsl_vector_set(sh,z_sh,gravityData->getCoeff(gravityData->key(z_sh)));
                 gsl_vector_set(sh,z_sh,gsl_vector_get(sampleCoeff_y,z_sh));
-                ORSA_DEBUG("%7s =  %+12.3g [sampled]",pds->data->key(z_sh).toStdString().c_str(),gsl_vector_get(sh,z_sh));
+                ORSA_DEBUG("%7s =  %+12.3g [sampled]",gravityData->key(z_sh).toStdString().c_str(),gsl_vector_get(sh,z_sh));
             }
 
             // solving here!
