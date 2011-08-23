@@ -92,6 +92,50 @@ int main(int argc, char **argv) {
     osg::ref_ptr<orsaPDS::RadioScienceGravityData> gravityData = new orsaPDS::RadioScienceGravityData;
     orsaPDS::RadioScienceGravityFile::read(gravityData.get(),radioScienceGravityFile,512,1518);
     
+    if (0) {
+        
+        ORSA_DEBUG("testing writing of gravity data file...");
+        
+        // test
+        std::string testGravityFile = "gra.dat";
+        orsaPDS::RadioScienceGravityFile::write(gravityData.get(),testGravityFile,512,1518);
+        
+        osg::ref_ptr<orsaPDS::RadioScienceGravityData> testGravityData = new orsaPDS::RadioScienceGravityData;
+        orsaPDS::RadioScienceGravityFile::read(testGravityData.get(),testGravityFile,512,1518);
+        
+        {
+            gsl_vector *  pds_coeff = gravityData->getCoefficientVector();
+            gsl_vector * test_coeff = testGravityData->getCoefficientVector();
+            for (size_t i=0; i<gravityData->numberOfCoefficients; ++i) {
+                const double delta =
+                    gsl_vector_get(test_coeff,i) -
+                    gsl_vector_get( pds_coeff,i);
+                const double perc = 100*fabs(delta / gsl_vector_get(pds_coeff,i));
+                if (delta != 0.0) {
+                    ORSA_DEBUG("%+12.6e %9.3e %%",delta,perc);
+                }
+            }
+        }
+        
+        {
+            gsl_matrix *  pds_covm = gravityData->getCovarianceMatrix();
+            gsl_matrix * test_covm = testGravityData->getCovarianceMatrix();
+            for (size_t i=0; i<gravityData->numberOfCoefficients; ++i) {
+                for (size_t j=0; j<=i; ++j) {
+                    const double delta =
+                        gsl_matrix_get(test_covm,i,j) -
+                        gsl_matrix_get( pds_covm,i,j);
+                    const double perc = 100*fabs(delta / gsl_matrix_get(pds_covm,i,j));
+                    if (delta != 0.0) {
+                        ORSA_DEBUG("%+12.6e %9.3e %%",delta,perc);
+                    }
+                }
+            }
+        }
+        
+        ORSA_DEBUG("testing writing of gravity data file... done.");
+    }
+    
     /* osg::ref_ptr<orsaPDS::RadioScienceGravityFile> pds =
     // new orsaPDS::RadioScienceGravityFile("JGDAWN20SIMA.DAT",512,1518);
     new orsaPDS::RadioScienceGravityFile(radioScienceGravityFile,512,1518);
