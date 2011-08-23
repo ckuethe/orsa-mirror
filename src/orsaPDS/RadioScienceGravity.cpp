@@ -134,46 +134,48 @@ gsl_matrix * RadioScienceGravityData::getInverseCovarianceMatrix() const {
     return inv_covm;
 }
 
-RadioScienceGravityFile::RadioScienceGravityFile(const std::string & fileName,
-                                                 const size_t & RECORD_BYTES_,
-                                                 const size_t & FILE_RECORDS_) :
-    RECORD_BYTES(RECORD_BYTES_),
-    FILE_RECORDS(FILE_RECORDS_) {
+bool RadioScienceGravityFile::read(RadioScienceGravityData * data,
+                                   const std::string & fileName,
+                                   const size_t & RECORD_BYTES,
+                                   const size_t & /* FILE_RECORDS */) {
     
-    data = new RadioScienceGravityData;
+    /* RECORD_BYTES(RECORD_BYTES_),
+       FILE_RECORDS(FILE_RECORDS_) {   
+       data = new RadioScienceGravityData;
+    */
     
-    fp = fopen(fileName.c_str(),"r");
+    FILE * fp = fopen(fileName.c_str(),"r");
     if (!fp) {
         ORSA_DEBUG("cannot open file [%s]",fileName.c_str());
-        return;
+        return false;
     }
     
     // read SHBDR_HEADER_TABLE
     {
-        readD(data->R0);
+        readD(data->R0,fp);
         data->R0 = orsa::FromUnits(data->R0,orsa::Unit::KM);
         
-        readD(data->GM);
+        readD(data->GM,fp);
         data->GM = orsa::FromUnits(orsa::FromUnits(data->GM,orsa::Unit::KM,3),orsa::Unit::SECOND,-2);
         
-        readD(data->sigmaGM);
+        readD(data->sigmaGM,fp);
         data->sigmaGM = orsa::FromUnits(orsa::FromUnits(data->sigmaGM,orsa::Unit::KM,3),orsa::Unit::SECOND,-2);
         
-        readU(data->degree);
+        readU(data->degree,fp);
         
-        readU(data->order);
+        readU(data->order,fp);
         
-        readU(data->normalizationState);
+        readU(data->normalizationState,fp);
 
-        readU(data->numberOfCoefficients);
+        readU(data->numberOfCoefficients,fp);
         
-        readD(data->referenceLongitude);
+        readD(data->referenceLongitude,fp);
         data->referenceLongitude *= orsa::degToRad();
         
-        readD(data->referenceLatitude);
+        readD(data->referenceLatitude,fp);
         data->referenceLatitude *= orsa::degToRad();
         
-        skipToNextRow();
+        skipToNextRow(RECORD_BYTES,fp);
     }
     
     // ORSA_DEBUG("n. coeff: %i",data->numberOfCoefficients);
@@ -189,19 +191,19 @@ RadioScienceGravityFile::RadioScienceGravityFile(const std::string & fileName,
     {
         std::string s;
         for (unsigned int k=0; k<data->numberOfCoefficients; ++k) {
-            readS(s);
+            readS(s,fp);
             // ORSA_DEBUG("name: [%s]",s.c_str());
             data->hash[QString(s.c_str())] = k;
         }
         
-        skipToNextRow();
+        skipToNextRow(RECORD_BYTES,fp);
     }
     
     // read SHBDR_COEFFICIENTS_TABLE
     {
         double d;
         for (unsigned int k=0; k<data->numberOfCoefficients; ++k) {
-            readD(d);
+            readD(d,fp);
             // ORSA_DEBUG("d: [%g]",d);
             if (k == data->index("GM")) {
                 // GM is in km^2/s^2
@@ -210,7 +212,7 @@ RadioScienceGravityFile::RadioScienceGravityFile(const std::string & fileName,
             data->coeff[k] = d;
         }
         
-        skipToNextRow();
+        skipToNextRow(RECORD_BYTES,fp);
     }
     
     // read SHBDR_COVARIANCE_TABLE
@@ -218,7 +220,7 @@ RadioScienceGravityFile::RadioScienceGravityFile(const std::string & fileName,
         double d;
         for (unsigned int k=0; k<data->numberOfCoefficients; ++k) {
             for (unsigned int r=0; r<=k; ++r) {
-                readD(d);
+                readD(d,fp);
                 // ORSA_DEBUG("d: [%g]",d);
                 if (k == data->index("GM")) {
                     // GM is in km^2/s^2
@@ -232,14 +234,15 @@ RadioScienceGravityFile::RadioScienceGravityFile(const std::string & fileName,
             }
         }
         
-        skipToNextRow();
+        skipToNextRow(RECORD_BYTES,fp);
     }
     
     fclose(fp);
+    
+    return true;
 }
 
-
-bool RadioScienceGravityFile::readD(double & d) const {
+bool RadioScienceGravityFile::readD(double & d, FILE * fp) {
     const bool retVal = (1 == fread(&d,sizeof(double),1,fp));
     if (!retVal) {
         ORSA_DEBUG("problems...");
@@ -247,7 +250,7 @@ bool RadioScienceGravityFile::readD(double & d) const {
     return retVal;
 }
 
-bool RadioScienceGravityFile::readI(int & i) const {
+bool RadioScienceGravityFile::readI(int & i, FILE * fp) {
     const bool retVal = (1 == fread(&i,sizeof(int),1,fp));
     if (!retVal) {
         ORSA_DEBUG("problems...");
@@ -255,7 +258,7 @@ bool RadioScienceGravityFile::readI(int & i) const {
     return retVal;
 }
 
-bool RadioScienceGravityFile::readU(unsigned int & u) const {
+bool RadioScienceGravityFile::readU(unsigned int & u, FILE * fp) {
     const bool retVal = (1 == fread(&u,sizeof(unsigned int),1,fp));
     if (!retVal) {
         ORSA_DEBUG("problems...");
@@ -263,7 +266,7 @@ bool RadioScienceGravityFile::readU(unsigned int & u) const {
     return retVal;
 }
 
-bool RadioScienceGravityFile::readS(std::string & s) const {
+bool RadioScienceGravityFile::readS(std::string & s, FILE * fp) {
     char line[8];
     const bool retVal = (8 == fread(&line,sizeof(char),8,fp));
     if (!retVal) {
@@ -274,7 +277,132 @@ bool RadioScienceGravityFile::readS(std::string & s) const {
     return retVal;
 }
 
-void RadioScienceGravityFile::skipToNextRow() const {
+void RadioScienceGravityFile::skipToNextRow(const size_t & RECORD_BYTES, FILE * fp) {
+    if ((ftell(fp)%RECORD_BYTES) != 0) {
+        fseek(fp,RECORD_BYTES-(ftell(fp)%RECORD_BYTES),SEEK_CUR);
+    }
+}
+
+bool RadioScienceGravityFile::write(const RadioScienceGravityData * data,
+                                    const std::string & fileName,
+                                    const size_t & RECORD_BYTES,
+                                    const size_t & /* FILE_RECORDS */) {
+    
+    FILE * fp = fopen(fileName.c_str(),"w");
+    if (!fp) {
+        ORSA_DEBUG("cannot open file [%s]",fileName.c_str());
+        return false;
+    }
+    
+    // write SHBDR_HEADER_TABLE
+    {
+        writeD(orsa::FromUnits(data->R0,orsa::Unit::KM,-1),fp);
+        
+        writeD(orsa::FromUnits(orsa::FromUnits(data->GM,orsa::Unit::KM,-3),orsa::Unit::SECOND,2),fp);
+        
+        writeD(orsa::FromUnits(orsa::FromUnits(data->sigmaGM,orsa::Unit::KM,-3),orsa::Unit::SECOND,2),fp);
+        
+        writeU(data->degree,fp);
+        
+        writeU(data->order,fp);
+        
+        writeU(data->normalizationState,fp);
+
+        writeU(data->numberOfCoefficients,fp);
+        
+        writeD(data->referenceLongitude*orsa::radToDeg(),fp);
+        
+        writeD(data->referenceLatitude*orsa::radToDeg(),fp);
+        
+        padToNextRow(RECORD_BYTES,fp);
+    }
+    
+    // write SHBDR_NAMES_TABLE
+    {
+        writeS("GM",fp);
+        for (unsigned int l=2; l<=data->degree; ++l) {
+            for (unsigned int m=0; m<=l; ++m) {
+                writeS(data->keyC(l,m).toStdString().c_str(),fp);
+                if (m != 0) {
+                    writeS(data->keyS(l,m).toStdString().c_str(),fp);
+                }       
+            }
+        }
+        
+        padToNextRow(RECORD_BYTES,fp);
+    }
+    
+    // write SHBDR_COEFFICIENTS_TABLE
+    {
+        for (unsigned int k=0; k<data->numberOfCoefficients; ++k) {
+            double factor = 1;
+            if (k == data->index("GM")) {
+                factor *= orsa::FromUnits(orsa::FromUnits(1,orsa::Unit::KM,-3),orsa::Unit::SECOND,2);
+            }
+            writeD(factor*data->coeff[k],fp);
+        }
+        
+        padToNextRow(RECORD_BYTES,fp);
+    }
+    
+    // write SHBDR_COVARIANCE_TABLE
+    {
+        for (unsigned int k=0; k<data->numberOfCoefficients; ++k) {
+            for (unsigned int r=0; r<=k; ++r) {
+                double factor = 1;
+                if (k == data->index("GM")) {
+                    factor *= orsa::FromUnits(orsa::FromUnits(1,orsa::Unit::KM,-3),orsa::Unit::SECOND,2);
+                }
+                if (r == data->index("GM")) {
+                    factor *= orsa::FromUnits(orsa::FromUnits(1,orsa::Unit::KM,-3),orsa::Unit::SECOND,2);
+                }
+                writeD(factor*data->covar[k][r],fp);
+            }
+        }
+        
+        padToNextRow(RECORD_BYTES,fp);
+    }
+    
+    fclose(fp);
+    
+    return true;    
+}
+
+bool RadioScienceGravityFile::writeD(const double & d, FILE * fp) {
+    const bool retVal = (1 == fwrite(&d,sizeof(double),1,fp));
+    if (!retVal) {
+        ORSA_DEBUG("problems...");
+    }
+    return retVal;
+}
+
+bool RadioScienceGravityFile::writeI(const int & i, FILE * fp) {
+    const bool retVal = (1 == fwrite(&i,sizeof(int),1,fp));
+    if (!retVal) {
+        ORSA_DEBUG("problems...");
+    }
+    return retVal;
+}
+
+bool RadioScienceGravityFile::writeU(const unsigned int & u, FILE * fp) {
+    const bool retVal = (1 == fwrite(&u,sizeof(unsigned int),1,fp));
+    if (!retVal) {
+        ORSA_DEBUG("problems...");
+    }
+    return retVal;
+}
+
+bool RadioScienceGravityFile::writeS(const std::string & s, FILE * fp) {
+    char line[8];
+    sprintf(line,"%8s",s.c_str());
+    const bool retVal = (8 == fwrite(&line,sizeof(char),8,fp));
+    if (!retVal) {
+        ORSA_DEBUG("problems...");
+    }
+    return retVal;
+}
+
+void RadioScienceGravityFile::padToNextRow(const size_t & RECORD_BYTES, FILE * fp) {
     if ((ftell(fp)%RECORD_BYTES) != 0) {
         fseek(fp,RECORD_BYTES-(ftell(fp)%RECORD_BYTES),SEEK_CUR);
     }

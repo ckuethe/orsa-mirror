@@ -51,30 +51,36 @@ namespace orsaPDS {
         gsl_matrix * getInverseCovarianceMatrix() const;
     };
     
-    class RadioScienceGravityFile : public osg::Referenced {
-    public:
+    class RadioScienceGravityFile {
         // read RECORD_BYTES and FILE_RECORDS from the label of the PDS file
-        RadioScienceGravityFile(const std::string & fileName,
-                                const size_t & RECORD_BYTES_,
-                                const size_t & FILE_RECORDS_);
-    public:
-        const RadioScienceGravityData * getData() const { return data.get(); }
-    public:
-        osg::ref_ptr<RadioScienceGravityData> data;
-    protected:
-        bool readD(double & d) const;
-        bool readI(int & i) const;
-        bool readU(unsigned int & u) const;
-        bool readS(std::string & s) const;
-    protected:
-        void skipToNextRow() const;
         
+        // file READ interface
+    public:
+        static bool read(RadioScienceGravityData * data,
+                         const std::string & fileName,
+                         const size_t & RECORD_BYTES,
+                         const size_t & FILE_RECORDS);
     protected:
-        const size_t RECORD_BYTES;
-        const size_t FILE_RECORDS;
+        static bool readD(double & d, FILE * fp);
+        static bool readI(int & i, FILE * fp);
+        static bool readU(unsigned int & u, FILE * fp);
+        static bool readS(std::string & s, FILE * fp);
+    protected:
+        static void skipToNextRow(const size_t & RECORD_BYTES, FILE * fp);
         
+        // file WRITE interface
+    public:
+        static bool write(const RadioScienceGravityData * data,
+                          const std::string & fileName,
+                          const size_t & RECORD_BYTES,
+                          const size_t & FILE_RECORDS);
     protected:
-        FILE * fp;
+        static bool writeD(const double & d, FILE * fp);
+        static bool writeI(const int & i, FILE * fp);
+        static bool writeU(const unsigned int & u, FILE * fp);
+        static bool writeS(const std::string & s, FILE * fp);
+    protected:
+        static void padToNextRow(const size_t & RECORD_BYTES, FILE * fp);
     };
     
 } // namespace orsaPDS
