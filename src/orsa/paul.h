@@ -7,9 +7,11 @@ namespace orsa {
   
     class Attitude;
     class PaulMoment;
-  
-    //! A class implementing the equations in M.K. Paul (1988), "An expansion in power series of mutual potential for gravitating bodies with finite sizes", Celestial Mechanics, 44, 49-59.
-  
+    
+    //! A class implementing the equations in:
+    //! * Paul, M.K. (1988), An expansion in power series of mutual potential for gravitating bodies with finite sizes, Celestial Mechanics, 44, 49-59.
+    //! * Tricarico, P. (2008), Figure-figure interaction between bodies having arbitrary shapes and mass distributions: a power series expansion approach, Celestial Mechanics and Dynamical Astronomy 100, 319-330.
+    
     class Paul {
     public:
         // Eq. (1')
@@ -36,10 +38,10 @@ namespace orsa {
     
     public:
         // Eq. (21b)
-        static double C_lmn(const int l,
-                            const int m,
-                            const int n);
-    
+        static mpq_class C_lmn(const int l,
+                               const int m,
+                               const int n);
+        
     public:	
         // Eq. (23)
         class t_lmnLMN {
@@ -55,20 +57,34 @@ namespace orsa {
             virtual ~t_lmnLMN();
       
         public:
-            double get(const int l,
-                       const int m,
-                       const int n,
-                       const int L,
-                       const int M,
-                       const int N) const;
+            mpz_class get_mpz(const int l,
+                              const int m,
+                              const int n,
+                              const int L,
+                              const int M,
+                              const int N) const;
+        public:
+            double get_d(const int l,
+                         const int m,
+                         const int n,
+                         const int L,
+                         const int M,
+                         const int N) const;
         private:
-            double trueGet(const int l,
-                           const int m,
-                           const int n,
-                           const int L,
-                           const int M,
-                           const int N) const;
-      
+           mpz_class trueGet_mpz(const int l,
+                                 const int m,
+                                 const int n,
+                                 const int L,
+                                 const int M,
+                                 const int N) const;
+        private:
+            double trueGet_d(const int l,
+                             const int m,
+                             const int n,
+                             const int L,
+                             const int M,
+                             const int N) const;
+            
         private:
             void resize(const size_t order) const;
         private:
@@ -81,23 +97,11 @@ namespace orsa {
             */
         private:
             mutable 
-            std::vector<
-            std::vector<
-                std::vector<
-                    std::vector<
-                        std::vector<
-                            std::vector<
-                                orsa::Cache<double> 
-                                > 
-                            > 
-                        > 
-                    > 
-                > 
-            > _data;
+            std::vector< std::vector< std::vector< std::vector< std::vector< std::vector< orsa::Cache<mpz_class> > > > > > > _data;
         };
-    
+        
     };
-  
+    
 }; // namespace orsa
 
 #endif // _ORSA_PAUL_H_

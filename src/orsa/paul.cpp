@@ -8,21 +8,10 @@
 
 using namespace orsa;
 
-double Paul::C_lmn(const int l,
-                   const int m,
-                   const int n) {
-    /* if ( (l==0) &&
-       (m==0) &&
-       (n==0) ) { 
-       ORSA_ERROR("singular C value...");
-       return 0;
-       }
-    */
-  
-    const double retVal = 
-        1.0 / (3.0 - orsa::kronecker(l,0) - orsa::kronecker(m,0) - orsa::kronecker(n,0) );
-  
-    return retVal;
+mpq_class Paul::C_lmn(const int l,
+                      const int m,
+                      const int n) {
+    return mpq_class(1,3-orsa::kronecker(l,0)-orsa::kronecker(m,0)-orsa::kronecker(n,0));
 }
 
 //
@@ -44,13 +33,22 @@ Paul::t_lmnLMN::~t_lmnLMN() {
     _instance = 0;
 }
 
-double Paul::t_lmnLMN::get(const int l,
-                           const int m,
-                           const int n,
-                           const int L,
-                           const int M,
-                           const int N) const {
-  
+double Paul::t_lmnLMN::get_d(const int l,
+                             const int m,
+                             const int n,
+                             const int L,
+                             const int M,
+                             const int N) const {
+    return get_mpz(l,m,n,L,M,N).get_d();
+}
+
+mpz_class Paul::t_lmnLMN::get_mpz(const int l,
+                                  const int m,
+                                  const int n,
+                                  const int L,
+                                  const int M,
+                                  const int N) const {
+    
     /* 
        ORSA_DEBUG("called get(%i,%i,%i,%i,%i,%i)",
        l,m,n,L,M,N);
@@ -89,21 +87,29 @@ double Paul::t_lmnLMN::get(const int l,
         return 0;
     }
   
-    return trueGet(l,m,n,L,M,N);
+    return trueGet_mpz(l,m,n,L,M,N);
 }
 
-double Paul::t_lmnLMN::trueGet(const int l,
-                               const int m,
-                               const int n,
-                               const int L,
-                               const int M,
-                               const int N) const {
-  
-    /* 
-       ORSA_DEBUG("called trueGet(%i,%i,%i,%i,%i,%i)",
+double Paul::t_lmnLMN::trueGet_d(const int l,
+                                 const int m,
+                                 const int n,
+                                 const int L,
+                                 const int M,
+                                 const int N) const {
+    return trueGet_mpz(l,m,n,L,M,N).get_d();
+}
+
+mpz_class Paul::t_lmnLMN::trueGet_mpz(const int l,
+                                      const int m,
+                                      const int n,
+                                      const int L,
+                                      const int M,
+                                      const int N) const {
+    
+    /* ORSA_DEBUG("called for (l,m,n,L,M,N) = (%i,%i,%i,%i,%i,%i)",
        l,m,n,L,M,N);
     */
-  
+    
     // prepare the data container
     resize(l+m+n);
   
@@ -174,24 +180,56 @@ double Paul::t_lmnLMN::trueGet(const int l,
        _data[l][m][n][L][M].resize(1+N);
        }
     */
-  
+    
+    // general rule
+    /* 
+       if (!(_data[l][m][n][L][M][N].isSet())) {
+       // ORSA_DEBUG("computing...");
+       const double _C_lmn = C_lmn(l,m,n);
+       _data[l][m][n][L][M][N] =
+       (orsa::kronecker(l,0)-1)*( (2*l-_C_lmn)*get(l-1,m,n,L-1,M,N) +
+       (l-1)*(l-_C_lmn)*get(l-2,m,n,L,M,N) ) +
+       (orsa::kronecker(m,0)-1)*( (2*m-_C_lmn)*get(l,m-1,n,L,M-1,N) +
+       (m-1)*(m-_C_lmn)*get(l,m-2,n,L,M,N) ) +
+       (orsa::kronecker(n,0)-1)*( (2*n-_C_lmn)*get(l,m,n-1,L,M,N-1) +
+       (n-1)*(n-_C_lmn)*get(l,m,n-2,L,M,N) );      
+       }
+    */
     // general rule
     if (!(_data[l][m][n][L][M][N].isSet())) {
         // ORSA_DEBUG("computing...");
-        const double _C_lmn = C_lmn(l,m,n);
+        
+        // first call get(...) for the needed _data elements, to make sure the value is computed,
+        // then call _data directly to use the mpz version (exact)
+        /* get(l-1,m,n,L-1,M,N);
+           get(l-2,m,n,L,M,N);
+           get(l,m-1,n,L,M-1,N);
+           get(l,m-2,n,L,M,N);
+           get(l,m,n-1,L,M,N-1);
+           get(l,m,n-2,L,M,N);
+        */
+        
+        const mpq_class _C_lmn = C_lmn(l,m,n);
         _data[l][m][n][L][M][N] =
-            (orsa::kronecker(l,0)-1)*( (2*l-_C_lmn)*get(l-1,m,n,L-1,M,N) +
-                                       (l-1)*(l-_C_lmn)*get(l-2,m,n,L,M,N) ) +
-            (orsa::kronecker(m,0)-1)*( (2*m-_C_lmn)*get(l,m-1,n,L,M-1,N) +
-                                       (m-1)*(m-_C_lmn)*get(l,m-2,n,L,M,N) ) +
-            (orsa::kronecker(n,0)-1)*( (2*n-_C_lmn)*get(l,m,n-1,L,M,N-1) +
-                                       (n-1)*(n-_C_lmn)*get(l,m,n-2,L,M,N) );      
+            (orsa::kronecker(l,0)-1)*( (2*l-_C_lmn)*get_mpz(l-1,m,n,L-1,M,N) +
+                                       (l-1)*(l-_C_lmn)*get_mpz(l-2,m,n,L,M,N) ) +
+            (orsa::kronecker(m,0)-1)*( (2*m-_C_lmn)*get_mpz(l,m-1,n,L,M-1,N) +
+                                       (m-1)*(m-_C_lmn)*get_mpz(l,m-2,n,L,M,N) ) +
+            (orsa::kronecker(n,0)-1)*( (2*n-_C_lmn)*get_mpz(l,m,n-1,L,M,N-1) +
+                                       (n-1)*(n-_C_lmn)*get_mpz(l,m,n-2,L,M,N) );     
+        /* _data[l][m][n][L][M][N] =
+           (orsa::kronecker(l,0)-1)*( (2*l-_C_lmn)*(*_data[l-1][m][n][L-1][M][N]) +
+           (l-1)*(l-_C_lmn)*(*_data[l-2][m][n][L][M][N]) ) +
+           (orsa::kronecker(m,0)-1)*( (2*m-_C_lmn)*(*_data[l][m-1][n][L][M-1][N]) +
+           (m-1)*(m-_C_lmn)*(*_data[l][m-2][n][L][M][N]) ) +
+           (orsa::kronecker(n,0)-1)*( (2*n-_C_lmn)*(*_data[l][m][n-1][L][M][N-1]) +
+           (n-1)*(n-_C_lmn)*(*_data[l][m][n-2][L][M][N]) );      
+        */
     }
     //
-    /* 
-       ORSA_DEBUG("get(%i,%i,%i,%i,%i,%i) = %g",
+    /* ORSA_DEBUG("get(%i,%i,%i,%i,%i,%i) = %Zi",
        l,m,n,L,M,N,
-       _data[l][m][n][L][M][N]);
+       (*_data[l][m][n][L][M][N]).get_mpz_t());
     */
     //
     return _data[l][m][n][L][M][N];
@@ -378,7 +416,7 @@ double Paul::gravitationalPotential(const orsa::PaulMoment * M1,
                                                         for (unsigned int M=0; M<=j5; ++M) {
                                                             for (unsigned int N=0; N<=k5; ++N) {
                                                                 fiveSum +=
-                                                                    orsa::Paul::t_lmnLMN::instance()->get(i5,j5,k5,L,M,N) *
+                                                                    orsa::Paul::t_lmnLMN::instance()->get_d(i5,j5,k5,L,M,N) *
                                                                     // orsa::int_pow(csi1, L) * 
                                                                     csi1_PC.get(L) *
                                                                     // orsa::int_pow(eta1, M) * 
@@ -636,7 +674,7 @@ orsa::Vector Paul::gravitationalForce(const orsa::PaulMoment * M1,
                                                         for (unsigned int M=0; M<=j5; ++M) {
                                                             for (unsigned int N=0; N<=k5; ++N) {
 				
-                                                                const double local_t = orsa::Paul::t_lmnLMN::instance()->get(i5,j5,k5,L,M,N);
+                                                                const double local_t = orsa::Paul::t_lmnLMN::instance()->get_d(i5,j5,k5,L,M,N);
 				
                                                                 if (local_t == 0) {
                                                                     continue;
@@ -675,7 +713,7 @@ orsa::Vector Paul::gravitationalForce(const orsa::PaulMoment * M1,
                                                         for (unsigned int M=0; M<=j5; ++M) {
                                                             for (unsigned int N=0; N<=k5; ++N) {
 				
-                                                                const double local_t = orsa::Paul::t_lmnLMN::instance()->get(i5,j5,k5,L,M,N);
+                                                                const double local_t = orsa::Paul::t_lmnLMN::instance()->get_d(i5,j5,k5,L,M,N);
 				
                                                                 if (local_t == 0) {
                                                                     continue;
@@ -1191,7 +1229,7 @@ orsa::Vector Paul::gravitationalTorque(const orsa::PaulMoment * M1,
                                                             for (unsigned int N=0; N<=k5; ++N) {
                                                                 if (L != 0) {
                                                                     fiveSumFx +=
-                                                                        orsa::Paul::t_lmnLMN::instance()->get(i5,j5,k5,L,M,N) *
+                                                                        orsa::Paul::t_lmnLMN::instance()->get_d(i5,j5,k5,L,M,N) *
                                                                         L * csi1_PC.get(L-1) *
                                                                         eta1_PC.get(M) *
                                                                         zeta1_PC.get(N) *
@@ -1200,7 +1238,7 @@ orsa::Vector Paul::gravitationalTorque(const orsa::PaulMoment * M1,
                                                                 //
                                                                 if (M != 0) {
                                                                     fiveSumFy +=
-                                                                        orsa::Paul::t_lmnLMN::instance()->get(i5,j5,k5,L,M,N) *
+                                                                        orsa::Paul::t_lmnLMN::instance()->get_d(i5,j5,k5,L,M,N) *
                                                                         csi1_PC.get(L) *
                                                                         M * eta1_PC.get(M-1) *
                                                                         zeta1_PC.get(N) *
@@ -1209,7 +1247,7 @@ orsa::Vector Paul::gravitationalTorque(const orsa::PaulMoment * M1,
                                                                 //
                                                                 if (N != 0) {
                                                                     fiveSumFz +=
-                                                                        orsa::Paul::t_lmnLMN::instance()->get(i5,j5,k5,L,M,N) *
+                                                                        orsa::Paul::t_lmnLMN::instance()->get_d(i5,j5,k5,L,M,N) *
                                                                         csi1_PC.get(L) *
                                                                         eta1_PC.get(M) *
                                                                         N * zeta1_PC.get(N-1) *
@@ -1224,7 +1262,7 @@ orsa::Vector Paul::gravitationalTorque(const orsa::PaulMoment * M1,
                                                             for (unsigned int N=0; N<=k5; ++N) {
                                                                 fiveSumFx -=
                                                                     (i5+j5+k5+L+M+N+1) *
-                                                                    orsa::Paul::t_lmnLMN::instance()->get(i5,j5,k5,L,M,N) *
+                                                                    orsa::Paul::t_lmnLMN::instance()->get_d(i5,j5,k5,L,M,N) *
                                                                     csi1_PC.get(L+1) *
                                                                     eta1_PC.get(M) *
                                                                     zeta1_PC.get(N) *
@@ -1232,7 +1270,7 @@ orsa::Vector Paul::gravitationalTorque(const orsa::PaulMoment * M1,
                                                                 //
                                                                 fiveSumFy -=
                                                                     (i5+j5+k5+L+M+N+1) *
-                                                                    orsa::Paul::t_lmnLMN::instance()->get(i5,j5,k5,L,M,N) *
+                                                                    orsa::Paul::t_lmnLMN::instance()->get_d(i5,j5,k5,L,M,N) *
                                                                     csi1_PC.get(L) *
                                                                     eta1_PC.get(M+1) *
                                                                     zeta1_PC.get(N) *
@@ -1240,7 +1278,7 @@ orsa::Vector Paul::gravitationalTorque(const orsa::PaulMoment * M1,
                                                                 //
                                                                 fiveSumFz -=
                                                                     (i5+j5+k5+L+M+N+1) *
-                                                                    orsa::Paul::t_lmnLMN::instance()->get(i5,j5,k5,L,M,N) *
+                                                                    orsa::Paul::t_lmnLMN::instance()->get_d(i5,j5,k5,L,M,N) *
                                                                     csi1_PC.get(L) *
                                                                     eta1_PC.get(M) *
                                                                     zeta1_PC.get(N+1) *
