@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
                     gsl_vector_get( pds_coeff,i);
                 const double perc = 100*fabs(delta / gsl_vector_get(pds_coeff,i));
                 if (delta != 0.0) {
-                    ORSA_DEBUG("%+12.6e %9.3e %%",delta,perc);
+                    ORSA_DEBUG("i: %i %+12.6e %9.3e %%",i,delta,perc);
                 }
             }
         }
@@ -127,7 +127,7 @@ int main(int argc, char **argv) {
                         gsl_matrix_get( pds_covm,i,j);
                     const double perc = 100*fabs(delta / gsl_matrix_get(pds_covm,i,j));
                     if (delta != 0.0) {
-                        ORSA_DEBUG("%+12.6e %9.3e %%",delta,perc);
+                        ORSA_DEBUG("i: %i j: %i %+12.6e %9.3e %%",i,j,delta,perc);
                     }
                 }
             }
