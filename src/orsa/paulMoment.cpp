@@ -413,8 +413,8 @@ bool orsa::solve(PaulMoment * pm,
     return true;
 }
 
-static double EllipsoidExpansion_product_utility(const unsigned int n) {
-    double product = 1;
+static mpz_class EllipsoidExpansion_product_utility(const unsigned int n) {
+    mpz_class product = 1;
     for (unsigned int k=1; k<=n; ++k) {
         product *= (2*k-1);
     }
@@ -436,18 +436,23 @@ void orsa::EllipsoidExpansion(PaulMoment   * pm,
                         if (i%2==1) continue;
                         if (j%2==1) continue;
                         if (k%2==1) continue;
-                        const double factor_i   = EllipsoidExpansion_product_utility(i/2);
-                        const double factor_j   = EllipsoidExpansion_product_utility(j/2);
-                        const double factor_k   = EllipsoidExpansion_product_utility(k/2);
-                        const double factor_ijk = EllipsoidExpansion_product_utility((i+j+k)/2+2);
-                        const double factor     = 3*(factor_i*factor_j*factor_k)/factor_ijk;
-                        const double M_ijk      = factor*orsa::int_pow(a,i)*orsa::int_pow(b,j)*orsa::int_pow(c,k);
+                        const mpz_class factor_i   = EllipsoidExpansion_product_utility(i/2);
+                        const mpz_class factor_j   = EllipsoidExpansion_product_utility(j/2);
+                        const mpz_class factor_k   = EllipsoidExpansion_product_utility(k/2);
+                        const mpz_class factor_ijk = EllipsoidExpansion_product_utility((i+j+k)/2+2);
+                        //
+                        mpq_class factor(3*(factor_i*factor_j*factor_k),factor_ijk);
+                        factor.canonicalize();
+                        //
+                        const double M_ijk         = factor.get_d()*orsa::int_pow(a,i)*orsa::int_pow(b,j)*orsa::int_pow(c,k);
                         pm->setM(M_ijk,i,j,k);
-                        ORSA_DEBUG("ijk: %i %i %i   factor: %g   M: %g",i,j,k,factor,M_ijk); 
+                        ORSA_DEBUG("ijk: %i %i %i   factor: %Zi/%Zi  M: %g",
+                                   i,j,k,
+                                   factor.get_num().get_mpz_t(),factor.get_den().get_mpz_t(),
+                                   M_ijk); 
                     }
                 }
             }
         }
     }
-  
 }
