@@ -267,11 +267,12 @@ bool RadioScienceGravityFile::readU(unsigned int & u, FILE * fp) {
 }
 
 bool RadioScienceGravityFile::readS(std::string & s, FILE * fp) {
-    char line[8];
+    char line[9];
     const bool retVal = (8 == fread(&line,sizeof(char),8,fp));
     if (!retVal) {
         ORSA_DEBUG("problems...");
     }
+    line[8] = '\0';
     s = line;
     orsa::removeLeadingAndTrailingSpaces(s);
     return retVal;
