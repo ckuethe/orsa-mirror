@@ -17,9 +17,9 @@
 using namespace orsa;
 
 PaulMoment::PaulMoment(const unsigned int n) : osg::Referenced(true), order(n) {
-  
+    
     const unsigned int order_plus_one = order+1;
-  
+    
     {
         _M.resize(order_plus_one);
         _M_uncertainty.resize(order_plus_one);
@@ -82,16 +82,16 @@ void PaulMoment::setM_uncertainty (const double & val,
 
 /***/
 
-const orsa::triIndex_mpq orsa::conversionCoefficients_C_integral(const size_t & l, const size_t & m) {
+const orsa::triIndex_mpq orsa::conversionCoefficients_C_integral(const size_t & l_ask, const size_t & m_ask) {
     static std::deque< std::deque<orsa::triIndex_mpq> > coeff;
-    if (coeff.size() > l) {
-        if (coeff[l].size() > m) {
-            return coeff[l][m];
+    if (coeff.size() > l_ask) {
+        if (coeff[l_ask].size() > m_ask) {
+            return coeff[l_ask][m_ask];
         }        
     }
     const size_t old_l_size = coeff.size();
-    coeff.resize(l+1);
-    for (int zl=old_l_size; zl<=(int)l; ++zl) {
+    coeff.resize(l_ask+1);
+    for (int zl=old_l_size; zl<=(int)l_ask; ++zl) {
         coeff[zl].resize(zl+1);
         for (int zm=0; zm<=zl; ++zm) {
             
@@ -112,6 +112,14 @@ const orsa::triIndex_mpq orsa::conversionCoefficients_C_integral(const size_t & 
                 }
             }
             
+            for (int ti=0; ti<=zl; ++ti) {
+                for (int tj=0; tj<=zl-ti; ++tj) {
+                    for (int tk=0; tk<=zl-ti-tj; ++tk) {
+                        pq_factor[ti][tj][tk] = 0;
+                    }   
+                }
+            }
+            
             // integer division in limits
             for (int p=0;p<=(zl/2);++p) {
                 for (int q=0;q<=(zm/2);++q) {
@@ -122,6 +130,14 @@ const orsa::triIndex_mpq orsa::conversionCoefficients_C_integral(const size_t & 
                         nu_factor[ti].resize(zl+1-ti);
                         for (int tj=0; tj<=zl-ti; ++tj) {
                             nu_factor[ti][tj].resize(zl+1-ti-tj);
+                        }
+                    }
+                    
+                    for (int ti=0; ti<=zl; ++ti) {
+                        for (int tj=0; tj<=zl-ti; ++tj) {
+                            for (int tk=0; tk<=zl-ti-tj; ++tk) {
+                                nu_factor[ti][tj][tk] = 0;
+                            }   
                         }
                     }
                     
@@ -140,22 +156,28 @@ const orsa::triIndex_mpq orsa::conversionCoefficients_C_integral(const size_t & 
                                  (M_j>=0) && 
                                  (M_k>=0) && 
                                  (M_i+M_j+M_k==zl) ) {
-		
-                                // ORSA_DEBUG("requesting M[%i][%i][%i]...   l: %i",M_i, M_j, M_k, l);
                                 
-                                const mpz_class nu_factor_base = orsa::factorial(p) / (orsa::factorial(nu_x)*orsa::factorial(nu_y)*orsa::factorial(p-nu_x-nu_y));
+                                const mpq_class nu_factor_base(orsa::factorial(p),orsa::factorial(nu_x)*orsa::factorial(nu_y)*orsa::factorial(p-nu_x-nu_y));
 #warning '=' or '+=' operator?
-                                nu_factor[M_i][M_j][M_k] = nu_factor_base;
+                                
+                                /* ORSA_DEBUG("nu_factor_base[%i][%i][%i] += %Zi/%Zi = %i!/(%i!%i!%i!)",
+                                   M_i, M_j, M_k,
+                                   nu_factor_base.get_num().get_mpz_t(),
+                                   nu_factor_base.get_den().get_mpz_t(),
+                                   p,nu_x,nu_y,p-nu_x-nu_y);
+                                */
+                                
+                                nu_factor[M_i][M_j][M_k] += nu_factor_base;
                             }
                         }
                     }
                     
                     const mpz_class pq_factor_base = 
                         orsa::power_sign(p+q) *
-                        orsa::binomial(l,p) *
-                        orsa::binomial(2*l-2*p,l) *
-                        orsa::binomial(m,2*q) *
-                        orsa::pochhammer(mpz_class(l-m-2*p+1),m);
+                        orsa::binomial(zl,p) *
+                        orsa::binomial(2*zl-2*p,zl) *
+                        orsa::binomial(zm,2*q) *
+                        orsa::pochhammer(mpz_class(zl-zm-2*p+1),zm);
                     
                     for (int ti=0; ti<=zl; ++ti) {
                         for (int tj=0; tj<=zl-ti; ++tj) {
@@ -196,7 +218,7 @@ const orsa::triIndex_mpq orsa::conversionCoefficients_C_integral(const size_t & 
             }
         }
     }
-    return coeff[l][m];
+    return coeff[l_ask][m_ask];
 }
 
 /***/
