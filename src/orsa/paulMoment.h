@@ -32,6 +32,15 @@ namespace orsa {
     public:
         const unsigned int order;
     };
+
+    typedef std::vector< std::vector< std::vector<double> > >    triIndex_d;
+    typedef std::vector< std::vector< std::vector<mpq_class> > > triIndex_mpq;
+    const triIndex_mpq conversionCoefficients_C_integral(const size_t & l, const size_t & m);
+    const triIndex_d   conversionCoefficients_C_plain(   const size_t & l, const size_t & m);
+    const triIndex_d   conversionCoefficients_C_norm(    const size_t & l, const size_t & m);
+    const triIndex_mpq conversionCoefficients_S_integral(const size_t & l, const size_t & m);
+    const triIndex_d   conversionCoefficients_S_plain(   const size_t & l, const size_t & m);
+    const triIndex_d   conversionCoefficients_S_norm(    const size_t & l, const size_t & m);
     
     // utility, just printing out values for now
     void convert(std::vector< std::vector<mpf_class> > & C,
@@ -42,20 +51,20 @@ namespace orsa {
                  const PaulMoment * const pm,
                  const double     & R0,
                  const bool         verbose=false);
-  
+    
     // tries to find a set of PaulMoments that matches the normalized C and S
     // the order of pm must be <= the order of norm_C and norm_S
     bool solve(PaulMoment * pm,
                const std::vector< std::vector<mpf_class> > & norm_C,
                const std::vector< std::vector<mpf_class> > & norm_S,
                const double     & R0);
-  
+    
     // a,b,c are the 3 semiaxes along x,y,z respectively
     void EllipsoidExpansion(PaulMoment   * pm,
                             const double & a,
                             const double & b,
                             const double & c);
-  
+    
 }; // namespace orsa
 
 #endif // _ORSA_PAUL_MOMENT_H_

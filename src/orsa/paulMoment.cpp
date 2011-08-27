@@ -80,6 +80,124 @@ void PaulMoment::setM_uncertainty (const double & val,
     }
 }
 
+/***/
+
+const orsa::triIndex_mpq orsa::conversionCoefficients_C_integral(const size_t & l, const size_t & m) {
+    static std::deque< std::deque<orsa::triIndex_mpq> > coeff;
+    if (coeff.size() > l) {
+        if (coeff[l].size() > m) {
+            return coeff[l][m];
+        }        
+    }
+    const size_t old_l_size = coeff.size();
+    coeff.resize(l+1);
+    for (int zl=old_l_size; zl<=(int)l; ++zl) {
+        coeff[zl].resize(zl+1);
+        for (int zm=0; zm<=zl; ++zm) {
+            
+            coeff[zl][zm].resize(zl+1);
+            for (int ti=0; ti<=zl; ++ti) {
+                coeff[zl][zm][ti].resize(zl+1-ti);
+                for (int tj=0; tj<=zl-ti; ++tj) {
+                    coeff[zl][zm][ti][tj].resize(zl+1-ti-tj);
+                }
+            }
+            
+            triIndex_mpq pq_factor;
+            pq_factor.resize(zl+1);
+            for (int ti=0; ti<=zl; ++ti) {
+                pq_factor[ti].resize(zl+1-ti);
+                for (int tj=0; tj<=zl-ti; ++tj) {
+                    pq_factor[ti][tj].resize(zl+1-ti-tj);
+                }
+            }
+            
+            // integer division in limits
+            for (int p=0;p<=(zl/2);++p) {
+                for (int q=0;q<=(zm/2);++q) {
+
+                    triIndex_mpq nu_factor;
+                    nu_factor.resize(zl+1);
+                    for (int ti=0; ti<=zl; ++ti) {
+                        nu_factor[ti].resize(zl+1-ti);
+                        for (int tj=0; tj<=zl-ti; ++tj) {
+                            nu_factor[ti][tj].resize(zl+1-ti-tj);
+                        }
+                    }
+                    
+                    for (int nu_x=0; nu_x<=p; ++nu_x) {
+                        for (int nu_y=0; nu_y<=(p-nu_x); ++nu_y) {
+                            
+                            const int M_i = zm-2*q+2*nu_x;
+                            const int M_j = 2*q+2*nu_y;
+                            const int M_k = zl-zm-2*nu_x-2*nu_y;
+                            
+                            if (M_i+M_j+M_k!=zl) {
+                                ORSA_DEBUG("WARNING!!! ***********************");
+                            }
+                            
+                            if ( (M_i>=0) && 
+                                 (M_j>=0) && 
+                                 (M_k>=0) && 
+                                 (M_i+M_j+M_k==zl) ) {
+		
+                                // ORSA_DEBUG("requesting M[%i][%i][%i]...   l: %i",M_i, M_j, M_k, l);
+                                
+                                const mpz_class nu_factor_base = orsa::factorial(p) / (orsa::factorial(nu_x)*orsa::factorial(nu_y)*orsa::factorial(p-nu_x-nu_y));
+#warning '=' or '+=' operator?
+                                nu_factor[M_i][M_j][M_k] = nu_factor_base;
+                            }
+                        }
+                    }
+                    
+                    const mpz_class pq_factor_base = 
+                        orsa::power_sign(p+q) *
+                        orsa::binomial(l,p) *
+                        orsa::binomial(2*l-2*p,l) *
+                        orsa::binomial(m,2*q) *
+                        orsa::pochhammer(mpz_class(l-m-2*p+1),m);
+                    
+                    for (int ti=0; ti<=zl; ++ti) {
+                        for (int tj=0; tj<=zl-ti; ++tj) {
+                            for (int tk=0; tk<=zl-ti-tj; ++tk) {
+                                nu_factor[ti][tj][tk] *= pq_factor_base;
+                            }   
+                        }
+                    }
+                    
+                    for (int ti=0; ti<=zl; ++ti) {
+                        for (int tj=0; tj<=zl-ti; ++tj) {
+                            for (int tk=0; tk<=zl-ti-tj; ++tk) {
+                                pq_factor[ti][tj][tk] += nu_factor[ti][tj][tk];
+                            }   
+                        }
+                    }
+                }
+            }
+            
+            for (int ti=0; ti<=zl; ++ti) {
+                for (int tj=0; tj<=zl-ti; ++tj) {
+                    for (int tk=0; tk<=zl-ti-tj; ++tk) {
+                        
+                        // brute force way to divide by 2^l, no 'pow' function in GMP?
+                        for (int tp=0; tp<zl; ++tp) {
+                            pq_factor[ti][tj][tk] /= 2;
+                        }
+                    }   
+                }
+            }
+            
+            for (int ti=0; ti<=zl; ++ti) {
+                for (int tj=0; tj<=zl-ti; ++tj) {
+                    for (int tk=0; tk<=zl-ti-tj; ++tk) {
+                        coeff[zl][zm][ti][tj][tk] = pq_factor[ti][tj][tk];
+                    }
+                }
+            }
+        }
+    }
+    return coeff[l][m];
+}
 
 /***/
 
@@ -383,7 +501,7 @@ bool orsa::solve(PaulMoment * pm,
             }
             // }
         }
-    
+        
         osg::ref_ptr<PaulMomentsSolveMultimin> multimin = 
             new PaulMomentsSolveMultimin(focusOrder,norm_C,norm_S,R0);
         //
