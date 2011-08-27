@@ -266,25 +266,6 @@ void Paul::t_lmnLMN::resize(const size_t order) const {
     }
 }
 
-/* 
-   void Paul::t_lmnLMN::sort(int & l_out,
-   int & m_out,
-   int & n_out,
-   const int l_in,
-   const int m_in,
-   const int n_in) const {
-   // this is not efficient, should use some kind of sort3() algorithm...
-   std::vector<int> v;
-   v.push_back(l_in);
-   v.push_back(m_in);
-   v.push_back(n_in);
-   std::sort(v.begin(),v.end());
-   l_out = v[0];
-   m_out = v[1];
-   n_out = v[2];
-   }
-*/
-
 double Paul::gravitationalPotential(const orsa::PaulMoment * M1,
                                     const orsa::Matrix     & A1_g2l,
                                     const orsa::PaulMoment * M2,

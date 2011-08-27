@@ -88,14 +88,6 @@ namespace orsa {
         private:
             void resize(const size_t order) const;
         private:
-            /* void sort(int & l_out,
-               int & m_out,
-               int & n_out,
-               const int l_in,
-               const int m_in,
-               const int n_in) const;
-            */
-        private:
             mutable 
             std::vector< std::vector< std::vector< std::vector< std::vector< std::vector< orsa::Cache<mpz_class> > > > > > > _data;
         };
