@@ -93,6 +93,7 @@ const orsa::triIndex_mpq orsa::conversionCoefficients_C_integral(const size_t & 
     coeff.resize(l_ask+1);
     for (int l=old_l_size; l<=(int)l_ask; ++l) {
         coeff[l].resize(l+1);
+        const mpz_class pow_2_l = orsa::int_pow(mpz_class(2),l);
         for (int m=0; m<=l; ++m) {
             
             coeff[l][m].resize(l+1);
@@ -199,11 +200,8 @@ const orsa::triIndex_mpq orsa::conversionCoefficients_C_integral(const size_t & 
             for (int ti=0; ti<=l; ++ti) {
                 for (int tj=0; tj<=l-ti; ++tj) {
                     for (int tk=0; tk<=l-ti-tj; ++tk) {
-                        
-                        // brute force way to divide by 2^l, no 'pow' function in GMP?
-                        for (int tp=0; tp<l; ++tp) {
-                            pq_factor[ti][tj][tk] /= 2;
-                        }
+                        // divide by 2^l
+                        pq_factor[ti][tj][tk] /= pow_2_l;
                     }   
                 }
             }
@@ -211,6 +209,7 @@ const orsa::triIndex_mpq orsa::conversionCoefficients_C_integral(const size_t & 
             for (int ti=0; ti<=l; ++ti) {
                 for (int tj=0; tj<=l-ti; ++tj) {
                     for (int tk=0; tk<=l-ti-tj; ++tk) {
+                        pq_factor[ti][tj][tk].canonicalize();
                         coeff[l][m][ti][tj][tk] = pq_factor[ti][tj][tk];
                     }
                 }
