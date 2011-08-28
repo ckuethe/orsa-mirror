@@ -85,6 +85,78 @@ int main(int argc, char **argv) {
        }
        }
     */
+    /* {
+       orsa::triIndex_mpq tri_integral;
+       orsa::triIndex_d   tri_plain;
+       orsa::triIndex_d   tri_norm;
+       for (size_t l=0; l<=10; ++l) {
+       for(size_t m=0; m<=l; ++m) {
+       {
+       // C
+       tri_integral = orsa::conversionCoefficients_C_integral(l,m);
+       tri_plain    = orsa::conversionCoefficients_C_plain(l,m);
+       tri_norm     = orsa::conversionCoefficients_C_norm(l,m);
+       for (size_t ti=0; ti<=l; ++ti) {
+       for (size_t tj=0; tj<=l-ti; ++tj) {
+       for (size_t tk=0; tk<=l-ti-tj; ++tk) {
+       if (tri_integral[ti][tj][tk] != 0) {
+       if (tri_integral[ti][tj][tk].get_den() == 1) {
+       ORSA_DEBUG("C[%i][%i] += %Zi N[%i][%i][%i]",l,m,
+       tri_integral[ti][tj][tk].get_num().get_mpz_t(),
+       // tri_integral[ti][tj][tk].get_den().get_mpz_t(),
+       ti,tj,tk);
+       } else {
+       ORSA_DEBUG("C[%i][%i] += %Zi/%Zi N[%i][%i][%i]",l,m,
+       tri_integral[ti][tj][tk].get_num().get_mpz_t(),
+       tri_integral[ti][tj][tk].get_den().get_mpz_t(),
+       ti,tj,tk);
+       }
+       ORSA_DEBUG("C[%i][%i] += %g N[%i][%i][%i]",l,m,
+       tri_plain[ti][tj][tk],
+       ti,tj,tk);
+       ORSA_DEBUG("C[%i][%i] += %g N[%i][%i][%i]",l,m,
+       tri_norm[ti][tj][tk],
+       ti,tj,tk);
+       }
+       }
+       }
+       }
+       }
+       {
+       // S
+       tri_integral = orsa::conversionCoefficients_S_integral(l,m);
+       tri_plain    = orsa::conversionCoefficients_S_plain(l,m);
+       tri_norm     = orsa::conversionCoefficients_S_norm(l,m);
+       for (size_t ti=0; ti<=l; ++ti) {
+       for (size_t tj=0; tj<=l-ti; ++tj) {
+       for (size_t tk=0; tk<=l-ti-tj; ++tk) {
+       if (tri_integral[ti][tj][tk] != 0) {
+       if (tri_integral[ti][tj][tk].get_den() == 1) {
+       ORSA_DEBUG("S[%i][%i] += %Zi N[%i][%i][%i]",l,m,
+       tri_integral[ti][tj][tk].get_num().get_mpz_t(),
+       // tri_integral[ti][tj][tk].get_den().get_mpz_t(),
+       ti,tj,tk);
+       } else {
+       ORSA_DEBUG("S[%i][%i] += %Zi/%Zi N[%i][%i][%i]",l,m,
+       tri_integral[ti][tj][tk].get_num().get_mpz_t(),
+       tri_integral[ti][tj][tk].get_den().get_mpz_t(),
+       ti,tj,tk);
+       }
+       ORSA_DEBUG("S[%i][%i] += %g N[%i][%i][%i]",l,m,
+       tri_plain[ti][tj][tk],
+       ti,tj,tk);
+       ORSA_DEBUG("S[%i][%i] += %g N[%i][%i][%i]",l,m,
+       tri_norm[ti][tj][tk],
+       ti,tj,tk);
+       }
+       }
+       }
+       }
+       }
+       }
+       }
+       }
+    */
     
     // test specific cases, for debug purposes only!
     // orsa::GlobalRNG::randomSeed = -800402816;
