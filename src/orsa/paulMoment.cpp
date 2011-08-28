@@ -95,7 +95,6 @@ const orsa::triIndex_mpq orsa::conversionCoefficients_C_integral(const size_t & 
         coeff[l].resize(l+1);
         const mpz_class pow_2_l = orsa::int_pow(mpz_class(2),l);
         for (int m=0; m<=l; ++m) {
-            
             coeff[l][m].resize(l+1);
             for (int ti=0; ti<=l; ++ti) {
                 coeff[l][m][ti].resize(l+1-ti);
@@ -211,6 +210,274 @@ const orsa::triIndex_mpq orsa::conversionCoefficients_C_integral(const size_t & 
                     for (int tk=0; tk<=l-ti-tj; ++tk) {
                         pq_factor[ti][tj][tk].canonicalize();
                         coeff[l][m][ti][tj][tk] = pq_factor[ti][tj][tk];
+                    }
+                }
+            }
+        }
+    }
+    return coeff[l_ask][m_ask];
+}
+
+const orsa::triIndex_d orsa::conversionCoefficients_C_plain(const size_t & l_ask, const size_t & m_ask) {
+    static std::deque< std::deque<orsa::triIndex_d> > coeff;
+    if (coeff.size() > l_ask) {
+        if (coeff[l_ask].size() > m_ask) {
+            return coeff[l_ask][m_ask];
+        }        
+    }
+    const size_t old_l_size = coeff.size();
+    coeff.resize(l_ask+1);
+    for (int l=old_l_size; l<=(int)l_ask; ++l) {
+        coeff[l].resize(l+1);
+        for (int m=0; m<=l; ++m) {
+            coeff[l][m].resize(l+1);
+            for (int ti=0; ti<=l; ++ti) {
+                coeff[l][m][ti].resize(l+1-ti);
+                for (int tj=0; tj<=l-ti; ++tj) {
+                    coeff[l][m][ti][tj].resize(l+1-ti-tj);
+                }
+            }
+            const orsa::triIndex_mpq coeff_base = orsa::conversionCoefficients_C_integral(l,m);
+            const mpf_class norm_base = orsa::normalization_integralToSphericalHarmonics(l,m);
+            for (int ti=0; ti<=l; ++ti) {
+                for (int tj=0; tj<=l-ti; ++tj) {
+                    for (int tk=0; tk<=l-ti-tj; ++tk) {
+                        coeff[l][m][ti][tj][tk] = mpf_class(coeff_base[ti][tj][tk]*norm_base).get_d();
+                    }
+                }
+            }
+        }
+    }
+    return coeff[l_ask][m_ask];
+}
+
+const orsa::triIndex_d orsa::conversionCoefficients_C_norm(const size_t & l_ask, const size_t & m_ask) {
+    static std::deque< std::deque<orsa::triIndex_d> > coeff;
+    if (coeff.size() > l_ask) {
+        if (coeff[l_ask].size() > m_ask) {
+            return coeff[l_ask][m_ask];
+        }        
+    }
+    const size_t old_l_size = coeff.size();
+    coeff.resize(l_ask+1);
+    for (int l=old_l_size; l<=(int)l_ask; ++l) {
+        coeff[l].resize(l+1);
+        for (int m=0; m<=l; ++m) {
+            coeff[l][m].resize(l+1);
+            for (int ti=0; ti<=l; ++ti) {
+                coeff[l][m][ti].resize(l+1-ti);
+                for (int tj=0; tj<=l-ti; ++tj) {
+                    coeff[l][m][ti][tj].resize(l+1-ti-tj);
+                }
+            }
+            const orsa::triIndex_mpq coeff_base = orsa::conversionCoefficients_C_integral(l,m);
+            const mpf_class norm_base = orsa::normalization_integralToNormalizedSphericalHarmonics(l,m);
+            for (int ti=0; ti<=l; ++ti) {
+                for (int tj=0; tj<=l-ti; ++tj) {
+                    for (int tk=0; tk<=l-ti-tj; ++tk) {
+                        coeff[l][m][ti][tj][tk] = mpf_class(coeff_base[ti][tj][tk]*norm_base).get_d();
+                    }
+                }
+            }
+        }
+    }
+    return coeff[l_ask][m_ask];
+}
+
+const orsa::triIndex_mpq orsa::conversionCoefficients_S_integral(const size_t & l_ask, const size_t & m_ask) {
+    static std::deque< std::deque<orsa::triIndex_mpq> > coeff;
+    if (coeff.size() > l_ask) {
+        if (coeff[l_ask].size() > m_ask) {
+            return coeff[l_ask][m_ask];
+        }        
+    }
+    const size_t old_l_size = coeff.size();
+    coeff.resize(l_ask+1);
+    for (int l=old_l_size; l<=(int)l_ask; ++l) {
+        coeff[l].resize(l+1);
+        const mpz_class pow_2_l = orsa::int_pow(mpz_class(2),l);
+        for (int m=0; m<=l; ++m) {
+            coeff[l][m].resize(l+1);
+            for (int ti=0; ti<=l; ++ti) {
+                coeff[l][m][ti].resize(l+1-ti);
+                for (int tj=0; tj<=l-ti; ++tj) {
+                    coeff[l][m][ti][tj].resize(l+1-ti-tj);
+                }
+            }
+            
+            triIndex_mpq pq_factor;
+            pq_factor.resize(l+1);
+            for (int ti=0; ti<=l; ++ti) {
+                pq_factor[ti].resize(l+1-ti);
+                for (int tj=0; tj<=l-ti; ++tj) {
+                    pq_factor[ti][tj].resize(l+1-ti-tj);
+                }
+            }
+            
+            for (int ti=0; ti<=l; ++ti) {
+                for (int tj=0; tj<=l-ti; ++tj) {
+                    for (int tk=0; tk<=l-ti-tj; ++tk) {
+                        pq_factor[ti][tj][tk] = 0;
+                    }   
+                }
+            }
+            
+            // integer division in limits
+            for (int p=0;p<=(l/2);++p) {
+                for (int q=0;q<=((m-1)/2);++q) {
+
+                    triIndex_mpq nu_factor;
+                    nu_factor.resize(l+1);
+                    for (int ti=0; ti<=l; ++ti) {
+                        nu_factor[ti].resize(l+1-ti);
+                        for (int tj=0; tj<=l-ti; ++tj) {
+                            nu_factor[ti][tj].resize(l+1-ti-tj);
+                        }
+                    }
+                    
+                    for (int ti=0; ti<=l; ++ti) {
+                        for (int tj=0; tj<=l-ti; ++tj) {
+                            for (int tk=0; tk<=l-ti-tj; ++tk) {
+                                nu_factor[ti][tj][tk] = 0;
+                            }   
+                        }
+                    }
+                    
+                    for (int nu_x=0; nu_x<=p; ++nu_x) {
+                        for (int nu_y=0; nu_y<=(p-nu_x); ++nu_y) {
+                            
+                            const int M_i = m-2*q-1+2*nu_x;
+                            const int M_j = 2*q+1+2*nu_y;
+                            const int M_k = l-m-2*nu_x-2*nu_y;
+                            
+                            if (M_i+M_j+M_k!=l) {
+                                ORSA_DEBUG("WARNING!!! ***********************");
+                            }
+                            
+                            if ( (M_i>=0) && 
+                                 (M_j>=0) && 
+                                 (M_k>=0) && 
+                                 (M_i+M_j+M_k==l) ) {
+                                
+                                const mpq_class nu_factor_base(orsa::factorial(p),orsa::factorial(nu_x)*orsa::factorial(nu_y)*orsa::factorial(p-nu_x-nu_y));
+                                
+                                /* ORSA_DEBUG("nu_factor_base[%i][%i][%i] += %Zi/%Zi = %i!/(%i!%i!%i!)",
+                                   M_i, M_j, M_k,
+                                   nu_factor_base.get_num().get_mpz_t(),
+                                   nu_factor_base.get_den().get_mpz_t(),
+                                   p,nu_x,nu_y,p-nu_x-nu_y);
+                                */
+                                
+                                nu_factor[M_i][M_j][M_k] += nu_factor_base;
+                            }
+                        }
+                    }
+                    
+                    const mpz_class pq_factor_base = 
+                        orsa::power_sign(p+q) *
+                        orsa::binomial(l,p) *
+                        orsa::binomial(2*l-2*p,l) *
+                        orsa::binomial(m,2*q+1) *
+                        orsa::pochhammer(mpz_class(l-m-2*p+1),m);
+                    
+                    for (int ti=0; ti<=l; ++ti) {
+                        for (int tj=0; tj<=l-ti; ++tj) {
+                            for (int tk=0; tk<=l-ti-tj; ++tk) {
+                                nu_factor[ti][tj][tk] *= pq_factor_base;
+                            }   
+                        }
+                    }
+                    
+                    for (int ti=0; ti<=l; ++ti) {
+                        for (int tj=0; tj<=l-ti; ++tj) {
+                            for (int tk=0; tk<=l-ti-tj; ++tk) {
+                                pq_factor[ti][tj][tk] += nu_factor[ti][tj][tk];
+                            }   
+                        }
+                    }
+                }
+            }
+            
+            for (int ti=0; ti<=l; ++ti) {
+                for (int tj=0; tj<=l-ti; ++tj) {
+                    for (int tk=0; tk<=l-ti-tj; ++tk) {
+                        // divide by 2^l
+                        pq_factor[ti][tj][tk] /= pow_2_l;
+                    }   
+                }
+            }
+            
+            for (int ti=0; ti<=l; ++ti) {
+                for (int tj=0; tj<=l-ti; ++tj) {
+                    for (int tk=0; tk<=l-ti-tj; ++tk) {
+                        pq_factor[ti][tj][tk].canonicalize();
+                        coeff[l][m][ti][tj][tk] = pq_factor[ti][tj][tk];
+                    }
+                }
+            }
+        }
+    }
+    return coeff[l_ask][m_ask];
+}
+
+const orsa::triIndex_d orsa::conversionCoefficients_S_plain(const size_t & l_ask, const size_t & m_ask) {
+    static std::deque< std::deque<orsa::triIndex_d> > coeff;
+    if (coeff.size() > l_ask) {
+        if (coeff[l_ask].size() > m_ask) {
+            return coeff[l_ask][m_ask];
+        }        
+    }
+    const size_t old_l_size = coeff.size();
+    coeff.resize(l_ask+1);
+    for (int l=old_l_size; l<=(int)l_ask; ++l) {
+        coeff[l].resize(l+1);
+        for (int m=0; m<=l; ++m) {
+            coeff[l][m].resize(l+1);
+            for (int ti=0; ti<=l; ++ti) {
+                coeff[l][m][ti].resize(l+1-ti);
+                for (int tj=0; tj<=l-ti; ++tj) {
+                    coeff[l][m][ti][tj].resize(l+1-ti-tj);
+                }
+            }
+            const orsa::triIndex_mpq coeff_base = orsa::conversionCoefficients_S_integral(l,m);
+            const mpf_class norm_base = orsa::normalization_integralToSphericalHarmonics(l,m);
+            for (int ti=0; ti<=l; ++ti) {
+                for (int tj=0; tj<=l-ti; ++tj) {
+                    for (int tk=0; tk<=l-ti-tj; ++tk) {
+                        coeff[l][m][ti][tj][tk] = mpf_class(coeff_base[ti][tj][tk]*norm_base).get_d();
+                    }
+                }
+            }
+        }
+    }
+    return coeff[l_ask][m_ask];
+}
+
+const orsa::triIndex_d orsa::conversionCoefficients_S_norm(const size_t & l_ask, const size_t & m_ask) {
+    static std::deque< std::deque<orsa::triIndex_d> > coeff;
+    if (coeff.size() > l_ask) {
+        if (coeff[l_ask].size() > m_ask) {
+            return coeff[l_ask][m_ask];
+        }        
+    }
+    const size_t old_l_size = coeff.size();
+    coeff.resize(l_ask+1);
+    for (int l=old_l_size; l<=(int)l_ask; ++l) {
+        coeff[l].resize(l+1);
+        for (int m=0; m<=l; ++m) {
+            coeff[l][m].resize(l+1);
+            for (int ti=0; ti<=l; ++ti) {
+                coeff[l][m][ti].resize(l+1-ti);
+                for (int tj=0; tj<=l-ti; ++tj) {
+                    coeff[l][m][ti][tj].resize(l+1-ti-tj);
+                }
+            }
+            const orsa::triIndex_mpq coeff_base = orsa::conversionCoefficients_S_integral(l,m);
+            const mpf_class norm_base = orsa::normalization_integralToNormalizedSphericalHarmonics(l,m);
+            for (int ti=0; ti<=l; ++ti) {
+                for (int tj=0; tj<=l-ti; ++tj) {
+                    for (int tk=0; tk<=l-ti-tj; ++tk) {
+                        coeff[l][m][ti][tj][tk] = mpf_class(coeff_base[ti][tj][tk]*norm_base).get_d();
                     }
                 }
             }

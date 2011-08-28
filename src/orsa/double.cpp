@@ -116,6 +116,9 @@ template double orsa::int_pow(const double & x,
 template mpf_class orsa::int_pow(const mpf_class & x,
                                  const int & p);
 
+template mpz_class orsa::int_pow(const mpz_class & z,
+                                 const int & p);
+
 const double & orsa::epsilon() {
     static const double _eps = __DBL_EPSILON__; /* 2.2204460492503131e-16 */
     return _eps;
