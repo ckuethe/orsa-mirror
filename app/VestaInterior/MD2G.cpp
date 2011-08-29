@@ -314,27 +314,25 @@ int main(int argc, char **argv) {
     // densityCCC[0][0][0] = 3.4*gcm3;
     densityCCC[0][0][0] = 1.0;
     
-#warning adjust for difference in R0 between gravity file and simplex
-    
     const double radiusCorrectionRatio = plateModelR0/gravityData->R0;
     
 #warning track precision of operations
-    
-#warning BARYCENTRIC!!
     
     for (size_t l=0; l<=gravityData->degree; ++l) {
         const double radiusCorrectionFactor = orsa::int_pow(radiusCorrectionRatio,l);
         for (size_t m=0; m<=l; ++m) {
             {
-                // C
-                const orsa::triIndex_mpq tri_integral = orsa::conversionCoefficients_C_integral(l,m);
-                const orsa::triIndex_d tri_norm = orsa::conversionCoefficients_C_norm(l,m);
+                const orsa::triIndex_mpq C_tri_integral = orsa::conversionCoefficients_C_integral(l,m);
+                const orsa::triIndex_d   C_tri_norm     = orsa::conversionCoefficients_C_norm(l,m);
                 double norm_C = 0.0;
-                // ni,nj,nk are the expansion of C_lm in terms of N_ijk
+                const orsa::triIndex_mpq S_tri_integral = orsa::conversionCoefficients_S_integral(l,m);
+                const orsa::triIndex_d   S_tri_norm     = orsa::conversionCoefficients_S_norm(l,m);
+                double norm_S = 0.0;
+                // ni,nj,nk are the expansion of C_lm,S_lm in terms of N_ijk
                 for (size_t ni=0; ni<=l; ++ni) {
                     for (size_t nj=0; nj<=l-ni; ++nj) {
                         for (size_t nk=0; nk<=l-ni-nj; ++nk) {
-                            if (tri_integral[ni][nj][nk] == 0) continue;
+                            if ( (C_tri_integral[ni][nj][nk] == 0) && (S_tri_integral[ni][nj][nk] == 0) ) continue;
                             // ti,tj,tk are the expansion of the density in a cubic Chebyshev
                             for (size_t ti=0; ti<=T_degree; ++ti) {
                                 for (size_t tj=0; tj<=T_degree-ti; ++tj) {
@@ -355,25 +353,35 @@ int main(int argc, char **argv) {
                                                         for (size_t bj=0; bj<=nj; ++bj) {
                                                             for (size_t bk=0; bk<=nk; ++bk) {
                                                                 
-                                                                norm_C +=
-                                                                    orsa::power_sign(bi+bj+bk) *
-                                                                    densityCCC[ti][tj][tk] *
-                                                                    tri_norm[ni][nj][nk] *
-                                                                    mpz_class(orsa::binomial(ni,bi) *
-                                                                              orsa::binomial(nj,bj) *
-                                                                              orsa::binomial(nk,bk) *
-                                                                              cTi[ci] * cTj[cj] * cTk[ck]).get_d() *
-                                                                    orsa::int_pow(CMx_over_plateModelR0,bi) *
-                                                                    orsa::int_pow(CMy_over_plateModelR0,bj) *
-                                                                    orsa::int_pow(CMz_over_plateModelR0,bk) *
-                                                                    si->getIntegral(ni-bi+ci,nj-bj+cj,nk-bk+ck);
+                                                                if (C_tri_integral[ni][nj][nk] != 0) {
+                                                                    norm_C +=
+                                                                        orsa::power_sign(bi+bj+bk) *
+                                                                        densityCCC[ti][tj][tk] *
+                                                                        C_tri_norm[ni][nj][nk] *
+                                                                        mpz_class(orsa::binomial(ni,bi) *
+                                                                                  orsa::binomial(nj,bj) *
+                                                                                  orsa::binomial(nk,bk) *
+                                                                                  cTi[ci] * cTj[cj] * cTk[ck]).get_d() *
+                                                                        orsa::int_pow(CMx_over_plateModelR0,bi) *
+                                                                        orsa::int_pow(CMy_over_plateModelR0,bj) *
+                                                                        orsa::int_pow(CMz_over_plateModelR0,bk) *
+                                                                        si->getIntegral(ni-bi+ci,nj-bj+cj,nk-bk+ck);
+                                                                }
                                                                 
-                                                                /* ORSA_DEBUG("d: %g  tri: %g  z: %Zi  sx: %g",
-                                                                   densityCCC[ti][tj][tk],
-                                                                   tri_norm[ni][nj][nk],
-                                                                   mpz_class(cTi[ci]*cTj[cj]*cTk[ck]).get_mpz_t(),
-                                                                   si->getIntegral(ni+ci,nj+cj,nk+ck));
-                                                                */
+                                                                if (S_tri_integral[ni][nj][nk] != 0) {
+                                                                    norm_S +=
+                                                                        orsa::power_sign(bi+bj+bk) *
+                                                                        densityCCC[ti][tj][tk] *
+                                                                        S_tri_norm[ni][nj][nk] *
+                                                                        mpz_class(orsa::binomial(ni,bi) *
+                                                                                  orsa::binomial(nj,bj) *
+                                                                                  orsa::binomial(nk,bk) *
+                                                                                  cTi[ci] * cTj[cj] * cTk[ck]).get_d() *
+                                                                        orsa::int_pow(CMx_over_plateModelR0,bi) *
+                                                                        orsa::int_pow(CMy_over_plateModelR0,bj) *
+                                                                        orsa::int_pow(CMz_over_plateModelR0,bk) *
+                                                                        si->getIntegral(ni-bi+ci,nj-bj+cj,nk-bk+ck);
+                                                                }                                                               
                                                             }
                                                         }
                                                     }
@@ -386,15 +394,22 @@ int main(int argc, char **argv) {
                         }
                     }
                 }
+                
                 norm_C /= si->getIntegral(0,0,0);
                 norm_C *= radiusCorrectionFactor;
+                norm_S /= si->getIntegral(0,0,0);
+                norm_S *= radiusCorrectionFactor;
+                
+                if (l>=2) {
+                    gravityData->setCoeff(orsaPDS::RadioScienceGravityData::keyC(l,m),norm_C);
+                    if (m!= 0) gravityData->setCoeff(orsaPDS::RadioScienceGravityData::keyS(l,m),norm_S);
+                }
+                
                 ORSA_DEBUG("norm_C[%i][%i] = %g",l,m,norm_C);
+                if (m != 0) ORSA_DEBUG("norm_S[%i][%i] = %g",l,m,norm_S);
             }
         }
     }
-    
-    
-    
     
     
     orsaPDS::RadioScienceGravityFile::write(gravityData.get(),outputGravityFile,512,1518);
