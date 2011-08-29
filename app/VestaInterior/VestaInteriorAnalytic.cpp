@@ -605,12 +605,15 @@ int main(int argc, char **argv) {
                             for (size_t by=0; by<=ny; ++by) {
                                 for (size_t bz=0; bz<=nz; ++bz) {
                                     
-                                    sum += mpz_class(orsa::binomial(nx,bx) *
-                                                     orsa::binomial(ny,by) *
-                                                     orsa::binomial(nz,bz) *
-                                                     cTx[cx] *
-                                                     cTy[cy] *
-                                                     cTz[cz]).get_d() *
+#warning SIGN^pow missing? correct?
+                                    
+                                    sum += orsa::power_sign(bx+by+bz) *
+                                        mpz_class(orsa::binomial(nx,bx) *
+                                                  orsa::binomial(ny,by) *
+                                                  orsa::binomial(nz,bz) *
+                                                  cTx[cx] *
+                                                  cTy[cy] *
+                                                  cTz[cz]).get_d() *
                                         orsa::int_pow(sampled_CM.getX()/plateModelR0,bx) *
                                         orsa::int_pow(sampled_CM.getY()/plateModelR0,by) *
                                         orsa::int_pow(sampled_CM.getZ()/plateModelR0,bz) *
