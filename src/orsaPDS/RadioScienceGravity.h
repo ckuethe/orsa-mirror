@@ -46,6 +46,9 @@ namespace orsaPDS {
         double getCoeff(const QString &) const;
         double getCovar(const QString &, const QString &) const;
     public:
+        void setCoeff(const QString &, const double &);
+        void setCovar(const QString &, const QString &, const double &);
+    public:
         gsl_vector * getCoefficientVector() const;
         gsl_matrix * getCovarianceMatrix() const;
         gsl_matrix * getInverseCovarianceMatrix() const;

@@ -47,16 +47,24 @@ double RadioScienceGravityData::getCoeff(const QString & key) const {
     }
 }
 
-double RadioScienceGravityData::getCovar(const QString & s1, const QString & s2) const {
-    const HashType::const_iterator it1 = hash.constFind(s1);
-    const HashType::const_iterator it2 = hash.constFind(s2);
+double RadioScienceGravityData::getCovar(const QString & key1, const QString & key2) const {
+    const HashType::const_iterator it1 = hash.constFind(key1);
+    const HashType::const_iterator it2 = hash.constFind(key2);
     if ( (it1 != hash.constEnd()) && (it2 != hash.constEnd()) ) {
         return covar[std::max(it1.value(),it2.value())][std::min(it1.value(),it2.value())];
     } else {
-        if (it1 == hash.constEnd()) ORSA_DEBUG("problem: no hash found for [%s]",s1.toStdString().c_str());
-        if (it2 == hash.constEnd()) ORSA_DEBUG("problem: no hash found for [%s]",s2.toStdString().c_str());
+        if (it1 == hash.constEnd()) ORSA_DEBUG("problem: no hash found for [%s]",key1.toStdString().c_str());
+        if (it2 == hash.constEnd()) ORSA_DEBUG("problem: no hash found for [%s]",key2.toStdString().c_str());
         return 0;
     }
+}
+
+void RadioScienceGravityData::setCoeff(const QString & key, const double & val) {
+    coeff[index(key)] = val;
+}
+
+void RadioScienceGravityData::setCovar(const QString & key1, const QString & key2, const double & val) {
+    covar[index(key1)][index(key2)] = val;
 }
 
 gsl_vector * RadioScienceGravityData::getCoefficientVector() const {
