@@ -298,9 +298,9 @@ int main(int argc, char **argv) {
        const double CMz_over_plateModelR0 = CMz / plateModelR0;
     */
     //
-    const double CMx_over_plateModelR0 = si->getIntegral(1,0,0) / si->getIntegral(0,0,0);
-    const double CMy_over_plateModelR0 = si->getIntegral(0,1,0) / si->getIntegral(0,0,0);
-    const double CMz_over_plateModelR0 = si->getIntegral(0,0,1) / si->getIntegral(0,0,0);
+    const double alt_CMx_over_plateModelR0 = si->getIntegral(1,0,0) / si->getIntegral(0,0,0);
+    const double alt_CMy_over_plateModelR0 = si->getIntegral(0,1,0) / si->getIntegral(0,0,0);
+    const double alt_CMz_over_plateModelR0 = si->getIntegral(0,0,1) / si->getIntegral(0,0,0);
     
     // first determine the Chebyshev expansion of the mass distribution
     const size_t T_degree = 0;
@@ -362,9 +362,9 @@ int main(int argc, char **argv) {
                                                                                   orsa::binomial(nj,bj) *
                                                                                   orsa::binomial(nk,bk) *
                                                                                   cTi[ci] * cTj[cj] * cTk[ck]).get_d() *
-                                                                        orsa::int_pow(CMx_over_plateModelR0,bi) *
-                                                                        orsa::int_pow(CMy_over_plateModelR0,bj) *
-                                                                        orsa::int_pow(CMz_over_plateModelR0,bk) *
+                                                                        orsa::int_pow(alt_CMx_over_plateModelR0,bi) *
+                                                                        orsa::int_pow(alt_CMy_over_plateModelR0,bj) *
+                                                                        orsa::int_pow(alt_CMz_over_plateModelR0,bk) *
                                                                         si->getIntegral(ni-bi+ci,nj-bj+cj,nk-bk+ck);
                                                                 }
                                                                 
@@ -377,9 +377,9 @@ int main(int argc, char **argv) {
                                                                                   orsa::binomial(nj,bj) *
                                                                                   orsa::binomial(nk,bk) *
                                                                                   cTi[ci] * cTj[cj] * cTk[ck]).get_d() *
-                                                                        orsa::int_pow(CMx_over_plateModelR0,bi) *
-                                                                        orsa::int_pow(CMy_over_plateModelR0,bj) *
-                                                                        orsa::int_pow(CMz_over_plateModelR0,bk) *
+                                                                        orsa::int_pow(alt_CMx_over_plateModelR0,bi) *
+                                                                        orsa::int_pow(alt_CMy_over_plateModelR0,bj) *
+                                                                        orsa::int_pow(alt_CMz_over_plateModelR0,bk) *
                                                                         si->getIntegral(ni-bi+ci,nj-bj+cj,nk-bk+ck);
                                                                 }                                                               
                                                             }
@@ -411,8 +411,24 @@ int main(int argc, char **argv) {
         }
     }
     
-    
+    ORSA_DEBUG("writing file [%s]",outputGravityFile.c_str());
     orsaPDS::RadioScienceGravityFile::write(gravityData.get(),outputGravityFile,512,1518);
+    
+    {
+        // write barycenter file
+        char filename[1024];
+        sprintf(filename,"%s.barycenter_km.dat",outputGravityFile.c_str());
+        FILE * fp = fopen(filename,"w");
+        ORSA_DEBUG("writing file [%s]",filename);
+        const double CMx = si->getIntegral(1,0,0)*plateModelR0;
+        const double CMy = si->getIntegral(0,1,0)*plateModelR0;
+        const double CMz = si->getIntegral(0,0,1)*plateModelR0;
+        gmp_fprintf(fp,"%+9.3f %+9.3f %+9.3f\n",
+                    orsa::FromUnits(CMx,orsa::Unit::KM,-1),
+                    orsa::FromUnits(CMy,orsa::Unit::KM,-1),
+                    orsa::FromUnits(CMz,orsa::Unit::KM,-1));
+        fclose(fp);        
+    }
     
     return 0;
 }
