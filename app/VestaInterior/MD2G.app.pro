@@ -18,11 +18,11 @@ OBJECTS_DIR = .obj/$${PLATFORM_NAME}
 DESTDIR     = ../../bin/$${PLATFORM_NAME}
 
 unix:!macx {
-	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaEssentialOSG -lorsaSolarSystem -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads
+	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaEssentialOSG -lorsaSolarSystem -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads -lqd -L/home/tricaric/sqlite -lsqlite3
 }
 
 
-HEADERS += 
-SOURCES += MD2G.cpp 
+HEADERS += CubicChebyshevMassDistribution.h vesta.h gaskell.h simplex.h
+SOURCES += MD2G.cpp CubicChebyshevMassDistribution.cpp
 
 
