@@ -41,7 +41,8 @@ gsl_siman_params_t params  = {N_TRIES, ITERS_FIXED_T, STEP_SIZE,
 
 class SIMAN_xp {
 public:
-    orsa::Cache<double> R0;
+    orsa::Cache<double> R0_plate;
+    orsa::Cache<double> R0_gravity;
     orsa::Cache<double> bulkDensity_gcm3;
     osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape;
     orsa::Cache<size_t> T_degree;
@@ -56,7 +57,8 @@ public:
 void SIMAN_copy (void * source, void * dest) {
     SIMAN_xp * s = (SIMAN_xp *) source;
     SIMAN_xp * d = (SIMAN_xp *) dest;
-    d->R0                  = s->R0;
+    d->R0_plate            = s->R0_plate;
+    d->R0_gravity          = s->R0_gravity;
     d->bulkDensity_gcm3    = s->bulkDensity_gcm3;
     d->randomPointsInShape = s->randomPointsInShape;
     d->T_degree            = s->T_degree;
@@ -104,7 +106,7 @@ double E1(void * xp) {
     }
     
     osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
-        new CubicChebyshevMassDistribution(coeff,x->R0);
+        new CubicChebyshevMassDistribution(coeff,x->R0_plate);
     
     x->randomPointsInShape->updateMassDistribution(massDistribution);
     

@@ -245,14 +245,9 @@ int main(int argc, char **argv) {
     osg::ref_ptr<SimplexIntegration<simplex_T> > si = new SimplexIntegration<simplex_T>(shapeModel.get(), plateModelR0, SQLiteDBFileName);
     si->reserve(polynomialDegree);
     
-#warning CORRECT FOR DIFFERENCE BETWEEN plateModelR0 and radioScienceGravityR0
-
-#warning check all R0 is they are plate_R0 or gravity_R0 !!!
-    
     const size_t SH_degree = gravityDegree; // shperical harmonics degree
     const size_t  T_degree = polynomialDegree; // chebyshev polinomials degree
     
-    const double R0 = gravityData->R0;
 #warning which GM value to use? gravityData->GM  OR gravityData->getCoeff("GM") ??
     const double GM = gravityData->GM; 
     
@@ -577,6 +572,8 @@ int main(int argc, char **argv) {
     
     gsl_matrix * ijk2cT = gsl_matrix_calloc(ijk_size,T_size);
     
+    const double radiusCorrectionRatio = plateModelR0/gravityData->R0;
+    
     for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
         
         size_t Tx,Ty,Tz;
@@ -605,8 +602,6 @@ int main(int argc, char **argv) {
                             for (size_t by=0; by<=ny; ++by) {
                                 for (size_t bz=0; bz<=nz; ++bz) {
                                     
-#warning SIGN^pow missing? correct?
-                                    
                                     sum += orsa::power_sign(bx+by+bz) *
                                         mpz_class(orsa::binomial(nx,bx) *
                                                   orsa::binomial(ny,by) *
@@ -624,6 +619,7 @@ int main(int argc, char **argv) {
                     }
                 }
             }
+            sum *= orsa::int_pow(radiusCorrectionRatio,nx+ny+nz);
             
             // gsl_matrix_set(ijk2cT,z_ijk,z_cT,sum);
             // gsl_matrix_set(ijk2cT,z_ijk,z_cT,sum/(volume*orsa::int_pow(plateModelR0,-3)));
@@ -659,12 +655,11 @@ int main(int argc, char **argv) {
     gsl_matrix * sh2cT = gsl_matrix_alloc(SH_size,T_size);
     gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, sh2ijk, ijk2cT, 0.0, sh2cT);
     
-    
     for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
         for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
             size_t Tx,Ty,Tz;
             CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-            ORSA_DEBUG("sh2cT[%03i][%03i] = %+9.6f [%s ->  cT[%i][%i][%i]]",
+            ORSA_DEBUG("sh2cT[%03i][%03i] = %+9.6f [%s -> cT[%i][%i][%i]]",
                        z_sh,z_cT,gsl_matrix_get(sh2cT,z_sh,z_cT),gravityData->key(z_sh).toStdString().c_str(),Tx,Ty,Tz);
         }
     }
@@ -848,7 +843,8 @@ int main(int argc, char **argv) {
                 
                 SIMAN_xp x0;
 #warning which R0 to use (both?)
-                x0.R0 = plateModelR0;
+                x0.R0_plate   = plateModelR0;
+                x0.R0_gravity = gravityData->R0;
                 x0.bulkDensity_gcm3 = bulkDensity_gcm3;
                 x0.randomPointsInShape = randomPointsInShape;
                 x0.T_degree = T_degree;
