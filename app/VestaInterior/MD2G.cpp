@@ -287,10 +287,20 @@ int main(int argc, char **argv) {
     orsaPDS::RadioScienceGravityFile::read(gravityData.get(),radioScienceGravityBaseFile,512,1518);
     
     const double volume = si->getIntegral(0,0,0)*orsa::cube(plateModelR0);
-    
-    const double CM_x = si->getIntegral(1,0,0)*orsa::int_pow(plateModelR0,4);
-    const double CM_y = si->getIntegral(0,1,0)*orsa::int_pow(plateModelR0,4);
-    const double CM_z = si->getIntegral(0,0,1)*orsa::int_pow(plateModelR0,4);
+
+    /* 
+       const double CMx = si->getIntegral(1,0,0)*orsa::int_pow(plateModelR0,1);
+       const double CMy = si->getIntegral(0,1,0)*orsa::int_pow(plateModelR0,1);
+       const double CMz = si->getIntegral(0,0,1)*orsa::int_pow(plateModelR0,1);
+       
+       const double CMx_over_plateModelR0 = CMx / plateModelR0;
+       const double CMy_over_plateModelR0 = CMy / plateModelR0;
+       const double CMz_over_plateModelR0 = CMz / plateModelR0;
+    */
+    //
+    const double CMx_over_plateModelR0 = si->getIntegral(1,0,0) / si->getIntegral(0,0,0);
+    const double CMy_over_plateModelR0 = si->getIntegral(0,1,0) / si->getIntegral(0,0,0);
+    const double CMz_over_plateModelR0 = si->getIntegral(0,0,1) / si->getIntegral(0,0,0);
     
     // first determine the Chebyshev expansion of the mass distribution
     const size_t T_degree = 0;
@@ -332,26 +342,41 @@ int main(int argc, char **argv) {
                                         const std::vector<mpz_class> & cTi = orsa::ChebyshevTcoeff(ti);
                                         const std::vector<mpz_class> & cTj = orsa::ChebyshevTcoeff(tj);
                                         const std::vector<mpz_class> & cTk = orsa::ChebyshevTcoeff(tk);
-                                        // ci,cj,ck are the expansion of each Chebyshev polinomial in terms of x^k
+                                        // ci,cj,ck are the expansion of each Chebyshev polinomial in terms of powers of x,y,z
                                         for (size_t ci=0; ci<=ti; ++ci) {
                                             if (cTi[ci] == 0) continue;
                                             for (size_t cj=0; cj<=tj; ++cj) {
                                                 if (cTj[cj] == 0) continue;
                                                 for (size_t ck=0; ck<=tk; ++ck) {
                                                     if (cTk[ck] == 0) continue;
-
-                                                    norm_C +=
-                                                        densityCCC[ti][tj][tk] *
-                                                        tri_norm[ni][nj][nk] *
-                                                        mpz_class(cTi[ci]*cTj[cj]*cTk[ck]).get_d() *
-                                                        si->getIntegral(ni+ci,nj+cj,nk+ck);
-
-                                                    /* ORSA_DEBUG("d: %g  tri: %g  z: %Zi  sx: %g",
-                                                       densityCCC[ti][tj][tk],
-                                                       tri_norm[ni][nj][nk],
-                                                       mpz_class(cTi[ci]*cTj[cj]*cTk[ck]).get_mpz_t(),
-                                                       si->getIntegral(ni+ci,nj+cj,nk+ck));
-                                                    */
+                                                    // bi,bj,bk are the binomial expansion about the center of mass
+                                                    // this also introduces a power_sign
+                                                    for (size_t bi=0; bi<=ni; ++bi) {
+                                                        for (size_t bj=0; bj<=nj; ++bj) {
+                                                            for (size_t bk=0; bk<=nk; ++bk) {
+                                                                
+                                                                norm_C +=
+                                                                    orsa::power_sign(bi+bj+bk) *
+                                                                    densityCCC[ti][tj][tk] *
+                                                                    tri_norm[ni][nj][nk] *
+                                                                    mpz_class(orsa::binomial(ni,bi) *
+                                                                              orsa::binomial(nj,bj) *
+                                                                              orsa::binomial(nk,bk) *
+                                                                              cTi[ci] * cTj[cj] * cTk[ck]).get_d() *
+                                                                    orsa::int_pow(CMx_over_plateModelR0,bi) *
+                                                                    orsa::int_pow(CMy_over_plateModelR0,bj) *
+                                                                    orsa::int_pow(CMz_over_plateModelR0,bk) *
+                                                                    si->getIntegral(ni-bi+ci,nj-bj+cj,nk-bk+ck);
+                                                                
+                                                                /* ORSA_DEBUG("d: %g  tri: %g  z: %Zi  sx: %g",
+                                                                   densityCCC[ti][tj][tk],
+                                                                   tri_norm[ni][nj][nk],
+                                                                   mpz_class(cTi[ci]*cTj[cj]*cTk[ck]).get_mpz_t(),
+                                                                   si->getIntegral(ni+ci,nj+cj,nk+ck));
+                                                                */
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
