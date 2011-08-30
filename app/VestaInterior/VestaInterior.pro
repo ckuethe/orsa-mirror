@@ -2,4 +2,4 @@ include(../../orsa.pri)
 
 TEMPLATE = subdirs
 
-SUBDIRS += MD2G.app.pro simplex.app.pro VestaInteriorAnalytic.app.pro
+SUBDIRS += simplex.app.pro MD2G.app.pro VestaInteriorAnalytic.app.pro slice.app.pro
