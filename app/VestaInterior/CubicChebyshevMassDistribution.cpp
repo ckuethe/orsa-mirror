@@ -133,6 +133,29 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
     return true;
 }
 
+bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile::DataContainer & data, const std::string & fileName, const double & limitDeltaDensity) {
+    FILE * fp = fopen(fileName.c_str(),"r");
+    if (!fp) {
+        ORSA_DEBUG("cannot open file [%s]",fileName.c_str());
+        return false;
+    }
+    data.clear();
+    size_t num_read=0, num_saved=0;
+    CubicChebyshevMassDistributionFile::DataType dataElement;
+    while (read(dataElement,fp)) {
+        ++num_read;
+        if (dataElement.deltaDensity <= limitDeltaDensity) {
+            ++num_saved;
+            data.push_back(dataElement);
+
+            ORSA_DEBUG("delta: %g  limit: %g",dataElement.deltaDensity,limitDeltaDensity);
+        }
+    }
+    fclose(fp);
+    if (num_read != 0) ORSA_DEBUG("read: %i  saved: %i  [%7.3f%%]",num_read,num_saved,100*(double)num_saved/(double)num_read);
+    return true;
+}
+
 bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistributionFile::DataContainer & data, const std::string & fileName) {
     FILE * fp = fopen(fileName.c_str(),"w");
     if (!fp) {
@@ -160,38 +183,32 @@ bool CubicChebyshevMassDistributionFile::append(const CubicChebyshevMassDistribu
 }
 
 bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile::DataType & data, FILE * fp) {
-    char * line = NULL;
-    size_t len = 0;
-    ssize_t read = getline(&line, &len, fp);
-    if (read>0) {
-        gmp_fscanf(fp,"%lf",&data.minDensity);
-        data.minDensity = orsa::FromUnits(orsa::FromUnits(data.minDensity,orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
-        gmp_fscanf(fp,"%lf",&data.maxDensity);
-        data.maxDensity = orsa::FromUnits(orsa::FromUnits(data.maxDensity,orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
-        gmp_fscanf(fp,"%lf",&data.deltaDensity);
-        data.maxDensity = orsa::FromUnits(orsa::FromUnits(data.deltaDensity,orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
-        gmp_fscanf(fp,"%lf",&data.densityScale);
-        data.densityScale = orsa::FromUnits(orsa::FromUnits(data.densityScale,orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
-        gmp_fscanf(fp,"%lf",&data.R0);
-        data.R0 = orsa::FromUnits(data.R0,orsa::Unit::KM,1);
-        size_t degree;
-        gmp_fscanf(fp,"%zi",&degree);
-        CubicChebyshevMassDistribution::resize(data.coeff,degree);
-        for (size_t runningDegree=0; runningDegree<=degree; ++runningDegree) {
-            for (size_t i=0; i<=degree; ++i) {
-                for (size_t j=0; j<=degree-i; ++j) {
-                    for (size_t k=0; k<=degree-i-j; ++k) {
-                        if (i+j+k == runningDegree) {
-                            gmp_fscanf(fp,"%lf",&data.coeff[i][j][k]);
-                        }
+    if (1 != gmp_fscanf(fp,"%lf",&data.minDensity)) return false;                                
+    data.minDensity = orsa::FromUnits(orsa::FromUnits(data.minDensity,orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
+    if (1 != gmp_fscanf(fp,"%lf",&data.maxDensity)) return false;                                
+    data.maxDensity = orsa::FromUnits(orsa::FromUnits(data.maxDensity,orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
+    if (1 != gmp_fscanf(fp,"%lf",&data.deltaDensity)) return false;                                    
+    data.maxDensity = orsa::FromUnits(orsa::FromUnits(data.deltaDensity,orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
+    if (1 != gmp_fscanf(fp,"%lf",&data.densityScale)) return false;                                
+    data.densityScale = orsa::FromUnits(orsa::FromUnits(data.densityScale,orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
+    if (1 != gmp_fscanf(fp,"%lf",&data.R0)) return false;                                
+    data.R0 = orsa::FromUnits(data.R0,orsa::Unit::KM,1);
+    size_t degree;
+    if (1 != gmp_fscanf(fp,"%zi",&degree)) return false;                                
+    ORSA_DEBUG("degree: %i",degree);
+    CubicChebyshevMassDistribution::resize(data.coeff,degree);
+    for (size_t runningDegree=0; runningDegree<=degree; ++runningDegree) {
+        for (size_t i=0; i<=degree; ++i) {
+            for (size_t j=0; j<=degree-i; ++j) {
+                for (size_t k=0; k<=degree-i-j; ++k) {
+                    if (i+j+k == runningDegree) {
+                        if (1 != gmp_fscanf(fp,"%lf",&data.coeff[i][j][k])) return false;
                     }
                 }
             }
         }
     }
-    if (line) free(line);
-    if (read>0) return true;
-    else return true;
+    return true;
 }
 
 bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistributionFile::DataType & data, FILE * fp) {

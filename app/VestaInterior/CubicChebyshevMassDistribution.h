@@ -48,6 +48,7 @@ public:
     typedef std::list<DataType> DataContainer;
 public:
     static bool read(DataContainer & data, const std::string & fileName);
+    static bool read(DataContainer & data, const std::string & fileName, const double & limitDeltaDensity);
 public:
     static bool write(const DataContainer & data, const std::string & fileName);
 public:
