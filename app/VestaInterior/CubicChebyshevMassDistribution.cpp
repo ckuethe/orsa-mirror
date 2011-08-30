@@ -195,11 +195,11 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
 }
 
 bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistributionFile::CCMDF_data & data, FILE * fp) {
-    gmp_fprintf(fp,"%.2f ",orsa::FromUnits(orsa::FromUnits(data.minDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
-    gmp_fprintf(fp,"%.2f ",orsa::FromUnits(orsa::FromUnits(data.maxDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
-    gmp_fprintf(fp,"%.2f ",orsa::FromUnits(orsa::FromUnits(data.deltaDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
-    gmp_fprintf(fp,"%.2f ",orsa::FromUnits(orsa::FromUnits(data.densityScale,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
-    gmp_fprintf(fp,"%.2f ",orsa::FromUnits(data.R0,orsa::Unit::KM,-1));
+    gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.minDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+    gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.maxDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+    gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.deltaDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+    gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.densityScale,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+    gmp_fprintf(fp,"%g ",orsa::FromUnits(data.R0,orsa::Unit::KM,-1));
     const size_t degree = data.coeff.size()-1;
     gmp_fprintf(fp,"%i ",degree);
     for (size_t runningDegree=0; runningDegree<=degree; ++runningDegree) {
@@ -207,7 +207,7 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
             for (size_t j=0; j<=degree-i; ++j) {
                 for (size_t k=0; k<=degree-i-j; ++k) {
                     if (i+j+k == runningDegree) {
-                        gmp_fprintf(fp,"%+6.3f ",data.coeff[i][j][k]);
+                        gmp_fprintf(fp,"%+9.6f ",data.coeff[i][j][k]);
                     }
                 }
             }
