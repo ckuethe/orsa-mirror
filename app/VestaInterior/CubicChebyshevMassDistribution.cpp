@@ -150,7 +150,7 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
         }
     }
     fclose(fp);
-    if (num_read != 0) ORSA_DEBUG("read: %i  saved: %i  [%7.3f%%]",num_read,num_saved,100*(double)num_saved/(double)num_read);
+    if (num_read != 0) ORSA_DEBUG("read: %i  saved: %i  [%.3f%%]",num_read,num_saved,100*(double)num_saved/(double)num_read);
     return true;
 }
 

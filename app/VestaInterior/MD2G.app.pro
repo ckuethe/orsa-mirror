@@ -15,7 +15,7 @@ DEPENDPATH  += ../../src/
 UI_DIR      =  .ui/$${PLATFORM_NAME}
 MOC_DIR     = .moc/$${PLATFORM_NAME}
 OBJECTS_DIR = .obj/$${PLATFORM_NAME}
-DESTDIR     = ../../bin/$${PLATFORM_NAME}
+DESTDIR     = .
 
 unix:!macx {
 	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaEssentialOSG -lorsaSolarSystem -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads -lqd -L/home/tricaric/sqlite -lsqlite3
