@@ -1,5 +1,7 @@
 #include "CubicChebyshevMassDistribution.h"
 
+#include <orsa/unit.h>
+
 std::vector< std::vector< std::vector<size_t> > > CubicChebyshevMassDistribution::indexTable;
 
 size_t CubicChebyshevMassDistribution::totalSize(const size_t & degree) {
@@ -110,4 +112,99 @@ double CubicChebyshevMassDistribution::density(const orsa::Vector & p) const {
         }
     }
     return density;
+}
+
+/***/
+
+bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile::DataType & data, const std::string & fileName) {
+    FILE * fp = fopen(fileName.c_str(),"r");
+    if (!fp) {
+        ORSA_DEBUG("cannot open file [%s]",fileName.c_str());
+        return false;
+    }
+    data.clear();
+    CubicChebyshevMassDistributionFile::CCMDF_data dataElement;
+    while (read(dataElement,fp)) {
+        data.push_back(dataElement);
+    }
+    fclose(fp);
+    return true;
+}
+
+bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistributionFile::DataType & data, const std::string & fileName) {
+    FILE * fp = fopen(fileName.c_str(),"w");
+    if (!fp) {
+        ORSA_DEBUG("cannot open file [%s]",fileName.c_str());
+        return false;
+    }
+    CubicChebyshevMassDistributionFile::DataType::const_iterator it = data.begin();
+    while (it != data.end()) {
+        write((*it),fp);
+        ++it;
+    }
+    fclose(fp);
+    return true;
+}
+
+bool CubicChebyshevMassDistributionFile::append(const CubicChebyshevMassDistributionFile::CCMDF_data & data, const std::string & fileName) {
+    FILE * fp = fopen(fileName.c_str(),"a");
+    if (!fp) {
+        ORSA_DEBUG("cannot open file [%s]",fileName.c_str());
+        return false;
+    }
+    write(data,fp);
+    fclose(fp);
+    return true;
+}
+
+bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile::CCMDF_data & data, FILE * fp) {
+    char * line = NULL;
+    size_t len = 0;
+    ssize_t read = getline(&line, &len, fp);
+    if (read>0) {
+        gmp_fscanf(fp,"%lf",&data.minDensity);
+        data.minDensity = orsa::FromUnits(orsa::FromUnits(data.minDensity,orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
+        gmp_fscanf(fp,"%lf",&data.maxDensity);
+        data.maxDensity = orsa::FromUnits(orsa::FromUnits(data.maxDensity,orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
+        gmp_fscanf(fp,"%lf",&data.deltaDensity);
+        data.maxDensity = orsa::FromUnits(orsa::FromUnits(data.deltaDensity,orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
+        size_t degree;
+        gmp_fscanf(fp,"%zi",&degree);
+        CubicChebyshevMassDistribution::resize(data.coeff,degree);
+        for (size_t runningDegree=0; runningDegree<=degree; ++runningDegree) {
+            for (size_t i=0; i<=degree; ++i) {
+                for (size_t j=0; j<=degree-i; ++j) {
+                    for (size_t k=0; k<=degree-i-j; ++k) {
+                        if (i+j+k == runningDegree) {
+                            gmp_fscanf(fp,"%lf",&data.coeff[i][j][k]);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (line) free(line);
+    if (read>0) return true;
+    else return true;
+}
+
+bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistributionFile::CCMDF_data & data, FILE * fp) {
+    gmp_fprintf(fp,"%.2f ",orsa::FromUnits(orsa::FromUnits(data.minDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+    gmp_fprintf(fp,"%.2f ",orsa::FromUnits(orsa::FromUnits(data.maxDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+    gmp_fprintf(fp,"%.2f ",orsa::FromUnits(orsa::FromUnits(data.deltaDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+    const size_t degree = data.coeff.size()-1;
+    gmp_fprintf(fp,"%i ",degree);
+    for (size_t runningDegree=0; runningDegree<=degree; ++runningDegree) {
+        for (size_t i=0; i<=degree; ++i) {
+            for (size_t j=0; j<=degree-i; ++j) {
+                for (size_t k=0; k<=degree-i-j; ++k) {
+                    if (i+j+k == runningDegree) {
+                        gmp_fprintf(fp,"%+6.3f ",data.coeff[i][j][k]);
+                    }
+                }
+            }
+        }
+    }
+    gmp_fprintf(fp,"\n");
+    return true;
 }

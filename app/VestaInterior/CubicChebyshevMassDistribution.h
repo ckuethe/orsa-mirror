@@ -31,4 +31,27 @@ public:
     double density(const orsa::Vector & p) const;
 };
 
+class CubicChebyshevMassDistributionFile {
+public:
+    class CCMDF_data {
+        // basic CCMD data + some auxil data useful to sort solutions
+    public:
+        double minDensity, maxDensity, deltaDensity;
+        CubicChebyshevMassDistribution::CoefficientType coeff;
+        // same R0 as plate model...
+    };
+public:
+    typedef std::list<CCMDF_data> DataType;
+public:
+    static bool read(DataType & data, const std::string & fileName);
+public:
+    static bool write(const DataType & data, const std::string & fileName);
+public:
+    static bool append(const CCMDF_data & data, const std::string & fileName);
+protected:
+    static bool read(CCMDF_data & data, FILE * fp);
+protected:
+    static bool write(const CCMDF_data & data, FILE * fp);
+};
+
 #endif // CUBIC_CHEBYSHEV_MASS_DISTRIBUTION_H
