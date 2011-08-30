@@ -43,7 +43,7 @@ class SIMAN_xp {
 public:
     orsa::Cache<double> R0_plate;
     orsa::Cache<double> R0_gravity;
-    orsa::Cache<double> bulkDensity_gcm3;
+    orsa::Cache<double> bulkDensity;
     osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape;
     orsa::Cache<size_t> T_degree;
     orsa::Cache<size_t> T_size;
@@ -59,7 +59,7 @@ void SIMAN_copy (void * source, void * dest) {
     SIMAN_xp * d = (SIMAN_xp *) dest;
     d->R0_plate            = s->R0_plate;
     d->R0_gravity          = s->R0_gravity;
-    d->bulkDensity_gcm3    = s->bulkDensity_gcm3;
+    d->bulkDensity         = s->bulkDensity;
     d->randomPointsInShape = s->randomPointsInShape;
     d->T_degree            = s->T_degree;
     d->T_size              = s->T_size;
@@ -106,7 +106,7 @@ double E1(void * xp) {
     }
     
     osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
-        new CubicChebyshevMassDistribution(coeff,x->R0_plate);
+        new CubicChebyshevMassDistribution(coeff,x->bulkDensity,x->R0_plate);
     
     x->randomPointsInShape->updateMassDistribution(massDistribution);
     
@@ -120,39 +120,41 @@ double E1(void * xp) {
         minDensity.setIfSmaller(density);
         maxDensity.setIfLarger(density);
     }
-
+    
 #warning find a better way to compute average density? (based on simplexIntegral and not on randomPointsInShape)
     
     ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]",
-               x->bulkDensity_gcm3*stat->min(),
-               x->bulkDensity_gcm3*stat->max(),
-               x->bulkDensity_gcm3*stat->average());
-
+               orsa::FromUnits(orsa::FromUnits(stat->min(),orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+               orsa::FromUnits(orsa::FromUnits(stat->max(),orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+               orsa::FromUnits(orsa::FromUnits(stat->average(),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+    
     /* 
        {
        // quick output
        char filename[1024];
-       sprintf(filename,"quickProfile_%+.6f_%d.dat",x->bulkDensity_gcm3*stat->min(),(*orsa::GlobalRNG::randomSeed));
+       sprintf(filename,"quickProfile_%+.6f_%d.dat",orsa::FromUnits(orsa::FromUnits(stat->min(),orsa::Unit::GRAM,-1),orsa::Unit::CM,3),(*orsa::GlobalRNG::randomSeed));
        ORSA_DEBUG("writing file [%s]",filename);
        FILE * fp = fopen(filename,"w");
        double PP = -285.0;
        while (PP < 285.0) {
        v = orsa::Vector(orsa::FromUnits(PP,orsa::Unit::KM),0,0);
        density = massDistribution->density(v);
-       gmp_fprintf(fp,"%g %g\n",PP,x->bulkDensity_gcm3*density);
+       gmp_fprintf(fp,"%g %g\n",PP,orsa::FromUnits(orsa::FromUnits(density,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
        PP += 1.0;
        }
        fclose(fp);
        }
     */
 
-    if (x->bulkDensity_gcm3*stat->min() >= 0.0) {
+    if (x->bulkDensity*stat->min() >= 0.0) {
         // another quick output...
 #warning pass filename as parameter...
         CubicChebyshevMassDistributionFile::CCMDF_data data;
-        data.minDensity = orsa::FromUnits(orsa::FromUnits(x->bulkDensity_gcm3*stat->min(),orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
-        data.maxDensity = orsa::FromUnits(orsa::FromUnits(x->bulkDensity_gcm3*stat->max(),orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
-        data.deltaDensity = orsa::FromUnits(orsa::FromUnits(x->bulkDensity_gcm3*(stat->max()-stat->min()),orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
+        data.minDensity = stat->min();
+        data.maxDensity = stat->max();
+        data.deltaDensity = (stat->max()-stat->min());
+        data.densityScale = x->bulkDensity;
+        data.R0 = x->R0_plate;
         data.coeff = coeff;
         CubicChebyshevMassDistributionFile::append(data,"CCMDF.out");
     }

@@ -10,6 +10,7 @@ public:
 protected:
     const CoefficientType coeff;
     const double oneOverR0;
+    const double densityScale;
 public:
     static size_t totalSize(const size_t & degree);
 public:
@@ -24,6 +25,7 @@ protected:
     static void updateIndexTable(const size_t & requestedDegree);
 public:
     CubicChebyshevMassDistribution(const CoefficientType & coefficient,
+                                   const double & densityScale, // = bulk density if coefficients are relative
                                    const double & R0);
 protected:
     virtual ~CubicChebyshevMassDistribution();
@@ -37,8 +39,9 @@ public:
         // basic CCMD data + some auxil data useful to sort solutions
     public:
         double minDensity, maxDensity, deltaDensity;
+        double densityScale;
+        double R0;
         CubicChebyshevMassDistribution::CoefficientType coeff;
-        // same R0 as plate model...
     };
 public:
     typedef std::list<CCMDF_data> DataType;

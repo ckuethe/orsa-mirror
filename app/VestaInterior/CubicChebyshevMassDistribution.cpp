@@ -69,10 +69,12 @@ void CubicChebyshevMassDistribution::updateIndexTable(const size_t & requestedDe
 }
 
 CubicChebyshevMassDistribution::CubicChebyshevMassDistribution(const CoefficientType & coefficient,
+                                                               const double & densityScale_,
                                                                const double & R0) :
     orsa::MassDistribution(),
     coeff(coefficient),
-    oneOverR0(1.0/R0) {
+    oneOverR0(1.0/R0),
+    densityScale(densityScale_) {
     /* const size_t degree = coeff.size()-1;
        for (unsigned int printDegree=0; printDegree<=degree; ++printDegree) {
        for (unsigned int i=0; i<=degree; ++i) {
@@ -111,7 +113,7 @@ double CubicChebyshevMassDistribution::density(const orsa::Vector & p) const {
             }
         }
     }
-    return density;
+    return densityScale*density;
 }
 
 /***/
@@ -168,6 +170,10 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
         data.maxDensity = orsa::FromUnits(orsa::FromUnits(data.maxDensity,orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
         gmp_fscanf(fp,"%lf",&data.deltaDensity);
         data.maxDensity = orsa::FromUnits(orsa::FromUnits(data.deltaDensity,orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
+        gmp_fscanf(fp,"%lf",&data.densityScale);
+        data.densityScale = orsa::FromUnits(orsa::FromUnits(data.densityScale,orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
+        gmp_fscanf(fp,"%lf",&data.R0);
+        data.R0 = orsa::FromUnits(data.R0,orsa::Unit::KM,1);
         size_t degree;
         gmp_fscanf(fp,"%zi",&degree);
         CubicChebyshevMassDistribution::resize(data.coeff,degree);
@@ -192,6 +198,8 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
     gmp_fprintf(fp,"%.2f ",orsa::FromUnits(orsa::FromUnits(data.minDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
     gmp_fprintf(fp,"%.2f ",orsa::FromUnits(orsa::FromUnits(data.maxDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
     gmp_fprintf(fp,"%.2f ",orsa::FromUnits(orsa::FromUnits(data.deltaDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+    gmp_fprintf(fp,"%.2f ",orsa::FromUnits(orsa::FromUnits(data.densityScale,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+    gmp_fprintf(fp,"%.2f ",orsa::FromUnits(data.R0,orsa::Unit::KM,-1));
     const size_t degree = data.coeff.size()-1;
     gmp_fprintf(fp,"%i ",degree);
     for (size_t runningDegree=0; runningDegree<=degree; ++runningDegree) {

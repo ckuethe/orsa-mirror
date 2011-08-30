@@ -564,11 +564,8 @@ int main(int argc, char **argv) {
     const double volume = si->getIntegral(0,0,0)*orsa::cube(plateModelR0);
     
     const double bulkDensity = GM/orsa::Unit::G()/volume;
-    const double bulkDensity_gcm3 = orsa::FromUnits(orsa::FromUnits(bulkDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3);
     
-    ORSA_DEBUG("bulkDensity: %g",bulkDensity);
-    
-#warning fix how bulkDensity is used in this code...
+    ORSA_DEBUG("bulkDensity: %g [g/cm^3]",orsa::FromUnits(orsa::FromUnits(bulkDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
     
     gsl_matrix * ijk2cT = gsl_matrix_calloc(ijk_size,T_size);
     
@@ -845,7 +842,7 @@ int main(int argc, char **argv) {
 #warning which R0 to use (both?)
                 x0.R0_plate   = plateModelR0;
                 x0.R0_gravity = gravityData->R0;
-                x0.bulkDensity_gcm3 = bulkDensity_gcm3;
+                x0.bulkDensity = bulkDensity;
                 x0.randomPointsInShape = randomPointsInShape;
                 x0.T_degree = T_degree;
                 x0.T_size = T_size;
