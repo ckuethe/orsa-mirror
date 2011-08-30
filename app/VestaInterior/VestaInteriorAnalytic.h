@@ -145,7 +145,18 @@ double E1(void * xp) {
        fclose(fp);
        }
     */
-        
+
+    if (x->bulkDensity_gcm3*stat->min() >= 0.0) {
+        // another quick output...
+#warning pass filename as parameter...
+        CubicChebyshevMassDistributionFile::CCMDF_data data;
+        data.minDensity = orsa::FromUnits(orsa::FromUnits(x->bulkDensity_gcm3*stat->min(),orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
+        data.maxDensity = orsa::FromUnits(orsa::FromUnits(x->bulkDensity_gcm3*stat->max(),orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
+        data.deltaDensity = orsa::FromUnits(orsa::FromUnits(x->bulkDensity_gcm3*(stat->max()-stat->min()),orsa::Unit::GRAM,1),orsa::Unit::CM,-3);
+        data.coeff = coeff;
+        CubicChebyshevMassDistributionFile::append(data,"CCMDF.out");
+    }
+    
     // first approach: maximize the minimum density
     // return -minDensity;
     // alternative: minimize density range
