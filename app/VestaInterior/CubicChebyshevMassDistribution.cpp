@@ -118,14 +118,14 @@ double CubicChebyshevMassDistribution::density(const orsa::Vector & p) const {
 
 /***/
 
-bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile::DataType & data, const std::string & fileName) {
+bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile::DataContainer & data, const std::string & fileName) {
     FILE * fp = fopen(fileName.c_str(),"r");
     if (!fp) {
         ORSA_DEBUG("cannot open file [%s]",fileName.c_str());
         return false;
     }
     data.clear();
-    CubicChebyshevMassDistributionFile::CCMDF_data dataElement;
+    CubicChebyshevMassDistributionFile::DataType dataElement;
     while (read(dataElement,fp)) {
         data.push_back(dataElement);
     }
@@ -133,13 +133,13 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
     return true;
 }
 
-bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistributionFile::DataType & data, const std::string & fileName) {
+bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistributionFile::DataContainer & data, const std::string & fileName) {
     FILE * fp = fopen(fileName.c_str(),"w");
     if (!fp) {
         ORSA_DEBUG("cannot open file [%s]",fileName.c_str());
         return false;
     }
-    CubicChebyshevMassDistributionFile::DataType::const_iterator it = data.begin();
+    CubicChebyshevMassDistributionFile::DataContainer::const_iterator it = data.begin();
     while (it != data.end()) {
         write((*it),fp);
         ++it;
@@ -148,7 +148,7 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
     return true;
 }
 
-bool CubicChebyshevMassDistributionFile::append(const CubicChebyshevMassDistributionFile::CCMDF_data & data, const std::string & fileName) {
+bool CubicChebyshevMassDistributionFile::append(const CubicChebyshevMassDistributionFile::DataType & data, const std::string & fileName) {
     FILE * fp = fopen(fileName.c_str(),"a");
     if (!fp) {
         ORSA_DEBUG("cannot open file [%s]",fileName.c_str());
@@ -159,7 +159,7 @@ bool CubicChebyshevMassDistributionFile::append(const CubicChebyshevMassDistribu
     return true;
 }
 
-bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile::CCMDF_data & data, FILE * fp) {
+bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile::DataType & data, FILE * fp) {
     char * line = NULL;
     size_t len = 0;
     ssize_t read = getline(&line, &len, fp);
@@ -194,7 +194,7 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
     else return true;
 }
 
-bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistributionFile::CCMDF_data & data, FILE * fp) {
+bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistributionFile::DataType & data, FILE * fp) {
     gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.minDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
     gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.maxDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
     gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.deltaDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
