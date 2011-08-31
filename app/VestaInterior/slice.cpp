@@ -286,16 +286,16 @@ int main(int argc, char **argv) {
     
     CubicChebyshevMassDistributionFile::DataContainer CCMDF;
     CubicChebyshevMassDistributionFile::read(CCMDF,CCMDF_filename,limitDeltaDensity);
-    
+    if (CCMDF.size() == 0) exit(0);
     
     /*** plotting ***/
     
     // plot range in km
-    const double x_step =    5.00;
+    const double x_step =    3.00;
     const double x_min  = -300.00;
     const double x_max  =  300.00;
     //
-    const double y_step =    5.00;
+    const double y_step =    3.00;
     const double y_min  = -300.00;
     const double y_max  =  300.00;
     
@@ -312,32 +312,61 @@ int main(int argc, char **argv) {
     
     {
         // random points on given plane
-        std::deque<orsa::Vector> rv;
-        while (rv.size() < 100000) {
+        std::deque<orsa::Vector> rv_in;
+        // std::deque<orsa::Vector> rv_out; // for smoother edges
+        while (rv_in.size() < 10000) {
+            // XZ
             const orsa::Vector v(orsa::FromUnits(x_min+(x_max-x_min)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM),
                                  orsa::FromUnits(0,orsa::Unit::KM),
                                  orsa::FromUnits(y_min+(y_max-y_min)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM));
+            // XY
+            /* const orsa::Vector v(orsa::FromUnits(x_min+(x_max-x_min)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM),
+               orsa::FromUnits(y_min+(y_max-y_min)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM),
+               orsa::FromUnits(0,orsa::Unit::KM));
+            */
             if (shapeModel->isInside(v)) {
-                rv.push_back(v);
+                rv_in.push_back(v);
+            } else {
+                // rv_out.push_back(v);
             }
         }
         std::vector<double> xVector;
         xVector.resize(varDefinition.size());
+        // double toKM = orsa::FromUnits(1,orsa::Unit::KM,-1);
         CubicChebyshevMassDistributionFile::DataContainer::const_iterator it_CCMDF = CCMDF.begin();
         while (it_CCMDF != CCMDF.end()) {
             osg::ref_ptr<CubicChebyshevMassDistribution> md =
                 new CubicChebyshevMassDistribution((*it_CCMDF).coeff,
                                                    (*it_CCMDF).densityScale,
                                                    (*it_CCMDF).R0);
-            std::deque<orsa::Vector>::const_iterator it_rv = rv.begin();
-            while (it_rv != rv.end()) {
+            std::deque<orsa::Vector>::const_iterator it_rv_in = rv_in.begin();
+            while (it_rv_in != rv_in.end()) {
 #warning double-check why adding step here...
-                xVector[0] = orsa::FromUnits((*it_rv).getX(),orsa::Unit::KM,-1) + x_step;
-                xVector[1] = orsa::FromUnits((*it_rv).getZ(),orsa::Unit::KM,-1) + y_step;
+                // XZ
+                xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1) + x_step;
+                xVector[1] = orsa::FromUnits((*it_rv_in).getZ(),orsa::Unit::KM,-1) + y_step;
+                // XY
+                /* xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1) + x_step;
+                   xVector[1] = orsa::FromUnits((*it_rv_in).getY(),orsa::Unit::KM,-1) + y_step;
+                */
                 plotStats->insert(xVector,
-                                  orsa::FromUnits(orsa::FromUnits(md->density((*it_rv)),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
-                ++it_rv;
+                                  orsa::FromUnits(orsa::FromUnits(md->density((*it_rv_in)),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+                ++it_rv_in;
             }
+            /* std::deque<orsa::Vector>::const_iterator it_rv_out = rv_out.begin();
+               while (it_rv_out != rv_out.end()) {
+               #warning double-check why adding step here...
+               // XZ
+               xVector[0] = orsa::FromUnits((*it_rv_out).getX(),orsa::Unit::KM,-1) + x_step;
+               xVector[1] = orsa::FromUnits((*it_rv_out).getZ(),orsa::Unit::KM,-1) + y_step;
+               // XY
+               // xVector[0] = orsa::FromUnits((*it_rv_out).getX(),orsa::Unit::KM,-1) + x_step;
+               // xVector[1] = orsa::FromUnits((*it_rv_out).getY(),orsa::Unit::KM,-1) + y_step;
+               plotStats->insert(xVector,
+               0.0);
+               ++it_rv_out;
+               }
+            */
             ++it_CCMDF;
         }
     }
@@ -362,7 +391,9 @@ int main(int argc, char **argv) {
 #warning choose what to plot here...
                         if (e->average() > 0.0) {
                             // mesh[mesh_id] = pow10(e->average());
-                            mesh[mesh_id] = e->average();
+                            // mesh[mesh_id] = e->average();
+                            // mesh[mesh_id] = e->max()-e->min();
+                            mesh[mesh_id] = e->min();
                             // mesh[mesh_id] = log10(e->average());
                         } else {
                             // mesh[mesh_id] = 1e-20;
@@ -554,7 +585,8 @@ int main(int argc, char **argv) {
     //
     // other... LINEAR 0->1
     // const double z_min=1.0e-5; const double z_max=1.0e-3;
-    const double z_min=2.0; const double z_max=5.0;
+    const double z_min=3.0; const double z_max=4.0;
+    // const double z_min=0.0; const double z_max=1.0;
     //
     // a,i
     // const double z_min=1e-5; const double z_max=1e-3;
@@ -654,18 +686,19 @@ int main(int argc, char **argv) {
     */
     
     
-    /* 
-       if (1) {
-       // contour plot, level curves
-       digits(1,"contour");
-       labels("FLOAT","CONTUR");
-       double T=eta_min+round_eta;
-       while (T<eta_max) {
-       conmat((float *)mesh,NX,NY,T);
-       T += round_eta;
-       }
-       }
-    */
+    if (0) {
+        // contour plot, level curves
+        const size_t nx = var_x->size();
+        const size_t ny = var_y->size();
+        digits(1,"contour");
+        labels("FLOAT","CONTUR");
+        double T=0.0;
+        while (T<10.0) {
+            // conmat((float *)mesh,NX,NY,T);
+            conmat((float *)mesh,nx,ny,T);
+            T += 0.2;
+        }
+    }
     
     // title only
     vkytit(-50); // title closer to plot
@@ -673,6 +706,8 @@ int main(int argc, char **argv) {
     title();
     
     disfin();
+    
+    ORSA_DEBUG("done.");
     
     return 0;
 }
