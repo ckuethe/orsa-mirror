@@ -285,9 +285,11 @@ int main(int argc, char **argv) {
     
     osg::ref_ptr<orsaPDS::RadioScienceGravityData> gravityData = new orsaPDS::RadioScienceGravityData;
     orsaPDS::RadioScienceGravityFile::read(gravityData.get(),radioScienceGravityBaseFile,512,1518);
-    
-    const double volume = si->getIntegral(0,0,0)*orsa::cube(plateModelR0);
 
+    const double GM = gravityData->GM; 
+    const double volume = si->getIntegral(0,0,0)*orsa::cube(plateModelR0);
+    const double bulkDensity = GM/orsa::Unit::G()/volume;
+    
     /* 
        const double CMx = si->getIntegral(1,0,0)*orsa::int_pow(plateModelR0,1);
        const double CMy = si->getIntegral(0,1,0)*orsa::int_pow(plateModelR0,1);
@@ -313,6 +315,22 @@ int main(int argc, char **argv) {
     CubicChebyshevMassDistribution::resize(densityCCC,T_degree); 
     // densityCCC[0][0][0] = 3.4*gcm3;
     densityCCC[0][0][0] = 1.0;
+    
+    
+    
+    {
+        // another quick output...
+#warning pass filename as parameter...
+        CubicChebyshevMassDistributionFile::CCMDF_data data;
+#warning review all these entries
+        data.minDensity = 0.0;
+        data.maxDensity = 0.0;
+        data.deltaDensity = 0.0;
+        data.densityScale = bulkDensity;
+        data.R0 = plateModelR0;
+        data.coeff = densityCCC;
+        CubicChebyshevMassDistributionFile::write(data,"MD2G.CCMDF.out");
+    }
     
     const double radiusCorrectionRatio = plateModelR0/gravityData->R0;
     
