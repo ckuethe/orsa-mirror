@@ -140,17 +140,17 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
         return false;
     }
     data.clear();
-    size_t num_read=0, num_saved=0;
+    size_t num_read=0, num_imported=0;
     CubicChebyshevMassDistributionFile::DataType dataElement;
     while (read(dataElement,fp)) {
         ++num_read;
         if (dataElement.deltaDensity <= limitDeltaDensity) {
-            ++num_saved;
+            ++num_imported;
             data.push_back(dataElement);
         }
     }
     fclose(fp);
-    if (num_read != 0) ORSA_DEBUG("read: %i  saved: %i  [%.3f%%]",num_read,num_saved,100*(double)num_saved/(double)num_read);
+    if (num_read != 0) ORSA_DEBUG("imported: %i/%i [%.3f%%]",num_imported,num_read,100*(double)num_imported/(double)num_read);
     return true;
 }
 
