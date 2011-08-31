@@ -169,6 +169,17 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
     return true;
 }
 
+bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistributionFile::DataType & data, const std::string & fileName) {
+    FILE * fp = fopen(fileName.c_str(),"w");
+    if (!fp) {
+        ORSA_DEBUG("cannot open file [%s]",fileName.c_str());
+        return false;
+    }
+    write(data,fp);
+    fclose(fp);
+    return true;
+}
+
 bool CubicChebyshevMassDistributionFile::append(const CubicChebyshevMassDistributionFile::DataType & data, const std::string & fileName) {
     FILE * fp = fopen(fileName.c_str(),"a");
     if (!fp) {

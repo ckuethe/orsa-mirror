@@ -51,6 +51,7 @@ public:
     static bool read(DataContainer & data, const std::string & fileName, const double & limitDeltaDensity);
 public:
     static bool write(const DataContainer & data, const std::string & fileName);
+    static bool write(const DataType & data, const std::string & fileName);
 public:
     static bool append(const DataType & data, const std::string & fileName);
 protected:
