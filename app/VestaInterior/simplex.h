@@ -216,7 +216,6 @@ public:
             val.resize(index+1);
         }
         if (!val[index].isSet()) {
-
             bool needToCompute=true;
             {
                 // first check if it is in the SQLite db
@@ -259,6 +258,7 @@ public:
             }
 
             if (needToCompute) {
+                ORSA_DEBUG("value for [%i][%i][%i] not available, computing it...",nx,ny,nz);
                 std::vector<T> val_vol_sum_fun;
                 val_vol_sum_fun.resize(degree+1);
                 const size_t q_min = (degree==0) ? 0 : 1;
