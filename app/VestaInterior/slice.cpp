@@ -371,7 +371,7 @@ int main(int argc, char **argv) {
         }
     }
     
-    const double empty_mesh_val=-1000;
+    const double empty_mesh_val=1000;
     float * mesh;
     const size_t meshSize = plotStats->size().get_si();
     //
@@ -482,10 +482,10 @@ int main(int argc, char **argv) {
     axslen(2500,2500);
     
     // select a color table
-    setvlt("RRAIN"); // TEMP,GREY,RGREY,VGA,RAIN,SPEC...
+    setvlt("RAIN"); // TEMP,GREY,RGREY,VGA,RAIN,SPEC...
     // setvlt("TEMP"); // TEMP,GREY,RGREY,VGA,RAIN,SPEC...
     // setvlt("RGREY"); // TEMP,GREY,RGREY,VGA,RAIN,SPEC...
-    // setvlt("RAIN");
+    // setvlt("GREY");
     
     hwmode("ON","LINE");
     
@@ -585,7 +585,7 @@ int main(int argc, char **argv) {
     //
     // other... LINEAR 0->1
     // const double z_min=1.0e-5; const double z_max=1.0e-3;
-    const double z_min=0.0; const double z_max=10.0;
+    const double z_min=2.0; const double z_max=8.0;
     // const double z_min=0.0; const double z_max=1.0;
     //
     // a,i
