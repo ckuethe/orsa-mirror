@@ -264,6 +264,7 @@ namespace orsa {
         // in order to use again all vectors, call reset()
         // bool get(orsa::Vector & v) const;
         bool get(orsa::Vector & v, double & density) const;
+        bool get(orsa::Vector & v) const;
     public:
         void reset() const { 
             rng = new orsa::RNG(randomSeed);

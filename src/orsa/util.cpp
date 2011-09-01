@@ -433,7 +433,9 @@ RandomPointsInShape::RandomPointsInShape(const orsa::Shape * s,
     while (counter < size) {
         const orsa::Vector v = __randomVectorUtil(rng.get(),boundingBox);
         in[counter] = shape->isInside(v);
-        if (md.get() != 0) density[counter] = md->density(v);
+        if (md.get() != 0) {
+            density[counter] = md->density(v);
+        }
         if (saveVector) {
             vec[counter] = v;
         }
@@ -446,6 +448,11 @@ RandomPointsInShape::RandomPointsInShape(const orsa::Shape * s,
 }
 
 bool RandomPointsInShape::get(orsa::Vector & v, double & pointDensity) const {
+    if (md.get() == 0) {
+        ORSA_DEBUG("warning: mass distribution is not set, so the density is undefined, and this method will fail");
+        ORSA_DEBUG("you should call instead get(v);");
+        return false;
+    }
     while (counter < size) {
         if (!saveVector) {
             // must sample, to keep the counter and the RNG in sync
@@ -453,6 +460,25 @@ bool RandomPointsInShape::get(orsa::Vector & v, double & pointDensity) const {
         }
         if (in[counter]) {
             pointDensity = density[counter];
+            if (saveVector) {
+                v = vec[counter];
+            }
+            ++counter;
+            return true;
+        } else {
+            ++counter;
+        }
+    }
+    return false;
+}
+
+bool RandomPointsInShape::get(orsa::Vector & v) const {
+    while (counter < size) {
+        if (!saveVector) {
+            // must sample, to keep the counter and the RNG in sync
+            v = __randomVectorUtil(rng,shape->boundingBox());
+        }
+        if (in[counter]) {
             if (saveVector) {
                 v = vec[counter];
             }
