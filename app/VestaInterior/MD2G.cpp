@@ -70,7 +70,7 @@ public:
         double f = 0.0;
         
         // const double x = data->getD("x",row);
-
+        
         // PRECOMPUTED!
         // std::vector<double> T;
         // orsa::ChebyshevT(T,N,x);
@@ -136,7 +136,6 @@ protected:
 
 /************/
 
-
 int main(int argc, char **argv) {
     
     orsa::Debug::instance()->initTimer();
@@ -186,7 +185,7 @@ int main(int argc, char **argv) {
     
     osg::ref_ptr<orsaPDS::RadioScienceGravityData> gravityData = new orsaPDS::RadioScienceGravityData;
     orsaPDS::RadioScienceGravityFile::read(gravityData.get(),radioScienceGravityBaseFile,512,1518);
-
+    
     const double GM = gravityData->GM; 
     const double volume = si->getIntegral(0,0,0)*orsa::cube(plateModelR0);
     const double bulkDensity = GM/orsa::Unit::G()/volume;
@@ -206,18 +205,32 @@ int main(int argc, char **argv) {
     const double alt_CMz_over_plateModelR0 = si->getIntegral(0,0,1) / si->getIntegral(0,0,0);
     
     // first determine the Chebyshev expansion of the mass distribution
-    const size_t T_degree = 2;
+    const size_t T_degree = 6;
     
-    // use relative density (c000=1 for constant density = bulk density)
+    // choose mass distribution
+    osg::ref_ptr<orsa::MassDistribution> massDistribution;
+    //
+    {
+        const orsa::Vector coreCenter(orsa::FromUnits(0.0,orsa::Unit::KM),
+                                      orsa::FromUnits(0.0,orsa::Unit::KM),
+                                      orsa::FromUnits(0.0,orsa::Unit::KM));
+        const double coreDensity = orsa::FromUnits(orsa::FromUnits(8.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+        const double mantleDensity = orsa::FromUnits(orsa::FromUnits(3.1,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+        // const double coreRadius = orsa::FromUnits(80.0,orsa::Unit::KM);
+        const double coreRadius = cbrt((3.0/(4.0*pi()))*volume*(bulkDensity-mantleDensity)/(coreDensity-mantleDensity));
+        ORSA_DEBUG("coreRadius: %g [km]", orsa::FromUnits(coreRadius,orsa::Unit::KM,-1));
+        massDistribution = new orsa::SphericalCorePlusMantleMassDistribution(coreCenter,
+                                                                             coreRadius,
+                                                                             coreDensity,
+                                                                             mantleDensity);
+    }
     
-    // (constant for now)
+    // using relative density (coeff[0][0][0]=1 for constant density = bulk density)
     CubicChebyshevMassDistribution::CoefficientType densityCCC; // CCC=CubicChebyshevCoefficient
     CubicChebyshevMassDistribution::resize(densityCCC,T_degree); 
-    // densityCCC[0][0][0] = 3.4*gcm3;
-    // densityCCC[0][0][0] = 1.0;
     
     {
-        // multifit of distribution
+        // multifit of mass distribution
         
         osg::ref_ptr<orsa::MultifitParameters> par = 
             new orsa::MultifitParameters;
@@ -234,47 +247,39 @@ int main(int argc, char **argv) {
                 }
             }
         }
-
+        
+        const size_t numSamplePoints = 2000;
+        const bool storeSamplePoints = true;
+        osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
+            new orsa::RandomPointsInShape(shapeModel,
+                                          massDistribution.get(),
+                                          numSamplePoints,
+                                          storeSamplePoints);       
+        
         osg::ref_ptr<orsa::MultifitData> data = 
             new orsa::MultifitData;
         data->insertVariable("x");
         data->insertVariable("y");
         data->insertVariable("z");
-        const double dx = 0.2; const size_t Nx = 2.0/dx;
-        const double dy = 0.2; const size_t Ny = 2.0/dy;
-        const double dz = 0.2; const size_t Nz = 2.0/dz;
-        // const size_t maxRow = 2.0/dx;
-        double f;
-        // for (size_t row=0; row<=maxRow; ++row) {
-        size_t row = 0, iter = 0;
-        // while (1) {
-        for (size_t kx=0; kx<=Nx; ++kx) {
-            for (size_t ky=0; ky<=Ny; ++ky) {
-                for (size_t kz=0; kz<=Nz; ++kz) {
-                    
-                    const double x = -1.0 + kx*dx;
-                    const double y = -1.0 + ky*dy;
-                    const double z = -1.0 + kz*dz;
-                    
-                    // ORSA_DEBUG("row: %i  iter: %i  x: %g y: %g z: %g",row,iter,x,y,z);
-                    
-                    // f = 1.0-0.3*x*x-4.0*x*y+z;
-                    f = 1.0+x+y+z+x*x+x*y+x*z+y*z+y*y+z*z;
-                    //
-                    data->insertD("x",row,x);
-                    data->insertD("y",row,y);
-                    data->insertD("z",row,z);
-                    data->insertF(row,f);
-                    data->insertSigma(row,1.0);
-                    ++row;
-                    ++iter;
-                }
-            }
+        orsa::Vector v;
+        double density;
+        const double oneOverR0 = 1.0/plateModelR0;
+        randomPointsInShape->reset();
+        size_t row=0;
+        size_t iter=0;
+        while (randomPointsInShape->get(v,density)) { 
+            data->insertD("x",row,v.getX()*oneOverR0);
+            data->insertD("y",row,v.getY()*oneOverR0);
+            data->insertD("z",row,v.getZ()*oneOverR0);
+            data->insertF(row,density/bulkDensity);
+            data->insertSigma(row,1.0);
+            ++row;
+            ++iter;
         }
-        
         const size_t maxRow = --row;
+        
         char logFile[1024];
-        snprintf(logFile,1024,"ChebyshevFit3D.log");
+        snprintf(logFile,1024,"MD2G_ChebyshevFit3D.log");
         
         osg::ref_ptr<ChebyshevFit3D> cf = new ChebyshevFit3D(T_degree);
         //
@@ -296,7 +301,7 @@ int main(int argc, char **argv) {
                                      0,
                                      row);
             const double err = T-f;
-            ORSA_DEBUG("FINAL: %g %g %g %g %g %g",
+            ORSA_DEBUG("FINAL: %+.3f %+.3f %+.3f %+.3f %+.3f %+.3f",
                        x,y,z,f,T,err);
         }
         
@@ -305,7 +310,18 @@ int main(int argc, char **argv) {
         }
         
         
-        
+        for (size_t s=0; s<=T_degree; ++s) {
+            for (size_t i=0; i<=T_degree; ++i) {
+                for (size_t j=0; j<=T_degree-i; ++j) {
+                    for (size_t k=0; k<=T_degree-i-j; ++k) {
+                        if (i+j+k==s) {
+                            sprintf(varName,"c%03i%03i%03i",i,j,k);
+                            densityCCC[i][j][k] = par->get(varName);
+                        }
+                    }
+                }
+            }
+        }
         
     }
     

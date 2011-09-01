@@ -391,9 +391,9 @@ int main(int argc, char **argv) {
 #warning choose what to plot here...
                         if (e->average() > 0.0) {
                             // mesh[mesh_id] = pow10(e->average());
-                            // mesh[mesh_id] = e->average();
+                            mesh[mesh_id] = e->average();
                             // mesh[mesh_id] = e->max()-e->min();
-                            mesh[mesh_id] = e->min();
+                            // mesh[mesh_id] = e->min();
                             // mesh[mesh_id] = log10(e->average());
                         } else {
                             // mesh[mesh_id] = 1e-20;
@@ -585,7 +585,7 @@ int main(int argc, char **argv) {
     //
     // other... LINEAR 0->1
     // const double z_min=1.0e-5; const double z_max=1.0e-3;
-    const double z_min=3.0; const double z_max=4.0;
+    const double z_min=0.0; const double z_max=10.0;
     // const double z_min=0.0; const double z_max=1.0;
     //
     // a,i

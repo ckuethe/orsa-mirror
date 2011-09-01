@@ -551,8 +551,9 @@ int main(int argc, char **argv) {
             if (gsl_matrix_get(sh2ijk,z_sh,z_ijk)!=0.0) {
                 size_t nx,ny,nz;
                 CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);                
-                ORSA_DEBUG("sh2ijk[%03i][%03i] = %+10.6f [%s -> N[%02i][%02i][%02i]]",
-                           z_sh,z_ijk,gsl_matrix_get(sh2ijk,z_sh,z_ijk),gravityData->key(z_sh).toStdString().c_str(),nx,ny,nz);
+                /* ORSA_DEBUG("sh2ijk[%03i][%03i] = %+10.6f [%s -> N[%02i][%02i][%02i]]",
+                   z_sh,z_ijk,gsl_matrix_get(sh2ijk,z_sh,z_ijk),gravityData->key(z_sh).toStdString().c_str(),nx,ny,nz);
+                */
             }
         }
     }
@@ -572,6 +573,8 @@ int main(int argc, char **argv) {
     const double radiusCorrectionRatio = plateModelR0/gravityData->R0;
     
     for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
+        
+        ORSA_DEBUG("cT: %i/%i",z_cT,T_size);
         
         size_t Tx,Ty,Tz;
         CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
@@ -627,8 +630,9 @@ int main(int argc, char **argv) {
                 CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);                
                 size_t Tx,Ty,Tz;
                 CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-                ORSA_DEBUG("ijk2cT[%03i][%03i] = %+9.6f [N[%02i][%02i][%02i] -> cT[%i][%i][%i]]",
-                           z_ijk,z_cT,gsl_matrix_get(ijk2cT,z_ijk,z_cT),nx,ny,nz,Tx,Ty,Tz);
+                /* ORSA_DEBUG("ijk2cT[%03i][%03i] = %+9.6f [N[%02i][%02i][%02i] -> cT[%i][%i][%i]]",
+                   z_ijk,z_cT,gsl_matrix_get(ijk2cT,z_ijk,z_cT),nx,ny,nz,Tx,Ty,Tz);
+                */
             }
         }
     }
@@ -656,8 +660,9 @@ int main(int argc, char **argv) {
         for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
             size_t Tx,Ty,Tz;
             CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-            ORSA_DEBUG("sh2cT[%03i][%03i] = %+9.6f [%s -> cT[%i][%i][%i]]",
-                       z_sh,z_cT,gsl_matrix_get(sh2cT,z_sh,z_cT),gravityData->key(z_sh).toStdString().c_str(),Tx,Ty,Tz);
+            /* ORSA_DEBUG("sh2cT[%03i][%03i] = %+9.6f [%s -> cT[%i][%i][%i]]",
+               z_sh,z_cT,gsl_matrix_get(sh2cT,z_sh,z_cT),gravityData->key(z_sh).toStdString().c_str(),Tx,Ty,Tz);
+            */
         }
     }
     
@@ -722,11 +727,12 @@ int main(int argc, char **argv) {
         
         gsl_blas_dgemm(CblasNoTrans,CblasNoTrans,1.0,A,AT,0.0,A_AT);
         
-        for (size_t j=0; j<M; ++j) {
-            for (size_t k=0; k<M; ++k) {
-                ORSA_DEBUG("(A A^T)[%03i][%03i] = %+12.6f",j,k,gsl_matrix_get(A_AT,j,k));
-            }
-        }
+        /* for (size_t j=0; j<M; ++j) {
+           for (size_t k=0; k<M; ++k) {
+           ORSA_DEBUG("(A A^T)[%03i][%03i] = %+12.6f",j,k,gsl_matrix_get(A_AT,j,k));
+           }
+           }
+        */
         
         // compute (A_AT)^(-1)
         gsl_matrix * inv_A_AT = gsl_matrix_alloc(M,M);

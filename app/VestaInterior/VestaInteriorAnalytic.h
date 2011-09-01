@@ -32,8 +32,9 @@
 // #define T_INITIAL 0.008     
 #define T_INITIAL 0.010         
 
-/* damping factor for temperature */        
-#define MU_T 1.010 // 1.010 // 1.003      
+/* damping factor for temperature */
+#warning no damping??
+#define MU_T 1.000 // 1.010 // 1.003      
 #define T_MIN 1.0e-5 // 2.0e-6
 
 gsl_siman_params_t params  = {N_TRIES, ITERS_FIXED_T, STEP_SIZE,
