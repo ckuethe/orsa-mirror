@@ -31,17 +31,17 @@ template <typename T> std::vector< std::vector< std::vector< std::vector<size_t>
 
 //// ChebyshevFit3D
 
-const size_t ChebyshevFit3D_N = 4;
-
 class ChebyshevFit3D : public orsa::Multifit {
 public:
-    ChebyshevFit3D() : 
-        orsa::Multifit() { }
+    ChebyshevFit3D(const size_t & T_degree) : 
+        orsa::Multifit(),
+        degree(T_degree) { }
 protected:
     void singleIterationDone(const orsa::MultifitParameters *) const {
         ORSA_DEBUG("--MARK--");
     }
 protected:
+    const size_t degree;
     mutable std::vector< std::vector<double> >  Tx, Ty, Tz;
     void computeAllFunctionCalls(const orsa::MultifitParameters * /* par */, 
                                  const orsa::MultifitData       * data,
@@ -49,14 +49,13 @@ protected:
         // need to run this only once!
         static bool done=false;  
         if (!done) {
-            const size_t N = ChebyshevFit3D_N; // copy from global var
             Tx.resize(data->size());
             Ty.resize(data->size());
             Tz.resize(data->size());
             for (size_t row=0; row<data->size(); ++row) {
-                orsa::ChebyshevT(Tx[row],N,data->getD("x",row));
-                orsa::ChebyshevT(Ty[row],N,data->getD("y",row));
-                orsa::ChebyshevT(Tz[row],N,data->getD("z",row));
+                orsa::ChebyshevT(Tx[row],degree,data->getD("x",row));
+                orsa::ChebyshevT(Ty[row],degree,data->getD("y",row));
+                orsa::ChebyshevT(Tz[row],degree,data->getD("z",row));
             }
             done=true;
         }
@@ -68,8 +67,6 @@ public:
                const int          d,
                const unsigned int row) const {
         
-        const size_t N = ChebyshevFit3D_N; // copy from global var
-        
         double f = 0.0;
         
         // const double x = data->getD("x",row);
@@ -79,7 +76,6 @@ public:
         // orsa::ChebyshevT(T,N,x);
         
         char varName[1024];
-        const size_t degree = N;
         for (size_t s=0; s<=degree; ++s) {
             for (size_t i=0; i<=degree; ++i) {
                 for (size_t j=0; j<=degree-i; ++j) {
@@ -138,103 +134,6 @@ protected:
   
 };
 
-void performChebyshevFit3D() {
-    
-    const size_t N = ChebyshevFit3D_N; // copy from global var
-    
-    osg::ref_ptr<orsa::MultifitParameters> par = 
-        new orsa::MultifitParameters;
-    char varName[1024];
-    const size_t degree = N;
-    for (size_t s=0; s<=degree; ++s) {
-        for (size_t i=0; i<=degree; ++i) {
-            for (size_t j=0; j<=degree-i; ++j) {
-                for (size_t k=0; k<=degree-i-j; ++k) {
-                    if (i+j+k==s) {
-                        sprintf(varName,"c%03i%03i%03i",i,j,k);
-                        par->insert(varName,0,1.0);
-                    }
-                }
-            }
-        }
-    }
-    
-    // test ranges
-    // par->setRange("a",40,42);
-    // par->setRangeMin("a",40.22);
-    // par->setRange("b",0,5);
-    
-    osg::ref_ptr<orsa::MultifitData> data = 
-        new orsa::MultifitData;
-    data->insertVariable("x");
-    data->insertVariable("y");
-    data->insertVariable("z");
-    const double dx = 0.2; const size_t Nx = 2.0/dx;
-    const double dy = 0.2; const size_t Ny = 2.0/dy;
-    const double dz = 0.2; const size_t Nz = 2.0/dz;
-    // const size_t maxRow = 2.0/dx;
-    double f;
-    // for (size_t row=0; row<=maxRow; ++row) {
-    size_t row = 0, iter = 0;
-    // while (1) {
-    for (size_t kx=0; kx<=Nx; ++kx) {
-        for (size_t ky=0; ky<=Ny; ++ky) {
-            for (size_t kz=0; kz<=Nz; ++kz) {
-                
-                const double x = -1.0 + kx*dx;
-                const double y = -1.0 + ky*dy;
-                const double z = -1.0 + kz*dz;
-                
-                // ORSA_DEBUG("row: %i  iter: %i  x: %g y: %g z: %g",row,iter,x,y,z);
-                
-                // f = 1.0-0.3*x*x-4.0*x*y+z;
-                f = 1.0+x+y+z+x*x+x*y+x*z+y*z+y*y+z*z;
-                //
-                data->insertD("x",row,x);
-                data->insertD("y",row,y);
-                data->insertD("z",row,z);
-                data->insertF(row,f);
-                data->insertSigma(row,1.0);
-                ++row;
-                ++iter;
-            }
-        }
-    }
-
-    const size_t maxRow = --row;
-    char logFile[1024];
-    snprintf(logFile,1024,"ChebyshevFit3D.log");
-    
-    osg::ref_ptr<ChebyshevFit3D> cf = new ChebyshevFit3D;
-    //
-    cf->setMultifitParameters(par.get());
-    cf->setMultifitData(data.get());
-    //
-    cf->setLogFile(logFile);
-    //
-    cf->run();
-    
-    for (size_t row=0; row<=maxRow; ++row) {
-        const double x = data->getD("x",row);
-        const double y = data->getD("y",row);
-        const double z = data->getD("z",row);
-        const double f = data->getF(row);
-        const double T = cf->fun(par.get(),
-                                 data.get(),
-                                 0,
-                                 0,
-                                 row);
-        const double err = T-f;
-        ORSA_DEBUG("FINAL: %g %g %g %g %g %g",
-                   x,y,z,f,T,err);
-    }
-    
-    for (size_t s=0; s<par->totalSize(); ++s) {
-        ORSA_DEBUG("par[%03i] = [%s] = %+12.6f",s,par->name(s).c_str(),par->get(s));
-    }
-    
-}
-
 /************/
 
 
@@ -253,6 +152,8 @@ int main(int argc, char **argv) {
     // ORSA_DEBUG("updated mpf precision: %i",mpf_get_default_prec());
     
 #warning add possibility to reduce the degree...
+    
+#warning keep GM or change it?
     
     if (argc != 5) {
         printf("Usage: %s <plate-model-file> <R0_km> <gravity-file-gravity-base-file> <output-gravity-file>\n",argv[0]);
@@ -305,16 +206,109 @@ int main(int argc, char **argv) {
     const double alt_CMz_over_plateModelR0 = si->getIntegral(0,0,1) / si->getIntegral(0,0,0);
     
     // first determine the Chebyshev expansion of the mass distribution
-    const size_t T_degree = 0;
-    // const double gcm3 = orsa::FromUnits(orsa::FromUnits(1,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+    const size_t T_degree = 2;
     
-#warning absolute or relative density? keep GM or change it?
+    // use relative density (c000=1 for constant density = bulk density)
     
     // (constant for now)
     CubicChebyshevMassDistribution::CoefficientType densityCCC; // CCC=CubicChebyshevCoefficient
     CubicChebyshevMassDistribution::resize(densityCCC,T_degree); 
     // densityCCC[0][0][0] = 3.4*gcm3;
-    densityCCC[0][0][0] = 1.0;
+    // densityCCC[0][0][0] = 1.0;
+    
+    {
+        // multifit of distribution
+        
+        osg::ref_ptr<orsa::MultifitParameters> par = 
+            new orsa::MultifitParameters;
+        char varName[1024];
+        for (size_t s=0; s<=T_degree; ++s) {
+            for (size_t i=0; i<=T_degree; ++i) {
+                for (size_t j=0; j<=T_degree-i; ++j) {
+                    for (size_t k=0; k<=T_degree-i-j; ++k) {
+                        if (i+j+k==s) {
+                            sprintf(varName,"c%03i%03i%03i",i,j,k);
+                            par->insert(varName,0,1.0);
+                        }
+                    }
+                }
+            }
+        }
+
+        osg::ref_ptr<orsa::MultifitData> data = 
+            new orsa::MultifitData;
+        data->insertVariable("x");
+        data->insertVariable("y");
+        data->insertVariable("z");
+        const double dx = 0.2; const size_t Nx = 2.0/dx;
+        const double dy = 0.2; const size_t Ny = 2.0/dy;
+        const double dz = 0.2; const size_t Nz = 2.0/dz;
+        // const size_t maxRow = 2.0/dx;
+        double f;
+        // for (size_t row=0; row<=maxRow; ++row) {
+        size_t row = 0, iter = 0;
+        // while (1) {
+        for (size_t kx=0; kx<=Nx; ++kx) {
+            for (size_t ky=0; ky<=Ny; ++ky) {
+                for (size_t kz=0; kz<=Nz; ++kz) {
+                    
+                    const double x = -1.0 + kx*dx;
+                    const double y = -1.0 + ky*dy;
+                    const double z = -1.0 + kz*dz;
+                    
+                    // ORSA_DEBUG("row: %i  iter: %i  x: %g y: %g z: %g",row,iter,x,y,z);
+                    
+                    // f = 1.0-0.3*x*x-4.0*x*y+z;
+                    f = 1.0+x+y+z+x*x+x*y+x*z+y*z+y*y+z*z;
+                    //
+                    data->insertD("x",row,x);
+                    data->insertD("y",row,y);
+                    data->insertD("z",row,z);
+                    data->insertF(row,f);
+                    data->insertSigma(row,1.0);
+                    ++row;
+                    ++iter;
+                }
+            }
+        }
+        
+        const size_t maxRow = --row;
+        char logFile[1024];
+        snprintf(logFile,1024,"ChebyshevFit3D.log");
+        
+        osg::ref_ptr<ChebyshevFit3D> cf = new ChebyshevFit3D(T_degree);
+        //
+        cf->setMultifitParameters(par.get());
+        cf->setMultifitData(data.get());
+        //
+        cf->setLogFile(logFile);
+        //
+        cf->run();
+        
+        for (size_t row=0; row<=maxRow; ++row) {
+            const double x = data->getD("x",row);
+            const double y = data->getD("y",row);
+            const double z = data->getD("z",row);
+            const double f = data->getF(row);
+            const double T = cf->fun(par.get(),
+                                     data.get(),
+                                     0,
+                                     0,
+                                     row);
+            const double err = T-f;
+            ORSA_DEBUG("FINAL: %g %g %g %g %g %g",
+                       x,y,z,f,T,err);
+        }
+        
+        for (size_t s=0; s<par->totalSize(); ++s) {
+            ORSA_DEBUG("par[%03i] = [%s] = %+12.6f",s,par->name(s).c_str(),par->get(s));
+        }
+        
+        
+        
+        
+    }
+    
     
     
     
