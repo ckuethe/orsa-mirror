@@ -27,7 +27,7 @@ namespace orsa {
             return 1;
         }
     };
-  
+    
     // all in "shape" coordinates
     class SphericalCorePlusMantleMassDistribution : public MassDistribution {
     public:
