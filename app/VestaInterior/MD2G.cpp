@@ -212,7 +212,7 @@ int main(int argc, char **argv) {
     } else {
         
         // first determine the Chebyshev expansion of the mass distribution
-        const size_t T_degree = 2;
+        const size_t T_degree = 10;
         
         // using relative density (coeff[0][0][0]=1 for constant density = bulk density)
         // CubicChebyshevMassDistribution::CoefficientType densityCCC; // CCC=CubicChebyshevCoefficient
@@ -257,7 +257,7 @@ int main(int argc, char **argv) {
                 }
             }
         
-            const size_t numSamplePoints = 2000;
+            const size_t numSamplePoints = 10000;
             const bool storeSamplePoints = true;
             osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
                 new orsa::RandomPointsInShape(shapeModel,
@@ -386,7 +386,7 @@ int main(int argc, char **argv) {
                 const std::vector<mpz_class> & cTi = orsa::ChebyshevTcoeff(ti);
                 const std::vector<mpz_class> & cTj = orsa::ChebyshevTcoeff(tj);
                 const std::vector<mpz_class> & cTk = orsa::ChebyshevTcoeff(tk);
-                // ci,cj,ck are the expansion of each Chebyshev polinomial in terms of powers of x,y,z
+                // ci,cj,ck are the expansion of each Chebyshev polynomial in terms of powers of x,y,z
                 for (size_t ci=0; ci<=ti; ++ci) {
                     if (cTi[ci] == 0) continue;
                     for (size_t cj=0; cj<=tj; ++cj) {
@@ -456,7 +456,7 @@ int main(int argc, char **argv) {
                                         const std::vector<mpz_class> & cTi = orsa::ChebyshevTcoeff(ti);
                                         const std::vector<mpz_class> & cTj = orsa::ChebyshevTcoeff(tj);
                                         const std::vector<mpz_class> & cTk = orsa::ChebyshevTcoeff(tk);
-                                        // ci,cj,ck are the expansion of each Chebyshev polinomial in terms of powers of x,y,z
+                                        // ci,cj,ck are the expansion of each Chebyshev polynomial in terms of powers of x,y,z
                                         for (size_t ci=0; ci<=ti; ++ci) {
                                             if (cTi[ci] == 0) continue;
                                             for (size_t cj=0; cj<=tj; ++cj) {
