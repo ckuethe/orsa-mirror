@@ -305,7 +305,7 @@ public:
                                     ++indexVector[i];
                                     increased = true;
                                     for (size_t s=0; s<i; ++s) {
-#warning IMPORTANT: which rule is correct?
+                                        // #warning IMPORTANT: which rule is correct?
                                         indexVector[s] = indexVector[i]; // this one avoids repetitions, i.e. {1,0}, {0,1}
                                         // indexVector[s] = 0; // this one includes repetitions
                                     }
