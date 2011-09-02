@@ -171,6 +171,9 @@ double E1(void * xp) {
     return maxDensity-minDensity;
     // return -minDensity*(maxDensity-minDensity);
     // return minDensity*(maxDensity-minDensity);
+    
+    // maximum amplitude!
+    // return minDensity-maxDensity;
 }
 
 double M1(void * xp, void * yp) {
