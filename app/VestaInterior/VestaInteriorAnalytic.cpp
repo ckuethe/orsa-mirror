@@ -246,14 +246,14 @@ int main(int argc, char **argv) {
     si->reserve(polynomialDegree);
     
     const size_t SH_degree = gravityDegree; // shperical harmonics degree
-    const size_t  T_degree = polynomialDegree; // chebyshev polinomials degree
+    const size_t  T_degree = polynomialDegree; // chebyshev polynomials degree
     
 #warning which GM value to use? gravityData->GM  OR gravityData->getCoeff("GM") ??
     const double GM = gravityData->GM; 
     
     // sh size: (l+1)^2 +1; +1 due to GM factor; -4 because C00, C10, C11, S11 are missing
     const size_t  SH_size = (SH_degree+1)*(SH_degree+1)+1-4;
-    const size_t ijk_size = CubicChebyshevMassDistribution::totalSize(SH_degree);
+    // const size_t ijk_size = CubicChebyshevMassDistribution::totalSize(SH_degree);
     const size_t   T_size = CubicChebyshevMassDistribution::totalSize( T_degree);
     
     ORSA_DEBUG("SH_size: %d  T_size: %d",SH_size,T_size);
@@ -263,304 +263,36 @@ int main(int argc, char **argv) {
         exit(0);
     }
     
-    gsl_matrix *      sh2ijk = gsl_matrix_calloc(SH_size,ijk_size);
-    //
-    gsl_matrix *   pq_sh2ijk =  gsl_matrix_alloc(SH_size,ijk_size);
-    gsl_matrix *   nu_sh2ijk =  gsl_matrix_alloc(SH_size,ijk_size);
-    //
-    gsl_matrix * identity_sh = gsl_matrix_calloc(SH_size,SH_size);
-    for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
-        gsl_matrix_set(identity_sh,z_sh,z_sh,1.0);
-    }
-
-    
-    // C_lm coefficients
-    //
-    for (int l=0; l<=(int)SH_degree; ++l) {
-
-#warning remember: skipping all l==1 terms
-        if (l==1) continue;
-        
-        for (int m=0; m<=l; ++m) {
-            
-            // double pq_factor=0;
-            // double pq_factor_uncertainty=0;
-            //
-            // reset pq_sh2ijk to zero
-            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, 0.0, pq_sh2ijk);
-            
-            // integer division in limits
-            for (int p=0;p<=(l/2);++p) {
-                for (int q=0;q<=(m/2);++q) {
-	  
-                    // double nu_factor=0;
-                    // double nu_factor_uncertainty=0;
-                    //
-                    gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, nu_sh2ijk, 0.0, nu_sh2ijk);
-                    
-                    for (int nu_x=0; nu_x<=p; ++nu_x) {
-                        for (int nu_y=0; nu_y<=(p-nu_x); ++nu_y) {
-                            
-                            const int M_i = m-2*q+2*nu_x;
-                            const int M_j = 2*q+2*nu_y;
-                            const int M_k = l-m-2*nu_x-2*nu_y;
-                            
-                            if (M_i+M_j+M_k!=l) {
-                                ORSA_DEBUG("WARNING!!! ***********************");
-                            }
-	      
-                            if ( (M_i>=0) && 
-                                 (M_j>=0) && 
-                                 (M_k>=0) && 
-                                 (M_i+M_j+M_k==l) ) {
-		
-                                // ORSA_DEBUG("requesting M[%i][%i][%i]...   l: %i",M_i, M_j, M_k, l);
-		
-                                const double nu_factor_base =
-                                    (orsa::factorial(p).get_d() / (orsa::factorial(nu_x).get_d()*orsa::factorial(nu_y).get_d()*orsa::factorial(p-nu_x-nu_y).get_d()));
-		
-                                // nu_factor += nu_factor_base * pm->M(M_i,M_j,M_k);
-                                // nu_factor_uncertainty += nu_factor_base * pm->M_uncertainty(M_i,M_j,M_k);
-
-                                // z_sh is 0 if l==0, it's the GM term
-                                const size_t z_sh  = (l==0 ? 0 :  gravityData->index(orsaPDS::RadioScienceGravityData::keyC(l,m)));
-                                const size_t z_ijk = CubicChebyshevMassDistribution::index(M_i,M_j,M_k);
-                                // gsl_matrix_set(nu_sh2ijk,z_sh,z_ijk,gsl_matrix_get(nu_sh2ijk,z_sh,z_ijk)+nu_factor_base);
-                                gsl_matrix_set(nu_sh2ijk,z_sh,z_ijk,nu_factor_base);
-                                
-                            }
-                        }
-                    }
-                    // need this because using M(i,j,k) instead of N(i,j,k)
-                    // nu_factor /= int_pow(R0,l);
-                    // nu_factor_uncertainty /= int_pow(R0,l);
-
-#warning RESTORE?
-                    // gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, nu_sh2ijk, 1.0/int_pow(R0,l), nu_sh2ijk);
-                    gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, nu_sh2ijk, 1.0, nu_sh2ijk);
-
-                    /* 
-                       const double pq_factor_base = 
-                       orsa::power_sign(p+q) *
-                       orsa::binomial(l,p).get_d() *
-                       orsa::binomial(2*l-2*p,l).get_d() *
-                       orsa::binomial(m,2*q).get_d() *
-                       orsa::pochhammer(mpz_class(l-m-2*p+1),m).get_d();
-                    */
-                    const double pq_factor_base = 
-                        mpz_class(orsa::power_sign(p+q) *
-                                  orsa::binomial(l,p) *
-                                  orsa::binomial(2*l-2*p,l) *
-                                  orsa::binomial(m,2*q) *
-                                  orsa::pochhammer(mpz_class(l-m-2*p+1),m)).get_d();
-                    
-                    /* pq_factor += 
-                       pq_factor_base *
-                       nu_factor;
-                       
-                       pq_factor_uncertainty += 
-                       pq_factor_base *
-                       nu_factor_uncertainty;
-                    */
-                    
-                    gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, nu_sh2ijk, pq_factor_base, nu_sh2ijk);
-                    gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, identity_sh, nu_sh2ijk, 1.0, pq_sh2ijk);
-                }
-            }
-      
-            // pq_factor /= int_pow(2.0,l);
-            // pq_factor_uncertainty /= int_pow(2.0,l);
-            //
-            
-            // #warning RESTORE
-            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, 1.0/orsa::int_pow(2.0,l), pq_sh2ijk);
-            // gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, 1.0, pq_sh2ijk);
-            
-            // ORSA_DEBUG("PaulMoment::normalization(%i,%i) = %g",l,m,PaulMoment::normalization(l,m));
-            // normalization
-            // gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, PaulMoment::normalization(l,m), pq_sh2ijk);
-            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, orsa::normalization_integralToNormalizedSphericalHarmonics(l,m).get_d(), pq_sh2ijk);
-
-
-#warning scaling for l=0,m=0 term that is GM in the data...
-            if (l==0 && m==0) {
-                gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, GM, pq_sh2ijk);
-            }
-            
-            /* const double C_lm = pq_factor;
-               const double C_lm_uncertainty = fabs(pq_factor_uncertainty);
-               //      
-               const double norm_C_lm = C_lm*PaulMoment::normalization(l,m);
-               const double norm_C_lm_uncertainty = fabs(C_lm_uncertainty*PaulMoment::normalization(l,m));
-            */
-            //
-            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, identity_sh, pq_sh2ijk, 1.0, sh2ijk);
-            
-            /* if (verbose) {
-               ORSA_DEBUG("     C[%i][%i] = %+16.12f +/- %16.12f",
-               l,m,     C_lm, C_lm_uncertainty);
-               ORSA_DEBUG("norm_C[%i][%i] = %+16.12f +/- %16.12f   norm: %f",
-               l,m,norm_C_lm,norm_C_lm_uncertainty,PaulMoment::normalization(l,m));
-               }
-            */
-            
-            /* C[l][m]      = C_lm;
-               norm_C[l][m] = norm_C_lm;
-            */
-        }
-    } 
-
-    // S_lm coefficients
-    //
-    for (int l=2; l<=(int)SH_degree; ++l) {
-        for (int m=1; m<=l; ++m) {
-            
-            // double pq_factor=0;
-            // double pq_factor_uncertainty=0;
-            //
-            // reset pq_sh2ijk to zero
-            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, 0.0, pq_sh2ijk);
-            
-            // integer division in limits
-            for (int p=0;p<=(l/2);++p) {
-                for (int q=0;q<=((m-1)/2);++q) {
-	  
-                    // double nu_factor=0;
-                    // double nu_factor_uncertainty=0;
-                    //
-                    gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, nu_sh2ijk, 0.0, nu_sh2ijk);
-                    
-                    for (int nu_x=0; nu_x<=p; ++nu_x) {
-                        for (int nu_y=0; nu_y<=(p-nu_x); ++nu_y) {
-	      
-                            const int M_i = m-2*q-1+2*nu_x;
-                            const int M_j = 2*q+1+2*nu_y;
-                            const int M_k = l-m-2*nu_x-2*nu_y;
-	      
-                            if (M_i+M_j+M_k!=l) {
-                                ORSA_DEBUG("WARNING!!!");
-                            }
-	      
-                            if ( (M_i>=0) && 
-                                 (M_j>=0) && 
-                                 (M_k>=0) && 
-                                 (M_i+M_j+M_k==l) ) {
-		
-                                // ORSA_DEBUG("requesting M[%i][%i][%i]...   l: %i",M_i, M_j, M_k, l);
-		
-                                const double nu_factor_base =
-                                    (orsa::factorial(p).get_d() /(orsa::factorial(nu_x).get_d()*orsa::factorial(nu_y).get_d()*orsa::factorial(p-nu_x-nu_y).get_d()));
-		
-                                // nu_factor += nu_factor_base * pm->M(M_i,M_j,M_k);
-                                // nu_factor_uncertainty += nu_factor_base * pm->M_uncertainty(M_i,M_j,M_k);
-                                
-                                const size_t z_sh  = gravityData->index(orsaPDS::RadioScienceGravityData::keyS(l,m));
-                                const size_t z_ijk = CubicChebyshevMassDistribution::index(M_i,M_j,M_k);
-                                // gsl_matrix_set(nu_sh2ijk,z_sh,z_ijk,gsl_matrix_get(nu_sh2ijk,z_sh,z_ijk)+nu_factor_base);
-                                gsl_matrix_set(nu_sh2ijk,z_sh,z_ijk,nu_factor_base);
-                                
-                            }
-                        }
-                    }
-                    // need this because using M(i,j,k) instead of N(i,j,k)
-                    // nu_factor /= int_pow(R0,l);
-                    // nu_factor_uncertainty /= int_pow(R0,l);
-	  
-#warning RESTORE?
-                    // gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, nu_sh2ijk, 1.0/int_pow(R0,l), nu_sh2ijk);
-                    gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, nu_sh2ijk, 1.0, nu_sh2ijk);
-                    
-                    
-                    /* const double pq_factor_base = 
-                       orsa::power_sign(p+q) *
-                       orsa::binomial(l,p).get_d() *
-                       orsa::binomial(2*l-2*p,l).get_d() *
-                       orsa::binomial(m,2*q+1).get_d() *
-                       orsa::pochhammer(mpz_class(l-m-2*p+1),m).get_d();
-                    */
-                    const double pq_factor_base = 
-                        mpz_class(orsa::power_sign(p+q) *
-                                  orsa::binomial(l,p) *
-                                  orsa::binomial(2*l-2*p,l) *
-                                  orsa::binomial(m,2*q+1) *
-                                  orsa::pochhammer(mpz_class(l-m-2*p+1),m)).get_d();
-                    
-                    /* pq_factor += 
-                       pq_factor_base *
-                       nu_factor;
-                       
-                       pq_factor_uncertainty += 
-                       pq_factor_base *
-                       nu_factor_uncertainty;
-                    */
-                    
-                    gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, nu_sh2ijk, pq_factor_base, nu_sh2ijk);
-                    gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, identity_sh, nu_sh2ijk, 1.0, pq_sh2ijk);
-                }
-            }
-            //
-            // pq_factor /= int_pow(2.0,l);
-            // pq_factor_uncertainty /= int_pow(2.0,l);
-            //
-            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, 1.0/orsa::int_pow(2.0,l), pq_sh2ijk);
-            
-            // ORSA_DEBUG("PaulMoment::normalization(%i,%i) = %g",l,m,PaulMoment::normalization(l,m));
-            // normalization
-            // gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, PaulMoment::normalization(l,m), pq_sh2ijk);
-            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 0.0, identity_sh, pq_sh2ijk, orsa::normalization_integralToNormalizedSphericalHarmonics(l,m).get_d(), pq_sh2ijk);
-            
-            /* const double S_lm = pq_factor;
-               const double S_lm_uncertainty = fabs(pq_factor_uncertainty);
-               //      
-               const double norm_S_lm = S_lm*PaulMoment::normalization(l,m);
-               const double norm_S_lm_uncertainty = fabs(S_lm_uncertainty*PaulMoment::normalization(l,m));
-            */
-            
-            gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, identity_sh, pq_sh2ijk, 1.0, sh2ijk);
-            
-            /* if (verbose) {
-               ORSA_DEBUG("     S[%i][%i] = %+16.12f +/- %16.12f",
-               l,m,     S_lm, S_lm_uncertainty);
-               ORSA_DEBUG("norm_S[%i][%i] = %+16.12f +/- %16.12f   norm: %f",
-               l,m,norm_S_lm,norm_S_lm_uncertainty,PaulMoment::normalization(l,m));
-               }
-            */
-            
-            /* S[l][m]      = S_lm;
-               norm_S[l][m] = norm_S_lm;
-            */
-        }
-    }
-    
 #warning check if there is any ROTATION between reference systems
-    
-#warning FIX GM entry!!
-    
-#warning re-include factor 1/R0^l ?
-    
-#warning re-include normalization for Ckm Slm
-    
-#warning maybe rescale GM entries to 1.0 to have more homogeneous entries?
-    
-#warning CHECK ALL NORMALIZATIONS!
     
 #warning check code for HIGH degree, might have to rewrite linear algebra...
     
-    for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
-        for (size_t z_ijk=0; z_ijk<ijk_size; ++z_ijk) {
-            if (gsl_matrix_get(sh2ijk,z_sh,z_ijk)!=0.0) {
-                size_t nx,ny,nz;
-                CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);                
-                /* ORSA_DEBUG("sh2ijk[%03i][%03i] = %+10.6f [%s -> N[%02i][%02i][%02i]]",
-                   z_sh,z_ijk,gsl_matrix_get(sh2ijk,z_sh,z_ijk),gravityData->key(z_sh).toStdString().c_str(),nx,ny,nz);
-                */
-            }
-        }
-    }
+    gsl_matrix * sh2cT = gsl_matrix_calloc(SH_size,T_size);
+    
+    // gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, sh2ijk, ijk2cT, 0.0, sh2cT);
+    
+    /* for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
+       for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
+       size_t Tx,Ty,Tz;
+       CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
+       ORSA_DEBUG("sh2cT[%03i][%03i] = %+9.6f [%s -> cT[%i][%i][%i]]",
+       z_sh,z_cT,gsl_matrix_get(sh2cT,z_sh,z_cT),gravityData->key(z_sh).toStdString().c_str(),Tx,Ty,Tz);
+       }
+       }
+    */
     
     const orsa::Vector sampled_CM(CM_x+orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(CM_sx),  
                                   CM_y+orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(CM_sy),
                                   CM_z+orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(CM_sz));
+    // #warning RESTORE SAMPLING ABOVE!!!
+    /* const orsa::Vector sampled_CM(CM_x,  
+       CM_y,
+       CM_z);
+    */
+    
+    const double CMx_over_plateModelR0 = sampled_CM.getX()/plateModelR0;
+    const double CMy_over_plateModelR0 = sampled_CM.getY()/plateModelR0;
+    const double CMz_over_plateModelR0 = sampled_CM.getZ()/plateModelR0;
     
     const double volume = si->getIntegral(0,0,0)*orsa::cube(plateModelR0);
     
@@ -568,101 +300,151 @@ int main(int argc, char **argv) {
     
     ORSA_DEBUG("bulkDensity: %g [g/cm^3]",orsa::FromUnits(orsa::FromUnits(bulkDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
     
-    gsl_matrix * ijk2cT = gsl_matrix_calloc(ijk_size,T_size);
+    // gsl_matrix * ijk2cT = gsl_matrix_calloc(ijk_size,T_size);
     
     const double radiusCorrectionRatio = plateModelR0/gravityData->R0;
     
-    for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
-        
-        ORSA_DEBUG("cT: %i/%i",z_cT,T_size);
-        
-        size_t Tx,Ty,Tz;
-        CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-        
-        const std::vector<mpz_class> & cTx = orsa::ChebyshevTcoeff(Tx);
-        const std::vector<mpz_class> & cTy = orsa::ChebyshevTcoeff(Ty);
-        const std::vector<mpz_class> & cTz = orsa::ChebyshevTcoeff(Tz);
-        
-        for (size_t z_ijk=0; z_ijk<ijk_size; ++z_ijk) {
+    /* {
+    // test
+    for (size_t l=0; l<=(size_t)gravityDegree; ++l) {
+    for (size_t m=0; m<=l; ++m) {
+    }
+    }
+    }
+    */
+    
+    for (size_t l=0; l<=(size_t)gravityDegree; ++l) {
+        // #warning should try to print degree 1 terms, just as a check 
+        // #warning SKIP l=1 in production!!!!!!!!!!!!!!!!
+        if (l==1) continue;
+        const double radiusCorrectionFactor = orsa::int_pow(radiusCorrectionRatio,l);
+        for (size_t m=0; m<=l; ++m) {
+
+            ORSA_DEBUG("l: %i m: %i",l,m);
             
-            size_t nx,ny,nz;
-            CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);
+            const orsa::triIndex_mpq C_tri_integral = orsa::conversionCoefficients_C_integral(l,m);
+            const orsa::triIndex_d   C_tri_norm     = orsa::conversionCoefficients_C_norm(l,m);
             
-            double sum = 0;
-            // expansion of Chebyshev
-            for (size_t cx=0; cx<=Tx; ++cx) {
-                if (cTx[cx] == 0) continue;
-                for (size_t cy=0; cy<=Ty; ++cy) {
-                    if (cTy[cy] == 0) continue;
-                    for (size_t cz=0; cz<=Tz; ++cz) {
-                        if (cTz[cz] == 0) continue;
-                        
-                        // binomial expansion of (vec-vec_CM)
-                        for (size_t bx=0; bx<=nx; ++bx) {
-                            for (size_t by=0; by<=ny; ++by) {
-                                for (size_t bz=0; bz<=nz; ++bz) {
-                                    
-                                    sum += orsa::power_sign(bx+by+bz) *
-                                        mpz_class(orsa::binomial(nx,bx) *
-                                                  orsa::binomial(ny,by) *
-                                                  orsa::binomial(nz,bz) *
-                                                  cTx[cx] *
-                                                  cTy[cy] *
-                                                  cTz[cz]).get_d() *
-                                        orsa::int_pow(sampled_CM.getX()/plateModelR0,bx) *
-                                        orsa::int_pow(sampled_CM.getY()/plateModelR0,by) *
-                                        orsa::int_pow(sampled_CM.getZ()/plateModelR0,bz) *
-                                        si->getIntegral(nx-bx+cx,ny-by+cy,nz-bz+cz);
+            const orsa::triIndex_mpq S_tri_integral = orsa::conversionCoefficients_S_integral(l,m);
+            const orsa::triIndex_d   S_tri_norm     = orsa::conversionCoefficients_S_norm(l,m);
+            
+            const bool isGM = (l==0);
+            
+            // const QString C_key = (l==0) ? QString("GM",2) : gravityData->index(orsaPDS::RadioScienceGravityData::keyC(l,m));
+            // const QString S_key = (m==0) ? QString()     : gravityData->index(orsaPDS::RadioScienceGravityData::keyS(l,m));
+            
+            const size_t z_C = (l==0) ? gravityData->index("GM") : gravityData->index(orsaPDS::RadioScienceGravityData::keyC(l,m));
+            const size_t z_S = (m==0) ? 0 : gravityData->index(orsaPDS::RadioScienceGravityData::keyS(l,m));
+            
+            // ni,nj,nk are the expansion of C_lm,S_lm in terms of N_ijk
+            for (size_t ni=0; ni<=l; ++ni) {
+                for (size_t nj=0; nj<=l-ni; ++nj) {
+                    for (size_t nk=0; nk<=l-ni-nj; ++nk) {
+                        if ( (C_tri_integral[ni][nj][nk] == 0) && (S_tri_integral[ni][nj][nk] == 0) ) continue;
+                        // ti,tj,tk are the expansion of the density in terms of the cubic Chebyshev
+                        for (size_t running_T_degree=0; running_T_degree<=T_degree; ++running_T_degree) {
+                            for (size_t ti=0; ti<=T_degree; ++ti) {
+                                for (size_t tj=0; tj<=T_degree-ti; ++tj) {
+                                    for (size_t tk=0; tk<=T_degree-ti-tj; ++tk) {
+                                        if (ti+tj+tk != running_T_degree) continue;
+                                        const std::vector<mpz_class> & cTi = orsa::ChebyshevTcoeff(ti);
+                                        const std::vector<mpz_class> & cTj = orsa::ChebyshevTcoeff(tj);
+                                        const std::vector<mpz_class> & cTk = orsa::ChebyshevTcoeff(tk);
+                                        
+                                        const size_t z_cT = CubicChebyshevMassDistribution::index(ti,tj,tk);
+
+                                        /* ORSA_DEBUG("z_cT: %i  z_C: %i  z_S: %i   l: %i   m: %i   rT: %i  ni,nj,nk: %i %i %i   C_tri: %+g  S_tri: %+g",
+                                           z_cT,z_C,z_S,l,m,running_T_degree,ni,nj,nk,
+                                           C_tri_integral[ni][nj][nk].get_d(),
+                                           S_tri_integral[ni][nj][nk].get_d());
+                                        */
+                                        
+                                        double C2cT = 0.0;
+                                        double S2cT = 0.0;
+                                        
+                                        // ci,cj,ck are the expansion of each Chebyshev polynomial in terms of powers of x,y,z
+                                        for (size_t ci=0; ci<=ti; ++ci) {
+                                            if (cTi[ci] == 0) continue;
+                                            for (size_t cj=0; cj<=tj; ++cj) {
+                                                if (cTj[cj] == 0) continue;
+                                                for (size_t ck=0; ck<=tk; ++ck) {
+                                                    if (cTk[ck] == 0) continue;
+                                                    // bi,bj,bk are the binomial expansion about the center of mass
+                                                    // this also introduces a power_sign
+                                                    for (size_t bi=0; bi<=ni; ++bi) {
+                                                        for (size_t bj=0; bj<=nj; ++bj) {
+                                                            for (size_t bk=0; bk<=nk; ++bk) {
+                                                                
+                                                                if (C_tri_integral[ni][nj][nk] != 0) {
+                                                                    C2cT +=
+                                                                        orsa::power_sign(bi+bj+bk) *
+                                                                        radiusCorrectionFactor *
+                                                                        C_tri_norm[ni][nj][nk] *
+                                                                        mpz_class(orsa::binomial(ni,bi) *
+                                                                                  orsa::binomial(nj,bj) *
+                                                                                  orsa::binomial(nk,bk) *
+                                                                                  cTi[ci] * cTj[cj] * cTk[ck]).get_d() *
+                                                                        orsa::int_pow(CMx_over_plateModelR0,bi) *
+                                                                        orsa::int_pow(CMy_over_plateModelR0,bj) *
+                                                                        orsa::int_pow(CMz_over_plateModelR0,bk) *
+                                                                        si->getIntegral(ni-bi+ci,nj-bj+cj,nk-bk+ck);
+                                                                }
+                                                                
+                                                                if (S_tri_integral[ni][nj][nk] != 0) {
+                                                                    S2cT +=
+                                                                        orsa::power_sign(bi+bj+bk) *
+                                                                        radiusCorrectionFactor *
+                                                                        S_tri_norm[ni][nj][nk] *
+                                                                        mpz_class(orsa::binomial(ni,bi) *
+                                                                                  orsa::binomial(nj,bj) *
+                                                                                  orsa::binomial(nk,bk) *
+                                                                                  cTi[ci] * cTj[cj] * cTk[ck]).get_d() *
+                                                                        orsa::int_pow(CMx_over_plateModelR0,bi) *
+                                                                        orsa::int_pow(CMy_over_plateModelR0,bj) *
+                                                                        orsa::int_pow(CMz_over_plateModelR0,bk) *
+                                                                        si->getIntegral(ni-bi+ci,nj-bj+cj,nk-bk+ck);
+                                                                }                                                               
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }                                        
+                                        }
+                                        
+                                        C2cT /= si->getIntegral(0,0,0);
+                                        if (m!=0) S2cT /= si->getIntegral(0,0,0);
+
+                                        /* if ( (ni==0) &&
+                                           (nj==0) &&
+                                           (nk==0) ) {
+                                           ORSA_DEBUG("denom: %g",C2cT);
+                                           }
+                                        */
+                                        
+// #warning re-include this!!!!!!!!!!!!!!!!!!!
+                                        if (isGM) {
+                                            C2cT *= GM;
+                                        }
+                                        
+                                        // saving, NOTE how we are adding terms here
+                                        gsl_matrix_set(sh2cT,z_C,z_cT,gsl_matrix_get(sh2cT,z_C,z_cT)+C2cT);
+                                        if (m!=0) gsl_matrix_set(sh2cT,z_S,z_cT,gsl_matrix_get(sh2cT,z_S,z_cT)+S2cT);
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-            sum *= orsa::int_pow(radiusCorrectionRatio,nx+ny+nz);
-            
-            // gsl_matrix_set(ijk2cT,z_ijk,z_cT,sum);
-            // gsl_matrix_set(ijk2cT,z_ijk,z_cT,sum/(volume*orsa::int_pow(plateModelR0,-3)));
-            gsl_matrix_set(ijk2cT,z_ijk,z_cT,sum/si->getIntegral(0,0,0));
-            
-            if (1) {
-                size_t nx,ny,nz;
-                CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);                
-                size_t Tx,Ty,Tz;
-                CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-                /* ORSA_DEBUG("ijk2cT[%03i][%03i] = %+9.6f [N[%02i][%02i][%02i] -> cT[%i][%i][%i]]",
-                   z_ijk,z_cT,gsl_matrix_get(ijk2cT,z_ijk,z_cT),nx,ny,nz,Tx,Ty,Tz);
-                */
-            }
         }
     }
-    
-    
-    /* for (size_t z_ijk=0; z_ijk<ijk_size; ++z_ijk) {
-       for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
-       // if (gsl_matrix_get(ijk2cT,z_ijk,z_cT)!=0.0) {
-       {
-       size_t nx,ny,nz;
-       CubicChebyshevMassDistribution::triIndex(nx,ny,nz,z_ijk);                
-       size_t Tx,Ty,Tz;
-       CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-       ORSA_DEBUG("ijk2cT[%03i][%03i] = %+9.6f [N[%02i][%02i][%02i] -> cT[%i][%i][%i]]",
-       z_ijk,z_cT,gsl_matrix_get(ijk2cT,z_ijk,z_cT),nx,ny,nz,Tx,Ty,Tz);
-       }
-       }
-       }
-    */
-    
-    gsl_matrix * sh2cT = gsl_matrix_alloc(SH_size,T_size);
-    gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, sh2ijk, ijk2cT, 0.0, sh2cT);
     
     for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
         for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
             size_t Tx,Ty,Tz;
             CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-            /* ORSA_DEBUG("sh2cT[%03i][%03i] = %+9.6f [%s -> cT[%i][%i][%i]]",
-               z_sh,z_cT,gsl_matrix_get(sh2cT,z_sh,z_cT),gravityData->key(z_sh).toStdString().c_str(),Tx,Ty,Tz);
-            */
+            ORSA_DEBUG("sh2cT[%03i][%03i] = %+9.6f [%s -> cT[%i][%i][%i]]",
+                       z_sh,z_cT,gsl_matrix_get(sh2cT,z_sh,z_cT),gravityData->key(z_sh).toStdString().c_str(),Tx,Ty,Tz);
         }
     }
     
@@ -727,12 +509,11 @@ int main(int argc, char **argv) {
         
         gsl_blas_dgemm(CblasNoTrans,CblasNoTrans,1.0,A,AT,0.0,A_AT);
         
-        /* for (size_t j=0; j<M; ++j) {
-           for (size_t k=0; k<M; ++k) {
-           ORSA_DEBUG("(A A^T)[%03i][%03i] = %+12.6f",j,k,gsl_matrix_get(A_AT,j,k));
-           }
-           }
-        */
+        for (size_t j=0; j<M; ++j) {
+            for (size_t k=0; k<M; ++k) {
+                ORSA_DEBUG("(A A^T)[%03i][%03i] = %+12.6g",j,k,gsl_matrix_get(A_AT,j,k));
+            }
+        }
         
         // compute (A_AT)^(-1)
         gsl_matrix * inv_A_AT = gsl_matrix_alloc(M,M);
@@ -850,7 +631,6 @@ int main(int argc, char **argv) {
                                                   storeSamplePoints);
                 
                 SIMAN_xp x0;
-#warning which R0 to use (both?)
                 x0.R0_plate   = plateModelR0;
                 x0.R0_gravity = gravityData->R0;
                 x0.bulkDensity = bulkDensity;
@@ -878,10 +658,10 @@ int main(int argc, char **argv) {
     gsl_vector_free(pds_coeff);
     gsl_matrix_free(pds_covm);
     gsl_matrix_free(pds_inv_covm);
-    gsl_matrix_free(sh2ijk);
-    gsl_matrix_free(pq_sh2ijk);
-    gsl_matrix_free(nu_sh2ijk);
-    gsl_matrix_free(ijk2cT);
+    // gsl_matrix_free(sh2ijk);
+    // gsl_matrix_free(pq_sh2ijk);
+    // gsl_matrix_free(nu_sh2ijk);
+    // gsl_matrix_free(ijk2cT);
     gsl_matrix_free(sh2cT);
     
 #warning call gsl_*_free as needed...
