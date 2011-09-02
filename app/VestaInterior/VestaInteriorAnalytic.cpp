@@ -253,8 +253,9 @@ int main(int argc, char **argv) {
     
     // sh size: (l+1)^2 +1; +1 due to GM factor; -4 because C00, C10, C11, S11 are missing
     const size_t  SH_size = (SH_degree+1)*(SH_degree+1)+1-4;
-    // const size_t ijk_size = CubicChebyshevMassDistribution::totalSize(SH_degree);
     const size_t   T_size = CubicChebyshevMassDistribution::totalSize( T_degree);
+    
+    // const size_t alt_SH_size = SH_size + 3; // include C10, C11, S11 to set them to zero
     
     ORSA_DEBUG("SH_size: %d  T_size: %d",SH_size,T_size);
     
@@ -267,28 +268,9 @@ int main(int argc, char **argv) {
     
 #warning check code for HIGH degree, might have to rewrite linear algebra...
     
-    gsl_matrix * sh2cT = gsl_matrix_calloc(SH_size,T_size);
-    
-    // gsl_blas_dgemm(CblasNoTrans, CblasNoTrans, 1.0, sh2ijk, ijk2cT, 0.0, sh2cT);
-    
-    /* for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
-       for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
-       size_t Tx,Ty,Tz;
-       CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-       ORSA_DEBUG("sh2cT[%03i][%03i] = %+9.6f [%s -> cT[%i][%i][%i]]",
-       z_sh,z_cT,gsl_matrix_get(sh2cT,z_sh,z_cT),gravityData->key(z_sh).toStdString().c_str(),Tx,Ty,Tz);
-       }
-       }
-    */
-    
     const orsa::Vector sampled_CM(CM_x+orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(CM_sx),  
                                   CM_y+orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(CM_sy),
                                   CM_z+orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(CM_sz));
-    // #warning RESTORE SAMPLING ABOVE!!!
-    /* const orsa::Vector sampled_CM(CM_x,  
-       CM_y,
-       CM_z);
-    */
     
     const double CMx_over_plateModelR0 = sampled_CM.getX()/plateModelR0;
     const double CMy_over_plateModelR0 = sampled_CM.getY()/plateModelR0;
@@ -300,18 +282,9 @@ int main(int argc, char **argv) {
     
     ORSA_DEBUG("bulkDensity: %g [g/cm^3]",orsa::FromUnits(orsa::FromUnits(bulkDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
     
-    // gsl_matrix * ijk2cT = gsl_matrix_calloc(ijk_size,T_size);
-    
     const double radiusCorrectionRatio = plateModelR0/gravityData->R0;
     
-    /* {
-    // test
-    for (size_t l=0; l<=(size_t)gravityDegree; ++l) {
-    for (size_t m=0; m<=l; ++m) {
-    }
-    }
-    }
-    */
+    gsl_matrix * cT2sh = gsl_matrix_calloc(SH_size,T_size);
     
     for (size_t l=0; l<=(size_t)gravityDegree; ++l) {
         // #warning should try to print degree 1 terms, just as a check 
@@ -327,11 +300,6 @@ int main(int argc, char **argv) {
             
             const orsa::triIndex_mpq S_tri_integral = orsa::conversionCoefficients_S_integral(l,m);
             const orsa::triIndex_d   S_tri_norm     = orsa::conversionCoefficients_S_norm(l,m);
-            
-            const bool isGM = (l==0);
-            
-            // const QString C_key = (l==0) ? QString("GM",2) : gravityData->index(orsaPDS::RadioScienceGravityData::keyC(l,m));
-            // const QString S_key = (m==0) ? QString()     : gravityData->index(orsaPDS::RadioScienceGravityData::keyS(l,m));
             
             const size_t z_C = (l==0) ? gravityData->index("GM") : gravityData->index(orsaPDS::RadioScienceGravityData::keyC(l,m));
             const size_t z_S = (m==0) ? 0 : gravityData->index(orsaPDS::RadioScienceGravityData::keyS(l,m));
@@ -352,12 +320,6 @@ int main(int argc, char **argv) {
                                         const std::vector<mpz_class> & cTk = orsa::ChebyshevTcoeff(tk);
                                         
                                         const size_t z_cT = CubicChebyshevMassDistribution::index(ti,tj,tk);
-
-                                        /* ORSA_DEBUG("z_cT: %i  z_C: %i  z_S: %i   l: %i   m: %i   rT: %i  ni,nj,nk: %i %i %i   C_tri: %+g  S_tri: %+g",
-                                           z_cT,z_C,z_S,l,m,running_T_degree,ni,nj,nk,
-                                           C_tri_integral[ni][nj][nk].get_d(),
-                                           S_tri_integral[ni][nj][nk].get_d());
-                                        */
                                         
                                         double C2cT = 0.0;
                                         double S2cT = 0.0;
@@ -413,22 +375,14 @@ int main(int argc, char **argv) {
                                         
                                         C2cT /= si->getIntegral(0,0,0);
                                         if (m!=0) S2cT /= si->getIntegral(0,0,0);
-
-                                        /* if ( (ni==0) &&
-                                           (nj==0) &&
-                                           (nk==0) ) {
-                                           ORSA_DEBUG("denom: %g",C2cT);
-                                           }
-                                        */
                                         
-// #warning re-include this!!!!!!!!!!!!!!!!!!!
-                                        if (isGM) {
+                                        if (l==0) {
                                             C2cT *= GM;
                                         }
                                         
                                         // saving, NOTE how we are adding terms here
-                                        gsl_matrix_set(sh2cT,z_C,z_cT,gsl_matrix_get(sh2cT,z_C,z_cT)+C2cT);
-                                        if (m!=0) gsl_matrix_set(sh2cT,z_S,z_cT,gsl_matrix_get(sh2cT,z_S,z_cT)+S2cT);
+                                        gsl_matrix_set(cT2sh,z_C,z_cT,gsl_matrix_get(cT2sh,z_C,z_cT)+C2cT);
+                                        if (m!=0) gsl_matrix_set(cT2sh,z_S,z_cT,gsl_matrix_get(cT2sh,z_S,z_cT)+S2cT);
                                     }
                                 }
                             }
@@ -443,15 +397,15 @@ int main(int argc, char **argv) {
         for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
             size_t Tx,Ty,Tz;
             CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-            ORSA_DEBUG("sh2cT[%03i][%03i] = %+9.6f [%s -> cT[%i][%i][%i]]",
-                       z_sh,z_cT,gsl_matrix_get(sh2cT,z_sh,z_cT),gravityData->key(z_sh).toStdString().c_str(),Tx,Ty,Tz);
+            ORSA_DEBUG("cT2sh[%03i][%03i] = %+9.6f [%s -> cT[%i][%i][%i]]",
+                       z_sh,z_cT,gsl_matrix_get(cT2sh,z_sh,z_cT),gravityData->key(z_sh).toStdString().c_str(),Tx,Ty,Tz);
         }
     }
     
     {
         
         // A x = b
-        // A = sh2cT
+        // A = cT2sh
         // x = A^T (A A^T)^(-1) b
         
         const size_t M = SH_size;
@@ -462,7 +416,7 @@ int main(int argc, char **argv) {
         
         for (size_t j=0; j<M; ++j) {
             for (size_t k=0; k<N; ++k) {
-                gsl_matrix_set(A,j,k,gsl_matrix_get(sh2cT,j,k));
+                gsl_matrix_set(A,j,k,gsl_matrix_get(cT2sh,j,k));
             }
         }
         
@@ -471,7 +425,7 @@ int main(int argc, char **argv) {
         
         for (size_t j=0; j<N; ++j) {
             for (size_t k=0; k<M; ++k) {
-                gsl_matrix_set(AT,j,k,gsl_matrix_get(sh2cT,k,j));
+                gsl_matrix_set(AT,j,k,gsl_matrix_get(cT2sh,k,j));
             }
         }
 
@@ -658,11 +612,7 @@ int main(int argc, char **argv) {
     gsl_vector_free(pds_coeff);
     gsl_matrix_free(pds_covm);
     gsl_matrix_free(pds_inv_covm);
-    // gsl_matrix_free(sh2ijk);
-    // gsl_matrix_free(pq_sh2ijk);
-    // gsl_matrix_free(nu_sh2ijk);
-    // gsl_matrix_free(ijk2cT);
-    gsl_matrix_free(sh2cT);
+    gsl_matrix_free(cT2sh);
     
 #warning call gsl_*_free as needed...
     

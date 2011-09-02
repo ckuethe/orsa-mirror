@@ -212,7 +212,7 @@ int main(int argc, char **argv) {
     } else {
         
         // first determine the Chebyshev expansion of the mass distribution
-        const size_t T_degree = 10;
+        const size_t T_degree = 2;
         
         // using relative density (coeff[0][0][0]=1 for constant density = bulk density)
         // CubicChebyshevMassDistribution::CoefficientType densityCCC; // CCC=CubicChebyshevCoefficient
@@ -225,11 +225,10 @@ int main(int argc, char **argv) {
             const orsa::Vector coreCenter(orsa::FromUnits(0.0,orsa::Unit::KM),
                                           orsa::FromUnits(0.0,orsa::Unit::KM),
                                           orsa::FromUnits(0.0,orsa::Unit::KM));
-            const double coreDensity = orsa::FromUnits(orsa::FromUnits(8.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-            // const double coreDensity = bulkDensity;
-            const double mantleDensity = orsa::FromUnits(orsa::FromUnits(3.1,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-            // const double mantleDensity = bulkDensity;
-            // const double coreRadius = orsa::FromUnits(80.0,orsa::Unit::KM);
+            // const double coreDensity = orsa::FromUnits(orsa::FromUnits(8.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+            const double coreDensity = bulkDensity;
+            // const double mantleDensity = orsa::FromUnits(orsa::FromUnits(3.1,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+            const double mantleDensity = bulkDensity;
             const double coreRadius = cbrt((3.0/(4.0*pi()))*volume*(bulkDensity-mantleDensity)/(coreDensity-mantleDensity));
             ORSA_DEBUG("coreRadius: %g [km]", orsa::FromUnits(coreRadius,orsa::Unit::KM,-1));
             massDistribution = new orsa::SphericalCorePlusMantleMassDistribution(coreCenter,
@@ -257,7 +256,7 @@ int main(int argc, char **argv) {
                 }
             }
         
-            const size_t numSamplePoints = 10000;
+            const size_t numSamplePoints = 1000;
             const bool storeSamplePoints = true;
             osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
                 new orsa::RandomPointsInShape(shapeModel,
