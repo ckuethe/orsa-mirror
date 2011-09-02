@@ -817,9 +817,14 @@ int main(int argc, char **argv) {
             for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
                 // gsl_vector_set(sh,z_sh,gravityData->getCoeff(gravityData->key(z_sh)));
                 gsl_vector_set(sh,z_sh,gsl_vector_get(sampleCoeff_y,z_sh));
-                ORSA_DEBUG("%7s =  %+12.3g [sampled]",gravityData->key(z_sh).toStdString().c_str(),gsl_vector_get(sh,z_sh));
+                
+                ORSA_DEBUG("%7s =  %+12.3g [sampled]   nominal: %+12.3g   delta: %+12.3g",
+                           gravityData->key(z_sh).toStdString().c_str(),
+                           gsl_vector_get(sh,z_sh),
+                           gravityData->getCoeff(gravityData->key(z_sh)),
+                           gsl_vector_get(sh,z_sh)-gravityData->getCoeff(gravityData->key(z_sh)));
             }
-
+            
             // solving here!
             gsl_blas_dgemv(CblasNoTrans,1.0,pseudoInvA,sh,0.0,cT);
             
