@@ -154,8 +154,10 @@ int main(int argc, char **argv) {
     
 #warning keep GM or change it?
     
-    if (argc != 5) {
-        printf("Usage: %s <plate-model-file> <R0_km> <gravity-file-gravity-base-file> <output-gravity-file>\n",argv[0]);
+    if ( (argc != 5) &&
+         (argc != 6) ) {
+        // passing CCMDF-input-file to use it as input mass distribution
+        printf("Usage: %s <plate-model-file> <R0_km> <gravity-file-gravity-base-file> <output-gravity-file> [CCMDF-input-file]\n",argv[0]);
         exit(0);
     }
     
@@ -163,6 +165,8 @@ int main(int argc, char **argv) {
     const double plateModelR0 = orsa::FromUnits(atof(argv[2]),orsa::Unit::KM);
     const std::string radioScienceGravityBaseFile = argv[3];
     const std::string outputGravityFile = argv[4];
+    const bool have_CCMDF_file = (argc == 6);
+    const std::string CCMDF_filename = (argc == 6) ? argv[5] : "";
     
     if (plateModelR0 <= 0.0) {
         ORSA_DEBUG("invalid input...");
@@ -190,143 +194,147 @@ int main(int argc, char **argv) {
     const double volume = si->getIntegral(0,0,0)*orsa::cube(plateModelR0);
     const double bulkDensity = GM/orsa::Unit::G()/volume;
     
-    /* 
-       const double CMx = si->getIntegral(1,0,0)*orsa::int_pow(plateModelR0,1);
-       const double CMy = si->getIntegral(0,1,0)*orsa::int_pow(plateModelR0,1);
-       const double CMz = si->getIntegral(0,0,1)*orsa::int_pow(plateModelR0,1);
-       
-       const double CMx_over_plateModelR0 = CMx / plateModelR0;
-       const double CMy_over_plateModelR0 = CMy / plateModelR0;
-       const double CMz_over_plateModelR0 = CMz / plateModelR0;
-    */
-    //
-    const double alt_CMx_over_plateModelR0 = si->getIntegral(1,0,0) / si->getIntegral(0,0,0);
-    const double alt_CMy_over_plateModelR0 = si->getIntegral(0,1,0) / si->getIntegral(0,0,0);
-    const double alt_CMz_over_plateModelR0 = si->getIntegral(0,0,1) / si->getIntegral(0,0,0);
-    
-    // first determine the Chebyshev expansion of the mass distribution
-    const size_t T_degree = 6;
-    
-    // choose mass distribution
-    osg::ref_ptr<orsa::MassDistribution> massDistribution;
-    //
-    {
-        const orsa::Vector coreCenter(orsa::FromUnits(0.0,orsa::Unit::KM),
-                                      orsa::FromUnits(0.0,orsa::Unit::KM),
-                                      orsa::FromUnits(0.0,orsa::Unit::KM));
-        const double coreDensity = orsa::FromUnits(orsa::FromUnits(8.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-        const double mantleDensity = orsa::FromUnits(orsa::FromUnits(3.1,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-        // const double coreRadius = orsa::FromUnits(80.0,orsa::Unit::KM);
-        const double coreRadius = cbrt((3.0/(4.0*pi()))*volume*(bulkDensity-mantleDensity)/(coreDensity-mantleDensity));
-        ORSA_DEBUG("coreRadius: %g [km]", orsa::FromUnits(coreRadius,orsa::Unit::KM,-1));
-        massDistribution = new orsa::SphericalCorePlusMantleMassDistribution(coreCenter,
-                                                                             coreRadius,
-                                                                             coreDensity,
-                                                                             mantleDensity);
-    }
-    
-    // using relative density (coeff[0][0][0]=1 for constant density = bulk density)
     CubicChebyshevMassDistribution::CoefficientType densityCCC; // CCC=CubicChebyshevCoefficient
-    CubicChebyshevMassDistribution::resize(densityCCC,T_degree); 
     
-    {
-        // multifit of mass distribution
+    if (have_CCMDF_file) {
         
-        osg::ref_ptr<orsa::MultifitParameters> par = 
-            new orsa::MultifitParameters;
-        char varName[1024];
-        for (size_t s=0; s<=T_degree; ++s) {
-            for (size_t i=0; i<=T_degree; ++i) {
-                for (size_t j=0; j<=T_degree-i; ++j) {
-                    for (size_t k=0; k<=T_degree-i-j; ++k) {
-                        if (i+j+k==s) {
-                            sprintf(varName,"c%03i%03i%03i",i,j,k);
-                            par->insert(varName,0,1.0);
+        CubicChebyshevMassDistributionFile::DataContainer CCMDF;
+        CubicChebyshevMassDistributionFile::read(CCMDF,CCMDF_filename);
+        if (CCMDF.size() == 0) {
+            ORSA_DEBUG("empty CCMDF file: [%s]",CCMDF_filename.c_str());
+            exit(0);
+        }
+        if (CCMDF.size() > 1) {
+            ORSA_DEBUG("CCMDF [%s] should contain only one set of coefficients.",CCMDF_filename.c_str());
+        }
+        densityCCC = CCMDF[0].coeff;
+        
+    } else {
+        
+        // first determine the Chebyshev expansion of the mass distribution
+        const size_t T_degree = 2;
+        
+        // using relative density (coeff[0][0][0]=1 for constant density = bulk density)
+        // CubicChebyshevMassDistribution::CoefficientType densityCCC; // CCC=CubicChebyshevCoefficient
+        CubicChebyshevMassDistribution::resize(densityCCC,T_degree); 
+
+        // choose mass distribution
+        osg::ref_ptr<orsa::MassDistribution> massDistribution;
+        //
+        {
+            const orsa::Vector coreCenter(orsa::FromUnits(0.0,orsa::Unit::KM),
+                                          orsa::FromUnits(0.0,orsa::Unit::KM),
+                                          orsa::FromUnits(0.0,orsa::Unit::KM));
+            const double coreDensity = orsa::FromUnits(orsa::FromUnits(8.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+            // const double coreDensity = bulkDensity;
+            const double mantleDensity = orsa::FromUnits(orsa::FromUnits(3.1,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+            // const double mantleDensity = bulkDensity;
+            // const double coreRadius = orsa::FromUnits(80.0,orsa::Unit::KM);
+            const double coreRadius = cbrt((3.0/(4.0*pi()))*volume*(bulkDensity-mantleDensity)/(coreDensity-mantleDensity));
+            ORSA_DEBUG("coreRadius: %g [km]", orsa::FromUnits(coreRadius,orsa::Unit::KM,-1));
+            massDistribution = new orsa::SphericalCorePlusMantleMassDistribution(coreCenter,
+                                                                                 coreRadius,
+                                                                                 coreDensity,
+                                                                                 mantleDensity);
+        }
+    
+        {
+            // multifit of mass distribution
+        
+            osg::ref_ptr<orsa::MultifitParameters> par = 
+                new orsa::MultifitParameters;
+            char varName[1024];
+            for (size_t s=0; s<=T_degree; ++s) {
+                for (size_t i=0; i<=T_degree; ++i) {
+                    for (size_t j=0; j<=T_degree-i; ++j) {
+                        for (size_t k=0; k<=T_degree-i-j; ++k) {
+                            if (i+j+k==s) {
+                                sprintf(varName,"c%03i%03i%03i",i,j,k);
+                                par->insert(varName,0,1.0);
+                            }
+                        }
+                    }
+                }
+            }
+        
+            const size_t numSamplePoints = 2000;
+            const bool storeSamplePoints = true;
+            osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
+                new orsa::RandomPointsInShape(shapeModel,
+                                              massDistribution.get(),
+                                              numSamplePoints,
+                                              storeSamplePoints);       
+        
+            osg::ref_ptr<orsa::MultifitData> data = 
+                new orsa::MultifitData;
+            data->insertVariable("x");
+            data->insertVariable("y");
+            data->insertVariable("z");
+            orsa::Vector v;
+            double density;
+            const double oneOverR0 = 1.0/plateModelR0;
+            randomPointsInShape->reset();
+            size_t row=0;
+            size_t iter=0;
+            while (randomPointsInShape->get(v,density)) { 
+                data->insertD("x",row,v.getX()*oneOverR0);
+                data->insertD("y",row,v.getY()*oneOverR0);
+                data->insertD("z",row,v.getZ()*oneOverR0);
+                data->insertF(row,density/bulkDensity);
+                data->insertSigma(row,1.0);
+                ++row;
+                ++iter;
+            }
+            const size_t maxRow = --row;
+        
+            char logFile[1024];
+            snprintf(logFile,1024,"MD2G_ChebyshevFit3D.log");
+        
+            osg::ref_ptr<ChebyshevFit3D> cf = new ChebyshevFit3D(T_degree);
+            //
+            cf->setMultifitParameters(par.get());
+            cf->setMultifitData(data.get());
+            //
+            cf->setLogFile(logFile);
+            //
+            cf->run();
+        
+            for (size_t row=0; row<=maxRow; ++row) {
+                const double x = data->getD("x",row);
+                const double y = data->getD("y",row);
+                const double z = data->getD("z",row);
+                const double f = data->getF(row);
+                const double T = cf->fun(par.get(),
+                                         data.get(),
+                                         0,
+                                         0,
+                                         row);
+                const double err = T-f;
+                ORSA_DEBUG("FINAL: %+.3f %+.3f %+.3f %+.3f %+.3f %+.3f",
+                           x,y,z,f,T,err);
+            }
+        
+            for (size_t s=0; s<par->totalSize(); ++s) {
+                ORSA_DEBUG("par[%03i] = [%s] = %+12.6f",s,par->name(s).c_str(),par->get(s));
+            }
+        
+        
+            for (size_t s=0; s<=T_degree; ++s) {
+                for (size_t i=0; i<=T_degree; ++i) {
+                    for (size_t j=0; j<=T_degree-i; ++j) {
+                        for (size_t k=0; k<=T_degree-i-j; ++k) {
+                            if (i+j+k==s) {
+                                sprintf(varName,"c%03i%03i%03i",i,j,k);
+                                densityCCC[i][j][k] = par->get(varName);
+                            }
                         }
                     }
                 }
             }
         }
-        
-        const size_t numSamplePoints = 2000;
-        const bool storeSamplePoints = true;
-        osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
-            new orsa::RandomPointsInShape(shapeModel,
-                                          massDistribution.get(),
-                                          numSamplePoints,
-                                          storeSamplePoints);       
-        
-        osg::ref_ptr<orsa::MultifitData> data = 
-            new orsa::MultifitData;
-        data->insertVariable("x");
-        data->insertVariable("y");
-        data->insertVariable("z");
-        orsa::Vector v;
-        double density;
-        const double oneOverR0 = 1.0/plateModelR0;
-        randomPointsInShape->reset();
-        size_t row=0;
-        size_t iter=0;
-        while (randomPointsInShape->get(v,density)) { 
-            data->insertD("x",row,v.getX()*oneOverR0);
-            data->insertD("y",row,v.getY()*oneOverR0);
-            data->insertD("z",row,v.getZ()*oneOverR0);
-            data->insertF(row,density/bulkDensity);
-            data->insertSigma(row,1.0);
-            ++row;
-            ++iter;
-        }
-        const size_t maxRow = --row;
-        
-        char logFile[1024];
-        snprintf(logFile,1024,"MD2G_ChebyshevFit3D.log");
-        
-        osg::ref_ptr<ChebyshevFit3D> cf = new ChebyshevFit3D(T_degree);
-        //
-        cf->setMultifitParameters(par.get());
-        cf->setMultifitData(data.get());
-        //
-        cf->setLogFile(logFile);
-        //
-        cf->run();
-        
-        for (size_t row=0; row<=maxRow; ++row) {
-            const double x = data->getD("x",row);
-            const double y = data->getD("y",row);
-            const double z = data->getD("z",row);
-            const double f = data->getF(row);
-            const double T = cf->fun(par.get(),
-                                     data.get(),
-                                     0,
-                                     0,
-                                     row);
-            const double err = T-f;
-            ORSA_DEBUG("FINAL: %+.3f %+.3f %+.3f %+.3f %+.3f %+.3f",
-                       x,y,z,f,T,err);
-        }
-        
-        for (size_t s=0; s<par->totalSize(); ++s) {
-            ORSA_DEBUG("par[%03i] = [%s] = %+12.6f",s,par->name(s).c_str(),par->get(s));
-        }
-        
-        
-        for (size_t s=0; s<=T_degree; ++s) {
-            for (size_t i=0; i<=T_degree; ++i) {
-                for (size_t j=0; j<=T_degree-i; ++j) {
-                    for (size_t k=0; k<=T_degree-i-j; ++k) {
-                        if (i+j+k==s) {
-                            sprintf(varName,"c%03i%03i%03i",i,j,k);
-                            densityCCC[i][j][k] = par->get(varName);
-                        }
-                    }
-                }
-            }
-        }
-        
     }
     
-    
-    
+    const size_t T_degree = densityCCC.size()-1;
     
     {
         // another quick output...
@@ -343,6 +351,86 @@ int main(int argc, char **argv) {
     }
     
     const double radiusCorrectionRatio = plateModelR0/gravityData->R0;
+
+    // center of mass position
+    
+    /* 
+       const double CMx = si->getIntegral(1,0,0)*orsa::int_pow(plateModelR0,1);
+       const double CMy = si->getIntegral(0,1,0)*orsa::int_pow(plateModelR0,1);
+       const double CMz = si->getIntegral(0,0,1)*orsa::int_pow(plateModelR0,1);
+       
+       const double CMx_over_plateModelR0 = CMx / plateModelR0;
+       const double CMy_over_plateModelR0 = CMy / plateModelR0;
+       const double CMz_over_plateModelR0 = CMz / plateModelR0;
+    */
+    //
+    /* #warning DO NOT USE THIS
+       const double alt_CMx_over_plateModelR0 = si->getIntegral(1,0,0) / si->getIntegral(0,0,0);
+       const double alt_CMy_over_plateModelR0 = si->getIntegral(0,1,0) / si->getIntegral(0,0,0);
+       const double alt_CMz_over_plateModelR0 = si->getIntegral(0,0,1) / si->getIntegral(0,0,0);
+    */
+    //
+    /* double alt_CMx_over_plateModelR0;
+       double alt_CMy_over_plateModelR0;
+       double alt_CMz_over_plateModelR0;
+    */
+    
+    double i0d=0.0;
+    double iXd=0.0;
+    double iYd=0.0;
+    double iZd=0.0;
+    // ti,tj,tk are the expansion of the density in terms of the cubic Chebyshev 
+    for (size_t ti=0; ti<=T_degree; ++ti) {
+        for (size_t tj=0; tj<=T_degree-ti; ++tj) {
+            for (size_t tk=0; tk<=T_degree-ti-tj; ++tk) {
+                const std::vector<mpz_class> & cTi = orsa::ChebyshevTcoeff(ti);
+                const std::vector<mpz_class> & cTj = orsa::ChebyshevTcoeff(tj);
+                const std::vector<mpz_class> & cTk = orsa::ChebyshevTcoeff(tk);
+                // ci,cj,ck are the expansion of each Chebyshev polinomial in terms of powers of x,y,z
+                for (size_t ci=0; ci<=ti; ++ci) {
+                    if (cTi[ci] == 0) continue;
+                    for (size_t cj=0; cj<=tj; ++cj) {
+                        if (cTj[cj] == 0) continue;
+                        for (size_t ck=0; ck<=tk; ++ck) {
+                            if (cTk[ck] == 0) continue;
+                            const double baseFactor = densityCCC[ti][tj][tk] *
+                                mpz_class(cTi[ci] * cTj[cj] * cTk[ck]).get_d();
+                            i0d += baseFactor * si->getIntegral(ci,cj,ck);
+                            iXd += baseFactor * si->getIntegral(ci+1,cj,ck);
+                            iYd += baseFactor * si->getIntegral(ci,cj+1,ck);
+                            iZd += baseFactor * si->getIntegral(ci,cj,ck+1);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    const double CMx_over_plateModelR0 = iXd / i0d;
+    const double CMy_over_plateModelR0 = iYd / i0d;
+    const double CMz_over_plateModelR0 = iZd / i0d;
+    
+    /* ORSA_DEBUG("si->getIntegral(0,0,0): %g",si->getIntegral(0,0,0));
+       ORSA_DEBUG("i0d: %g",i0d);
+       ORSA_DEBUG("iXd: %g",iXd);
+       ORSA_DEBUG("iYd: %g",iYd);
+       ORSA_DEBUG("iZd: %g",iZd);
+    */
+    
+    {
+        // write barycenter file
+        char filename[1024];
+        sprintf(filename,"%s.barycenter_km.dat",outputGravityFile.c_str());
+        FILE * fp = fopen(filename,"w");
+        ORSA_DEBUG("writing file [%s]",filename);
+        const double CMx = CMx_over_plateModelR0*plateModelR0;
+        const double CMy = CMy_over_plateModelR0*plateModelR0;
+        const double CMz = CMz_over_plateModelR0*plateModelR0;
+        gmp_fprintf(fp,"%+9.3f %+9.3f %+9.3f\n",
+                    orsa::FromUnits(CMx,orsa::Unit::KM,-1),
+                    orsa::FromUnits(CMy,orsa::Unit::KM,-1),
+                    orsa::FromUnits(CMz,orsa::Unit::KM,-1));
+        fclose(fp);        
+    }
     
 #warning track precision of operations
     
@@ -361,7 +449,7 @@ int main(int argc, char **argv) {
                     for (size_t nj=0; nj<=l-ni; ++nj) {
                         for (size_t nk=0; nk<=l-ni-nj; ++nk) {
                             if ( (C_tri_integral[ni][nj][nk] == 0) && (S_tri_integral[ni][nj][nk] == 0) ) continue;
-                            // ti,tj,tk are the expansion of the density in a cubic Chebyshev
+                            // ti,tj,tk are the expansion of the density in terms of the cubic Chebyshev
                             for (size_t ti=0; ti<=T_degree; ++ti) {
                                 for (size_t tj=0; tj<=T_degree-ti; ++tj) {
                                     for (size_t tk=0; tk<=T_degree-ti-tj; ++tk) {
@@ -390,9 +478,9 @@ int main(int argc, char **argv) {
                                                                                   orsa::binomial(nj,bj) *
                                                                                   orsa::binomial(nk,bk) *
                                                                                   cTi[ci] * cTj[cj] * cTk[ck]).get_d() *
-                                                                        orsa::int_pow(alt_CMx_over_plateModelR0,bi) *
-                                                                        orsa::int_pow(alt_CMy_over_plateModelR0,bj) *
-                                                                        orsa::int_pow(alt_CMz_over_plateModelR0,bk) *
+                                                                        orsa::int_pow(CMx_over_plateModelR0,bi) *
+                                                                        orsa::int_pow(CMy_over_plateModelR0,bj) *
+                                                                        orsa::int_pow(CMz_over_plateModelR0,bk) *
                                                                         si->getIntegral(ni-bi+ci,nj-bj+cj,nk-bk+ck);
                                                                 }
                                                                 
@@ -405,9 +493,9 @@ int main(int argc, char **argv) {
                                                                                   orsa::binomial(nj,bj) *
                                                                                   orsa::binomial(nk,bk) *
                                                                                   cTi[ci] * cTj[cj] * cTk[ck]).get_d() *
-                                                                        orsa::int_pow(alt_CMx_over_plateModelR0,bi) *
-                                                                        orsa::int_pow(alt_CMy_over_plateModelR0,bj) *
-                                                                        orsa::int_pow(alt_CMz_over_plateModelR0,bk) *
+                                                                        orsa::int_pow(CMx_over_plateModelR0,bi) *
+                                                                        orsa::int_pow(CMy_over_plateModelR0,bj) *
+                                                                        orsa::int_pow(CMz_over_plateModelR0,bk) *
                                                                         si->getIntegral(ni-bi+ci,nj-bj+cj,nk-bk+ck);
                                                                 }                                                               
                                                             }
@@ -423,9 +511,9 @@ int main(int argc, char **argv) {
                     }
                 }
                 
-                norm_C /= si->getIntegral(0,0,0);
+                norm_C /= i0d;
                 norm_C *= radiusCorrectionFactor;
-                norm_S /= si->getIntegral(0,0,0);
+                norm_S /= i0d;
                 norm_S *= radiusCorrectionFactor;
                 
                 if (l>=2) {
@@ -441,22 +529,6 @@ int main(int argc, char **argv) {
     
     ORSA_DEBUG("writing file [%s]",outputGravityFile.c_str());
     orsaPDS::RadioScienceGravityFile::write(gravityData.get(),outputGravityFile,512,1518);
-    
-    {
-        // write barycenter file
-        char filename[1024];
-        sprintf(filename,"%s.barycenter_km.dat",outputGravityFile.c_str());
-        FILE * fp = fopen(filename,"w");
-        ORSA_DEBUG("writing file [%s]",filename);
-        const double CMx = si->getIntegral(1,0,0)*plateModelR0;
-        const double CMy = si->getIntegral(0,1,0)*plateModelR0;
-        const double CMz = si->getIntegral(0,0,1)*plateModelR0;
-        gmp_fprintf(fp,"%+9.3f %+9.3f %+9.3f\n",
-                    orsa::FromUnits(CMx,orsa::Unit::KM,-1),
-                    orsa::FromUnits(CMy,orsa::Unit::KM,-1),
-                    orsa::FromUnits(CMz,orsa::Unit::KM,-1));
-        fclose(fp);        
-    }
     
     return 0;
 }

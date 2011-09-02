@@ -45,7 +45,7 @@ public:
     };
 public:
     typedef CCMDF_data DataType;
-    typedef std::list<DataType> DataContainer;
+    typedef std::deque<DataType> DataContainer;
 public:
     static bool read(DataContainer & data, const std::string & fileName);
     static bool read(DataContainer & data, const std::string & fileName, const double & limitDeltaDensity);
