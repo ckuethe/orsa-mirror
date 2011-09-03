@@ -45,7 +45,8 @@ public:
     orsa::Cache<double> R0_plate;
     orsa::Cache<double> R0_gravity;
     orsa::Cache<double> bulkDensity;
-    osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape;
+    // osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape;
+    std::vector<orsa::Vector> rv;
     orsa::Cache<size_t> T_degree;
     orsa::Cache<size_t> T_size;
     gsl_vector * cT0;
@@ -62,7 +63,8 @@ void SIMAN_copy (void * source, void * dest) {
     d->R0_plate            = s->R0_plate;
     d->R0_gravity          = s->R0_gravity;
     d->bulkDensity         = s->bulkDensity;
-    d->randomPointsInShape = s->randomPointsInShape;
+    // d->randomPointsInShape = s->randomPointsInShape;
+    d->rv                  = s->rv;
     d->T_degree            = s->T_degree;
     d->T_size              = s->T_size;
     d->cT0                 = s->cT0;
@@ -111,18 +113,28 @@ double E1(void * xp) {
     osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
         new CubicChebyshevMassDistribution(coeff,x->bulkDensity,x->R0_plate);
     
-    x->randomPointsInShape->updateMassDistribution(massDistribution);
-    
-    orsa::Vector v;
-    double density;
+    // x->randomPointsInShape->updateMassDistribution(massDistribution);
+
     osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
     orsa::Cache<double> minDensity, maxDensity;
-    x->randomPointsInShape->reset();
-    while (x->randomPointsInShape->get(v,density)) { 
+    for (size_t k=0; k<x->rv.size(); ++k) {
+        const double density = massDistribution->density(x->rv[k]);
         stat->insert(density);
         minDensity.setIfSmaller(density);
         maxDensity.setIfLarger(density);
     }
+
+    /* orsa::Vector v;
+       double density;
+       osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
+       orsa::Cache<double> minDensity, maxDensity;
+       x->randomPointsInShape->reset();
+       while (x->randomPointsInShape->get(v,density)) { 
+       stat->insert(density);
+       minDensity.setIfSmaller(density);
+       maxDensity.setIfLarger(density);
+       }
+    */
     
 #warning find a better way to compute average density? (based on simplexIntegral and not on randomPointsInShape)
     

@@ -698,19 +698,28 @@ int main(int argc, char **argv) {
                 ::gsl_rng_set(rng,randomSeed);
                 ORSA_DEBUG("simulated annealing random seed: %d",randomSeed);
                 
-                // const size_t numSamplePoints = 100000;
-                const bool storeSamplePoints = true;
-                osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
-                    new orsa::RandomPointsInShape(shapeModel,
-                                                  0,
-                                                  numSamplePoints,
-                                                  storeSamplePoints);
+                std::vector<orsa::Vector> rv;
+                //
+                {
+                    const bool storeSamplePoints = false; // saving the points in rv
+                    osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
+                        new orsa::RandomPointsInShape(shapeModel,
+                                                      0,
+                                                      numSamplePoints,
+                                                      storeSamplePoints);
+                    orsa::Vector v;
+                    randomPointsInShape->reset();
+                    while (randomPointsInShape->get(v)) {
+                        rv.push_back(v);
+                    }
+                }
                 
                 SIMAN_xp x0;
                 x0.R0_plate   = plateModelR0;
                 x0.R0_gravity = gravityData->R0;
                 x0.bulkDensity = bulkDensity;
-                x0.randomPointsInShape = randomPointsInShape;
+                // x0.randomPointsInShape = randomPointsInShape;
+                x0.rv = rv;
                 x0.T_degree = T_degree;
                 x0.T_size = T_size;
                 x0.cT0 = cT0;
