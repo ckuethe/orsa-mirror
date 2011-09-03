@@ -157,13 +157,13 @@ int main(int argc, char **argv) {
     if ( (argc != 5) &&
          (argc != 6) ) {
         // passing CCMDF-input-file to use it as input mass distribution
-        printf("Usage: %s <plate-model-file> <R0_km> <gravity-file-gravity-base-file> <output-gravity-file> [CCMDF-input-file]\n",argv[0]);
+        printf("Usage: %s <plate-model-file> <R0_km> <gravity-file-gravity-template-file> <output-gravity-file> [CCMDF-input-file]\n",argv[0]);
         exit(0);
     }
     
     const std::string plateModelFile = argv[1];
     const double plateModelR0 = orsa::FromUnits(atof(argv[2]),orsa::Unit::KM);
-    const std::string radioScienceGravityBaseFile = argv[3];
+    const std::string radioScienceGravityTemplateFile = argv[3];
     const std::string outputGravityFile = argv[4];
     const bool have_CCMDF_file = (argc == 6);
     const std::string CCMDF_filename = (argc == 6) ? argv[5] : "";
@@ -188,7 +188,7 @@ int main(int argc, char **argv) {
         new SimplexIntegration<simplex_T>(shapeModel.get(), plateModelR0, SQLiteDBFileName);
     
     osg::ref_ptr<orsaPDS::RadioScienceGravityData> gravityData = new orsaPDS::RadioScienceGravityData;
-    orsaPDS::RadioScienceGravityFile::read(gravityData.get(),radioScienceGravityBaseFile,512,1518);
+    orsaPDS::RadioScienceGravityFile::read(gravityData.get(),radioScienceGravityTemplateFile,512,1518);
     
     const double GM = gravityData->GM; 
     const double volume = si->getIntegral(0,0,0)*orsa::cube(plateModelR0);
@@ -213,7 +213,7 @@ int main(int argc, char **argv) {
         
         // first determine the Chebyshev expansion of the mass distribution
 #warning THIS MUST BE A PARAMETER
-        const size_t T_degree = 4;
+        const size_t T_degree = 6;
         
         // using relative density (coeff[0][0][0]=1 for constant density = bulk density)
         // CubicChebyshevMassDistribution::CoefficientType densityCCC; // CCC=CubicChebyshevCoefficient
@@ -226,9 +226,9 @@ int main(int argc, char **argv) {
             const orsa::Vector coreCenter(orsa::FromUnits(0.0,orsa::Unit::KM),
                                           orsa::FromUnits(0.0,orsa::Unit::KM),
                                           orsa::FromUnits(0.0,orsa::Unit::KM));
-            const double coreDensity = orsa::FromUnits(orsa::FromUnits(8.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+            const double coreDensity = orsa::FromUnits(orsa::FromUnits(20.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
             // const double coreDensity = bulkDensity;
-            const double mantleDensity = orsa::FromUnits(orsa::FromUnits(3.1,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+            const double mantleDensity = orsa::FromUnits(orsa::FromUnits(2.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
             // const double mantleDensity = bulkDensity;
             const double coreRadius = cbrt((3.0/(4.0*pi()))*volume*(bulkDensity-mantleDensity)/(coreDensity-mantleDensity));
             ORSA_DEBUG("coreRadius: %g [km]", orsa::FromUnits(coreRadius,orsa::Unit::KM,-1));
@@ -237,7 +237,7 @@ int main(int argc, char **argv) {
                                                                                  coreDensity,
                                                                                  mantleDensity);
         }
-    
+        
         {
             // multifit of mass distribution
         
@@ -265,7 +265,7 @@ int main(int argc, char **argv) {
                                               massDistribution.get(),
                                               numSamplePoints,
                                               storeSamplePoints);       
-        
+            
             osg::ref_ptr<orsa::MultifitData> data = 
                 new orsa::MultifitData;
             data->insertVariable("x");
@@ -352,7 +352,54 @@ int main(int argc, char **argv) {
     }
     
     const double radiusCorrectionRatio = plateModelR0/gravityData->R0;
-
+    
+    /* if (1) {
+    // test: spherical harmonics coefficients using Monte Carlo integration
+    const size_t numSamplePoints = 1000000;
+    const unsigned int order = 4;
+    const bool storeSamplePoints = true;
+    osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
+    new CubicChebyshevMassDistribution(densityCCC,bulkDensity,plateModelR0);
+    osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
+    new orsa::RandomPointsInShape(shapeModel,
+    massDistribution.get(),
+    numSamplePoints,
+    storeSamplePoints);   
+    const double volume = orsa::volume(randomPointsInShape.get());
+    const orsa::Vector centerOfMass = orsa::centerOfMass(randomPointsInShape.get());
+    osg::ref_ptr<orsa::PaulMoment> paulMoment =
+    orsa::computePaulMoment(order,
+    orsa::Matrix::identity(),
+    orsa::Matrix::identity(),
+    centerOfMass,
+    randomPointsInShape.get());
+    std::vector< std::vector<mpf_class> > C, S, norm_C, norm_S;
+    std::vector<mpf_class> J;
+    const double SH_R0 = FromUnits(265,orsa::Unit::KM);
+    orsa::convert(C, S, norm_C, norm_S, J,
+    paulMoment, 
+    SH_R0);
+    ORSA_DEBUG("$x_{0}$    & $%+9.3f$ \\\\",orsa::FromUnits(centerOfMass.getX(),orsa::Unit::KM,-1));
+    ORSA_DEBUG("$y_{0}$    & $%+9.3f$ \\\\",orsa::FromUnits(centerOfMass.getY(),orsa::Unit::KM,-1));
+    ORSA_DEBUG("$z_{0}$    & $%+9.3f$ \\\\",orsa::FromUnits(centerOfMass.getZ(),orsa::Unit::KM,-1));
+    ORSA_DEBUG("\%\\hline");
+    for (unsigned int l=2; l<=order; ++l) {
+    // J_l is minus C_l0, where C_l0 is not normalized
+    ORSA_DEBUG("$J_{%i}$    & $%+9.6Ff$ \\\\",l,mpf_class(-C[l][0]).get_mpf_t());
+    }
+    ORSA_DEBUG("\%\\hline");
+    for (unsigned int l=2; l<=order; ++l) {
+    for (unsigned int m=0; m<=l; ++m) {
+    // LaTeX Tabular style
+    ORSA_DEBUG("$C_{%i%i}$   & $%+9.6Ff$ \\\\",l,m,norm_C[l][m].get_mpf_t());
+    if (m!=0) {
+    ORSA_DEBUG("$S_{%i%i}$   & $%+9.6Ff$ \\\\",l,m,norm_S[l][m].get_mpf_t());
+    }
+    }
+    }
+    }
+    */
+    
     // center of mass position
     
     /* 
