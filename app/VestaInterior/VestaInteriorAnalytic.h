@@ -52,6 +52,7 @@ public:
     gsl_vector * * uK;
     orsa::Cache<size_t> uK_size;
     std::vector<double> factor;
+    orsa::Cache<double> minimumDensity;
 };
 
 
@@ -68,6 +69,7 @@ void SIMAN_copy (void * source, void * dest) {
     d->uK                  = &(s->uK[0]);
     d->uK_size             = s->uK_size;
     d->factor              = s->factor;
+    d->minimumDensity      = s->minimumDensity;
 }
 
 void * SIMAN_copy_construct (void * xp) {
@@ -147,7 +149,7 @@ double E1(void * xp) {
        }
     */
 
-    if (x->bulkDensity*stat->min() >= 0.0) {
+    if (x->bulkDensity*stat->min() >= x->minimumDensity) {
         // another quick output...
 #warning pass filename as parameter...
         CubicChebyshevMassDistributionFile::CCMDF_data data;
@@ -168,12 +170,18 @@ double E1(void * xp) {
     // return std::max(0.0,-minDensity);
     // return std::max(0.0,-minDensity)*(maxDensity-minDensity);
     // return -minDensity*(maxDensity-minDensity);
-    return maxDensity-minDensity; /**/
+    // return maxDensity-minDensity; /**/
     // return -minDensity*(maxDensity-minDensity);
     // return minDensity*(maxDensity-minDensity);
     
     // maximum amplitude!
     // return minDensity-maxDensity;
+    
+    if (minDensity < x->minimumDensity) {
+        return 1.0;
+    } else {
+        return 0.0;
+    }
 }
 
 double M1(void * xp, void * yp) {
