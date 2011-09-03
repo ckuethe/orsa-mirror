@@ -316,14 +316,14 @@ int main(int argc, char **argv) {
         // std::deque<orsa::Vector> rv_out; // for smoother edges
         while (rv_in.size() < 10000) {
             // XZ
-            const orsa::Vector v(orsa::FromUnits(x_min+(x_max-x_min)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM),
-                                 orsa::FromUnits(0,orsa::Unit::KM),
-                                 orsa::FromUnits(y_min+(y_max-y_min)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM));
-            // XY
             /* const orsa::Vector v(orsa::FromUnits(x_min+(x_max-x_min)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM),
-               orsa::FromUnits(y_min+(y_max-y_min)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM),
-               orsa::FromUnits(0,orsa::Unit::KM));
+               orsa::FromUnits(0,orsa::Unit::KM),
+               orsa::FromUnits(y_min+(y_max-y_min)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM));
             */
+            // XY
+            const orsa::Vector v(orsa::FromUnits(x_min+(x_max-x_min)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM),
+                                 orsa::FromUnits(y_min+(y_max-y_min)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM),
+                                 orsa::FromUnits(0,orsa::Unit::KM));
             if (shapeModel->isInside(v)) {
                 rv_in.push_back(v);
             } else {
@@ -343,12 +343,13 @@ int main(int argc, char **argv) {
             while (it_rv_in != rv_in.end()) {
 #warning double-check why adding step here...
                 // XZ
-                xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1) + x_step;
-                xVector[1] = orsa::FromUnits((*it_rv_in).getZ(),orsa::Unit::KM,-1) + y_step;
-                // XY
                 /* xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1) + x_step;
-                   xVector[1] = orsa::FromUnits((*it_rv_in).getY(),orsa::Unit::KM,-1) + y_step;
+                   xVector[1] = orsa::FromUnits((*it_rv_in).getZ(),orsa::Unit::KM,-1) + y_step;
                 */
+                // XY
+                xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1) + x_step;
+                xVector[1] = orsa::FromUnits((*it_rv_in).getY(),orsa::Unit::KM,-1) + y_step;
+
                 plotStats->insert(xVector,
                                   orsa::FromUnits(orsa::FromUnits(md->density((*it_rv_in)),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
                 ++it_rv_in;
