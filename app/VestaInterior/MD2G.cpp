@@ -154,10 +154,10 @@ int main(int argc, char **argv) {
     
 #warning keep GM or change it?
     
-    if ( (argc != 5) &&
-         (argc != 6) ) {
+    if ( (argc != 7) &&
+         (argc != 8) ) {
         // passing CCMDF-input-file to use it as input mass distribution
-        printf("Usage: %s <plate-model-file> <R0_km> <gravity-file-gravity-template-file> <output-gravity-file> [CCMDF-input-file]\n",argv[0]);
+        printf("Usage: %s <plate-model-file> <R0_km> <gravity-file-gravity-template-file> <output-gravity-file> <fitting-function-degree> <num-sample-points> [CCMDF-input-file]\n",argv[0]);
         exit(0);
     }
     
@@ -165,8 +165,10 @@ int main(int argc, char **argv) {
     const double plateModelR0 = orsa::FromUnits(atof(argv[2]),orsa::Unit::KM);
     const std::string radioScienceGravityTemplateFile = argv[3];
     const std::string outputGravityFile = argv[4];
-    const bool have_CCMDF_file = (argc == 6);
-    const std::string CCMDF_filename = (argc == 6) ? argv[5] : "";
+    const size_t T_degree_input = atoi(argv[5]);
+    const size_t numSamplePoints = atoi(argv[6]);
+    const bool have_CCMDF_file = (argc == 8);
+    const std::string CCMDF_filename = (argc == 8) ? argv[7] : "";
     
     if (plateModelR0 <= 0.0) {
         ORSA_DEBUG("invalid input...");
@@ -212,8 +214,8 @@ int main(int argc, char **argv) {
     } else {
         
         // first determine the Chebyshev expansion of the mass distribution
-#warning THIS MUST BE A PARAMETER
-        const size_t T_degree = 6;
+        // #warning THIS MUST BE A PARAMETER
+        const size_t T_degree = T_degree_input;
         
         // using relative density (coeff[0][0][0]=1 for constant density = bulk density)
         // CubicChebyshevMassDistribution::CoefficientType densityCCC; // CCC=CubicChebyshevCoefficient
@@ -226,9 +228,9 @@ int main(int argc, char **argv) {
             const orsa::Vector coreCenter(orsa::FromUnits(0.0,orsa::Unit::KM),
                                           orsa::FromUnits(0.0,orsa::Unit::KM),
                                           orsa::FromUnits(0.0,orsa::Unit::KM));
-            const double coreDensity = orsa::FromUnits(orsa::FromUnits(20.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+            const double coreDensity = orsa::FromUnits(orsa::FromUnits(6.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
             // const double coreDensity = bulkDensity;
-            const double mantleDensity = orsa::FromUnits(orsa::FromUnits(2.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+            const double mantleDensity = orsa::FromUnits(orsa::FromUnits(3.2,orsa::Unit::GRAM),orsa::Unit::CM,-3);
             // const double mantleDensity = bulkDensity;
             const double coreRadius = cbrt((3.0/(4.0*pi()))*volume*(bulkDensity-mantleDensity)/(coreDensity-mantleDensity));
             ORSA_DEBUG("coreRadius: %g [km]", orsa::FromUnits(coreRadius,orsa::Unit::KM,-1));
@@ -257,8 +259,8 @@ int main(int argc, char **argv) {
                 }
             }
         
-#warning THIS MUST BE A PARAMETER
-            const size_t numSamplePoints = 1000;
+            // #warning THIS MUST BE A PARAMETER
+            // const size_t numSamplePoints = 1000;
             const bool storeSamplePoints = true;
             osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
                 new orsa::RandomPointsInShape(shapeModel,
