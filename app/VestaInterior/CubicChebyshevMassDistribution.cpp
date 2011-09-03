@@ -198,18 +198,19 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
     data.maxDensity = orsa::FromUnits(orsa::FromUnits(data.maxDensity,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     if (1 != gmp_fscanf(fp,"%lf",&data.deltaDensity)) return false;                                    
     data.deltaDensity = orsa::FromUnits(orsa::FromUnits(data.deltaDensity,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+    if (1 != gmp_fscanf(fp,"%lf",&data.penalty)) return false;
     if (1 != gmp_fscanf(fp,"%lf",&data.densityScale)) return false;                                
     data.densityScale = orsa::FromUnits(orsa::FromUnits(data.densityScale,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     if (1 != gmp_fscanf(fp,"%lf",&data.R0)) return false;                                
     data.R0 = orsa::FromUnits(data.R0,orsa::Unit::KM,1);
-    size_t degree;
-    if (1 != gmp_fscanf(fp,"%zi",&degree)) return false;                                
-    // ORSA_DEBUG("degree: %i",degree);
-    CubicChebyshevMassDistribution::resize(data.coeff,degree);
-    for (size_t runningDegree=0; runningDegree<=degree; ++runningDegree) {
-        for (size_t i=0; i<=degree; ++i) {
-            for (size_t j=0; j<=degree-i; ++j) {
-                for (size_t k=0; k<=degree-i-j; ++k) {
+    if (1 != gmp_fscanf(fp,"%zi",&data.SH_degree)) return false;   
+    size_t T_degree;
+    if (1 != gmp_fscanf(fp,"%zi",&T_degree)) return false;                                
+    CubicChebyshevMassDistribution::resize(data.coeff,T_degree);
+    for (size_t runningDegree=0; runningDegree<=T_degree; ++runningDegree) {
+        for (size_t i=0; i<=T_degree; ++i) {
+            for (size_t j=0; j<=T_degree-i; ++j) {
+                for (size_t k=0; k<=T_degree-i-j; ++k) {
                     if (i+j+k == runningDegree) {
                         if (1 != gmp_fscanf(fp,"%lf",&data.coeff[i][j][k])) return false;
                     }
@@ -224,14 +225,16 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
     gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.minDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
     gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.maxDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
     gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.deltaDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+    gmp_fprintf(fp,"%.3f ",data.penalty);
     gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.densityScale,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
     gmp_fprintf(fp,"%g ",orsa::FromUnits(data.R0,orsa::Unit::KM,-1));
-    const size_t degree = data.coeff.size()-1;
-    gmp_fprintf(fp,"%i ",degree);
-    for (size_t runningDegree=0; runningDegree<=degree; ++runningDegree) {
-        for (size_t i=0; i<=degree; ++i) {
-            for (size_t j=0; j<=degree-i; ++j) {
-                for (size_t k=0; k<=degree-i-j; ++k) {
+    gmp_fprintf(fp,"%i ",data.SH_degree);
+    const size_t T_degree = data.coeff.size()-1;
+    gmp_fprintf(fp,"%i ",T_degree);
+    for (size_t runningDegree=0; runningDegree<=T_degree; ++runningDegree) {
+        for (size_t i=0; i<=T_degree; ++i) {
+            for (size_t j=0; j<=T_degree-i; ++j) {
+                for (size_t k=0; k<=T_degree-i-j; ++k) {
                     if (i+j+k == runningDegree) {
                         gmp_fprintf(fp,"%+9.6f ",data.coeff[i][j][k]);
                     }

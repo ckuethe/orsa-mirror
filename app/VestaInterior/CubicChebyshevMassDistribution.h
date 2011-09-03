@@ -39,8 +39,11 @@ public:
         // basic CCMD data + some auxil data useful to sort solutions
     public:
         double minDensity, maxDensity, deltaDensity;
+        double penalty;
         double densityScale;
         double R0;
+        size_t SH_degree;
+        // size_T T_degree;
         CubicChebyshevMassDistribution::CoefficientType coeff;
     };
 public:
