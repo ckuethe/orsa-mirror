@@ -115,15 +115,40 @@ double E1(void * xp) {
     
     // x->randomPointsInShape->updateMassDistribution(massDistribution);
 
+    /* osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
+       orsa::Cache<double> minDensity, maxDensity;
+       for (size_t k=0; k<x->rv.size(); ++k) {
+       const double density = massDistribution->density(x->rv[k]);
+       stat->insert(density);
+       minDensity.setIfSmaller(density);
+       maxDensity.setIfLarger(density);
+       }
+    */
+    
     osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
     orsa::Cache<double> minDensity, maxDensity;
+    std::vector<double> dv;
+    dv.resize(x->rv.size());
     for (size_t k=0; k<x->rv.size(); ++k) {
-        const double density = massDistribution->density(x->rv[k]);
-        stat->insert(density);
-        minDensity.setIfSmaller(density);
-        maxDensity.setIfLarger(density);
+        dv[k] = massDistribution->density(x->rv[k]);
+        stat->insert(dv[k]);
+        minDensity.setIfSmaller(dv[k]);
+        maxDensity.setIfLarger(dv[k]);
     }
-
+    double penalty = 0.0;
+    for (size_t k1=0; k1<x->rv.size(); ++k1) {
+        for (size_t k2=0; k2<k1; ++k2) {
+#warning assuming all middle points are inside the body; slightly more complicated algorithm needed with stongly concave bodies
+            const orsa::Vector rm = 0.5*(x->rv[k1]+x->rv[k2]);
+            const double dm = massDistribution->density(rm);
+            const double d12 = std::min(dv[k1],dv[k2]);
+            if (dm<d12) {
+                penalty += (d12-dm)/d12;
+            }
+        }
+    }
+    penalty /= 0.5*x->rv.size()*(x->rv.size()-1);
+    
     /* orsa::Vector v;
        double density;
        osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
@@ -138,10 +163,11 @@ double E1(void * xp) {
     
 #warning find a better way to compute average density? (based on simplexIntegral and not on randomPointsInShape)
     
-    ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]",
+    ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]   penalty: %g",
                orsa::FromUnits(orsa::FromUnits(stat->min(),orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
                orsa::FromUnits(orsa::FromUnits(stat->max(),orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
-               orsa::FromUnits(orsa::FromUnits(stat->average(),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+               orsa::FromUnits(orsa::FromUnits(stat->average(),orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+               penalty);
     
     /* 
        {
@@ -160,8 +186,12 @@ double E1(void * xp) {
        fclose(fp);
        }
     */
-
-    if (x->bulkDensity*stat->min() >= x->minimumDensity) {
+    
+#warning introduce threshold penalty?
+    
+    if ( (stat->min() >= x->minimumDensity) &&
+         (penalty <= 0.05) ) {
+#warning penalty threshold should be a parameter
         // another quick output...
 #warning pass filename as parameter...
         CubicChebyshevMassDistributionFile::CCMDF_data data;
@@ -189,11 +219,29 @@ double E1(void * xp) {
     // maximum amplitude!
     // return minDensity-maxDensity;
     
+    /* if (minDensity < x->minimumDensity) {
+       return 1.0;
+       } else {
+       return 0.0;
+       }
+    */
+
+    // most flat
     if (minDensity < x->minimumDensity) {
-        return 1.0;
+        return (maxDensity-minDensity)+100*penalty+100*(x->minimumDensity-minDensity);
     } else {
-        return 0.0;
+        return (maxDensity-minDensity)+100*penalty;
     }
+    
+    // most peaks
+    /* if (minDensity < x->minimumDensity) {
+       return (minDensity-maxDensity)+100*penalty+100*(x->minimumDensity-minDensity);
+       } else {
+       return (minDensity-maxDensity)+100*penalty;
+       }
+    */
+    
+    // return penalty;
 }
 
 double M1(void * xp, void * yp) {
