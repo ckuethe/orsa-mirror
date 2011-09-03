@@ -168,7 +168,7 @@ double E1(void * xp) {
     // return std::max(0.0,-minDensity);
     // return std::max(0.0,-minDensity)*(maxDensity-minDensity);
     // return -minDensity*(maxDensity-minDensity);
-    return maxDensity-minDensity;
+    return maxDensity-minDensity; /**/
     // return -minDensity*(maxDensity-minDensity);
     // return minDensity*(maxDensity-minDensity);
     
