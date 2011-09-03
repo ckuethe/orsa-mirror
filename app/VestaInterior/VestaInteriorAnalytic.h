@@ -47,6 +47,7 @@ public:
     orsa::Cache<double> bulkDensity;
     // osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape;
     std::vector<orsa::Vector> rv;
+    orsa::Cache<size_t> SH_degree;
     orsa::Cache<size_t> T_degree;
     orsa::Cache<size_t> T_size;
     gsl_vector * cT0;
@@ -54,6 +55,7 @@ public:
     orsa::Cache<size_t> uK_size;
     std::vector<double> factor;
     orsa::Cache<double> minimumDensity;
+    orsa::Cache<double> penaltyThreshold;
 };
 
 
@@ -65,6 +67,7 @@ void SIMAN_copy (void * source, void * dest) {
     d->bulkDensity         = s->bulkDensity;
     // d->randomPointsInShape = s->randomPointsInShape;
     d->rv                  = s->rv;
+    d->SH_degree           = s->SH_degree;
     d->T_degree            = s->T_degree;
     d->T_size              = s->T_size;
     d->cT0                 = s->cT0;
@@ -72,6 +75,7 @@ void SIMAN_copy (void * source, void * dest) {
     d->uK_size             = s->uK_size;
     d->factor              = s->factor;
     d->minimumDensity      = s->minimumDensity;
+    d->penaltyThreshold    = s->penaltyThreshold;
 }
 
 void * SIMAN_copy_construct (void * xp) {
@@ -143,11 +147,12 @@ double E1(void * xp) {
             const double dm = massDistribution->density(rm);
             const double d12 = std::min(dv[k1],dv[k2]);
             if (dm<d12) {
-                penalty += (d12-dm)/d12;
+                // penalty += (d12-dm)/d12;
+                penalty = std::max(penalty,(d12-dm)/d12);
             }
         }
     }
-    penalty /= 0.5*x->rv.size()*(x->rv.size()-1);
+    // penalty /= 0.5*x->rv.size()*(x->rv.size()-1);
     
     /* orsa::Vector v;
        double density;
@@ -187,19 +192,18 @@ double E1(void * xp) {
        }
     */
     
-#warning introduce threshold penalty?
-    
     if ( (stat->min() >= x->minimumDensity) &&
-         (penalty <= 0.05) ) {
-#warning penalty threshold should be a parameter
+         (penalty <= x->penaltyThreshold) ) {
         // another quick output...
 #warning pass filename as parameter...
         CubicChebyshevMassDistributionFile::CCMDF_data data;
         data.minDensity = stat->min();
         data.maxDensity = stat->max();
         data.deltaDensity = (stat->max()-stat->min());
+        data.penalty = penalty;
         data.densityScale = x->bulkDensity;
         data.R0 = x->R0_plate;
+        data.SH_degree = x->SH_degree;
         data.coeff = coeff;
         CubicChebyshevMassDistributionFile::append(data,"CCMDF.out");
     }
@@ -225,21 +229,23 @@ double E1(void * xp) {
        return 0.0;
        }
     */
-
+    
+    /* ORSA_DEBUG("Mm: %g  p: %g  mm: %g",
+       (maxDensity-minDensity),
+       penalty,
+       (x->minimumDensity-minDensity));
+    */
+    
+#warning choose one return value, should be a parameter!
+    
     // most flat
-    if (minDensity < x->minimumDensity) {
-        return (maxDensity-minDensity)+100*penalty+100*(x->minimumDensity-minDensity);
-    } else {
-        return (maxDensity-minDensity)+100*penalty;
-    }
+    // return (maxDensity-minDensity)+1000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity));
     
     // most peaks
-    /* if (minDensity < x->minimumDensity) {
-       return (minDensity-maxDensity)+100*penalty+100*(x->minimumDensity-minDensity);
-       } else {
-       return (minDensity-maxDensity)+100*penalty;
-       }
-    */
+    // return (minDensity-maxDensity)+1000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity));
+    
+    // generic
+    return 1000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity));
     
     // return penalty;
 }

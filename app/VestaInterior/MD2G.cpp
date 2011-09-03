@@ -347,8 +347,10 @@ int main(int argc, char **argv) {
         data.minDensity = 0.0;
         data.maxDensity = 0.0;
         data.deltaDensity = 0.0;
+        data.penalty = 0.0;
         data.densityScale = bulkDensity;
         data.R0 = plateModelR0;
+        data.SH_degree = gravityData->degree;
         data.coeff = densityCCC;
         CubicChebyshevMassDistributionFile::write(data,"MD2G.CCMDF.out");
     }

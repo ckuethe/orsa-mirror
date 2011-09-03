@@ -720,6 +720,7 @@ int main(int argc, char **argv) {
                 x0.bulkDensity = bulkDensity;
                 // x0.randomPointsInShape = randomPointsInShape;
                 x0.rv = rv;
+                x0.SH_degree = SH_degree;
                 x0.T_degree = T_degree;
                 x0.T_size = T_size;
                 x0.cT0 = cT0;
@@ -727,6 +728,7 @@ int main(int argc, char **argv) {
                 x0.uK_size = N-M;
                 x0.factor.resize(x0.uK_size);
                 x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(2.00,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+                x0.penaltyThreshold = 0.05;
                 for (size_t b=0; b<x0.uK_size; ++b) {
                     x0.factor[b] = 0.0;
                 }
