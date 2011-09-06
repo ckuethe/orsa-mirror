@@ -12,6 +12,8 @@
 #include <orsa/statistic.h>
 #include <orsa/util.h>
 
+#include <orsaSolarSystem/attitude.h>
+
 using namespace orsa;
 
 class CGDIntegrator : public orsa::IntegratorRadau {

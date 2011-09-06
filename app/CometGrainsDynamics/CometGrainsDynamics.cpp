@@ -8,6 +8,13 @@ int main (int argc, char **argv) {
     const double nucleus_ay = orsa::FromUnits(2.5,orsa::Unit::KM);
     const double nucleus_az = orsa::FromUnits(2.0,orsa::Unit::KM);
     const double comet_density = orsa::FromUnits(orsa::FromUnits(1.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+    const double rotation_period = orsa::FromUnits(10.0,orsa::Unit::HOUR);
+    const double pole_ecliptic_longitude =  0.0*orsa::degToRad();
+    const double pole_ecliptic_latitude  = 90.0*orsa::degToRad();
+    const int max_time_days = 100;
+    
+    const orsa::Time t0 = orsa::Time(0);
+    const orsa::Time maxTime(max_time_days,0,0,0,0);
     
     orsa::Debug::instance()->initTimer();
     
@@ -41,11 +48,18 @@ int main (int argc, char **argv) {
                                                                orsa::Matrix::identity(),
                                                                pm.get());
         ibps.translational = new orsa::ConstantTranslationalBodyProperty(orsa::Vector(r_comet,0,0));
+        ibps.rotational = new orsaSolarSystem::ConstantZRotationEcliptic_RotationalBodyProperty(t0,
+                                                                                                0.0,
+                                                                                                orsa::twopi()/rotation_period,
+                                                                                                pole_ecliptic_longitude,
+                                                                                                pole_ecliptic_latitude);
         nucleus->setInitialConditions(ibps);
     }
-
+    
     while (1) {
         // loop on grains
+        
+        
         
         osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
         
