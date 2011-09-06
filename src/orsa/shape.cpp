@@ -820,9 +820,9 @@ bool EllipsoidShape::isInside(const Vector & v) const {
        (v.getZ()*v.getZ())/_c2 ) <= 1);
     */
     //
-    return (((v.getX()*v.getX())*_am2 +
-             (v.getY()*v.getY())*_bm2 +
-             (v.getZ()*v.getZ())*_cm2 ) <= 1);
+    return ((orsa::square(v.getX())*_am2 +
+             orsa::square(v.getY())*_bm2 +
+             orsa::square(v.getZ())*_cm2 ) <= 1);
 }
 
 bool EllipsoidShape::_updateCache() const {
