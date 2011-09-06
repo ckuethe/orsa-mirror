@@ -359,12 +359,40 @@ namespace orsa {
   
     class ConstantTranslationalBodyProperty : public TranslationalBodyProperty {
     public:
+        ConstantTranslationalBodyProperty(const orsa::Vector & r) :
+            TranslationalBodyProperty(),
+            _position(r) { }
+    public:
         BodyPropertyType type() const { return BP_CONSTANT; }
     public:
         bool update(const orsa::Time &) { return true; }
     public:
         void lock() { }
         void unlock() { }
+    public:
+        orsa::Vector position() const { 
+            return _position;
+        }
+    public:
+        orsa::Vector velocity() const {
+            return orsa::Vector(0,0,0);
+        }
+   public:
+        bool setPosition(const orsa::Vector &) { 
+            ORSA_DEBUG("cannot change position");
+            return false;
+        }
+    public: 
+        bool setVelocity(const orsa::Vector &) {
+            ORSA_DEBUG("cannot change velocity");
+            return false;
+        }
+    public:
+        TranslationalBodyProperty * clone() const {
+            return new ConstantTranslationalBodyProperty(*this);
+        }
+    protected:
+        const orsa::Vector _position;
     };
     
     class PrecomputedTranslationalBodyProperty : public TranslationalBodyProperty {
