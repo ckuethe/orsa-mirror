@@ -28,14 +28,22 @@ public:
         nucleus(nB),
         r_cut(cut_distance) {
         _accuracy = 1.0e-3;
-        collision = false;
+        // collision = false;
+        outcome = ORBITING;
     }
+public:
+    enum OUTCOME_TYPE {
+        ESCAPE=1,
+        IMPACT=2,
+        ORBITING=3
+    };
 protected:
     const orsa::Body * grain;
     const orsa::Body * nucleus;
     const double r_cut;
 public:
-    mutable bool collision;
+    // mutable bool collision;
+    mutable OUTCOME_TYPE outcome;
     mutable orsa::Cache<double> max_distance;
 public:
     void singleStepDone(orsa::BodyGroup  * bg,
@@ -65,22 +73,16 @@ public:
                     nucleus, 
                     t);
         if (grain_r_relative_local.length() > r_cut) {
-            ORSA_DEBUG("escaped, aborting integration");
+            // ORSA_DEBUG("escaped, aborting integration");
+            outcome = ESCAPE;
+            // ORSA_DEBUG("outcome: %i",outcome);
             orsa::Integrator::abort();
-        }
-        if (nucleusIBPS.inertial->originalShape()->isInside(grain_r_relative_local)) {
-            
-            ORSA_DEBUG("collision, aborting integration");
-            
-            /* ORSA_DEBUG("dr: %+9.3f [km]   dv: %+9.3f [m/s]   t: %9.3f [day]",
-               orsa::FromUnits(grain_r_relative_local.length(),orsa::Unit::KM,-1),
-               grain_v_relative_local.length(),
-               orsa::FromUnits(t.get_d(),orsa::Unit::DAY,-1));
-            */
-            
+        } else if (nucleusIBPS.inertial->originalShape()->isInside(grain_r_relative_local)) {
+            // ORSA_DEBUG("collision, aborting integration");
 #warning note: the collision is not resolved exactly (i.e. rewind time for exact contact of body surface)
-            
-            collision = true;
+            // collision = true;
+            outcome = IMPACT;
+            // ORSA_DEBUG("outcome: %i",outcome);
             orsa::Integrator::abort();
         }
     }
