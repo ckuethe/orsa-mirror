@@ -4,11 +4,11 @@ int main (int argc, char **argv) {
     
     // input
     const double r_comet = orsa::FromUnits(1.0,orsa::Unit::AU);
-    const double nucleus_ax = orsa::FromUnits(3.0,orsa::Unit::KM);
-    const double nucleus_ay = orsa::FromUnits(2.5,orsa::Unit::KM);
+    const double nucleus_ax = orsa::FromUnits(2.0,orsa::Unit::KM);
+    const double nucleus_ay = orsa::FromUnits(2.0,orsa::Unit::KM);
     const double nucleus_az = orsa::FromUnits(2.0,orsa::Unit::KM);
     const double comet_density = orsa::FromUnits(orsa::FromUnits(1.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-    const double rotation_period = orsa::FromUnits(15.0,orsa::Unit::HOUR);
+    const double rotation_period = orsa::FromUnits(5.0,orsa::Unit::HOUR);
     const double pole_ecliptic_longitude =  0.0*orsa::degToRad();
     const double pole_ecliptic_latitude  = 90.0*orsa::degToRad();
     const double min_escape_velocity_factor = 0.8;
@@ -19,7 +19,7 @@ int main (int argc, char **argv) {
     const double max_vertical_angle = 60.0*orsa::degToRad();
     const double min_beta = 1.0e-6;
     const double max_beta = 1.0e-2;
-    const int max_time_days = 100;
+    const int max_time_days = 10;
     
     const orsa::Time t0 = orsa::Time(0);
     const orsa::Time max_time(max_time_days,0,0,0,0);
@@ -37,7 +37,9 @@ int main (int argc, char **argv) {
         IBPS ibps;
         ibps.time = t0;
         ibps.inertial = new orsa::PointLikeConstantInertialBodyProperty(orsaSolarSystem::Data::MSun());
-        ibps.translational = new orsa::ConstantTranslationalBodyProperty(orsa::Vector(0,0,0));
+        ibps.translational = new orsa::DynamicTranslationalBodyProperty;
+        ibps.translational->setPosition(orsa::Vector(0,0,0));
+        ibps.translational->setVelocity(orsa::Vector(0,0,0));
         sun->setInitialConditions(ibps);
     }
     
@@ -74,76 +76,76 @@ int main (int argc, char **argv) {
                                                                                                 pole_ecliptic_latitude);
         nucleus->setInitialConditions(ibps);
     }
-    
+
+    size_t iter=0;
     while (1) {
         
         // loop on grains
         
+        // position of grain on the nucleus surface
+        const double lon = orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+        const double lat = min_latitude  + (max_latitude-min_latitude)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+        
+        double s_lon, c_lon;
+        sincos(lon,&s_lon,&c_lon);
+        double s_lat, c_lat;
+        sincos(lat,&s_lat,&c_lat);
+        const orsa::Vector u_ray(c_lat*c_lon,
+                                 c_lat*s_lon,
+                                 s_lat);
+        orsa::Vector intersectionPoint;
+        orsa::Vector normal;
+        nucleus_shape->rayIntersection(intersectionPoint,
+                                       normal,
+                                       orsa::Vector(0,0,0),
+                                       u_ray,
+                                       false);
+        const orsa::Vector r0 = intersectionPoint;
+        const orsa::Vector n0 = normal;
+        
+        const orsa::Vector u_rot =
+            orsa::externalProduct(orsa::Vector(0,0,1),n0).normalized();
+        const orsa::Vector u_pol =
+            orsa::externalProduct(n0,u_rot).normalized();
+        
+        // horizontal direction of ejection of grain, measured from the direction of rotation
+        const double phi = orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+        double s_phi, c_phi;
+        sincos(phi,&s_phi,&c_phi);
+        // vertical angle
+        const double theta = min_vertical_angle + (max_vertical_angle-min_vertical_angle)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+        double s_theta, c_theta;
+        sincos(theta,&s_theta,&c_theta);
+        
+        // not including rotation yet
+#warning escape velocity approximate for points within the bounding sphere of the body
+        const double escape_velocity = sqrt(2*orsa::Unit::G()*nucleus_mass/r0.length());
+        const double ejection_velocity =
+            escape_velocity*(min_escape_velocity_factor + (max_escape_velocity_factor-min_escape_velocity_factor)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
+        
+        // set velocity vector, including effect of nucleus rotation
+        const orsa::Vector v0_rotational_component =
+            orsa::externalProduct(orsa::Vector(0,0,omega),r0);
+        const orsa::Vector v0 =
+            n0*ejection_velocity*c_theta +
+            u_rot*ejection_velocity*s_theta*c_phi +
+            u_pol*ejection_velocity*s_theta*s_phi +
+            v0_rotational_component;
+        
+        /* ORSA_DEBUG("lat: %g [deg]",lat*orsa::radToDeg());
+           orsa::print(intersectionPoint);
+           orsa::print(normal);
+           orsa::print(u_rot);
+           orsa::print(u_pol);
+           ORSA_DEBUG("ejection velocity: %g [m/s] + rotational component: %g [m/s] = total velocity = %g [m/s]   [escape vel: %g [m/s]",
+           ejection_velocity,v0_rotational_component.length(),v0.length(),escape_velocity);
+           orsa::print(v0_rotational_component);
+           orsa::print(v0);
+        */
+        
+        
         osg::ref_ptr<orsa::Body> grain = new orsa::Body;
         {
-            
-            
-            // position of grain on the nucleus surface
-            const double lat = min_latitude  + (max_latitude-min_latitude)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
-            const double lon = orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
-            
-            double s_lat, c_lat;
-            sincos(lat,&s_lat,&c_lat);
-            double s_lon, c_lon;
-            sincos(lon,&s_lon,&c_lon);
-            const orsa::Vector u_ray(c_lat*c_lon,
-                                     c_lat*s_lon,
-                                     s_lat);
-            orsa::Vector intersectionPoint;
-            orsa::Vector normal;
-            nucleus_shape->rayIntersection(intersectionPoint,
-                                           normal,
-                                           orsa::Vector(0,0,0),
-                                           u_ray,
-                                           false);
-            const orsa::Vector r0 = intersectionPoint;
-            const orsa::Vector n0 = normal;
-            
-            const orsa::Vector u_rot =
-                orsa::externalProduct(orsa::Vector(0,0,1),n0).normalized();
-            const orsa::Vector u_pol =
-                orsa::externalProduct(n0,u_rot).normalized();
-
-            // horizontal direction of ejection of grain, measured from the direction of rotation
-            const double phi = orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
-            double s_phi, c_phi;
-            sincos(phi,&s_phi,&c_phi);
-            // vertical angle
-            const double theta = min_vertical_angle + (max_vertical_angle-min_vertical_angle)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
-            double s_theta, c_theta;
-            sincos(theta,&s_theta,&c_theta);
-            
-            // not including rotation yet
-#warning escape velocity approximate for points within the bounding sphere of the body
-            const double escape_velocity = sqrt(2*orsa::Unit::G()*nucleus_mass/r0.length());
-            const double ejection_velocity =
-                escape_velocity*(min_escape_velocity_factor + (max_escape_velocity_factor-min_escape_velocity_factor)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
-            
-            // set velocity vector, including effect of nucleus rotation
-            const orsa::Vector v0_rotational_component =
-                orsa::externalProduct(orsa::Vector(0,0,omega),r0);
-            const orsa::Vector v0 =
-                n0*ejection_velocity*c_theta +
-                u_rot*ejection_velocity*s_theta*c_phi +
-                u_pol*ejection_velocity*s_theta*s_phi +
-                v0_rotational_component;
-            
-            /* ORSA_DEBUG("lat: %g [deg]",lat*orsa::radToDeg());
-               orsa::print(intersectionPoint);
-               orsa::print(normal);
-               orsa::print(u_rot);
-               orsa::print(u_pol);
-               ORSA_DEBUG("ejection velocity: %g [m/s] + rotational component: %g [m/s] = total velocity = %g [m/s]   [escape vel: %g [m/s]",
-               ejection_velocity,v0_rotational_component.length(),v0.length(),escape_velocity);
-               orsa::print(v0_rotational_component);
-               orsa::print(v0);
-            */
-            
             grain->setName("grain");
             IBPS ibps;
             ibps.time = t0;
@@ -151,7 +153,7 @@ int main (int argc, char **argv) {
             ibps.translational = new orsa::DynamicTranslationalBodyProperty;
             ibps.translational->setPosition(r0+nucleus_r0);
             ibps.translational->setVelocity(v0+nucleus_v0);
-            grain->beta = min_beta + (max_beta-min_beta)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();;
+            grain->beta = exp(log(min_beta) + (log(max_beta)-log(min_beta))*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
             grain->betaSun = sun.get();
             grain->setInitialConditions(ibps);
         }
@@ -168,14 +170,74 @@ int main (int argc, char **argv) {
                               max_time,
                               orsa::Time(0,0,5,0,0));
         
-        orsa::Time common_start, common_stop;
-        const bool goodCommonInterval = bg->getCommonInterval(common_start,common_stop,false);
+        orsa::Time common_start_time, common_stop_time;
+        const bool goodCommonInterval = bg->getCommonInterval(common_start_time,common_stop_time,false);
         if (!goodCommonInterval) {
             ORSA_DEBUG("problems...");
         } else {
-            print(common_stop);
+
+            double final_distance;
+            double lon_collision = 0.0;
+            double lat_collision = 0.0;
+            {
+                const orsa::Time t = common_stop_time;
+                orsa::Vector r,v;
+                bg->getInterpolatedPosVel(r,
+                                          v,
+                                          nucleus,
+                                          t);
+                const orsa::Vector nucleus_r_global = r;
+                const orsa::Vector nucleus_v_global = v;
+                bg->getInterpolatedPosVel(r,
+                                          v,
+                                          grain,
+                                          t);
+                const orsa::Vector grain_r_relative_global = r - nucleus_r_global;
+                const orsa::Vector grain_v_relative_global = v - nucleus_v_global;
+                const orsa::Matrix g2l = orsa::globalToLocal(nucleus,bg,t);
+                const orsa::Vector grain_r_relative_local = g2l*grain_r_relative_global;
+                const orsa::Vector grain_v_relative_local = g2l*grain_v_relative_global;
+                
+                // note: final_distance < body "radius" if collision happened (the collision is not resolved exactly at the edge)
+                final_distance = grain_r_relative_local.length();
+                
+                if (integrator->collision) {
+                    lon_collision = atan2(grain_r_relative_local.getY(),grain_r_relative_local.getX());
+                    if (lon_collision < 0.0) lon_collision += orsa::twopi();
+                    lat_collision = asin(grain_r_relative_local.getZ()/grain_r_relative_local.length());
+                }
+            }
+            
+            FILE * fp = fopen("CGD.out","a");
+            gmp_fprintf(fp,"%g %g %g %g %.3e %.3e %g %g %g %g %7.3f %+7.3f %.3f %.3f %.3f %.3f %.3e %7.3f %.3e %.3e %i %7.3f %+7.3f\n",
+                        orsa::FromUnits(r_comet,orsa::Unit::AU,-1),
+                        orsa::FromUnits(nucleus_ax,orsa::Unit::KM,-1),
+                        orsa::FromUnits(nucleus_ay,orsa::Unit::KM,-1),
+                        orsa::FromUnits(nucleus_az,orsa::Unit::KM,-1),
+                        orsa::FromUnits(nucleus_mass,orsa::Unit::KG,-1),
+                        orsa::FromUnits(Hill_radius,orsa::Unit::KM,-1),
+                        orsa::FromUnits(orsa::FromUnits(comet_density,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+                        orsa::FromUnits(rotation_period,orsa::Unit::HOUR,-1),
+                        pole_ecliptic_longitude*orsa::radToDeg(),
+                        pole_ecliptic_latitude*orsa::radToDeg(),
+                        lon*orsa::radToDeg(),
+                        lat*orsa::radToDeg(),
+                        orsa::FromUnits(orsa::FromUnits(escape_velocity,orsa::Unit::METER,-1),orsa::Unit::SECOND),
+                        orsa::FromUnits(orsa::FromUnits(ejection_velocity,orsa::Unit::METER,-1),orsa::Unit::SECOND),
+                        orsa::FromUnits(orsa::FromUnits(v0_rotational_component.length(),orsa::Unit::METER,-1),orsa::Unit::SECOND),
+                        orsa::FromUnits(orsa::FromUnits(v0.length(),orsa::Unit::METER,-1),orsa::Unit::SECOND),
+                        (*grain->beta),
+                        orsa::FromUnits(common_stop_time.get_d(),orsa::Unit::DAY,-1),
+                        orsa::FromUnits((*integrator->max_distance),orsa::Unit::KM,-1),
+                        orsa::FromUnits(final_distance,orsa::Unit::KM,-1),
+                        integrator->collision,
+                        lon_collision*orsa::radToDeg(),
+                        lat_collision*orsa::radToDeg());
+            fclose (fp);
             
         }
+        
+        ++iter;
     }
     
     return 0;

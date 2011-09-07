@@ -26,10 +26,14 @@ public:
         grain(gB),
         nucleus(nB) {
         _accuracy = 1.0e-3;
+        collision = false;
     }
 protected:
     const orsa::Body * grain;
     const orsa::Body * nucleus;
+public:
+    mutable bool collision;
+    mutable orsa::Cache<double> max_distance;
 public:
     void singleStepDone(orsa::BodyGroup  * bg,
                         const orsa::Time & call_t,
@@ -52,12 +56,14 @@ public:
         const orsa::Matrix g2l = orsa::globalToLocal(nucleus,bg,t);
         const orsa::Vector grain_r_relative_local = g2l*grain_r_relative_global;
         const orsa::Vector grain_v_relative_local = g2l*grain_v_relative_global;
+        max_distance.setIfLarger(grain_r_relative_local.length());
         orsa::IBPS nucleusIBPS;
         bg->getIBPS(nucleusIBPS,
                     nucleus, 
                     t);
         if (nucleusIBPS.inertial->originalShape()->isInside(grain_r_relative_local)) {
-            ORSA_DEBUG("collision, aborting integration");
+            
+            // ORSA_DEBUG("collision, aborting integration");
             
             /* ORSA_DEBUG("dr: %+9.3f [km]   dv: %+9.3f [m/s]   t: %9.3f [day]",
                orsa::FromUnits(grain_r_relative_local.length(),orsa::Unit::KM,-1),
@@ -65,6 +71,9 @@ public:
                orsa::FromUnits(t.get_d(),orsa::Unit::DAY,-1));
             */
             
+#warning note: the collision is not resolved exactly (i.e. rewind time for exact contact of body surface)
+            
+            collision = true;
             orsa::Integrator::abort();
         }
     }
