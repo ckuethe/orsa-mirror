@@ -25,7 +25,7 @@ public:
         orsa::IntegratorRadau(),
         grain(gB),
         nucleus(nB) {
-        _accuracy = 1.0e-6;
+        _accuracy = 1.0e-3;
     }
 protected:
     const orsa::Body * grain;
@@ -36,26 +36,37 @@ public:
                         const orsa::Time & call_dt,
                         orsa::Time       & ) const {
         const orsa::Time t = call_t + call_dt;
-        orsa::Vector r;
-        bg->getInterpolatedPosition(r,
-                                    nucleus,
-                                    t);
+        orsa::Vector r,v;
+        bg->getInterpolatedPosVel(r,
+                                  v,
+                                  nucleus,
+                                  t);
         const orsa::Vector nucleus_r_global = r;
-        bg->getInterpolatedPosition(r,
-                                    grain,
-                                    t);
+        const orsa::Vector nucleus_v_global = v;
+        bg->getInterpolatedPosVel(r,
+                                  v,
+                                  grain,
+                                  t);
         const orsa::Vector grain_r_relative_global = r - nucleus_r_global;
+        const orsa::Vector grain_v_relative_global = v - nucleus_v_global;
         const orsa::Matrix g2l = orsa::globalToLocal(nucleus,bg,t);
         const orsa::Vector grain_r_relative_local = g2l*grain_r_relative_global;
+        const orsa::Vector grain_v_relative_local = g2l*grain_v_relative_global;
         orsa::IBPS nucleusIBPS;
         bg->getIBPS(nucleusIBPS,
                     nucleus, 
                     t);
         if (nucleusIBPS.inertial->originalShape()->isInside(grain_r_relative_local)) {
             ORSA_DEBUG("collision, aborting integration");
+            
+            /* ORSA_DEBUG("dr: %+9.3f [km]   dv: %+9.3f [m/s]   t: %9.3f [day]",
+               orsa::FromUnits(grain_r_relative_local.length(),orsa::Unit::KM,-1),
+               grain_v_relative_local.length(),
+               orsa::FromUnits(t.get_d(),orsa::Unit::DAY,-1));
+            */
+            
             orsa::Integrator::abort();
         }
-        
     }
 };
 
