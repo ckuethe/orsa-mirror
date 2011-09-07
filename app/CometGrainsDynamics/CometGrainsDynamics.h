@@ -21,16 +21,19 @@ public:
     // gB: grain
     // nB: comet nucleus
     CGDIntegrator(const orsa::Body * gB,
-                  const orsa::Body * nB) :
+                  const orsa::Body * nB,
+                  const double & cut_distance) :
         orsa::IntegratorRadau(),
         grain(gB),
-        nucleus(nB) {
+        nucleus(nB),
+        r_cut(cut_distance) {
         _accuracy = 1.0e-3;
         collision = false;
     }
 protected:
     const orsa::Body * grain;
     const orsa::Body * nucleus;
+    const double r_cut;
 public:
     mutable bool collision;
     mutable orsa::Cache<double> max_distance;
@@ -61,9 +64,13 @@ public:
         bg->getIBPS(nucleusIBPS,
                     nucleus, 
                     t);
+        if (grain_r_relative_local.length() > r_cut) {
+            ORSA_DEBUG("escaped, aborting integration");
+            orsa::Integrator::abort();
+        }
         if (nucleusIBPS.inertial->originalShape()->isInside(grain_r_relative_local)) {
             
-            // ORSA_DEBUG("collision, aborting integration");
+            ORSA_DEBUG("collision, aborting integration");
             
             /* ORSA_DEBUG("dr: %+9.3f [km]   dv: %+9.3f [m/s]   t: %9.3f [day]",
                orsa::FromUnits(grain_r_relative_local.length(),orsa::Unit::KM,-1),

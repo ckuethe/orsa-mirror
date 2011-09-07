@@ -4,22 +4,23 @@ int main (int argc, char **argv) {
     
     // input
     const double r_comet = orsa::FromUnits(1.0,orsa::Unit::AU);
-    const double nucleus_ax = orsa::FromUnits(2.0,orsa::Unit::KM);
-    const double nucleus_ay = orsa::FromUnits(2.0,orsa::Unit::KM);
-    const double nucleus_az = orsa::FromUnits(2.0,orsa::Unit::KM);
+    const double nucleus_ax = orsa::FromUnits(5.0,orsa::Unit::KM);
+    const double nucleus_ay = orsa::FromUnits(3.0,orsa::Unit::KM);
+    const double nucleus_az = orsa::FromUnits(3.0,orsa::Unit::KM);
+    const size_t gravity_degree = 4;
     const double comet_density = orsa::FromUnits(orsa::FromUnits(1.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-    const double rotation_period = orsa::FromUnits(5.0,orsa::Unit::HOUR);
+    const double rotation_period = orsa::FromUnits(3.0,orsa::Unit::HOUR);
     const double pole_ecliptic_longitude =  0.0*orsa::degToRad();
     const double pole_ecliptic_latitude  = 90.0*orsa::degToRad();
-    const double min_escape_velocity_factor = 0.8;
-    const double max_escape_velocity_factor = 1.2;
+    const double min_escape_velocity_factor = 0.7;
+    const double max_escape_velocity_factor = 1.3;
     const double min_latitude = -90.0*orsa::degToRad();
     const double max_latitude = +90.0*orsa::degToRad();
     const double min_vertical_angle =  0.0*orsa::degToRad();
     const double max_vertical_angle = 60.0*orsa::degToRad();
     const double min_beta = 1.0e-6;
     const double max_beta = 1.0e-2;
-    const int max_time_days = 10;
+    const int max_time_days = 100;
     
     const orsa::Time t0 = orsa::Time(0);
     const orsa::Time max_time(max_time_days,0,0,0,0);
@@ -54,7 +55,7 @@ int main (int argc, char **argv) {
         ibps.time = t0;
         // const double volume = 4.0*orsa::pi()*nucleus_ax*nucleus_ay*nucleus_az/3.0;
         // const double nucleus_mass = comet_density*volume;
-        osg::ref_ptr<orsa::PaulMoment> pm = new orsa::PaulMoment(2);
+        osg::ref_ptr<orsa::PaulMoment> pm = new orsa::PaulMoment(gravity_degree);
         orsa::EllipsoidExpansion(pm.get(),
                                  nucleus_ax,
                                  nucleus_ay,
@@ -164,7 +165,9 @@ int main (int argc, char **argv) {
         bg->addBody(nucleus);
         bg->addBody(grain);
         
-        osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),nucleus.get());
+        const double exo_radius = r_comet*sqrt(nucleus_mass/(grain->beta*orsaSolarSystem::Data::MSun()));
+        
+        osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),nucleus.get(),std::min(Hill_radius,exo_radius));
         integrator->integrate(bg.get(),
                               t0,
                               max_time,
@@ -207,9 +210,21 @@ int main (int argc, char **argv) {
                     lat_collision = asin(grain_r_relative_local.getZ()/grain_r_relative_local.length());
                 }
             }
+
+            // from beta to grain size
+            const double    L = orsa::FromUnits(orsa::FromUnits(orsa::FromUnits(3.839e26,orsa::Unit::KG),orsa::Unit::METER,2),orsa::Unit::SECOND,-3); //
+            const double    G = orsa::Unit::G();
+            const double MSun = orsaSolarSystem::Data::MSun();
+            const double    c = orsa::Unit::c();
+            const double  Qpr = 1.0;
+            //
+            const double    rho_grain = comet_density; // or different?
+#warning REFERENCE x FORMULA = ?
+            const double grain_radius = ((3*L)/(16*orsa::pi()*G*MSun*c) * (Qpr)/(grain->beta*rho_grain));
+            
             
             FILE * fp = fopen("CGD.out","a");
-            gmp_fprintf(fp,"%g %g %g %g %.3e %.3e %g %g %g %g %7.3f %+7.3f %.3f %.3f %.3f %.3f %.3e %7.3f %.3e %.3e %i %7.3f %+7.3f\n",
+            gmp_fprintf(fp,"%g %g %g %g %.3e %.3e %g %g %g %g %7.3f %+7.3f %7.3f %7.3f %.3f %.3f %.3f %.3f %.3e %.3e %7.3f %.3e %.3e %i %7.3f %+7.3f\n",
                         orsa::FromUnits(r_comet,orsa::Unit::AU,-1),
                         orsa::FromUnits(nucleus_ax,orsa::Unit::KM,-1),
                         orsa::FromUnits(nucleus_ay,orsa::Unit::KM,-1),
@@ -222,11 +237,14 @@ int main (int argc, char **argv) {
                         pole_ecliptic_latitude*orsa::radToDeg(),
                         lon*orsa::radToDeg(),
                         lat*orsa::radToDeg(),
+                        phi*orsa::radToDeg(),
+                        theta*orsa::radToDeg(),
                         orsa::FromUnits(orsa::FromUnits(escape_velocity,orsa::Unit::METER,-1),orsa::Unit::SECOND),
                         orsa::FromUnits(orsa::FromUnits(ejection_velocity,orsa::Unit::METER,-1),orsa::Unit::SECOND),
                         orsa::FromUnits(orsa::FromUnits(v0_rotational_component.length(),orsa::Unit::METER,-1),orsa::Unit::SECOND),
                         orsa::FromUnits(orsa::FromUnits(v0.length(),orsa::Unit::METER,-1),orsa::Unit::SECOND),
                         (*grain->beta),
+                        orsa::FromUnits(grain_radius,orsa::Unit::CM,-1),
                         orsa::FromUnits(common_stop_time.get_d(),orsa::Unit::DAY,-1),
                         orsa::FromUnits((*integrator->max_distance),orsa::Unit::KM,-1),
                         orsa::FromUnits(final_distance,orsa::Unit::KM,-1),
