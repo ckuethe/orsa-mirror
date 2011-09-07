@@ -19,7 +19,7 @@ int main (int argc, char **argv) {
     const double min_vertical_angle =  0.0*orsa::degToRad();
     const double max_vertical_angle = 45.0*orsa::degToRad();
     const double min_beta = 1.0e-6;
-    const double max_beta = 1.0e-2;
+    const double max_beta = 1.0e-1;
     const int max_time_days = 100;
     
     const orsa::Time t0 = orsa::Time(0);
@@ -180,8 +180,8 @@ int main (int argc, char **argv) {
         } else {
 
             double final_distance;
-            double lon_impact = 0.0;
-            double lat_impact = 0.0;
+            double lon_impact = -999*orsa::degToRad();
+            double lat_impact = -999*orsa::degToRad();
             {
                 const orsa::Time t = common_stop_time;
                 orsa::Vector r,v;
@@ -219,11 +219,11 @@ int main (int argc, char **argv) {
             const double  Qpr = 1.0;
             //
             const double    rho_grain = comet_density; // or different?
-#warning REFERENCE x FORMULA = ?
-            const double grain_radius = ((3*L)/(16*orsa::pi()*G*MSun*c) * (Qpr)/(grain->beta*rho_grain));
+            // Burns, Lamy, Soter 1979, Eq. (19)
+            const double grain_radius = (3*L)/(16*orsa::pi()*G*MSun*c) * (Qpr)/(grain->beta*rho_grain);
             
             FILE * fp = fopen("CGD.out","a");
-            gmp_fprintf(fp,"%g %g %g %g %.3e %.3e %g %g %g %g %7.3f %+7.3f %7.3f %7.3f %.3f %.3f %.3f %.3f %.3e %.3e %7.3f %.3e %.3e %i %7.3f %+7.3f\n",
+            gmp_fprintf(fp,"%g %g %g %g %.3e %.3e %g %g %g %g %7.3f %+7.3f %7.3f %7.3f %.3f %.3f %.3f %.3f %.3e %.3e %7.3f %.3e %.3e %i %8.3f %+8.3f\n",
                         orsa::FromUnits(r_comet,orsa::Unit::AU,-1),
                         orsa::FromUnits(nucleus_ax,orsa::Unit::KM,-1),
                         orsa::FromUnits(nucleus_ay,orsa::Unit::KM,-1),
