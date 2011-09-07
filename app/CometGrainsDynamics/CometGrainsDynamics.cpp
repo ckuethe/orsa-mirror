@@ -166,8 +166,9 @@ int main (int argc, char **argv) {
         bg->addBody(grain);
         
         const double exo_radius = r_comet*sqrt(nucleus_mass/(grain->beta*orsaSolarSystem::Data::MSun()));
+        const double bound_radius = std::min(Hill_radius,exo_radius);
         
-        osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),nucleus.get(),std::min(Hill_radius,exo_radius));
+        osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),nucleus.get(),bound_radius);
         integrator->integrate(bg.get(),
                               t0,
                               max_time,
@@ -223,13 +224,15 @@ int main (int argc, char **argv) {
             const double grain_radius = (3*L)/(16*orsa::pi()*G*MSun*c) * (Qpr)/(grain->beta*rho_grain);
             
             FILE * fp = fopen("CGD.out","a");
-            gmp_fprintf(fp,"%g %g %g %g %.3e %.3e %g %g %g %g %7.3f %+7.3f %7.3f %7.3f %.3f %.3f %.3f %.3f %.3e %.3e %7.3f %.3e %.3e %i %8.3f %+8.3f\n",
+            gmp_fprintf(fp,"%g %g %g %g %.3e %.3e %.3e %.3e %g %g %g %g %7.3f %+7.3f %7.3f %7.3f %.3f %.3f %.3f %.3f %.3e %.3e %7.3f %.3e %.3e %i %8.3f %+8.3f\n",
                         orsa::FromUnits(r_comet,orsa::Unit::AU,-1),
                         orsa::FromUnits(nucleus_ax,orsa::Unit::KM,-1),
                         orsa::FromUnits(nucleus_ay,orsa::Unit::KM,-1),
                         orsa::FromUnits(nucleus_az,orsa::Unit::KM,-1),
                         orsa::FromUnits(nucleus_mass,orsa::Unit::KG,-1),
                         orsa::FromUnits(Hill_radius,orsa::Unit::KM,-1),
+                        orsa::FromUnits(exo_radius,orsa::Unit::KM,-1),
+                        orsa::FromUnits(bound_radius,orsa::Unit::KM,-1),
                         orsa::FromUnits(orsa::FromUnits(comet_density,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
                         orsa::FromUnits(rotation_period,orsa::Unit::HOUR,-1),
                         pole_ecliptic_longitude*orsa::radToDeg(),
