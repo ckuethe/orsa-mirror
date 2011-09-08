@@ -22,13 +22,21 @@ public:
     // nB: comet nucleus
     CGDIntegrator(const orsa::Body * gB,
                   const orsa::Body * nB,
-                  const double & bound_distance) :
+                  const double & bound_distance,
+                  const size_t & pow_10_max_distance) :
         orsa::IntegratorRadau(),
         grain(gB),
         nucleus(nB),
-        r_bound(bound_distance) {
+        r_bound(bound_distance),
+        crossing_size(1+pow_10_max_distance) {
         _accuracy = 1.0e-3;
         outcome = ORBITING;
+        crossing_distance.resize(crossing_size);
+        crossing_time.resize(crossing_size);
+        for (size_t k=0; k<crossing_size; ++k) {
+            crossing_distance[k] = orsa::FromUnits(exp10(k),orsa::Unit::KM);
+            crossing_time[k] = orsa::Time(0);
+        }
     }
 public:
     enum OUTCOME_TYPE {
@@ -43,6 +51,9 @@ protected:
 public:
     mutable OUTCOME_TYPE outcome;
     mutable orsa::Cache<double> max_distance;
+    const size_t crossing_size;
+    std::vector<double> crossing_distance;
+    mutable std::vector<orsa::Time> crossing_time;
 public:
     void singleStepDone(orsa::BodyGroup  * bg,
                         const orsa::Time & call_t,
@@ -74,14 +85,30 @@ public:
             // ORSA_DEBUG("escaped, aborting integration");
             outcome = ESCAPE;
             // ORSA_DEBUG("outcome: %i",outcome);
-            orsa::Integrator::abort();
-        } else if (nucleusIBPS.inertial->originalShape()->isInside(grain_r_relative_local)) {
+            // orsa::Integrator::abort();
+        }
+        
+        for (size_t k=0; k<crossing_size; ++k) {
+            if (grain_r_relative_local.length() > crossing_distance[k]) {
+                if (crossing_time[k] == orsa::Time(0)) {
+                    crossing_time[k] = t;
+                }
+            }
+        }
+        
+        if (nucleusIBPS.inertial->originalShape()->isInside(grain_r_relative_local)) {
             // ORSA_DEBUG("collision, aborting integration");
 #warning note: the collision is not resolved exactly (i.e. rewind time for exact contact of body surface)
             outcome = IMPACT;
             // ORSA_DEBUG("outcome: %i",outcome);
             orsa::Integrator::abort();
         }
+        
+        if (grain_r_relative_local.length() > crossing_distance[crossing_size-1]) {
+            // body reached largest tracked distance
+            orsa::Integrator::abort();
+        }
+        
     }
 };
 

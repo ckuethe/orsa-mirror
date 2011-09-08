@@ -3,12 +3,12 @@
 int main (int argc, char **argv) {
     
     // input
-    const double r_comet = orsa::FromUnits(1.0,orsa::Unit::AU);
-    const double nucleus_ax = orsa::FromUnits(5.0,orsa::Unit::KM);
-    const double nucleus_ay = orsa::FromUnits(4.0,orsa::Unit::KM);
-    const double nucleus_az = orsa::FromUnits(3.0,orsa::Unit::KM);
+    const double r_comet = orsa::FromUnits(0.5,orsa::Unit::AU);
+    const double nucleus_ax = orsa::FromUnits(0.5,orsa::Unit::KM);
+    const double nucleus_ay = orsa::FromUnits(0.5,orsa::Unit::KM);
+    const double nucleus_az = orsa::FromUnits(0.5,orsa::Unit::KM);
     const size_t gravity_degree = 2;
-    const double comet_density = orsa::FromUnits(orsa::FromUnits(2.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+    const double comet_density = orsa::FromUnits(orsa::FromUnits(0.4,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double grain_density = orsa::FromUnits(orsa::FromUnits(1.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double rotation_period = orsa::FromUnits(6.0,orsa::Unit::HOUR);
     const double pole_ecliptic_longitude =  0.0*orsa::degToRad();
@@ -17,12 +17,14 @@ int main (int argc, char **argv) {
     // const double max_escape_velocity_factor = 1.5;
     const double min_ejection_velocity_constant = 0.5; // in the relation between beta and ejection velocity
     const double max_ejection_velocity_constant = 1.5; // in the relation between beta and ejection velocity
+    const double ejection_velocity_beta_exponent = 0.2; // nominal: 0.5
+    const double ejection_velocity_radial_exponent = -0.5; // nominal: -0.5
     const double min_latitude = -90.0*orsa::degToRad();
     const double max_latitude = +90.0*orsa::degToRad();
     const double min_vertical_angle =  0.0*orsa::degToRad();
     const double max_vertical_angle = 45.0*orsa::degToRad();
     const double min_beta = 1.0e-6;
-    const double max_beta = 1.0;
+    const double max_beta = 3.0;
     const int max_time_days = 100;
     
     const orsa::Time t0 = orsa::Time(0);
@@ -130,7 +132,9 @@ int main (int argc, char **argv) {
         // escape_velocity*(min_escape_velocity_factor + (max_escape_velocity_factor-min_escape_velocity_factor)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
         const double ejection_velocity =
             (min_ejection_velocity_constant+(max_ejection_velocity_constant-min_ejection_velocity_constant)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()) *
-            sqrt(grain_beta/orsa::FromUnits(r_comet,orsa::Unit::AU,-1));
+            // sqrt(grain_beta/orsa::FromUnits(r_comet,orsa::Unit::AU,-1));
+            pow(grain_beta,ejection_velocity_beta_exponent) *
+            pow(orsa::FromUnits(r_comet,orsa::Unit::AU,-1),ejection_velocity_radial_exponent);
         
         // set velocity vector, including effect of nucleus rotation
         const orsa::Vector v0_rotational_component =
@@ -175,8 +179,11 @@ int main (int argc, char **argv) {
         
         const double exo_radius = r_comet*sqrt(nucleus_mass/(grain->beta*orsaSolarSystem::Data::MSun()));
         const double bound_radius = std::min(Hill_radius,exo_radius);
-        
-        osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),nucleus.get(),bound_radius);
+
+        osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),nucleus.get(),bound_radius,6);
+        // call singleStepDone once before starting, to perform initial checks
+        orsa::Time dummy_time(0);
+        integrator->singleStepDone(bg.get(),t0,dummy_time,dummy_time);
         integrator->integrate(bg.get(),
                               t0,
                               max_time,
@@ -232,7 +239,7 @@ int main (int argc, char **argv) {
             const double grain_radius = (3*L)/(16*orsa::pi()*G*MSun*c) * (Qpr)/(grain->beta*rho_grain);
             
             FILE * fp = fopen("CGD.out","a");
-            gmp_fprintf(fp,"%g %g %g %g %.3e %.3e %.3e %.3e %g %g %g %g %g %7.3f %+7.3f %7.3f %7.3f %.3f %.3f %.3f %.3f %.3e %.3e %7.3f %.3e %.3e %i %8.3f %+8.3f\n",
+            gmp_fprintf(fp,"%g %g %g %g %.3e %.3e %.3e %.3e %g %g %g %g %g %7.3f %+7.3f %7.3f %7.3f %.3f %.3f %.3f %.3f %.3e %.3e %10.6f %10.6f %10.6f %10.6f %10.6f %.3e %.3e %i %8.3f %+8.3f\n",
                         orsa::FromUnits(r_comet,orsa::Unit::AU,-1),
                         orsa::FromUnits(nucleus_ax,orsa::Unit::KM,-1),
                         orsa::FromUnits(nucleus_ay,orsa::Unit::KM,-1),
@@ -257,6 +264,10 @@ int main (int argc, char **argv) {
                         (*grain->beta),
                         orsa::FromUnits(grain_radius,orsa::Unit::METER,-1),
                         orsa::FromUnits(common_stop_time.get_d(),orsa::Unit::DAY,-1),
+                        orsa::FromUnits(integrator->crossing_time[2].get_d(),orsa::Unit::DAY,-1),
+                        orsa::FromUnits(integrator->crossing_time[3].get_d(),orsa::Unit::DAY,-1),
+                        orsa::FromUnits(integrator->crossing_time[4].get_d(),orsa::Unit::DAY,-1),
+                        orsa::FromUnits(integrator->crossing_time[5].get_d(),orsa::Unit::DAY,-1),
                         orsa::FromUnits((*integrator->max_distance),orsa::Unit::KM,-1),
                         orsa::FromUnits(final_distance,orsa::Unit::KM,-1),
                         integrator->outcome,
