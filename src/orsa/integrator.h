@@ -71,7 +71,7 @@ namespace orsa {
         virtual bool integrate(orsa::BodyGroup  * bg,
                                const orsa::Time & start,
                                const orsa::Time & stop,
-                               const orsa::Time & samplig_period);
+                               const orsa::Time & sampling_period);
     
     protected:
         /* 
