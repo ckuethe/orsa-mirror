@@ -10,6 +10,7 @@
 #include <gsl/gsl_siman.h>
 
 #include "CubicChebyshevMassDistribution.h"
+#include "penalty.h"
 
 #include <orsaUtil/adaptiveInterval.h>
 #include <orsaUtil/adaptiveMonteCarlo.h>
@@ -139,20 +140,26 @@ double E1(void * xp) {
         minDensity.setIfSmaller(dv[k]);
         maxDensity.setIfLarger(dv[k]);
     }
-    double penalty = 0.0;
-    for (size_t k1=0; k1<x->rv.size(); ++k1) {
-        for (size_t k2=0; k2<k1; ++k2) {
-#warning assuming all middle points are inside the body; slightly more complicated algorithm needed with stongly concave bodies
-            const orsa::Vector rm = 0.5*(x->rv[k1]+x->rv[k2]);
-            const double dm = massDistribution->density(rm);
-            const double d12 = std::min(dv[k1],dv[k2]);
-            if (dm<d12) {
-                // penalty += (d12-dm)/d12;
-                penalty = std::max(penalty,(d12-dm)/d12);
-            }
-        }
-    }
-    // penalty /= 0.5*x->rv.size()*(x->rv.size()-1);
+    //
+    /* double penalty = 0.0;
+       for (size_t k1=0; k1<x->rv.size(); ++k1) {
+       for (size_t k2=0; k2<k1; ++k2) {
+       #warning assuming all middle points are inside the body; slightly more complicated algorithm needed with stongly concave bodies
+       const orsa::Vector rm = 0.5*(x->rv[k1]+x->rv[k2]);
+       const double dm = massDistribution->density(rm);
+       const double d12 = std::min(dv[k1],dv[k2]);
+       if (dm<d12) {
+       // penalty += (d12-dm)/d12;
+       penalty = std::max(penalty,(d12-dm)/d12);
+       }
+       }
+       }
+    */
+    //
+    const double penalty =
+        MassDistributionPenalty(x->rv,
+                                dv,
+                                massDistribution.get());
     
     /* orsa::Vector v;
        double density;

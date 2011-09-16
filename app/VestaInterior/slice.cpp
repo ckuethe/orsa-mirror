@@ -311,25 +311,38 @@ int main(int argc, char **argv) {
         new PlotStats(varDefinition);
     
     {
+        ORSA_DEBUG("sampling...");
         // random points on given plane
         std::deque<orsa::Vector> rv_in;
-        // std::deque<orsa::Vector> rv_out; // for smoother edges
-        while (rv_in.size() < 10000) {
-            // XZ
-            /* const orsa::Vector v(orsa::FromUnits(x_min+(x_max-x_min)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM),
-               orsa::FromUnits(0,orsa::Unit::KM),
-               orsa::FromUnits(y_min+(y_max-y_min)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM));
-            */
-            // XY
-            const orsa::Vector v(orsa::FromUnits(x_min+(x_max-x_min)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM),
-                                 orsa::FromUnits(y_min+(y_max-y_min)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM),
-                                 orsa::FromUnits(0,orsa::Unit::KM));
-            if (shapeModel->isInside(v)) {
-                rv_in.push_back(v);
-            } else {
-                // rv_out.push_back(v);
+        {
+            double x = x_min + 0.5*x_step;
+            while (x<x_max) {
+                double y = y_min + 0.5*y_step;
+                while (y<y_max) {
+                    
+                    // XZ
+                    const orsa::Vector v(orsa::FromUnits(x,orsa::Unit::KM),
+                                         orsa::FromUnits(0,orsa::Unit::KM),
+                                         orsa::FromUnits(y,orsa::Unit::KM));
+                    
+                    // XY
+                    /* const orsa::Vector v(orsa::FromUnits(x,orsa::Unit::KM),
+                       orsa::FromUnits(y,orsa::Unit::KM),
+                       orsa::FromUnits(0,orsa::Unit::KM));
+                    */
+
+                    if (shapeModel->isInside(v)) {
+                        rv_in.push_back(v);
+                    }
+                    
+                    y += y_step;
+                }
+                x += x_step;
             }
         }
+        //
+        ORSA_DEBUG("sampling... done.");
+        //
         std::vector<double> xVector;
         xVector.resize(varDefinition.size());
         // double toKM = orsa::FromUnits(1,orsa::Unit::KM,-1);
@@ -343,13 +356,14 @@ int main(int argc, char **argv) {
             while (it_rv_in != rv_in.end()) {
 #warning double-check why adding step here...
                 // XZ
-                /* xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1) + x_step;
-                   xVector[1] = orsa::FromUnits((*it_rv_in).getZ(),orsa::Unit::KM,-1) + y_step;
-                */
-                // XY
                 xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1) + x_step;
-                xVector[1] = orsa::FromUnits((*it_rv_in).getY(),orsa::Unit::KM,-1) + y_step;
-
+                xVector[1] = orsa::FromUnits((*it_rv_in).getZ(),orsa::Unit::KM,-1) + y_step;
+                
+                // XY
+                /* xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1) + x_step;
+                   xVector[1] = orsa::FromUnits((*it_rv_in).getY(),orsa::Unit::KM,-1) + y_step;
+                */
+                
                 plotStats->insert(xVector,
                                   orsa::FromUnits(orsa::FromUnits(md->density((*it_rv_in)),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
                 ++it_rv_in;
@@ -372,7 +386,7 @@ int main(int argc, char **argv) {
         }
     }
     
-    const double empty_mesh_val=1000;
+    const double empty_mesh_val=-1000;
     float * mesh;
     const size_t meshSize = plotStats->size().get_si();
     //
@@ -394,7 +408,7 @@ int main(int argc, char **argv) {
                             // mesh[mesh_id] = pow10(e->average());
                             mesh[mesh_id] = e->average();
                             // mesh[mesh_id] = e->max()-e->min();
-                            // mesh[mesh_id] = e->min();
+                            // mesh[mesh_id] = e->max();
                             // mesh[mesh_id] = log10(e->average());
                         } else {
                             // mesh[mesh_id] = 1e-20;
@@ -483,10 +497,10 @@ int main(int argc, char **argv) {
     axslen(2500,2500);
     
     // select a color table
-    setvlt("RAIN"); // TEMP,GREY,RGREY,VGA,RAIN,SPEC...
-    // setvlt("TEMP"); // TEMP,GREY,RGREY,VGA,RAIN,SPEC...
+    // setvlt("RAIN"); // TEMP,GREY,RGREY,VGA,RAIN,SPEC...
+    // setvlt("RAIN"); // TEMP,GREY,RGREY,VGA,RAIN,SPEC...
     // setvlt("RGREY"); // TEMP,GREY,RGREY,VGA,RAIN,SPEC...
-    // setvlt("GREY");
+    // setvlt("RGREY");
     
     hwmode("ON","LINE");
     
@@ -519,6 +533,13 @@ int main(int argc, char **argv) {
     // titlin("Saturn Trojans Predictor",4);
 
     // titlin("TITLE HERE",4);
+
+    // XZ
+    titlin("polar section",4);
+
+    // YZ
+    // titlin("equatorial section",4);
+    
     
     // name("initial semi-major axis [AU]","x");
     // name("libration amplitude","x");
@@ -636,20 +657,6 @@ int main(int argc, char **argv) {
               y_min-0.5*y_step,y_max+0.5*y_step,y_min,100.0,
               z_min,z_max,z_min,1.0);
         crvmat(mesh,var_x->size(),var_y->size(),1,1);
-        if (0) {
-            // q=1.3 line
-            const size_t nray=1000;
-            float xray[nray],yray[nray];
-            for (size_t k=0; k<nray; ++k) {
-                xray[k] = 1.9+((2.3-1.9)*k)/nray;
-                yray[k] = 1.0-(1.3/xray[k]);
-                ORSA_DEBUG("ray-> %g %g",xray[k],yray[k]);
-            }
-            graf(x_min-0.5*x_step,x_max+0.5*x_step,0,0,
-                 y_min-0.5*y_step,y_max+0.5*y_step,0,0);
-            lintyp(2);
-            curve(xray,yray,nray);
-        }
     }
     // a,i
     /* {
@@ -687,17 +694,17 @@ int main(int argc, char **argv) {
     */
     
     
-    if (0) {
+    if (1) {
         // contour plot, level curves
         const size_t nx = var_x->size();
         const size_t ny = var_y->size();
         digits(1,"contour");
         labels("FLOAT","CONTUR");
-        double T=0.0;
-        while (T<10.0) {
+        double T=2.5;
+        while (T<z_max) {
             // conmat((float *)mesh,NX,NY,T);
             conmat((float *)mesh,nx,ny,T);
-            T += 0.2;
+            T += 0.5;
         }
     }
     

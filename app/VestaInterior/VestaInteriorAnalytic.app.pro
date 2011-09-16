@@ -22,7 +22,7 @@ unix:!macx {
 }
 
 
-HEADERS += VestaInteriorAnalytic.h   vesta.h  CubicChebyshevMassDistribution.h gaskell.h
+HEADERS += VestaInteriorAnalytic.h   vesta.h  CubicChebyshevMassDistribution.h gaskell.h penalty.h
 SOURCES += VestaInteriorAnalytic.cpp CubicChebyshevMassDistribution.cpp
 
 
