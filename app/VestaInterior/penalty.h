@@ -1,6 +1,8 @@
 #ifndef ORSA_INTERIOR_PENALTY_H
 #define ORSA_INTERIOR_PENALTY_H
 
+#include <orsa/util.h>
+
 double MassDistributionPenalty(const std::vector<orsa::Vector> & rv,
                                const std::vector<double> & dv,
                                const orsa::MassDistribution * md) {
@@ -29,6 +31,19 @@ double MassDistributionPenalty(const std::vector<orsa::Vector> & rv,
         dv[k] = md->density(rv[k]);
     }
     return MassDistributionPenalty(rv,dv,md);
+}
+
+double MassDistributionPenalty(const orsa::RandomPointsInShape * randomPointsInShape) {
+    std::vector<orsa::Vector> rv;
+    std::vector<double> dv;
+    orsa::Vector v;
+    double density;
+    randomPointsInShape->reset();
+    while (randomPointsInShape->get(v,density)) { 
+        rv.push_back(v);
+        dv.push_back(density);
+    }
+    return MassDistributionPenalty(rv,dv,randomPointsInShape->md.get());
 }
 
 #endif // ORSA_INTERIOR_PENALTY_H
