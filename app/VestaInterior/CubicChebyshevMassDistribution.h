@@ -33,6 +33,15 @@ public:
     double density(const orsa::Vector & p) const;
 };
 
+// decompose a generic mass distribution into a cubic chebyshev mass distribuiton
+// note: there are no tests on whether the points tested are inside or outside the body shape,
+//       but that should not matter; what matters is that the new mass distribution
+//       returns the same density as the input at any given point
+CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(const orsa::MassDistribution * massDistribution,
+                                                                             const size_t & degree,
+                                                                             const double & densityScale,
+                                                                             const double & R0);
+
 class CubicChebyshevMassDistributionFile {
 public:
     class CCMDF_data {

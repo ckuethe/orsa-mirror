@@ -118,6 +118,59 @@ double CubicChebyshevMassDistribution::density(const orsa::Vector & p) const {
 
 /***/
 
+
+// decompose a generic mass distribution into a cubic chebyshev mass distribuiton
+// note: there are no tests on whether the points tested are inside or outside the body shape,
+//       but that should not matter; what matters is that the new mass distribution
+//       returns the same density as the input at any given point
+CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(const orsa::MassDistribution * massDistribution,
+                                                                             const size_t & degree,
+                                                                             const double & densityScale,
+                                                                             const double & R0) {
+    CubicChebyshevMassDistribution::CoefficientType coeff;
+    CubicChebyshevMassDistribution::resize(coeff,degree);
+    
+    for (size_t running_n=0; running_n<=degree; ++running_n) {
+        for (size_t nx=0; nx<=degree; ++nx) {
+            for (size_t ny=0; ny<=degree-nx; ++ny) {
+                for (size_t nz=0; nz<=degree-nx-ny; ++nz) {
+                    if (nx+ny+nz != running_n) continue;
+                    double sum = 0.0;
+                    for (size_t kx=0; kx<degree; ++kx) {
+                        const double x = cos(orsa::pi()*(kx+0.5)/degree);
+                        for (size_t ky=0; ky<degree; ++ky) {
+                            const double y = cos(orsa::pi()*(ky+0.5)/degree);
+                            for (size_t kz=0; kz<degree; ++kz) {
+                                const double z = cos(orsa::pi()*(kz+0.5)/degree);
+                                
+                                sum +=
+                                    cos(nx*orsa::pi()*(kx+0.5)/degree) *
+                                    cos(ny*orsa::pi()*(ky+0.5)/degree) *
+                                    cos(nz*orsa::pi()*(kz+0.5)/degree) *
+                                    massDistribution->density(R0*orsa::Vector(x,y,z)) / densityScale;
+                            }
+                        }
+                    }
+                    coeff[nx][ny][nz] =
+                        (2-orsa::kronecker(0,nx)) *
+                        (2-orsa::kronecker(0,ny)) *
+                        (2-orsa::kronecker(0,nz)) *
+                        sum/orsa::cube(degree);
+                    ORSA_DEBUG("coeff[%02i][%02i][%02i] = %20.12f",
+                               nx,ny,nz,coeff[nx][ny][nz]);
+                }
+            }
+        }
+    }
+    
+    CubicChebyshevMassDistribution * CCMD =
+        new CubicChebyshevMassDistribution(coeff,densityScale,R0);
+    
+    return CCMD;
+}
+
+/***/
+
 bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile::DataContainer & data, const std::string & fileName) {
     FILE * fp = fopen(fileName.c_str(),"r");
     if (!fp) {
