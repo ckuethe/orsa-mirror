@@ -16,6 +16,9 @@
 #include <qd/dd_real.h>
 #include <qd/qd_real.h>
 
+#include <gsl/gsl_blas.h>
+#include <gsl/gsl_siman.h>
+
 using namespace orsa;
 
 /*** CHOOSE ONE ***/
@@ -136,6 +139,141 @@ protected:
 
 /************/
 
+// another version, using simulated annealing
+
+/* how many points do we try before stepping */      
+#define N_TRIES 100 // 100 // 200             
+
+/* how many iterations for each T? */
+#define ITERS_FIXED_T 100 // 200 // 100 // 1000 // 
+
+/* max step size in random walk */
+#define STEP_SIZE 1.0 // 1.0           
+
+/* Boltzmann constant */
+#define K 1.0                   
+
+/* initial temperature */
+// #define T_INITIAL 0.008     
+#define T_INITIAL 0.010         
+
+/* damping factor for temperature */
+#warning no damping??
+#define MU_T 1.000 // 1.010 // 1.003      
+#define T_MIN 1.0e-5 // 2.0e-6
+
+gsl_siman_params_t params  = {N_TRIES, ITERS_FIXED_T, STEP_SIZE,
+                              K, T_INITIAL, MU_T, T_MIN};
+
+class SIMAN_xp {
+public:
+    CubicChebyshevMassDistribution::CoefficientType coeff;
+    orsa::Cache<double> bulkDensity;
+    orsa::Cache<double> R0_plate;
+    std::vector<orsa::Vector> rv;
+    orsa::Cache<double> ref_penalty;
+    std::vector<double> ref_dv;
+};
+
+void SIMAN_copy (void * source, void * dest) {
+    SIMAN_xp * s = (SIMAN_xp *) source;
+    SIMAN_xp * d = (SIMAN_xp *) dest;
+    d->coeff       = s->coeff;
+    d->bulkDensity = s->bulkDensity;
+    d->R0_plate    = s->R0_plate;
+    d->rv          = s->rv;
+    d->ref_penalty = s->ref_penalty;
+    d->ref_dv      = s->ref_dv;
+}
+
+void * SIMAN_copy_construct (void * xp) {
+    SIMAN_xp * d = new SIMAN_xp;
+    SIMAN_copy(xp,d);
+    return d;
+}
+
+void SIMAN_destroy (void * xp) {
+    delete (SIMAN_xp *) xp;
+}
+
+double E1(void * xp) {
+    
+    SIMAN_xp * x = (SIMAN_xp *) xp;
+    
+    osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
+        new CubicChebyshevMassDistribution(x->coeff,
+                                           x->bulkDensity,
+                                           x->R0_plate);
+    
+    double delta = 0.0;
+    for (size_t k=0; k<x->rv.size(); ++k) {
+        delta += orsa::square(massDistribution->density(x->rv[k]) - x->ref_dv[k]);
+        // ORSA_DEBUG("d: %g  ref_d: %g",massDistribution->density(x->rv[k]), x->ref_dv[k]);
+    }
+    delta /= x->rv.size();
+    delta = sqrt(delta);
+    
+    const double penalty =
+        MassDistributionPenalty(x->rv,massDistribution.get());
+    
+    ORSA_DEBUG("delta: %12.6f  penalty: %12.6f   ref_penalty: %12.6f",delta,penalty,(*x->ref_penalty));
+    
+    if (1) {
+        // another quick output...
+#warning pass filename as parameter...
+        CubicChebyshevMassDistributionFile::CCMDF_data data;
+        data.minDensity = 0.0;
+        data.maxDensity = 0.0;
+        data.deltaDensity = 0.0;
+        data.penalty = penalty;
+        data.densityScale = x->bulkDensity;
+        data.R0 = x->R0_plate;
+        data.SH_degree = 0;
+        data.coeff = x->coeff;
+        CubicChebyshevMassDistributionFile::append(data,"MD2G.CCMDF.search.out");
+    }
+    
+    // return (delta + 1000*orsa::square(penalty - x->ref_penalty));
+    return ((1.0+penalty)*delta);
+}
+
+double M1(void * xp, void * yp) {
+    SIMAN_xp * x = (SIMAN_xp *) xp;
+    SIMAN_xp * y = (SIMAN_xp *) yp;
+    
+    double distance = 0.0;
+    const size_t T_degree = x->coeff.size()-1;
+    for (size_t ti=0; ti<=T_degree; ++ti) {
+        for (size_t tj=0; tj<=T_degree-ti; ++tj) {
+            for (size_t tk=0; tk<=T_degree-ti-tj; ++tk) {
+                distance += orsa::square(y->coeff[ti][tj][tk] - x->coeff[ti][tj][tk]);
+            }
+        }
+    }
+    distance /= CubicChebyshevMassDistribution::totalSize(T_degree);
+    distance = sqrt(distance);
+    
+    return distance;
+}
+
+void S1(const gsl_rng * r, void * xp, double step_size) {
+    SIMAN_xp * x = (SIMAN_xp *) xp;
+    const size_t T_degree = x->coeff.size()-1;
+    for (size_t ti=0; ti<=T_degree; ++ti) {
+        for (size_t tj=0; tj<=T_degree-ti; ++tj) {
+            for (size_t tk=0; tk<=T_degree-ti-tj; ++tk) {
+                x->coeff[ti][tj][tk] += step_size*(2*gsl_rng_uniform(r)-1)/CubicChebyshevMassDistribution::totalSize(T_degree);
+            }
+        }
+    }    
+}
+
+void P1(void *) {
+    ORSA_DEBUG("print here...");
+}
+
+/***/
+
 int main(int argc, char **argv) {
     
     orsa::Debug::instance()->initTimer();
@@ -197,6 +335,7 @@ int main(int argc, char **argv) {
     const double bulkDensity = GM/orsa::Unit::G()/volume;
     
     CubicChebyshevMassDistribution::CoefficientType densityCCC; // CCC=CubicChebyshevCoefficient
+    CubicChebyshevMassDistribution::resize(densityCCC,T_degree_input);
     
     osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape;
     {
@@ -230,7 +369,7 @@ int main(int argc, char **argv) {
         // using relative density (coeff[0][0][0]=1 for constant density = bulk density)
         // CubicChebyshevMassDistribution::CoefficientType densityCCC; // CCC=CubicChebyshevCoefficient
         CubicChebyshevMassDistribution::resize(densityCCC,T_degree); 
-
+        
         // choose mass distribution
         osg::ref_ptr<orsa::MassDistribution> massDistribution;
         //
@@ -250,9 +389,56 @@ int main(int argc, char **argv) {
                                                                                  mantleDensity);
         }
         
-        {
-            // multifit of mass distribution
+        /* const bool storeSamplePoints = true;
+           osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
+           new orsa::RandomPointsInShape(shapeModel,
+           massDistribution.get(),
+           numSamplePoints,
+               storeSamplePoints);       
+        */
+        //
+        randomPointsInShape->updateMassDistribution(massDistribution.get());
+        const double ref_penalty = MassDistributionPenalty(randomPointsInShape.get());
         
+        ORSA_DEBUG("MD (ref) penalty: %g",ref_penalty);
+        
+        if (0) {
+            
+            // simulated annealing 
+            
+            std::vector<orsa::Vector> rv;
+            std::vector<double> dv;
+            {
+                orsa::Vector v;
+                double density;
+                randomPointsInShape->reset();
+                while (randomPointsInShape->get(v,density)) { 
+                    rv.push_back(v);
+                    dv.push_back(density);
+                }
+            }
+            
+            SIMAN_xp x0;
+            x0.coeff = densityCCC;
+            x0.bulkDensity = bulkDensity;
+            x0.R0_plate    = plateModelR0;
+            x0.rv          = rv;
+            x0.ref_penalty = ref_penalty;
+            x0.ref_dv      = dv; 
+
+            gsl_rng * rng = ::gsl_rng_alloc(gsl_rng_gfsr4);
+            const int randomSeed = time(NULL)*getpid();
+            ::gsl_rng_set(rng,randomSeed);
+            ORSA_DEBUG("simulated annealing random seed: %d",randomSeed);
+            
+            gsl_siman_solve(rng, &x0, E1, S1, M1, P1,
+                            SIMAN_copy, SIMAN_copy_construct, SIMAN_destroy,
+                            0, params);
+            
+        } else {
+            
+            // multifit of mass distribution
+            
             osg::ref_ptr<orsa::MultifitParameters> par = 
                 new orsa::MultifitParameters;
             char varName[1024];
@@ -268,19 +454,6 @@ int main(int argc, char **argv) {
                     }
                 }
             }
-            
-            /* const bool storeSamplePoints = true;
-               osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
-               new orsa::RandomPointsInShape(shapeModel,
-               massDistribution.get(),
-               numSamplePoints,
-               storeSamplePoints);       
-            */
-            //
-            randomPointsInShape->updateMassDistribution(massDistribution.get());
-            
-            ORSA_DEBUG("MD penalty: %g",
-                       MassDistributionPenalty(randomPointsInShape.get()));
             
             osg::ref_ptr<orsa::MultifitData> data = 
                 new orsa::MultifitData;
@@ -303,10 +476,10 @@ int main(int argc, char **argv) {
                 ++iter;
             }
             const size_t maxRow = --row;
-        
+            
             char logFile[1024];
             snprintf(logFile,1024,"MD2G_ChebyshevFit3D.log");
-        
+            
             osg::ref_ptr<ChebyshevFit3D> cf = new ChebyshevFit3D(T_degree);
             //
             cf->setMultifitParameters(par.get());
@@ -315,7 +488,7 @@ int main(int argc, char **argv) {
             cf->setLogFile(logFile);
             //
             cf->run();
-        
+            
             for (size_t row=0; row<=maxRow; ++row) {
                 const double x = data->getD("x",row);
                 const double y = data->getD("y",row);
@@ -330,12 +503,12 @@ int main(int argc, char **argv) {
                 ORSA_DEBUG("FINAL: %+.3f %+.3f %+.3f %+.3f %+.3f %+.3f",
                            x,y,z,f,T,err);
             }
-        
+            
             for (size_t s=0; s<par->totalSize(); ++s) {
                 ORSA_DEBUG("par[%03i] = [%s] = %+12.6f",s,par->name(s).c_str(),par->get(s));
             }
-        
-        
+            
+            
             for (size_t s=0; s<=T_degree; ++s) {
                 for (size_t i=0; i<=T_degree; ++i) {
                     for (size_t j=0; j<=T_degree-i; ++j) {
