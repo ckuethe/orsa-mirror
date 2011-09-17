@@ -7,7 +7,7 @@
 class CubicChebyshevMassDistribution : public orsa::MassDistribution {
 public:
     typedef std::vector< std::vector< std::vector<double> > > CoefficientType;
-protected:
+public:
     const CoefficientType coeff;
     const double oneOverR0;
     const double densityScale;

@@ -308,6 +308,14 @@ int main(int argc, char **argv) {
     const bool have_CCMDF_file = (argc == 8);
     const std::string CCMDF_filename = (argc == 8) ? argv[7] : "";
     
+    enum ALGO {
+        MULTIFIT,
+        ANNEALING,
+        DECOMPOSITION
+    };
+    
+    const ALGO algo = DECOMPOSITION;
+    
     if (plateModelR0 <= 0.0) {
         ORSA_DEBUG("invalid input...");
         exit(0);
@@ -402,125 +410,141 @@ int main(int argc, char **argv) {
         
         ORSA_DEBUG("MD (ref) penalty: %g",ref_penalty);
         
-        if (0) {
-            
-            // simulated annealing 
-            
-            std::vector<orsa::Vector> rv;
-            std::vector<double> dv;
+        switch (algo) {
+            case ANNEALING:
             {
+                // simulated annealing 
+                
+                std::vector<orsa::Vector> rv;
+                std::vector<double> dv;
+                {
+                    orsa::Vector v;
+                    double density;
+                    randomPointsInShape->reset();
+                    while (randomPointsInShape->get(v,density)) { 
+                        rv.push_back(v);
+                        dv.push_back(density);
+                    }
+                }
+                
+                SIMAN_xp x0;
+                x0.coeff = densityCCC;
+                x0.bulkDensity = bulkDensity;
+                x0.R0_plate    = plateModelR0;
+                x0.rv          = rv;
+                x0.ref_penalty = ref_penalty;
+                x0.ref_dv      = dv; 
+                
+                gsl_rng * rng = ::gsl_rng_alloc(gsl_rng_gfsr4);
+                const int randomSeed = time(NULL)*getpid();
+                ::gsl_rng_set(rng,randomSeed);
+                ORSA_DEBUG("simulated annealing random seed: %d",randomSeed);
+                
+                gsl_siman_solve(rng, &x0, E1, S1, M1, P1,
+                                SIMAN_copy, SIMAN_copy_construct, SIMAN_destroy,
+                                0, params);
+                
+            }
+            break;
+            case MULTIFIT:
+            {
+                
+                // multifit of mass distribution
+                
+                osg::ref_ptr<orsa::MultifitParameters> par = 
+                    new orsa::MultifitParameters;
+                char varName[1024];
+                for (size_t s=0; s<=T_degree; ++s) {
+                    for (size_t i=0; i<=T_degree; ++i) {
+                        for (size_t j=0; j<=T_degree-i; ++j) {
+                            for (size_t k=0; k<=T_degree-i-j; ++k) {
+                                if (i+j+k==s) {
+                                    sprintf(varName,"c%03i%03i%03i",i,j,k);
+                                    par->insert(varName,0,1.0);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                osg::ref_ptr<orsa::MultifitData> data = 
+                    new orsa::MultifitData;
+                data->insertVariable("x");
+                data->insertVariable("y");
+                data->insertVariable("z");
                 orsa::Vector v;
                 double density;
+                const double oneOverR0 = 1.0/plateModelR0;
                 randomPointsInShape->reset();
+                size_t row=0;
+                size_t iter=0;
                 while (randomPointsInShape->get(v,density)) { 
-                    rv.push_back(v);
-                    dv.push_back(density);
+                    data->insertD("x",row,v.getX()*oneOverR0);
+                    data->insertD("y",row,v.getY()*oneOverR0);
+                    data->insertD("z",row,v.getZ()*oneOverR0);
+                    data->insertF(row,density/bulkDensity);
+                    data->insertSigma(row,1.0);
+                    ++row;
+                    ++iter;
                 }
-            }
-            
-            SIMAN_xp x0;
-            x0.coeff = densityCCC;
-            x0.bulkDensity = bulkDensity;
-            x0.R0_plate    = plateModelR0;
-            x0.rv          = rv;
-            x0.ref_penalty = ref_penalty;
-            x0.ref_dv      = dv; 
-
-            gsl_rng * rng = ::gsl_rng_alloc(gsl_rng_gfsr4);
-            const int randomSeed = time(NULL)*getpid();
-            ::gsl_rng_set(rng,randomSeed);
-            ORSA_DEBUG("simulated annealing random seed: %d",randomSeed);
-            
-            gsl_siman_solve(rng, &x0, E1, S1, M1, P1,
-                            SIMAN_copy, SIMAN_copy_construct, SIMAN_destroy,
-                            0, params);
-            
-        } else {
-            
-            // multifit of mass distribution
-            
-            osg::ref_ptr<orsa::MultifitParameters> par = 
-                new orsa::MultifitParameters;
-            char varName[1024];
-            for (size_t s=0; s<=T_degree; ++s) {
-                for (size_t i=0; i<=T_degree; ++i) {
-                    for (size_t j=0; j<=T_degree-i; ++j) {
-                        for (size_t k=0; k<=T_degree-i-j; ++k) {
-                            if (i+j+k==s) {
-                                sprintf(varName,"c%03i%03i%03i",i,j,k);
-                                par->insert(varName,0,1.0);
+                const size_t maxRow = --row;
+                
+                char logFile[1024];
+                snprintf(logFile,1024,"MD2G_ChebyshevFit3D.log");
+                
+                osg::ref_ptr<ChebyshevFit3D> cf = new ChebyshevFit3D(T_degree);
+                //
+                cf->setMultifitParameters(par.get());
+                cf->setMultifitData(data.get());
+                //
+                cf->setLogFile(logFile);
+                //
+                cf->run();
+                
+                for (size_t row=0; row<=maxRow; ++row) {
+                    const double x = data->getD("x",row);
+                    const double y = data->getD("y",row);
+                    const double z = data->getD("z",row);
+                    const double f = data->getF(row);
+                    const double T = cf->fun(par.get(),
+                                             data.get(),
+                                             0,
+                                             0,
+                                             row);
+                    const double err = T-f;
+                    ORSA_DEBUG("FINAL: %+.3f %+.3f %+.3f %+.3f %+.3f %+.3f",
+                               x,y,z,f,T,err);
+                }
+                
+                for (size_t s=0; s<par->totalSize(); ++s) {
+                    ORSA_DEBUG("par[%03i] = [%s] = %+12.6f",s,par->name(s).c_str(),par->get(s));
+                }
+                
+                
+                for (size_t s=0; s<=T_degree; ++s) {
+                    for (size_t i=0; i<=T_degree; ++i) {
+                        for (size_t j=0; j<=T_degree-i; ++j) {
+                            for (size_t k=0; k<=T_degree-i-j; ++k) {
+                                if (i+j+k==s) {
+                                    sprintf(varName,"c%03i%03i%03i",i,j,k);
+                                    densityCCC[i][j][k] = par->get(varName);
+                                }
                             }
                         }
                     }
                 }
             }
-            
-            osg::ref_ptr<orsa::MultifitData> data = 
-                new orsa::MultifitData;
-            data->insertVariable("x");
-            data->insertVariable("y");
-            data->insertVariable("z");
-            orsa::Vector v;
-            double density;
-            const double oneOverR0 = 1.0/plateModelR0;
-            randomPointsInShape->reset();
-            size_t row=0;
-            size_t iter=0;
-            while (randomPointsInShape->get(v,density)) { 
-                data->insertD("x",row,v.getX()*oneOverR0);
-                data->insertD("y",row,v.getY()*oneOverR0);
-                data->insertD("z",row,v.getZ()*oneOverR0);
-                data->insertF(row,density/bulkDensity);
-                data->insertSigma(row,1.0);
-                ++row;
-                ++iter;
+            break;
+            case DECOMPOSITION:
+            {
+                osg::ref_ptr<CubicChebyshevMassDistribution> CCMD =
+                    CubicChebyshevMassDistributionDecomposition(massDistribution,
+                                                                T_degree_input,
+                                                                bulkDensity,
+                                                                plateModelR0);
+                densityCCC = CCMD->coeff;
             }
-            const size_t maxRow = --row;
-            
-            char logFile[1024];
-            snprintf(logFile,1024,"MD2G_ChebyshevFit3D.log");
-            
-            osg::ref_ptr<ChebyshevFit3D> cf = new ChebyshevFit3D(T_degree);
-            //
-            cf->setMultifitParameters(par.get());
-            cf->setMultifitData(data.get());
-            //
-            cf->setLogFile(logFile);
-            //
-            cf->run();
-            
-            for (size_t row=0; row<=maxRow; ++row) {
-                const double x = data->getD("x",row);
-                const double y = data->getD("y",row);
-                const double z = data->getD("z",row);
-                const double f = data->getF(row);
-                const double T = cf->fun(par.get(),
-                                         data.get(),
-                                         0,
-                                         0,
-                                         row);
-                const double err = T-f;
-                ORSA_DEBUG("FINAL: %+.3f %+.3f %+.3f %+.3f %+.3f %+.3f",
-                           x,y,z,f,T,err);
-            }
-            
-            for (size_t s=0; s<par->totalSize(); ++s) {
-                ORSA_DEBUG("par[%03i] = [%s] = %+12.6f",s,par->name(s).c_str(),par->get(s));
-            }
-            
-            
-            for (size_t s=0; s<=T_degree; ++s) {
-                for (size_t i=0; i<=T_degree; ++i) {
-                    for (size_t j=0; j<=T_degree-i; ++j) {
-                        for (size_t k=0; k<=T_degree-i-j; ++k) {
-                            if (i+j+k==s) {
-                                sprintf(varName,"c%03i%03i%03i",i,j,k);
-                                densityCCC[i][j][k] = par->get(varName);
-                            }
-                        }
-                    }
-                }
-            }
+            break;
         }
     }
     
