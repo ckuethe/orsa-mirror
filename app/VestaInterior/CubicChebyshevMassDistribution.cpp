@@ -156,8 +156,9 @@ CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(con
                         (2-orsa::kronecker(0,ny)) *
                         (2-orsa::kronecker(0,nz)) *
                         sum/orsa::cube(degree);
-                    ORSA_DEBUG("coeff[%02i][%02i][%02i] = %20.12f",
-                               nx,ny,nz,coeff[nx][ny][nz]);
+                    /* ORSA_DEBUG("coeff[%02i][%02i][%02i] = %20.12f",
+                       nx,ny,nz,coeff[nx][ny][nz]);
+                    */
                 }
             }
         }
