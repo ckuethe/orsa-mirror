@@ -31,6 +31,69 @@ typedef dd_real simplex_T;
 template <typename T> std::vector< std::vector< std::vector<size_t> > > SimplexIntegration<T>::indexTable;
 template <typename T> std::vector< std::vector< std::vector< std::vector<size_t> > > > SimplexIntegration<T>::index4Table;
 
+//// custom mass distibutions
+
+class ThreeComponentsMassDistribution : public MassDistribution {
+public:
+    ThreeComponentsMassDistribution(const orsa::Vector & coreCenter,
+                                    const double & coreRx,
+                                    const double & coreRy,
+                                    const double & coreRz,
+                                    const double & coreDensity,
+                                    const double & coreMantleInterfaceThickness,
+                                    const double & mantleDensity,
+                                    const double & mantleCrustInterfaceThickness,
+                                    const double & crustDensity,
+                                    const double & crustRx,
+                                    const double & crustRy,
+                                    const double & crustRz) :
+        MassDistribution(),
+        c0(coreCenter),
+        cRx(coreRx),
+        cRy(coreRy),
+        cRz(coreRz),
+        cD(coreDensity),
+        cmT(coreMantleInterfaceThickness),
+        mD(mantleDensity),
+        muT(mantleCrustInterfaceThickness),
+        uD(crustDensity),
+        uRx(crustRx),
+        uRy(crustRy),
+        uRz(crustRz),
+        cRxp2(orsa::int_pow(cRx, 2)),
+        cRyp2(orsa::int_pow(cRy, 2)),
+        cRzp2(orsa::int_pow(cRz, 2)),
+        uRxp2(orsa::int_pow(uRx, 2)),
+        uRyp2(orsa::int_pow(uRy, 2)),
+        uRzp2(orsa::int_pow(uRz, 2)),
+        cRxm2(orsa::int_pow(cRx,-2)),
+        cRym2(orsa::int_pow(cRy,-2)),
+        cRzm2(orsa::int_pow(cRz,-2)),
+        uRxm2(orsa::int_pow(uRx,-2)),
+        uRym2(orsa::int_pow(uRy,-2)),
+        uRzm2(orsa::int_pow(uRz,-2)) { }
+protected:
+    ~ThreeComponentsMassDistribution() { }
+public:
+    double density(const Vector & v) const {
+        // all mass distribution centered in c0
+        const orsa::Vector v0 = v-c0;
+        const double       l0 = v0.length();
+        const orsa::Vector u0 = v0.normalized();
+        const double cR = sqrt(orsa::square(u0.getX())*cRxp2+
+                               orsa::square(u0.getY())*cRyp2+
+                               orsa::square(u0.getZ())*cRzp2);
+        const double uR = sqrt(orsa::square(u0.getX())*uRxp2+
+                               orsa::square(u0.getY())*uRyp2+
+                               orsa::square(u0.getZ())*uRzp2);
+        return (uD + (mD-uD)/(1+exp((l0-uR)/muT)) + (cD-mD)/(1+exp((l0-cR)/cmT)));
+    }
+public:
+    const orsa::Vector c0;
+    const double cRx, cRy, cRz, cD, cmT, mD, muT, uD, uRx, uRy, uRz;
+    const double cRxp2, cRyp2, cRzp2, uRxp2, uRyp2, uRzp2;
+    const double cRxm2, cRym2, cRzm2, uRxm2, uRym2, uRzm2;
+};
 
 //// ChebyshevFit3D
 
@@ -396,15 +459,41 @@ int main(int argc, char **argv) {
                                                                                  coreDensity,
                                                                                  mantleDensity);
         }
-        
-        /* const bool storeSamplePoints = true;
-           osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
-           new orsa::RandomPointsInShape(shapeModel,
-           massDistribution.get(),
-           numSamplePoints,
-               storeSamplePoints);       
-        */
         //
+        {
+            const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
+            const double gcm3 = orsa::FromUnits(orsa::FromUnits(1.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+            
+            // NOTE: model densities are adjusted automatically later in order to conserve total mass
+            
+            const orsa::Vector coreCenter = orsa::Vector(0,0,0)*km;
+            const double coreRx = 100*km;
+            const double coreRy = 100*km;
+            const double coreRz = 100*km;
+            const double coreDensity = 8.0*gcm3;
+            const double coreMantleInterfaceThickness = 1.0*km;
+            const double mantleDensity = 3.5*gcm3;
+            const double mantleCrustInterfaceThickness = 1.0*km;
+            const double crustDensity = 2.5*gcm3;
+            const double crustRx = 220*km;
+            const double crustRy = 210*km;
+            const double crustRz = 180*km;
+            
+            massDistribution =
+                new ThreeComponentsMassDistribution(coreCenter,
+                                                    coreRx,
+                                                    coreRy,
+                                                    coreRz,
+                                                    coreDensity,
+                                                    coreMantleInterfaceThickness,
+                                                    mantleDensity,
+                                                    mantleCrustInterfaceThickness,
+                                                    crustDensity,
+                                                    crustRx,
+                                                    crustRy,
+                                                    crustRz);
+        }
+        
         randomPointsInShape->updateMassDistribution(massDistribution.get());
         const double ref_penalty = MassDistributionPenalty(randomPointsInShape.get());
         
@@ -550,33 +639,6 @@ int main(int argc, char **argv) {
     
     const size_t T_degree = densityCCC.size()-1;
     
-    orsa::Cache<double> penalty;
-    {
-        osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
-            new CubicChebyshevMassDistribution(densityCCC,
-                                               bulkDensity,     
-                                               plateModelR0);
-        randomPointsInShape->updateMassDistribution(massDistribution.get());
-        penalty = MassDistributionPenalty(randomPointsInShape.get());
-    }
-    ORSA_DEBUG("CCC penalty: %g",(*penalty));
-    
-    {
-        // another quick output...
-#warning pass filename as parameter...
-        CubicChebyshevMassDistributionFile::CCMDF_data data;
-#warning review all these entries
-        data.minDensity = 0.0;
-        data.maxDensity = 0.0;
-        data.deltaDensity = 0.0;
-        data.penalty = 0.0;
-        data.densityScale = bulkDensity;
-        data.R0 = plateModelR0;
-        data.SH_degree = gravityData->degree;
-        data.coeff = densityCCC;
-        CubicChebyshevMassDistributionFile::write(data,"MD2G.CCMDF.out");
-    }
-    
     const double radiusCorrectionRatio = plateModelR0/gravityData->R0;
     
     double i0d=0.0;
@@ -619,6 +681,49 @@ int main(int argc, char **argv) {
        ORSA_DEBUG("iYd: %g",iYd);
        ORSA_DEBUG("iZd: %g",iZd);
     */
+    
+    {
+        // correct coefficients in order to conserve total mass
+        // NOTE: this changes the input densities a little (or a lot)
+        //       depending on how far the generated total mass is from the nominal total mass
+        const double correctionFactor = si->getIntegral(0,0,0)/i0d;
+        for (size_t ti=0; ti<=T_degree; ++ti) {
+            for (size_t tj=0; tj<=T_degree-ti; ++tj) {
+                for (size_t tk=0; tk<=T_degree-ti-tj; ++tk) {
+                    densityCCC[ti][tj][tk] *= correctionFactor;
+                    ORSA_DEBUG("coeff[%02i][%02i][%02i] = %20.12f",
+                               ti,tj,tk,densityCCC[ti][tj][tk]);
+                }
+            }
+        }
+    }
+    
+    orsa::Cache<double> penalty;
+    {
+        osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
+            new CubicChebyshevMassDistribution(densityCCC,
+                                               bulkDensity,     
+                                               plateModelR0);
+        randomPointsInShape->updateMassDistribution(massDistribution.get());
+        penalty = MassDistributionPenalty(randomPointsInShape.get());
+    }
+    ORSA_DEBUG("CCC penalty: %g",(*penalty));
+    
+    {
+        // another quick output...
+#warning pass filename as parameter...
+        CubicChebyshevMassDistributionFile::CCMDF_data data;
+#warning review all these entries
+        data.minDensity = 0.0;
+        data.maxDensity = 0.0;
+        data.deltaDensity = 0.0;
+        data.penalty = 0.0;
+        data.densityScale = bulkDensity;
+        data.R0 = plateModelR0;
+        data.SH_degree = gravityData->degree;
+        data.coeff = densityCCC;
+        CubicChebyshevMassDistributionFile::write(data,"MD2G.CCMDF.out");
+    }
     
     {
         // write barycenter file
@@ -715,9 +820,9 @@ int main(int argc, char **argv) {
                     }
                 }
                 
-                norm_C /= i0d;
+                norm_C /= si->getIntegral(0,0,0);
                 norm_C *= radiusCorrectionFactor;
-                norm_S /= i0d;
+                norm_S /= si->getIntegral(0,0,0);
                 norm_S *= radiusCorrectionFactor;
                 
                 if (l>=2) {
