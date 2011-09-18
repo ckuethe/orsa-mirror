@@ -700,11 +700,11 @@ int main(int argc, char **argv) {
         const size_t ny = var_y->size();
         digits(1,"contour");
         labels("FLOAT","CONTUR");
-        double T=2.5;
+        double T=3.0;
         while (T<z_max) {
             // conmat((float *)mesh,NX,NY,T);
             conmat((float *)mesh,nx,ny,T);
-            T += 0.5;
+            T += 1.0;
         }
     }
     
