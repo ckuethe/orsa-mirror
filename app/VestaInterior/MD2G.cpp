@@ -444,21 +444,22 @@ int main(int argc, char **argv) {
         // choose mass distribution
         osg::ref_ptr<orsa::MassDistribution> massDistribution;
         //
-        {
-            const orsa::Vector coreCenter(orsa::FromUnits(0.0,orsa::Unit::KM),
-                                          orsa::FromUnits(0.0,orsa::Unit::KM),
-                                          orsa::FromUnits(0.0,orsa::Unit::KM));
-            const double coreDensity = orsa::FromUnits(orsa::FromUnits(6.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-            // const double coreDensity = bulkDensity;
-            const double mantleDensity = orsa::FromUnits(orsa::FromUnits(3.2,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-            // const double mantleDensity = bulkDensity;
-            const double coreRadius = cbrt((3.0/(4.0*pi()))*volume*(bulkDensity-mantleDensity)/(coreDensity-mantleDensity));
-            ORSA_DEBUG("coreRadius: %g [km]", orsa::FromUnits(coreRadius,orsa::Unit::KM,-1));
-            massDistribution = new orsa::SphericalCorePlusMantleMassDistribution(coreCenter,
-                                                                                 coreRadius,
-                                                                                 coreDensity,
-                                                                                 mantleDensity);
-        }
+        /* {
+           const orsa::Vector coreCenter(orsa::FromUnits(0.0,orsa::Unit::KM),
+           orsa::FromUnits(0.0,orsa::Unit::KM),
+           orsa::FromUnits(0.0,orsa::Unit::KM));
+           const double coreDensity = orsa::FromUnits(orsa::FromUnits(6.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+           // const double coreDensity = bulkDensity;
+           const double mantleDensity = orsa::FromUnits(orsa::FromUnits(3.2,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+           // const double mantleDensity = bulkDensity;
+           const double coreRadius = cbrt((3.0/(4.0*pi()))*volume*(bulkDensity-mantleDensity)/(coreDensity-mantleDensity));
+           ORSA_DEBUG("coreRadius: %g [km]", orsa::FromUnits(coreRadius,orsa::Unit::KM,-1));
+           massDistribution = new orsa::SphericalCorePlusMantleMassDistribution(coreCenter,
+           coreRadius,
+           coreDensity,
+           mantleDensity);
+           }
+        */
         //
         {
             const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
@@ -467,14 +468,14 @@ int main(int argc, char **argv) {
             // NOTE: model densities are adjusted automatically later in order to conserve total mass
             
             const orsa::Vector coreCenter = orsa::Vector(0,0,0)*km;
-            const double coreRx = 100*km;
-            const double coreRy = 100*km;
+            const double coreRx = 130*km;
+            const double coreRy = 120*km;
             const double coreRz = 100*km;
             const double coreDensity = 8.0*gcm3;
-            const double coreMantleInterfaceThickness = 1.0*km;
+            const double coreMantleInterfaceThickness = 10.0*km;
             const double mantleDensity = 3.5*gcm3;
-            const double mantleCrustInterfaceThickness = 1.0*km;
-            const double crustDensity = 2.5*gcm3;
+            const double mantleCrustInterfaceThickness = 10.0*km;
+            const double crustDensity = 3.5*gcm3;
             const double crustRx = 220*km;
             const double crustRy = 210*km;
             const double crustRz = 180*km;
@@ -641,10 +642,16 @@ int main(int argc, char **argv) {
     
     const double radiusCorrectionRatio = plateModelR0/gravityData->R0;
     
-    double i0d=0.0;
-    double iXd=0.0;
-    double iYd=0.0;
-    double iZd=0.0;
+    double i1d =0.0;
+    double iXd =0.0;
+    double iYd =0.0;
+    double iZd =0.0;
+    double iXXd=0.0;
+    double iXYd=0.0;
+    double iXZd=0.0;
+    double iYYd=0.0;
+    double iYZd=0.0;
+    double iZZd=0.0;
     // ti,tj,tk are the expansion of the density in terms of the cubic Chebyshev 
     for (size_t ti=0; ti<=T_degree; ++ti) {
         for (size_t tj=0; tj<=T_degree-ti; ++tj) {
@@ -661,32 +668,53 @@ int main(int argc, char **argv) {
                             if (cTk[ck] == 0) continue;
                             const double baseFactor = densityCCC[ti][tj][tk] *
                                 mpz_class(cTi[ci] * cTj[cj] * cTk[ck]).get_d();
-                            i0d += baseFactor * si->getIntegral(ci,cj,ck);
-                            iXd += baseFactor * si->getIntegral(ci+1,cj,ck);
-                            iYd += baseFactor * si->getIntegral(ci,cj+1,ck);
-                            iZd += baseFactor * si->getIntegral(ci,cj,ck+1);
+                            i1d  += baseFactor * si->getIntegral(ci,cj,ck);
+                            iXd  += baseFactor * si->getIntegral(ci+1,cj,ck);
+                            iYd  += baseFactor * si->getIntegral(ci,cj+1,ck);
+                            iZd  += baseFactor * si->getIntegral(ci,cj,ck+1);
+                            iXXd += baseFactor * si->getIntegral(ci+2,cj,ck);
+                            iXYd += baseFactor * si->getIntegral(ci+1,cj+1,ck);
+                            iXZd += baseFactor * si->getIntegral(ci+1,cj,ck+1);
+                            iYYd += baseFactor * si->getIntegral(ci,cj+2,ck);
+                            iYZd += baseFactor * si->getIntegral(ci,cj+1,ck+1);
+                            iZZd += baseFactor * si->getIntegral(ci,cj,ck+2);
                         }
                     }
                 }
             }
         }
     }
-    const double CMx_over_plateModelR0 = iXd / i0d;
-    const double CMy_over_plateModelR0 = iYd / i0d;
-    const double CMz_over_plateModelR0 = iZd / i0d;
+    const double CMx_over_plateModelR0 = iXd / i1d;
+    const double CMy_over_plateModelR0 = iYd / i1d;
+    const double CMz_over_plateModelR0 = iZd / i1d;
+    // inertia moments, barycentric
+    const double inertiaMomentXX_over_plateModelR0squared =
+        ((iYYd+iZZd) - (orsa::square(CMy_over_plateModelR0)+orsa::square(CMz_over_plateModelR0))) / i1d;
+    const double inertiaMomentYY_over_plateModelR0squared =
+        ((iXXd+iZZd) - (orsa::square(CMx_over_plateModelR0)+orsa::square(CMz_over_plateModelR0))) / i1d;
+    const double inertiaMomentZZ_over_plateModelR0squared =
+        ((iXXd+iYYd) - (orsa::square(CMx_over_plateModelR0)+orsa::square(CMy_over_plateModelR0))) / i1d;
     
-    /* ORSA_DEBUG("si->getIntegral(0,0,0): %g",si->getIntegral(0,0,0));
-       ORSA_DEBUG("i0d: %g",i0d);
-       ORSA_DEBUG("iXd: %g",iXd);
-       ORSA_DEBUG("iYd: %g",iYd);
-       ORSA_DEBUG("iZd: %g",iZd);
-    */
+    ORSA_DEBUG("si->getIntegral(0,0,0): %g",si->getIntegral(0,0,0));
+    ORSA_DEBUG("i1d:  %g",i1d);
+    ORSA_DEBUG("iXd:  %g",iXd);
+    ORSA_DEBUG("iYd:  %g",iYd);
+    ORSA_DEBUG("iZd:  %g",iZd);
+    ORSA_DEBUG("iXXd: %g",iXXd);
+    ORSA_DEBUG("iXYd: %g",iXYd);
+    ORSA_DEBUG("iXZd: %g",iXZd);
+    ORSA_DEBUG("iYYd: %g",iYYd);
+    ORSA_DEBUG("iYZd: %g",iYZd);
+    ORSA_DEBUG("iZZd: %g",iZZd);
+    ORSA_DEBUG("inertiaMomentXX_over_plateModelR0squared: %g",inertiaMomentXX_over_plateModelR0squared);
+    ORSA_DEBUG("inertiaMomentYY_over_plateModelR0squared: %g",inertiaMomentYY_over_plateModelR0squared);
+    ORSA_DEBUG("inertiaMomentZZ_over_plateModelR0squared: %g",inertiaMomentZZ_over_plateModelR0squared);
     
     {
-        // correct coefficients in order to conserve total mass
+        // adjust coefficients in order to conserve total mass
         // NOTE: this changes the input densities a little (or a lot)
         //       depending on how far the generated total mass is from the nominal total mass
-        const double correctionFactor = si->getIntegral(0,0,0)/i0d;
+        const double correctionFactor = si->getIntegral(0,0,0)/i1d;
         for (size_t ti=0; ti<=T_degree; ++ti) {
             for (size_t tj=0; tj<=T_degree-ti; ++tj) {
                 for (size_t tk=0; tk<=T_degree-ti-tj; ++tk) {
@@ -728,16 +756,19 @@ int main(int argc, char **argv) {
     {
         // write barycenter file
         char filename[1024];
-        sprintf(filename,"%s.barycenter_km.dat",outputGravityFile.c_str());
+        sprintf(filename,"%s.inertial.dat",outputGravityFile.c_str());
         FILE * fp = fopen(filename,"w");
         ORSA_DEBUG("writing file [%s]",filename);
         const double CMx = CMx_over_plateModelR0*plateModelR0;
         const double CMy = CMy_over_plateModelR0*plateModelR0;
         const double CMz = CMz_over_plateModelR0*plateModelR0;
-        gmp_fprintf(fp,"%+9.3f %+9.3f %+9.3f\n",
+        gmp_fprintf(fp,"CM: %+9.3f %+9.3f %+9.3f [km]\n",
                     orsa::FromUnits(CMx,orsa::Unit::KM,-1),
                     orsa::FromUnits(CMy,orsa::Unit::KM,-1),
                     orsa::FromUnits(CMz,orsa::Unit::KM,-1));
+        gmp_fprintf(fp,"Izz / (M*R0^2) = %9.6f   [R0=%g km]\n",
+                    inertiaMomentZZ_over_plateModelR0squared,
+                    orsa::FromUnits(plateModelR0,orsa::Unit::KM,-1));
         fclose(fp);        
     }
     
