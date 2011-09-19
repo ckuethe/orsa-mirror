@@ -736,6 +736,22 @@ int main(int argc, char **argv) {
         penalty = MassDistributionPenalty(randomPointsInShape.get());
     }
     ORSA_DEBUG("CCC penalty: %g",(*penalty));
+
+    {
+        // write density,points file
+        char filename[1024];
+        sprintf(filename,"%s.density.points.dat",outputGravityFile.c_str());
+        FILE * fp = fopen(filename,"w");
+        ORSA_DEBUG("writing file [%s]",filename);
+        const double gcm3 = orsa::FromUnits(orsa::FromUnits(1.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+        orsa::Vector v;
+        double density;
+        randomPointsInShape->reset();
+        while (randomPointsInShape->get(v,density)) { 
+            gmp_fprintf(fp,"%.3f\n",density/gcm3);
+        }
+        fclose(fp);
+    }
     
     {
         // another quick output...
@@ -745,7 +761,7 @@ int main(int argc, char **argv) {
         data.minDensity = 0.0;
         data.maxDensity = 0.0;
         data.deltaDensity = 0.0;
-        data.penalty = 0.0;
+        data.penalty = penalty;
         data.densityScale = bulkDensity;
         data.R0 = plateModelR0;
         data.SH_degree = gravityData->degree;
