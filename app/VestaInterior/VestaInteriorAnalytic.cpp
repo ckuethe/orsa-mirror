@@ -151,6 +151,8 @@ int main(int argc, char **argv) {
     
     orsa::Debug::instance()->initTimer();
     
+    ORSA_DEBUG("PID: %i",getpid());
+    
     // QD
     unsigned int oldcw;
     fpu_fix_start(&oldcw);

@@ -95,6 +95,34 @@ public:
     const double cRxm2, cRym2, cRzm2, uRxm2, uRym2, uRzm2;
 };
 
+// this just adds a masscon to a base massdistribution
+class MassConcentrationMassDistribution : public MassDistribution {
+public:
+    MassConcentrationMassDistribution(const orsa::MassDistribution * baseMassDistribution,
+                                      const orsa::Vector & position,
+                                      const double & radius,
+                                      const double & density,
+                                      const double & interfaceThickness) :
+        MassDistribution(),
+        baseMD(baseMassDistribution),
+        c0(position),
+        cR(radius),
+        cD(density),
+        cT(interfaceThickness) { }
+protected:
+    ~MassConcentrationMassDistribution() { }
+public:
+    double density(const Vector & v) const {
+        const orsa::Vector v0 = v-c0;
+        const double       l0 = v0.length();
+        return (baseMD->density(v) + cD/(1+exp((l0-cR)/cT)));
+    }
+public:
+    osg::ref_ptr<const orsa::MassDistribution> baseMD;
+    const orsa::Vector c0;
+    const double cR, cD, cT;
+};
+
 //// ChebyshevFit3D
 
 class ChebyshevFit3D : public orsa::Multifit {
@@ -340,6 +368,8 @@ void P1(void *) {
 int main(int argc, char **argv) {
     
     orsa::Debug::instance()->initTimer();
+
+    ORSA_DEBUG("PID: %i",getpid());
     
     // QD
     unsigned int oldcw;
@@ -466,7 +496,9 @@ int main(int argc, char **argv) {
             const double gcm3 = orsa::FromUnits(orsa::FromUnits(1.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
             
             // NOTE: model densities are adjusted automatically later in order to conserve total mass
-            
+
+
+            // OblateCore
             const orsa::Vector coreCenter = orsa::Vector(0,0,0)*km;
             const double coreRx = 130*km;
             const double coreRy = 120*km;
@@ -493,6 +525,25 @@ int main(int argc, char **argv) {
                                                     crustRx,
                                                     crustRy,
                                                     crustRz);
+        }
+
+        if (1) {
+            // add a masscon?
+            const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
+            const double gcm3 = orsa::FromUnits(orsa::FromUnits(1.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+            
+            osg::ref_ptr<orsa::MassDistribution> baseMassDistribution = massDistribution;
+            const orsa::Vector c0 = orsa::Vector(0,0,-180)*km;
+            const double cR = 50*km;
+            const double cD = 5.0*gcm3; // additional density, on top of baseMD density
+            const double cT = 5.0*km;
+            
+            massDistribution =
+                new MassConcentrationMassDistribution(baseMassDistribution.get(),
+                                                      c0,
+                                                      cR,
+                                                      cD,
+                                                      cT);
         }
         
         randomPointsInShape->updateMassDistribution(massDistribution.get());

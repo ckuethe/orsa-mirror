@@ -131,6 +131,7 @@ CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(con
     CubicChebyshevMassDistribution::resize(coeff,degree);
     
     for (size_t running_n=0; running_n<=degree; ++running_n) {
+        ORSA_DEBUG("[%zi/%zi]",running_n,degree);
         for (size_t nx=0; nx<=degree; ++nx) {
             for (size_t ny=0; ny<=degree-nx; ++ny) {
                 for (size_t nz=0; nz<=degree-nx-ny; ++nz) {
