@@ -34,7 +34,7 @@ public:
         crossing_distance.resize(crossing_size);
         crossing_time.resize(crossing_size);
         for (size_t k=0; k<crossing_size; ++k) {
-            crossing_distance[k] = orsa::FromUnits(exp10(k),orsa::Unit::KM);
+            crossing_distance[k] = orsa::FromUnits(pow(10,k),orsa::Unit::KM);
             crossing_time[k] = orsa::Time(0);
         }
     }

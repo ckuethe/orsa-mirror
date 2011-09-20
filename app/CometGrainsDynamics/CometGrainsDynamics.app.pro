@@ -21,5 +21,9 @@ unix:!macx {
 	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaSolarSystem -lorsaEssentialOSG -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads
 }
 
+macx {
+	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaSolarSystem -lorsaEssentialOSG -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads
+}
+
 HEADERS += CometGrainsDynamics.h
 SOURCES += CometGrainsDynamics.cpp
