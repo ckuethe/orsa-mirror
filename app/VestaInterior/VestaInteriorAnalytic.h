@@ -140,7 +140,10 @@ double E1(void * xp) {
         minDensity.setIfSmaller(dv[k]);
         maxDensity.setIfLarger(dv[k]);
     }
-    //
+    // const double minDensity = stat->min();
+    // const double maxDensity = stat->max();
+    const double averageDensity = stat->average();
+    
     /* double penalty = 0.0;
        for (size_t k1=0; k1<x->rv.size(); ++k1) {
        for (size_t k2=0; k2<k1; ++k2) {
@@ -176,9 +179,9 @@ double E1(void * xp) {
 #warning find a better way to compute average density? (based on simplexIntegral and not on randomPointsInShape)
     
     ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]   penalty: %g",
-               orsa::FromUnits(orsa::FromUnits(stat->min(),orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
-               orsa::FromUnits(orsa::FromUnits(stat->max(),orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
-               orsa::FromUnits(orsa::FromUnits(stat->average(),orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+               orsa::FromUnits(orsa::FromUnits(minDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+               orsa::FromUnits(orsa::FromUnits(maxDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+               orsa::FromUnits(orsa::FromUnits(averageDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
                penalty);
     
     /* 
@@ -199,14 +202,14 @@ double E1(void * xp) {
        }
     */
     
-    if ( (stat->min() >= x->minimumDensity) &&
+    if ( (minDensity >= x->minimumDensity) &&
          (penalty <= x->penaltyThreshold) ) {
         // another quick output...
 #warning pass filename as parameter...
         CubicChebyshevMassDistributionFile::CCMDF_data data;
-        data.minDensity = stat->min();
-        data.maxDensity = stat->max();
-        data.deltaDensity = (stat->max()-stat->min());
+        data.minDensity = minDensity;
+        data.maxDensity = maxDensity;
+        data.deltaDensity = maxDensity-minDensity;
         data.penalty = penalty;
         data.densityScale = x->bulkDensity;
         data.R0 = x->R0_plate;

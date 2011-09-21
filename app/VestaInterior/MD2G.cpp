@@ -778,16 +778,31 @@ int main(int argc, char **argv) {
     }
     
     orsa::Cache<double> penalty;
+    orsa::Cache<double> minDensity, maxDensity;
     {
         osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
             new CubicChebyshevMassDistribution(densityCCC,
                                                bulkDensity,     
                                                plateModelR0);
         randomPointsInShape->updateMassDistribution(massDistribution.get());
-        penalty = MassDistributionPenalty(randomPointsInShape.get());
+        
+        std::vector<orsa::Vector> rv;
+        std::vector<double> dv;
+        orsa::Vector v;
+        double density;
+        randomPointsInShape->reset();
+        while (randomPointsInShape->get(v,density)) { 
+            rv.push_back(v);
+            dv.push_back(density);
+            minDensity.setIfSmaller(density);
+            maxDensity.setIfLarger(density);
+        }
+        penalty = MassDistributionPenalty(rv,dv,massDistribution.get());
     }
     ORSA_DEBUG("CCC penalty: %g",(*penalty));
-
+    ORSA_DEBUG("mD: %g",(*minDensity));
+    ORSA_DEBUG("MD: %g",(*maxDensity));
+    
     {
         // write density,points file
         char filename[1024];
@@ -809,9 +824,9 @@ int main(int argc, char **argv) {
 #warning pass filename as parameter...
         CubicChebyshevMassDistributionFile::CCMDF_data data;
 #warning review all these entries
-        data.minDensity = 0.0;
-        data.maxDensity = 0.0;
-        data.deltaDensity = 0.0;
+        data.minDensity = minDensity;
+        data.maxDensity = maxDensity;
+        data.deltaDensity = maxDensity-minDensity;
         data.penalty = penalty;
         data.densityScale = bulkDensity;
         data.R0 = plateModelR0;
