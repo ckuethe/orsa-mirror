@@ -246,13 +246,13 @@ double E1(void * xp) {
 #warning choose one return value, should be a parameter!
     
     // most flat
-    // return (maxDensity-minDensity)+1000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity));
+    // return (maxDensity-minDensity)+10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity));
     
     // most peaks
-    // return (minDensity-maxDensity)+1000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity));
+    // return (minDensity-maxDensity)+10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity));
     
     // generic
-    return 1000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity));
+    return 10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity));
     
     // return penalty;
 }

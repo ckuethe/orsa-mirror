@@ -730,7 +730,7 @@ int main(int argc, char **argv) {
                 x0.uK_size = N-M;
                 x0.factor.resize(x0.uK_size);
                 x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(2.00,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-                x0.penaltyThreshold = 0.05;
+                x0.penaltyThreshold = 0.50;
                 for (size_t b=0; b<x0.uK_size; ++b) {
                     x0.factor[b] = 0.0;
                 }
