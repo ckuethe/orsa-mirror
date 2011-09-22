@@ -2,6 +2,12 @@
 
 int main (int argc, char **argv) {
     
+    // NOTE: two alternative mechanisms for ejection velocity
+    // 1) sampling distribution= rotational component + ejection velocity model (no gas drag)
+    // 2) start with v=(rotational component only) and then gas drag increases it
+    //
+    // all depends on the gas_drag_coefficient value
+    
     // input
     const double r_comet = orsa::FromUnits(0.5,orsa::Unit::AU);
     const double nucleus_ax = orsa::FromUnits(0.5,orsa::Unit::KM);
@@ -13,8 +19,6 @@ int main (int argc, char **argv) {
     const double rotation_period = orsa::FromUnits(6.0,orsa::Unit::HOUR);
     const double pole_ecliptic_longitude =  0.0*orsa::degToRad();
     const double pole_ecliptic_latitude  = 90.0*orsa::degToRad();
-    // const double min_escape_velocity_factor = 0.5;
-    // const double max_escape_velocity_factor = 1.5;
     const double min_ejection_velocity_constant = 0.5; // in the relation between beta and ejection velocity
     const double max_ejection_velocity_constant = 1.5; // in the relation between beta and ejection velocity
     const double ejection_velocity_beta_exponent = 0.2; // nominal: 0.5
@@ -26,6 +30,12 @@ int main (int argc, char **argv) {
     const double min_beta = 1.0e-6;
     const double max_beta = 3.0;
     const int max_time_days = 100;
+
+    // gas drag coefficients
+    const double gas_production_rate_at_1AU = orsa::FromUnits(1.0e28,orsa::Unit::SECOND,-1); // molecules/second
+    const double gas_velocity_at_1AU = orsa::FromUnits(orsa::FromUnits(0.5,orsa::Unit::KM),orsa::Unit::SECOND,-1);
+    const double gas_molar_mass = 18; // 18 for H20
+    const double gas_drag_coefficient = 0.4; // Cd
     
     const orsa::Time t0 = orsa::Time(0);
     const orsa::Time max_time(max_time_days,0,0,0,0);
@@ -89,6 +99,8 @@ int main (int argc, char **argv) {
         // loop on grains
         
         const double grain_beta = exp(log(min_beta) + (log(max_beta)-log(min_beta))*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
+        const double grain_radius = GrainBetaToRadius(grain_beta,grain_density);
+        const double grain_mass = 4.0*orsa::pi()*orsa::cube(grain_radius)*grain_density/3.0;
         
         // position of grain on the nucleus surface
         const double lon = orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
@@ -140,6 +152,8 @@ int main (int argc, char **argv) {
         const orsa::Vector v0_rotational_component =
             orsa::externalProduct(orsa::Vector(0,0,omega),r0);
         const orsa::Vector v0 =
+            (gas_drag_coefficient > 0.0) ?
+            v0_rotational_component :
             n0*ejection_velocity*c_theta +
             u_rot*ejection_velocity*s_theta*c_phi +
             u_pol*ejection_velocity*s_theta*s_phi +
@@ -157,21 +171,35 @@ int main (int argc, char **argv) {
         */
         
         
+        osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
+        
         osg::ref_ptr<orsa::Body> grain = new orsa::Body;
         {
             grain->setName("grain");
             IBPS ibps;
             ibps.time = t0;
-            ibps.inertial = new orsa::PointLikeConstantInertialBodyProperty(0.0);
+            ibps.inertial = new orsa::PointLikeConstantInertialBodyProperty(grain_mass);
             ibps.translational = new orsa::DynamicTranslationalBodyProperty;
             ibps.translational->setPosition(r0+nucleus_r0);
             ibps.translational->setVelocity(v0+nucleus_v0);
             grain->beta = grain_beta;
             grain->betaSun = sun.get();
+            // gas drag
+            if (gas_drag_coefficient < 0.0) {
+                grain->propulsion = new GasDrag(bg,
+                                                sun,
+                                                nucleus,
+                                                grain,
+                                                grain->beta,
+                                                grain_density,
+                                                gas_production_rate_at_1AU,
+                                                gas_velocity_at_1AU,
+                                                gas_molar_mass,
+                                                gas_drag_coefficient);
+            }
+            //
             grain->setInitialConditions(ibps);
         }
-        
-        osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
         
         bg->addBody(sun);
         bg->addBody(nucleus);
@@ -226,20 +254,9 @@ int main (int argc, char **argv) {
                     lat_impact = asin(grain_r_relative_local.getZ()/grain_r_relative_local.length());
                 }
             }
-
-            // from beta to grain size
-            const double    L = orsa::FromUnits(orsa::FromUnits(orsa::FromUnits(3.839e26,orsa::Unit::KG),orsa::Unit::METER,2),orsa::Unit::SECOND,-3); //
-            const double    G = orsa::Unit::G();
-            const double MSun = orsaSolarSystem::Data::MSun();
-            const double    c = orsa::Unit::c();
-            const double  Qpr = 1.0;
-            //
-            const double    rho_grain = grain_density;
-            // Burns, Lamy, Soter 1979, Eq. (19)
-            const double grain_radius = (3*L)/(16*orsa::pi()*G*MSun*c) * (Qpr)/(grain->beta*rho_grain);
             
             FILE * fp = fopen("CGD.out","a");
-            gmp_fprintf(fp,"%g %g %g %g %.3e %.3e %.3e %.3e %g %g %g %g %g %7.3f %+7.3f %7.3f %7.3f %.3f %.3f %.3f %.3f %.3e %.3e %10.6f %10.6f %10.6f %10.6f %10.6f %.3e %.3e %i %8.3f %+8.3f\n",
+            gmp_fprintf(fp,"%g %g %g %g %.3e %.3e %.3e %.3e %g %g %g %g %g %g %g %g %g %7.3f %+7.3f %7.3f %7.3f %.3f %.3f %.3f %.3f %.3e %.3e %10.6f %10.6f %10.6f %10.6f %10.6f %.3e %.3e %i %8.3f %+8.3f\n",
                         orsa::FromUnits(r_comet,orsa::Unit::AU,-1),
                         orsa::FromUnits(nucleus_ax,orsa::Unit::KM,-1),
                         orsa::FromUnits(nucleus_ay,orsa::Unit::KM,-1),
@@ -253,6 +270,10 @@ int main (int argc, char **argv) {
                         orsa::FromUnits(rotation_period,orsa::Unit::HOUR,-1),
                         pole_ecliptic_longitude*orsa::radToDeg(),
                         pole_ecliptic_latitude*orsa::radToDeg(),
+                        gas_production_rate_at_1AU,
+                        gas_velocity_at_1AU,
+                        gas_molar_mass,
+                        gas_drag_coefficient,
                         lon*orsa::radToDeg(),
                         lat*orsa::radToDeg(),
                         phi*orsa::radToDeg(),

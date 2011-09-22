@@ -16,6 +16,119 @@
 
 using namespace orsa;
 
+// Burns, Lamy, Soter 1979, Eq. (19)
+double GrainBetaToRadius(const double & grainBeta,
+                         const double & grainDensity,
+                         const double & Qpr = 1.0) {
+    static const double    L = orsa::FromUnits(orsa::FromUnits(orsa::FromUnits(3.839e26,orsa::Unit::KG),orsa::Unit::METER,2),orsa::Unit::SECOND,-3); //
+    static const double    G = orsa::Unit::G();
+    static const double MSun = orsaSolarSystem::Data::MSun();
+    static const double    c = orsa::Unit::c();
+    // static const double  Qpr = 1.0;
+    
+    return (3*L)/(16*orsa::pi()*G*MSun*c) * (Qpr)/(grainBeta*grainDensity);
+}
+
+class GasDrag : public orsa::Propulsion {
+public:
+    GasDrag(orsa::BodyGroup  * bg_in,
+            const orsa::Body * sun_in,
+            const orsa::Body * comet_in,
+            const orsa::Body * grain_in,
+            const double & grain_beta_in,
+            const double & grain_density_in,
+            const double & gas_production_rate_at_1AU,
+            const double & gas_velocity_at_1AU,
+            const double & gas_molar_mass, // i.e. 18 for H20
+            const double & gas_drag_coefficient) :
+        orsa::Propulsion(),
+        bg(bg_in),
+        sun(sun_in),
+        comet(comet_in),
+        grain(grain_in),
+        grainBeta(grain_beta_in),
+        grainDensity(grain_density_in),
+        grainRadius(GrainBetaToRadius(grainBeta,grainDensity)),
+        grainArea(orsa::pi()*orsa::square(grainRadius)),
+        Q_1AU(gas_production_rate_at_1AU),
+        Vgas_1AU(gas_velocity_at_1AU),
+        Mgas(orsa::FromUnits(gas_molar_mass*1.66e-27,orsa::Unit::KG)), // conversion from molar
+        Cd(gas_drag_coefficient),
+        newton(orsa::FromUnits(orsa::FromUnits(orsa::FromUnits(1,orsa::Unit::KG),orsa::Unit::METER),orsa::Unit::SECOND,-2)) { }
+protected:
+    ~GasDrag() { }
+public:	
+    orsa::Vector getThrust(const orsa::Time & t) const {
+
+        if (Cd == 0.0) return orsa::Vector(0,0,0);
+        
+        orsa::Vector rSun;
+        if (!bg->getInterpolatedPosition(rSun,sun.get(),t)) {
+            ORSA_DEBUG("problems...");
+        }	
+        
+        orsa::Vector rComet, vComet;
+        if (!bg->getInterpolatedPosVel(rComet,vComet,comet.get(),t)) {
+            ORSA_DEBUG("problems...");
+        }
+        
+        orsa::Vector rGrain,vGrain;
+        if (!bg->getInterpolatedPosVel(rGrain,vGrain,grain.get(),t)) {
+            ORSA_DEBUG("problems...");
+        }	
+        
+        const orsa::Vector R_h = (rComet-rSun);
+        const double r_h = R_h.length();
+
+        const double r_h_AU = orsa::FromUnits(r_h,orsa::Unit::AU,-1);
+        
+        const orsa::Vector R_c = (rGrain-rComet);
+        const double r_c = R_c.length();
+        
+        // gas velocity at r_h, relative to comet
+        const double v_gas_h = Vgas_1AU * pow(r_h_AU,-0.5);
+        
+        // production rate at r_h
+        const double Q_h = Q_1AU * pow(r_h_AU,-2);
+        
+        // number density at r_c for production rate Q_h
+        const double n = Q_h / (4*orsa::pi()*orsa::square(r_c)*v_gas_h);
+        // optional: can multiply x cos(theta_sun) to account for gas only from lit side of comet
+        
+        // rho = mass density = number density x molecular mass
+        const double rho = n * Mgas;
+
+        // relative to comet
+        const orsa::Vector V_Gas_c   = v_gas_h * (rGrain-rComet).normalized();
+        const orsa::Vector V_Grain_c = vGrain-vComet;
+        const orsa::Vector dV = V_Grain_c - V_Gas_c;
+        
+        const orsa::Vector thrust =
+            0.5*rho*dV.lengthSquared()*Cd*grainArea*V_Gas_c.normalized();
+        
+        return thrust;
+    }
+public:
+    bool nextEventTime(orsa::Time      &,
+                       const mpz_class &) const {
+        return false; // always ON
+    }
+protected:
+    osg::ref_ptr<orsa::BodyGroup>  bg;
+    osg::ref_ptr<const orsa::Body> sun;
+    osg::ref_ptr<const orsa::Body> comet;
+    osg::ref_ptr<const orsa::Body> grain;
+    const double grainBeta;
+    const double grainDensity;
+    const double grainRadius;
+    const double grainArea;
+    const double Q_1AU; // gas production rate at 1 AU [units: number/second]
+    const double Vgas_1AU; // gas velocity at 1 AU
+    const double Mgas; // gas molecule mass (already converted from molar to KG)
+    const double Cd; // drag coefficient
+    const double newton;
+};
+
 class CGDIntegrator : public orsa::IntegratorRadau {
 public:
     // gB: grain
