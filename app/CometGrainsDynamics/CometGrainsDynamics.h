@@ -59,7 +59,7 @@ protected:
     ~GasDrag() { }
 public:	
     orsa::Vector getThrust(const orsa::Time & t) const {
-
+        
         if (Cd == 0.0) return orsa::Vector(0,0,0);
         
         orsa::Vector rSun;
@@ -142,13 +142,15 @@ public:
         nucleus(nB),
         r_bound(bound_distance),
         crossing_size(1+pow_10_max_distance) {
-        _accuracy = 1.0e-3;
+        _accuracy = 1.0e-6;
         outcome = ORBITING;
         crossing_distance.resize(crossing_size);
+        crossing_velocity.resize(crossing_size);
         crossing_time.resize(crossing_size);
         for (size_t k=0; k<crossing_size; ++k) {
             crossing_distance[k] = orsa::FromUnits(pow(10,k),orsa::Unit::KM);
             crossing_time[k] = orsa::Time(0);
+            crossing_velocity[k] = 0.0;
         }
     }
 public:
@@ -166,6 +168,7 @@ public:
     mutable orsa::Cache<double> max_distance;
     const size_t crossing_size;
     std::vector<double> crossing_distance;
+    mutable std::vector<double> crossing_velocity;
     mutable std::vector<orsa::Time> crossing_time;
 public:
     void singleStepDone(orsa::BodyGroup  * bg,
@@ -205,6 +208,7 @@ public:
             if (grain_r_relative_local.length() > crossing_distance[k]) {
                 if (crossing_time[k] == orsa::Time(0)) {
                     crossing_time[k] = t;
+                    crossing_velocity[k] = grain_v_relative_local.length();
                 }
             }
         }
