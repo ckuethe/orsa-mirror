@@ -124,12 +124,11 @@ public:
         const double dist_ratio = dr_g.length() / nucleus_max_radius;
         const double v_Gas_factor = dist_ratio/(1.0+dist_ratio); // goes from 0.5 near nucleus to 1.0 asymptotically
         const orsa::Vector V_Gas_c = v_Gas_factor * v_gas_h * normal_g;
-        
         const orsa::Vector V_Grain_c = vGrain-vComet;
-        const orsa::Vector dV = V_Grain_c - V_Gas_c;
-        
+        const double dV = (V_Grain_c - V_Gas_c)*(V_Gas_c.normalized());
+        const double sign = (dV>0) ? -1 : +1;
         const orsa::Vector thrust =
-            0.5*rho*dV.lengthSquared()*Cd*grainArea*V_Gas_c.normalized();
+            sign*0.5*rho*dV*dV*Cd*grainArea*V_Gas_c.normalized();
         
         return thrust;
     }
