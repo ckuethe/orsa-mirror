@@ -15,7 +15,7 @@ int main (int argc, char **argv) {
     const double r_comet = orsa::FromUnits(1.0,orsa::Unit::AU);
     const double nucleus_ax = orsa::FromUnits(3.0,orsa::Unit::KM);
     const double nucleus_ay = orsa::FromUnits(3.0,orsa::Unit::KM);
-    const double nucleus_az = orsa::FromUnits(3.0,orsa::Unit::KM);
+    const double nucleus_az = orsa::FromUnits(2.0,orsa::Unit::KM);
     const size_t gravity_degree = 2;
     const double comet_density = orsa::FromUnits(orsa::FromUnits(0.4,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double grain_density = orsa::FromUnits(orsa::FromUnits(1.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
@@ -63,8 +63,9 @@ int main (int argc, char **argv) {
     }
     
     osg::ref_ptr<orsa::Body> nucleus = new orsa::Body;
-    osg::ref_ptr<orsa::Shape> nucleus_shape =
+    osg::ref_ptr<orsa::EllipsoidShape> nucleus_shape =
         new orsa::EllipsoidShape(nucleus_ax,nucleus_ay,nucleus_az);
+    nucleus_shape->closestVertexEpsilon = 1.0e-3;
     const orsa::Vector nucleus_r0 = orsa::Vector(r_comet,0,0);
     const orsa::Vector nucleus_v0 = orsa::Vector(0,sqrt(orsaSolarSystem::Data::GMSun()/r_comet),0); // circular orbit approximation, to keep the Hill sphere radius constant
     {

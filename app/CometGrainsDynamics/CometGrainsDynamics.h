@@ -97,9 +97,34 @@ public:
         
         // rho = mass density = number density x molecular mass
         const double rho = n * Mgas;
-
+        
+        const orsa::Matrix g2l = orsa::globalToLocal(comet,bg,t);
+        const orsa::Matrix l2g = orsa::localToGlobal(comet,bg,t);
+        orsa::IBPS ibps;
+        bg->getIBPS(ibps,comet,t);
+        const orsa::EllipsoidShape * nucleus_shape =
+            dynamic_cast<const orsa::EllipsoidShape *> (ibps.inertial->originalShape());
+        double na, nb, nc;
+        nucleus_shape->getABC(na,nb,nc);
+        const double nucleus_max_radius = std::max(na,std::max(nb,nc));
+        
         // relative to comet
-        const orsa::Vector V_Gas_c   = v_gas_h * (rGrain-rComet).normalized();
+        // const orsa::Vector V_Gas_c   = v_gas_h * (rGrain-rComet).normalized();
+        // modify V_gas_c to smoothly decrease near nucleus
+        const orsa::Vector dr_g = rGrain-rComet;
+        const orsa::Vector dr_l = g2l*dr_g;
+        const orsa::Vector closest_point =
+            nucleus_shape->closestVertex(dr_l);
+        const orsa::Vector normal_l =
+            nucleus_shape->normalVector(closest_point);
+        const orsa::Vector normal_g = l2g*normal_l;
+        
+        // NOTE: gas direction is proportional to normal_g, but at larger distances from nucleus, it should become simply radial...
+        
+        const double dist_ratio = dr_g.length() / nucleus_max_radius;
+        const double v_Gas_factor = dist_ratio/(1.0+dist_ratio); // goes from 0.5 near nucleus to 1.0 asymptotically
+        const orsa::Vector V_Gas_c = v_Gas_factor * v_gas_h * normal_g;
+        
         const orsa::Vector V_Grain_c = vGrain-vComet;
         const orsa::Vector dV = V_Grain_c - V_Gas_c;
         
