@@ -63,7 +63,7 @@ namespace orsa {
         virtual bool isInside(const Vector &) const = 0;
     
     public:
-        virtual const Vector & closestVertex(const Vector &) const = 0;
+        virtual const Vector closestVertex(const Vector &) const = 0;
     
     public:
         virtual bool rayIntersection(orsa::Vector & intersectionPoint,
@@ -188,8 +188,8 @@ namespace orsa {
         // bool _isInside_usePointInTetrahedronMethod(const Vector &) const;
         
     public:
-        const Vector & closestVertex(const Vector &) const;   
-        unsigned int   closestVertexIndex(const Vector &) const;   
+        const Vector closestVertex(const Vector &) const;   
+        unsigned int closestVertexIndex(const Vector &) const;   
     protected:
         mutable unsigned int _old_closest_vertex_index;
     
@@ -321,12 +321,13 @@ namespace orsa {
             _bm2(1/_b2),
             _c(c),
             _c2(c*c),
-            _cm2(1/_c2),
-            _dummy_closest(0,0,0) {
+            _cm2(1/_c2) {
             _init();
         }
     private:
-        void _init() { }
+        void _init() {
+            closestVertexEpsilon = 10*orsa::epsilon();
+        }
     protected:
         ~EllipsoidShape() { }
     
@@ -348,10 +349,7 @@ namespace orsa {
         bool isInside(const Vector &) const;
     
     public:
-        //! dummy method, for the moment...
-        const Vector & closestVertex(const Vector &) const {
-            return _dummy_closest;
-        }
+        const Vector closestVertex(const Vector &) const;
     
     protected:
         bool _updateCache() const;
@@ -380,14 +378,13 @@ namespace orsa {
            return (n);
            }
         */
-    
+        
     protected:
         const double _a, _a2, _am2, _b, _b2, _bm2, _c, _c2, _cm2;
-    
-    protected:
-        const orsa::Vector _dummy_closest;    
+    public:
+        mutable double closestVertexEpsilon;
     };
-  
+    
     //! Utility function: returns true if a half-line intersects a triangle
     //! Line starts at point P and with direction u 
     //! Triangle t1, t2, t3

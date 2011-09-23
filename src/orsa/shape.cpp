@@ -384,7 +384,7 @@ bool TriShape::_isInside_useFaceMethod(const Vector & v) const {
    }
 */
 
-const Vector & TriShape::closestVertex(const Vector & v) const {
+const Vector TriShape::closestVertex(const Vector & v) const {
     return _vertex[closestVertexIndex(v)];
 }
 
@@ -823,6 +823,42 @@ bool EllipsoidShape::isInside(const Vector & v) const {
     return ((orsa::square(v.getX())*_am2 +
              orsa::square(v.getY())*_bm2 +
              orsa::square(v.getZ())*_cm2 ) <= 1);
+}
+
+const Vector EllipsoidShape::closestVertex(const Vector & P) const {
+    orsa::Vector u = -P.normalized(); // initial value x unit vector, pointing to the ellipsoid center
+    orsa::Vector old_u;
+    orsa::Vector intersectionPoint;
+    orsa::Vector normal;
+    bool goodIntersection;
+    size_t iter=0;
+    do {
+        ++iter;
+        goodIntersection = rayIntersection(intersectionPoint,
+                                           normal,
+                                           P,
+                                           u,
+                                           true);
+        if (!goodIntersection) {
+
+            // ORSA_DEBUG("missed intersection, adjusting...");
+            
+            // get closer to old_u
+            u = (u+old_u).normalized();
+        }
+        old_u = u;
+        u = -normal;
+        
+        /* ORSA_DEBUG("iter: %zi   fabs(1.0-old_u*u): %g   10*orsa::epsilon(): %g",iter,fabs(1.0-old_u*u),10*orsa::epsilon());
+           orsa::print(old_u);
+           orsa::print(u);
+        */
+        
+    } while (fabs(1.0-old_u*u)>closestVertexEpsilon);
+    
+    // ORSA_DEBUG("iter: %zi",iter);
+    
+    return intersectionPoint;
 }
 
 bool EllipsoidShape::_updateCache() const {
