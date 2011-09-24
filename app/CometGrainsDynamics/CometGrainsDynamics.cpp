@@ -127,8 +127,6 @@ int main (int argc, char **argv) {
         const orsa::Vector r0 = intersectionPoint;
         const orsa::Vector n0 = normal;
         
-        // ORSA_DEBUG("scalar: %g",intersectionPoint*normal);
-        
         const orsa::Vector u_rot =
             orsa::externalProduct(orsa::Vector(0,0,1),n0).normalized();
         const orsa::Vector u_pol =
