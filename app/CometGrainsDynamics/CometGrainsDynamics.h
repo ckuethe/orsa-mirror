@@ -173,8 +173,8 @@ public:
         crossing_time.resize(crossing_size);
         for (size_t k=0; k<crossing_size; ++k) {
             crossing_distance[k] = orsa::FromUnits(pow(10,k),orsa::Unit::KM);
-            crossing_time[k] = orsa::Time(0);
-            crossing_velocity[k] = 0.0;
+            crossing_time[k] = orsa::Time(-99);
+            crossing_velocity[k] = -99;
         }
     }
 public:
@@ -230,7 +230,7 @@ public:
         
         for (size_t k=0; k<crossing_size; ++k) {
             if (grain_r_relative_local.length() > crossing_distance[k]) {
-                if (crossing_time[k] == orsa::Time(0)) {
+                if (crossing_time[k] == orsa::Time(-99)) {
                     crossing_time[k] = t;
                     crossing_velocity[k] = grain_v_relative_local.length();
                 }

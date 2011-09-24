@@ -12,10 +12,10 @@ int main (int argc, char **argv) {
     // all depends on the gas_drag_coefficient value
     
     // input
-    const double r_comet = orsa::FromUnits(0.5,orsa::Unit::AU);
+    const double r_comet = orsa::FromUnits(1.0,orsa::Unit::AU);
     const double nucleus_ax = orsa::FromUnits(3.0,orsa::Unit::KM);
-    const double nucleus_ay = orsa::FromUnits(3.0,orsa::Unit::KM);
-    const double nucleus_az = orsa::FromUnits(3.0,orsa::Unit::KM);
+    const double nucleus_ay = orsa::FromUnits(2.0,orsa::Unit::KM);
+    const double nucleus_az = orsa::FromUnits(1.0,orsa::Unit::KM);
     const size_t gravity_degree = 2;
     const double comet_density = orsa::FromUnits(orsa::FromUnits(0.4,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double grain_density = orsa::FromUnits(orsa::FromUnits(1.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
@@ -35,10 +35,10 @@ int main (int argc, char **argv) {
     const int max_time_days = 100;
     
     // gas drag coefficients
-    const double gas_production_rate_at_1AU = orsa::FromUnits(1.0e28,orsa::Unit::SECOND,-1); // molecules/second
+    const double gas_production_rate_at_1AU = orsa::FromUnits(1.0e30,orsa::Unit::SECOND,-1); // molecules/second
     const double gas_velocity_at_1AU = orsa::FromUnits(orsa::FromUnits(0.5,orsa::Unit::KM),orsa::Unit::SECOND,-1);
     const double gas_molar_mass = 18; // 18 for H20
-    const double gas_drag_coefficient = 0.40; // Cd
+    const double gas_drag_coefficient = 0.40; // Cd nominal: 0.40
     
     const orsa::Time t0 = orsa::Time(0);
     const orsa::Time max_time(max_time_days,0,0,0,0);
@@ -126,6 +126,8 @@ int main (int argc, char **argv) {
                                        false);
         const orsa::Vector r0 = intersectionPoint;
         const orsa::Vector n0 = normal;
+        
+        // ORSA_DEBUG("scalar: %g",intersectionPoint*normal);
         
         const orsa::Vector u_rot =
             orsa::externalProduct(orsa::Vector(0,0,1),n0).normalized();
