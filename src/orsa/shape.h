@@ -9,6 +9,8 @@
 #include <orsa/double.h>
 #include <orsa/vector.h>
 
+#include <gsl/gsl_roots.h>
+
 #include <vector>
 
 namespace orsa {
@@ -325,11 +327,11 @@ namespace orsa {
             _init();
         }
     private:
-        void _init() {
-            closestVertexEpsilon = 10*orsa::epsilon();
-        }
+        void _init();
     protected:
-        ~EllipsoidShape() { }
+        ~EllipsoidShape() {
+            gsl_root_fdfsolver_free (s);
+        }
     
     public:
         ShapeType getType() const {
@@ -383,6 +385,22 @@ namespace orsa {
         const double _a, _a2, _am2, _b, _b2, _bm2, _c, _c2, _cm2;
     public:
         mutable double closestVertexEpsilon;
+        mutable double cV_l;
+    public:
+        struct cV_par {
+            double a2, b2, c2;
+            double Px, Py, Pz;
+        };
+    protected:
+        mutable cV_par params;
+        mutable gsl_function_fdf cV_FDF;
+        const gsl_root_fdfsolver_type * T;
+        gsl_root_fdfsolver * s;
+        // double cV_S (const double & P, const double & l, const double & r2) const;
+        // double cV_dS2_dl_over_r2 (const double & P, const double & l, const double & r2) const;
+        // double cV_f (double l, void * params) const;
+        // double cV_df (double l, void * params) const;
+        // void cV_fdf (double l, void *params, double *y, double *dy) const;
     };
     
     //! Utility function: returns true if a half-line intersects a triangle
