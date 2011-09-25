@@ -4,6 +4,8 @@ int main (int argc, char **argv) {
     
     // set randomSeed for testing purposes only
     // orsa::GlobalRNG::randomSeed = 1376174123;
+    // orsa::GlobalRNG::randomSeed = 1119056643;
+    // orsa::GlobalRNG::randomSeed = -128300218;
     
     // NOTE: two alternative mechanisms for ejection velocity
     // 1) sampling distribution= rotational component + ejection velocity model (no gas drag)
@@ -35,7 +37,7 @@ int main (int argc, char **argv) {
     const int max_time_days = 100;
     
     // gas drag coefficients
-    const double gas_production_rate_at_1AU = orsa::FromUnits(1.0e30,orsa::Unit::SECOND,-1); // molecules/second
+    const double gas_production_rate_at_1AU = orsa::FromUnits(1.0e28,orsa::Unit::SECOND,-1); // molecules/second
     const double gas_velocity_at_1AU = orsa::FromUnits(orsa::FromUnits(0.5,orsa::Unit::KM),orsa::Unit::SECOND,-1);
     const double gas_molar_mass = 18; // 18 for H20
     const double gas_drag_coefficient = 0.40; // Cd nominal: 0.40
@@ -174,6 +176,9 @@ int main (int argc, char **argv) {
            orsa::print(v0_rotational_component);
            orsa::print(v0);
         */
+
+        // reset cV_l on ellipsoid shape
+        nucleus_shape->cV_l = 0.0;
         
         
         osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
@@ -220,7 +225,7 @@ int main (int argc, char **argv) {
         integrator->integrate(bg.get(),
                               t0,
                               max_time,
-                              orsa::Time(0,0,5,0,0));
+                              orsa::Time(0,0,0,1,0));
         
         orsa::Time common_start_time, common_stop_time;
         const bool goodCommonInterval = bg->getCommonInterval(common_start_time,common_stop_time,false);
@@ -231,9 +236,16 @@ int main (int argc, char **argv) {
             double final_distance;
             double lon_impact = -999*orsa::degToRad();
             double lat_impact = -999*orsa::degToRad();
+            double sun_final_angle = -999*orsa::degToRad();
             {
                 const orsa::Time t = common_stop_time;
                 orsa::Vector r,v;
+                bg->getInterpolatedPosVel(r,
+                                          v,
+                                          sun,
+                                          t);
+                const orsa::Vector sun_r_global = r;
+                const orsa::Vector sun_v_global = v;
                 bg->getInterpolatedPosVel(r,
                                           v,
                                           nucleus,
@@ -258,10 +270,12 @@ int main (int argc, char **argv) {
                     if (lon_impact < 0.0) lon_impact += orsa::twopi();
                     lat_impact = asin(grain_r_relative_local.getZ()/grain_r_relative_local.length());
                 }
+                
+                sun_final_angle = acos((sun_r_global-nucleus_r_global).normalized()*grain_r_relative_global.normalized());
             }
             
             FILE * fp = fopen("CGD.out","a");
-            gmp_fprintf(fp,"%g %g %g %g %.3e %.3e %.3e %.3e %g %g %g %g %g %g %g %g %g %7.3f %+7.3f %7.3f %7.3f %.3f %.3f %.3f %.3f %.3e %.3e %10.6f %10.6f %10.6f %10.6f %10.6f %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %i %8.3f %+8.3f\n",
+            gmp_fprintf(fp,"%g %g %g %g %.3e %.3e %.3e %.3e %g %g %g %g %g %g %g %g %g %7.3f %+7.3f %7.3f %7.3f %.3f %.3f %.3f %.3f %.3e %.3e %10.6f %10.6f %10.6f %10.6f %10.6f %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %i %8.3f %+8.3f %+8.3f\n",
                         orsa::FromUnits(r_comet,orsa::Unit::AU,-1),
                         orsa::FromUnits(nucleus_ax,orsa::Unit::KM,-1),
                         orsa::FromUnits(nucleus_ay,orsa::Unit::KM,-1),
@@ -306,9 +320,9 @@ int main (int argc, char **argv) {
                         orsa::FromUnits(final_distance,orsa::Unit::KM,-1),
                         integrator->outcome,
                         lon_impact*orsa::radToDeg(),
-                        lat_impact*orsa::radToDeg());
-            fclose (fp);
-            
+                        /* 45 */ lat_impact*orsa::radToDeg(),
+                        orsa::radToDeg()*sun_final_angle);
+            fclose (fp);  
         }
         
         ++iter;
@@ -316,3 +330,4 @@ int main (int argc, char **argv) {
     
     return 0;
 }
+

@@ -92,8 +92,13 @@ public:
         const double Q_h = Q_1AU * pow(r_h_AU,-2);
         
         // number density at r_c for production rate Q_h
-        const double n = Q_h / (4*orsa::pi()*orsa::square(r_c)*v_gas_h);
+        //const double n = Q_h / (4*orsa::pi()*orsa::square(r_c)*v_gas_h);
         // optional: can multiply x cos(theta_sun) to account for gas only from lit side of comet
+        const double theta_sun = acos((rSun-rComet).normalized() * R_c.normalized());
+        const double theta_sun_factor = cos(0.5*theta_sun);
+        const double n = Q_h * theta_sun_factor / (4*orsa::pi()*orsa::square(r_c)*v_gas_h);
+        
+        // ORSA_DEBUG("theta_sun_factor: %g",theta_sun_factor);
         
         // rho = mass density = number density x molecular mass
         const double rho = n * Mgas;
@@ -108,27 +113,46 @@ public:
         nucleus_shape->getABC(na,nb,nc);
         const double nucleus_max_radius = std::max(na,std::max(nb,nc));
         
-        // relative to comet
-        // const orsa::Vector V_Gas_c   = v_gas_h * (rGrain-rComet).normalized();
-        // modify V_gas_c to smoothly decrease near nucleus
-        const orsa::Vector dr_g = rGrain-rComet;
-        const orsa::Vector dr_l = g2l*dr_g;
-        const orsa::Vector closest_point =
-            nucleus_shape->closestVertex(dr_l);
-        const orsa::Vector normal_l =
-            nucleus_shape->normalVector(closest_point);
-        const orsa::Vector normal_g = l2g*normal_l;
+        // switch to radial when difference is approximately smaller than 1 deg
+        orsa::Vector u_gas;
+        if (r_c/nucleus_max_radius > 100) {
+            // radial
+            u_gas = R_c.normalized();
+        } else {
+            // relative to comet
+            // const orsa::Vector V_Gas_c   = v_gas_h * (rGrain-rComet).normalized();
+            // modify V_gas_c to smoothly decrease near nucleus
+            const orsa::Vector dr_g = rGrain-rComet;
+            const orsa::Vector dr_l = g2l*dr_g;
+            const orsa::Vector closest_point =
+                nucleus_shape->closestVertex(dr_l);
+            const orsa::Vector normal_l =
+                nucleus_shape->normalVector(closest_point);
+            const orsa::Vector normal_g = l2g*normal_l;
+            u_gas = normal_g;
+        }
         
-        // NOTE: gas direction is proportional to normal_g, but at larger distances from nucleus, it should become simply radial...
+        // NOTE: gas direction is proportional to normal_g, which gets close to radial at large distances
         
-        const double dist_ratio = dr_g.length() / nucleus_max_radius;
+        const double dist_ratio = r_c / nucleus_max_radius;
         const double v_Gas_factor = dist_ratio/(1.0+dist_ratio); // goes from 0.5 near nucleus to 1.0 asymptotically
-        const orsa::Vector V_Gas_c = v_Gas_factor * v_gas_h * normal_g;
+        const orsa::Vector V_Gas_c = v_Gas_factor * v_gas_h * u_gas;
         const orsa::Vector V_Grain_c = vGrain-vComet;
         const double dV = (V_Grain_c - V_Gas_c)*(V_Gas_c.normalized());
         const double sign = (dV>0) ? -1 : +1;
         const orsa::Vector thrust =
             sign*0.5*rho*dV*dV*Cd*grainArea*V_Gas_c.normalized();
+
+        gmp_printf("%12.6f %12.3f %12.6f %12.6f %12.6f %12.6f %g %g %g\n",
+                   orsa::FromUnits(t.get_d(),orsa::Unit::DAY,-1),
+                   orsa::FromUnits(R_c.length(),orsa::Unit::KM,-1),
+                   dist_ratio,
+                   orsa::radToDeg()*acos(std::min(1.0,u_gas*(R_c.normalized()))),
+                   orsa::radToDeg()*acos(std::min(1.0,(vGrain-vComet).normalized()*(R_c.normalized()))),
+                   orsa::radToDeg()*acos(std::min(1.0,(rSun-rComet).normalized()*(R_c.normalized()))),
+                   orsa::FromUnits(R_c.getX(),orsa::Unit::KM,-1),
+                   orsa::FromUnits(R_c.getY(),orsa::Unit::KM,-1),
+                   orsa::FromUnits(R_c.getZ(),orsa::Unit::KM,-1));
         
         return thrust;
     }
