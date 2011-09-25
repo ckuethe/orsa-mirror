@@ -5,6 +5,10 @@
 
 #include <algorithm>
 
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_math.h>
+#include <gsl/gsl_roots.h>
+
 using namespace orsa;
 
 // Shape
@@ -825,9 +829,96 @@ bool EllipsoidShape::isInside(const Vector & v) const {
              orsa::square(v.getZ())*_cm2 ) <= 1);
 }
 
+
+/*** root finding code for EllipsoidShape::closestVertex ***/
+
+struct cV_par {
+    double a2, b2, c2;
+    double Px, Py, Pz;
+};
+
+double cV_f (double x, void * params) {
+    struct cV_par * p = (struct cV_par *) params;
+    const double Sx = p->Px/(1+x/p->a2);
+    const double Sy = p->Py/(1+x/p->b2);
+    const double Sz = p->Pz/(1+x/p->c2);
+    return (Sx*Sx/p->a2 +
+            Sy*Sy/p->b2 +
+            Sz*Sz/p->c2 - 1);
+}
+
+const Vector EllipsoidShape::closestVertex(const Vector & P) const {   
+    int status;
+    int iter = 0, max_iter = 100;
+    double r = 0;
+    // double x_lo = 0.0, x_hi = P.length()/std::min(_a,std::min(_b,_c));
+    double x_lo = -1;
+    double x_hi =  1e20;
+    gsl_function F;
+    
+#warning should do only this once in class constructor...
+    struct cV_par params;
+    params.a2 = _a2;
+    params.b2 = _b2;
+    params.c2 = _c2;
+    params.Px = P.getX();
+    params.Py = P.getY();
+    params.Pz = P.getZ();
+    
+    /* {
+    // test
+    double x=x_lo;
+    while (x<= x_hi) {
+    const double f = cV_f(x,&params);
+    ORSA_DEBUG("x: %12g  f: %12g",x,f);
+    x += 0.01*(x_hi-x_lo);
+    }
+    }
+    */
+    
+    F.function = &cV_f;
+    F.params   = &params;
+    
+    const gsl_root_fsolver_type * T  = gsl_root_fsolver_brent;
+    gsl_root_fsolver * s = gsl_root_fsolver_alloc (T);
+    gsl_root_fsolver_set (s, &F, x_lo, x_hi);
+
+    do {
+        iter++;
+        status = gsl_root_fsolver_iterate (s);
+        r = gsl_root_fsolver_root (s);
+        x_lo = gsl_root_fsolver_x_lower (s);
+        x_hi = gsl_root_fsolver_x_upper (s);
+        status = gsl_root_test_interval (x_lo, x_hi, 0, 0.001);
+        
+        /* if (status == GSL_SUCCESS)
+           printf ("Converged:\n");
+           printf ("%5d [%.7f, %.7f] %.7f %.7f\n",
+           iter, x_lo, x_hi,
+           r,
+           x_hi - x_lo);
+        */
+        
+    } while (status == GSL_CONTINUE && iter < max_iter);
+    
+    // ORSA_DEBUG("root: %12g   P.length(): %12g",r,P.length());
+    
+    // save
+    const orsa::Vector cV(P.getX()/(1+r*_am2),
+                          P.getY()/(1+r*_bm2),
+                          P.getZ()/(1+r*_cm2));
+
+    // ORSA_DEBUG("iter: %i",iter);
+    
+    gsl_root_fsolver_free (s);
+    
+    return cV;
+}
+
+#if 0 // older version
 const Vector EllipsoidShape::closestVertex(const Vector & P) const {
     orsa::Vector u = -P.normalized(); // initial value x unit vector, pointing to the ellipsoid center
-    orsa::Vector old_u;
+    // orsa::Vector old_u;
     orsa::Vector intersectionPoint;
     orsa::Vector normal;
     bool goodIntersection;
@@ -840,26 +931,31 @@ const Vector EllipsoidShape::closestVertex(const Vector & P) const {
                                            u,
                                            true);
         if (!goodIntersection) {
-
-            // ORSA_DEBUG("missed intersection, adjusting...");
+            
+            ORSA_DEBUG("missed intersection, need adjusting...");
             
             // get closer to old_u
-            u = (u+old_u).normalized();
+            // u = (u+old_u).normalized();
         }
-        old_u = u;
-        u = -normal;
+        // old_u = u;
+        // u = -normal;
+        u = (intersectionPoint-P).normalized();
         
-        /* ORSA_DEBUG("iter: %zi   fabs(1.0-old_u*u): %g   10*orsa::epsilon(): %g",iter,fabs(1.0-old_u*u),10*orsa::epsilon());
-           orsa::print(old_u);
-           orsa::print(u);
-        */
+        {
+            ORSA_DEBUG("iter: %zi",iter); 
+            // orsa::print(old_u);
+            orsa::print(u);
+        }
         
-    } while (fabs(1.0-old_u*u)>closestVertexEpsilon);
+        // } while (fabs(1.0-old_u*u)>closestVertexEpsilon);
+    } while (fabs(1.0-u*normal)>closestVertexEpsilon);
     
     // ORSA_DEBUG("iter: %zi",iter);
     
     return intersectionPoint;
 }
+
+#endif // 0
 
 bool EllipsoidShape::_updateCache() const {
     if ((!_r_min.isSet()) || (!_r_max.isSet())) {
