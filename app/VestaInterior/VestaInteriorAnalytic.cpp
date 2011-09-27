@@ -732,7 +732,24 @@ int main(int argc, char **argv) {
                 x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(2.00,orsa::Unit::GRAM),orsa::Unit::CM,-3);
                 x0.penaltyThreshold = 0.50;
                 for (size_t b=0; b<x0.uK_size; ++b) {
+
+                    // orig
+                    // x0.factor[b] = 0.0;
+                    
+#warning the start model, or hint model, should be one of the user arguments
+                    // test: get as close as possible to cT = {1,0,0,0,0...} = constant density
+                    // projectr (1,0,0,0..) - cT0 along uK_b
                     x0.factor[b] = 0.0;
+                    for (size_t s=0; s<N; ++s) {
+                        if (s==0) {
+                            // first element of target cT = 1
+                            x0.factor[b] += (1.0-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
+                        } else {
+                            // all other elements of target cT = 0
+                            x0.factor[b] += (0.0-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
+                        }
+                    }
+                    ORSA_DEBUG("factor[%03i] = %g",b,x0.factor[b]);
                 }
                 
                 gsl_siman_solve(rng, &x0, E1, S1, M1, P1,
