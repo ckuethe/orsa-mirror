@@ -115,10 +115,12 @@ public:
         
         // switch to radial when difference is approximately smaller than 1 deg
         orsa::Vector u_gas;
-        if (r_c/nucleus_max_radius > 100) {
-            // radial
-            u_gas = R_c.normalized();
+        /* if (r_c/nucleus_max_radius > 100) {
+        // radial
+        u_gas = R_c.normalized();
         } else {
+        */
+        {
             // relative to comet
             // const orsa::Vector V_Gas_c   = v_gas_h * (rGrain-rComet).normalized();
             // modify V_gas_c to smoothly decrease near nucleus
