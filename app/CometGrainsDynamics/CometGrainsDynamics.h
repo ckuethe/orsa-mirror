@@ -62,8 +62,8 @@ public:
         
         if (Cd == 0.0) return orsa::Vector(0,0,0);
         
-        orsa::Vector rSun;
-        if (!bg->getInterpolatedPosition(rSun,sun.get(),t)) {
+        orsa::Vector rSun, vSun;
+        if (!bg->getInterpolatedPosVel(rSun,vSun,sun.get(),t)) {
             ORSA_DEBUG("problems...");
         }	
         
@@ -76,6 +76,18 @@ public:
         if (!bg->getInterpolatedPosVel(rGrain,vGrain,grain.get(),t)) {
             ORSA_DEBUG("problems...");
         }	
+
+        // triplet of orthogonal unit vectors: uS (towards Sun), uV (along comet velocity), uN (normal to comet orbit plane)
+        const orsa::Vector uS = (rSun-rComet).normalized();
+        const orsa::Vector u_tmp_z = orsa::externalProduct(uS,(vSun-vComet)).normalized();
+        const orsa::Vector uV = orsa::externalProduct(u_tmp_z,uS).normalized();
+        const orsa::Vector uN = orsa::externalProduct(uS,uV).normalized();
+        
+        /* ORSA_DEBUG("---- %g %g %g",uS*uV,uS*uN,uV*uN);
+           orsa::print(uS);
+           orsa::print(uV);
+           orsa::print(uN);
+        */
         
         const orsa::Vector R_h = (rComet-rSun);
         const double r_h = R_h.length();
@@ -152,9 +164,9 @@ public:
                    orsa::radToDeg()*acos(std::min(1.0,u_gas*(R_c.normalized()))),
                    orsa::radToDeg()*acos(std::min(1.0,(vGrain-vComet).normalized()*(R_c.normalized()))),
                    orsa::radToDeg()*acos(std::min(1.0,(rSun-rComet).normalized()*(R_c.normalized()))),
-                   orsa::FromUnits(R_c.getX(),orsa::Unit::KM,-1),
-                   orsa::FromUnits(R_c.getY(),orsa::Unit::KM,-1),
-                   orsa::FromUnits(R_c.getZ(),orsa::Unit::KM,-1));
+                   orsa::FromUnits(R_c*uS,orsa::Unit::KM,-1),
+                   orsa::FromUnits(R_c*uV,orsa::Unit::KM,-1),
+                   orsa::FromUnits(R_c*uN,orsa::Unit::KM,-1));
         
         return thrust;
     }
