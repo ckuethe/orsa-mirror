@@ -6,6 +6,7 @@ int main (int argc, char **argv) {
     // orsa::GlobalRNG::randomSeed = 1376174123;
     // orsa::GlobalRNG::randomSeed = 1119056643;
     // orsa::GlobalRNG::randomSeed = -128300218;
+    // orsa::GlobalRNG::randomSeed = -124766705;
     
     // NOTE: two alternative mechanisms for ejection velocity
     // 1) sampling distribution= rotational component + ejection velocity model (no gas drag)
