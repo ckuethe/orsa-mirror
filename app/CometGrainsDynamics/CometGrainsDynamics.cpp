@@ -92,6 +92,7 @@ int main (int argc, char **argv) {
         ibps.translational = new orsa::DynamicTranslationalBodyProperty;
         ibps.translational->setPosition(nucleus_r0);
         ibps.translational->setVelocity(nucleus_v0);
+        // NOTE: initial angle will change again later...
         ibps.rotational = new orsaSolarSystem::ConstantZRotationEcliptic_RotationalBodyProperty(t0,
                                                                                                 0.0,
                                                                                                 omega,
@@ -212,6 +213,17 @@ int main (int argc, char **argv) {
             grain->setInitialConditions(ibps);
         }
         
+        {
+            // change initial angle of nucleus
+            IBPS ibps = nucleus->getInitialConditions();        
+            ibps.rotational = new orsaSolarSystem::ConstantZRotationEcliptic_RotationalBodyProperty(t0,
+                                                                                                    orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),
+                                                                                                    omega,
+                                                                                                    pole_ecliptic_longitude,
+                                                                                                    pole_ecliptic_latitude);
+            nucleus->setInitialConditions(ibps);
+        }
+        
         bg->addBody(sun);
         bg->addBody(nucleus);
         bg->addBody(grain);
@@ -252,7 +264,7 @@ int main (int argc, char **argv) {
             
             const orsa::Matrix g2l = orsa::globalToLocal(nucleus,bg,t);
             
-            // orsa::print(g2l);
+            orsa::print(g2l);
             
             const orsa::Vector sun_r_relative_local = g2l*sun_r_relative_global;
             const orsa::Vector sun_v_relative_local = g2l*sun_v_relative_global;
