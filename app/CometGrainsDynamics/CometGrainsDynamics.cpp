@@ -219,6 +219,69 @@ int main (int argc, char **argv) {
         const double exo_radius = r_comet*sqrt(nucleus_mass/(grain->beta*orsaSolarSystem::Data::MSun()));
         const double bound_radius = std::min(Hill_radius,exo_radius);
 
+        // gather some more initial conditions
+        double initial_distance;
+        double sun_initial_angle;
+        double sun_initial_angle_360;
+        {
+            const orsa::Time t = t0;
+            orsa::Vector r,v;
+            bg->getInterpolatedPosVel(r,
+                                      v,
+                                      sun,
+                                      t);
+            const orsa::Vector sun_r_global = r;
+            const orsa::Vector sun_v_global = v;
+            bg->getInterpolatedPosVel(r,
+                                      v,
+                                      nucleus,
+                                      t);
+            const orsa::Vector nucleus_r_global = r;
+            const orsa::Vector nucleus_v_global = v;
+            bg->getInterpolatedPosVel(r,
+                                      v,
+                                      grain,
+                                      t);
+            const orsa::Vector grain_r_global = r;
+            const orsa::Vector grain_v_global = v;
+            
+            const orsa::Vector sun_r_relative_global = sun_r_global - nucleus_r_global;
+            const orsa::Vector sun_v_relative_global = sun_v_global - nucleus_v_global;
+            const orsa::Vector grain_r_relative_global = grain_r_global - nucleus_r_global;
+            const orsa::Vector grain_v_relative_global = grain_v_global - nucleus_v_global;
+            
+            const orsa::Matrix g2l = orsa::globalToLocal(nucleus,bg,t);
+            
+            // orsa::print(g2l);
+            
+            const orsa::Vector sun_r_relative_local = g2l*sun_r_relative_global;
+            const orsa::Vector sun_v_relative_local = g2l*sun_v_relative_global;
+            const orsa::Vector grain_r_relative_local = g2l*grain_r_relative_global;
+            const orsa::Vector grain_v_relative_local = g2l*grain_v_relative_global;
+
+            // local normal vectors
+            const orsa::Vector u_sun = sun_r_relative_local.normalized();
+            const orsa::Vector u_z   = orsa::Vector(0,0,1);
+            const orsa::Vector u_ortho = orsa::externalProduct(u_z,u_sun).normalized();
+
+            // orsa::print(u_sun);
+            
+            initial_distance = grain_r_relative_local.length();
+            
+            sun_initial_angle = acos((sun_r_global-nucleus_r_global).normalized()*grain_r_relative_global.normalized());
+            
+            sun_initial_angle_360 = atan2(grain_r_relative_local.normalized()*u_ortho,
+                                          grain_r_relative_local.normalized()*u_sun);
+            
+            /* orsa::print((sun_r_global-nucleus_r_global).normalized()*grain_r_relative_global.normalized());
+               orsa::print(sun_r_relative_local.normalized()*grain_r_relative_local.normalized());
+               orsa::print(grain_r_relative_global.normalized());
+               orsa::print(grain_r_relative_local.normalized());
+               orsa::print(u_sun);
+               orsa::print(u_ortho);
+            */
+        }
+        
         osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),nucleus.get(),bound_radius,6);
         // call singleStepDone once before starting, to perform initial checks
         orsa::Time dummy_time(0);
@@ -276,7 +339,7 @@ int main (int argc, char **argv) {
             }
             
             FILE * fp = fopen("CGD.out","a");
-            gmp_fprintf(fp,"%g %g %g %g %.3e %.3e %.3e %.3e %g %g %g %g %g %g %g %g %g %7.3f %+7.3f %7.3f %7.3f %.3f %.3f %.3f %.3f %.3e %.3e %10.6f %10.6f %10.6f %10.6f %10.6f %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %i %8.3f %+8.3f %+8.3f\n",
+            gmp_fprintf(fp,"%g %g %g %g %.3e %.3e %.3e %.3e %g %g %g %g %g %g %g %g %g %7.3f %+7.3f %7.3f %7.3f %.3f %.3f %.3f %.3f %.3e %.3e %10.6f %10.6f %10.6f %10.6f %10.6f %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %i %8.3f %+8.3f %+8.3f %+8.3f %+8.3f\n",
                         orsa::FromUnits(r_comet,orsa::Unit::AU,-1),
                         orsa::FromUnits(nucleus_ax,orsa::Unit::KM,-1),
                         orsa::FromUnits(nucleus_ay,orsa::Unit::KM,-1),
@@ -317,11 +380,14 @@ int main (int argc, char **argv) {
                         orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[3],orsa::Unit::METER,-1),orsa::Unit::SECOND),
                         orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[4],orsa::Unit::METER,-1),orsa::Unit::SECOND),
                         /* 40 */ orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[5],orsa::Unit::METER,-1),orsa::Unit::SECOND),
+                        orsa::FromUnits(initial_distance,orsa::Unit::KM,-1),
                         orsa::FromUnits((*integrator->max_distance),orsa::Unit::KM,-1),
                         orsa::FromUnits(final_distance,orsa::Unit::KM,-1),
                         integrator->outcome,
-                        lon_impact*orsa::radToDeg(),
-                        /* 45 */ lat_impact*orsa::radToDeg(),
+                        /* 45 */ lon_impact*orsa::radToDeg(),
+                        lat_impact*orsa::radToDeg(),
+                        orsa::radToDeg()*sun_initial_angle,
+                        orsa::radToDeg()*sun_initial_angle_360,
                         orsa::radToDeg()*sun_final_angle);
             fclose (fp);  
         }
