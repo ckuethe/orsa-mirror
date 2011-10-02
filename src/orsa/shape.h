@@ -384,7 +384,7 @@ namespace orsa {
     protected:
         const double _a, _a2, _am2, _b, _b2, _bm2, _c, _c2, _cm2;
     public:
-        mutable double closestVertexEpsilon;
+        mutable double closestVertexEpsilonRelative;
         mutable double cV_l;
     public:
         struct cV_par {

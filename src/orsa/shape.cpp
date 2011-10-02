@@ -859,7 +859,29 @@ double cV_df (double l, void * params) {
 
 void cV_fdf (double l, void *params, double *y, double *dy) {
     *y  = cV_f(l,params);
-    *dy = cV_df(l,params); 
+    *dy = cV_df(l,params);
+    
+    /* {
+    // test 
+    static double min_dy = 1.0;
+    if (fabs(*dy) < min_dy) {
+    min_dy = fabs(*dy);
+    struct EllipsoidShape::cV_par * p = (struct EllipsoidShape::cV_par *) params;
+    ORSA_DEBUG("y: %+12.3e   dy: %+12.3e    l: %+12.3e   P: %+12.3f %+12.3f %+12.3f   S: %+12.3f %+12.3f %+12.3f",
+    *y,*dy,l,
+    p->Px,p->Py,p->Pz,
+    cV_S(p->Px,l,p->a2),cV_S(p->Py,l,p->b2),cV_S(p->Pz,l,p->c2));
+    }
+    }
+    */
+    
+    // if the iteration puts S inside the ellipsoid (not sure how, but it happens...), push it back outside!
+    /* if (*y < 0.0) {
+       ORSA_DEBUG("helping it:   y: %+12.3e OLD dy: %+12.3e",*y,*dy);
+       *dy = -*y;
+       ORSA_DEBUG("helping it:   y: %+12.3e NEW dy: %+12.3e",*y,*dy);
+       }
+    */
 }
 
 const Vector EllipsoidShape::closestVertex(const Vector & P) const {   
@@ -910,11 +932,10 @@ const Vector EllipsoidShape::closestVertex(const Vector & P) const {
         status = gsl_root_fdfsolver_iterate (s);
         l0 = l;
         l = gsl_root_fdfsolver_root (s);
-        status = gsl_root_test_delta (l, l0, 0, 0.001);
+        status = gsl_root_test_delta (l, l0, 0, closestVertexEpsilonRelative);
         
     } while (status == GSL_CONTINUE && iter < max_iter);
     
-    // ORSA_DEBUG("root: %12g   P.length(): %12g",r,P.length());
     
     // save
     /* const orsa::Vector cV(P.getX()/(1+l*_am2),
@@ -935,6 +956,8 @@ const Vector EllipsoidShape::closestVertex(const Vector & P) const {
        orsa::print(cV_dS2_dl_over_r2(P.getZ(),l,_c2));
     */
     
+    // ORSA_DEBUG("root: %12g   P.length(): %12g   l: %g",cV.length(),P.length(),l);
+    
     // moved to class destructor
     // gsl_root_fdfsolver_free (s);
     
@@ -945,10 +968,10 @@ const Vector EllipsoidShape::closestVertex(const Vector & P) const {
 }
 
 void EllipsoidShape::_init() {
-
-    closestVertexEpsilon = 10*orsa::epsilon();
     
-    cV_l = 0.0;
+    closestVertexEpsilonRelative = 1.0e-3;
+    
+    cV_l = 1.0;
     
     params.a2 = _a2;
     params.b2 = _b2;
