@@ -105,7 +105,7 @@ int main (int argc, char **argv) {
     osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
     
     size_t iter=0;
-    while (1) {
+    while (iter < 100000) {
         
         // loop on grains
         
