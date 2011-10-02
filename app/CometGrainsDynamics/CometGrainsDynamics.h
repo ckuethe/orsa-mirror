@@ -127,12 +127,11 @@ public:
         
         // switch to radial when difference is approximately smaller than 1 deg
         orsa::Vector u_gas;
-        /* if (r_c/nucleus_max_radius > 100) {
-           // radial
-           u_gas = R_c.normalized();
-           } else {
-        */
-        {
+#warning shoud replace this test with one more physically sound, comparing rotation period with gas expansion time to reach the distance
+        if (r_c/nucleus_max_radius > 1000) {
+            // radial
+            u_gas = R_c.normalized();
+        } else {
             // relative to comet
             // const orsa::Vector V_Gas_c   = v_gas_h * (rGrain-rComet).normalized();
             // modify V_gas_c to smoothly decrease near nucleus
@@ -157,16 +156,18 @@ public:
         const orsa::Vector thrust =
             sign*0.5*rho*dV*dV*Cd*grainArea*V_Gas_c.normalized();
 
-        gmp_printf("%12.6f %12.3f %12.6f %12.6f %12.6f %12.6f %g %g %g\n",
-                   orsa::FromUnits(t.get_d(),orsa::Unit::DAY,-1),
-                   orsa::FromUnits(R_c.length(),orsa::Unit::KM,-1),
-                   dist_ratio,
-                   orsa::radToDeg()*acos(std::min(1.0,u_gas*(R_c.normalized()))),
-                   orsa::radToDeg()*acos(std::min(1.0,(vGrain-vComet).normalized()*(R_c.normalized()))),
-                   orsa::radToDeg()*acos(std::min(1.0,(rSun-rComet).normalized()*(R_c.normalized()))),
-                   orsa::FromUnits(R_c*uS,orsa::Unit::KM,-1),
-                   orsa::FromUnits(R_c*uV,orsa::Unit::KM,-1),
-                   orsa::FromUnits(R_c*uN,orsa::Unit::KM,-1));
+        if (0) {
+            gmp_printf("%12.6f %12.3f %12.6f %12.6f %12.6f %12.6f %g %g %g\n",
+                       orsa::FromUnits(t.get_d(),orsa::Unit::DAY,-1),
+                       orsa::FromUnits(R_c.length(),orsa::Unit::KM,-1),
+                       dist_ratio,
+                       orsa::radToDeg()*acos(std::min(1.0,u_gas*(R_c.normalized()))),
+                       orsa::radToDeg()*acos(std::min(1.0,(vGrain-vComet).normalized()*(R_c.normalized()))),
+                       orsa::radToDeg()*acos(std::min(1.0,(rSun-rComet).normalized()*(R_c.normalized()))),
+                       orsa::FromUnits(R_c*uS,orsa::Unit::KM,-1),
+                       orsa::FromUnits(R_c*uV,orsa::Unit::KM,-1),
+                       orsa::FromUnits(R_c*uN,orsa::Unit::KM,-1));
+        }
         
         return thrust;
     }

@@ -7,6 +7,7 @@ int main (int argc, char **argv) {
     // orsa::GlobalRNG::randomSeed = 1119056643;
     // orsa::GlobalRNG::randomSeed = -128300218;
     // orsa::GlobalRNG::randomSeed = -124766705;
+    // orsa::GlobalRNG::randomSeed = 1617326819;
     
     // NOTE: two alternative mechanisms for ejection velocity
     // 1) sampling distribution= rotational component + ejection velocity model (no gas drag)
@@ -16,9 +17,9 @@ int main (int argc, char **argv) {
     
     // input
     const double r_comet = orsa::FromUnits(1.0,orsa::Unit::AU);
-    const double nucleus_ax = orsa::FromUnits(3.0,orsa::Unit::KM);
-    const double nucleus_ay = orsa::FromUnits(2.0,orsa::Unit::KM);
-    const double nucleus_az = orsa::FromUnits(1.0,orsa::Unit::KM);
+    const double nucleus_ax = orsa::FromUnits(4.0,orsa::Unit::KM);
+    const double nucleus_ay = orsa::FromUnits(3.0,orsa::Unit::KM);
+    const double nucleus_az = orsa::FromUnits(2.0,orsa::Unit::KM);
     const size_t gravity_degree = 2;
     const double comet_density = orsa::FromUnits(orsa::FromUnits(0.4,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double grain_density = orsa::FromUnits(orsa::FromUnits(1.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
@@ -68,7 +69,7 @@ int main (int argc, char **argv) {
     osg::ref_ptr<orsa::Body> nucleus = new orsa::Body;
     osg::ref_ptr<orsa::EllipsoidShape> nucleus_shape =
         new orsa::EllipsoidShape(nucleus_ax,nucleus_ay,nucleus_az);
-    nucleus_shape->closestVertexEpsilon = 1.0e-3;
+    nucleus_shape->closestVertexEpsilonRelative = 1.0e-3;
     const orsa::Vector nucleus_r0 = orsa::Vector(r_comet,0,0);
     const orsa::Vector nucleus_v0 = orsa::Vector(0,sqrt(orsaSolarSystem::Data::GMSun()/r_comet),0); // circular orbit approximation, to keep the Hill sphere radius constant
     {
@@ -178,10 +179,9 @@ int main (int argc, char **argv) {
            orsa::print(v0_rotational_component);
            orsa::print(v0);
         */
-
-        // reset cV_l on ellipsoid shape
-        nucleus_shape->cV_l = 0.0;
         
+        // reset cV_l on ellipsoid shape
+        nucleus_shape->cV_l = 1.0e3;        
         
         osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
         
@@ -263,8 +263,6 @@ int main (int argc, char **argv) {
             const orsa::Vector grain_v_relative_global = grain_v_global - nucleus_v_global;
             
             const orsa::Matrix g2l = orsa::globalToLocal(nucleus,bg,t);
-            
-            orsa::print(g2l);
             
             const orsa::Vector sun_r_relative_local = g2l*sun_r_relative_global;
             const orsa::Vector sun_v_relative_local = g2l*sun_v_relative_global;
