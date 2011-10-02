@@ -132,11 +132,13 @@ public:
         
         // switch to radial when difference is approximately smaller than 1 deg
         orsa::Vector u_gas;
-#warning shoud replace this test with one more physically sound, comparing rotation period with gas expansion time to reach the distance
-        if (r_c/nucleus_max_radius > 1000) {
-            // radial
-            u_gas = R_c.normalized();
-        } else {
+        /* #warning shoud replace this test with one more physically sound, comparing rotation period with gas expansion time to reach the distance
+           if (r_c/nucleus_max_radius > 1000) {
+           // radial
+           u_gas = R_c.normalized();
+           } else {
+        */
+        {
             // relative to comet
             // const orsa::Vector V_Gas_c   = v_gas_h * (rGrain-rComet).normalized();
             // modify V_gas_c to smoothly decrease near nucleus

@@ -101,7 +101,9 @@ int main (int argc, char **argv) {
                                                                                                 pole_ecliptic_latitude);
         nucleus->setInitialConditions(ibps);
     }
-
+    
+    osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
+    
     size_t iter=0;
     while (1) {
         
@@ -183,9 +185,9 @@ int main (int argc, char **argv) {
         */
         
         // reset cV_l on ellipsoid shape
-        nucleus_shape->cV_l = 1.0e3;        
+        nucleus_shape->cV_l = 0.0;        
         
-        osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
+        // osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
         
         osg::ref_ptr<orsa::Body> grain = new orsa::Body;
         {
@@ -225,7 +227,8 @@ int main (int argc, char **argv) {
                                                                                                     pole_ecliptic_latitude);
             nucleus->setInitialConditions(ibps);
         }
-        
+
+        bg->clear();
         bg->addBody(sun);
         bg->addBody(nucleus);
         bg->addBody(grain);
