@@ -285,17 +285,42 @@ bool Interaction::acceleration(InteractionVector & a,
 	  
                     // if (b->getRadius()+ref_b->getRadius() > R.length()) {
                     //
+                    
+#warning RE-INCLUDE THIS!!!
                     if ((b_radius+ref_b_radius) > R.length()) {
-	    
-                        ORSA_DEBUG("bodies too close: R<R1+R2, R=%g R1=%g R2=%g [km] [b1:%s] [b2:%s]",
-                                   orsa::FromUnits(R.length(),orsa::Unit::KM,-1),
-                                   orsa::FromUnits(b_radius,orsa::Unit::KM,-1),
-                                   orsa::FromUnits(ref_b_radius,orsa::Unit::KM,-1),
-                                   b->getName().c_str(),
-                                   ref_b->getName().c_str());
-                        ORSA_DEBUG("reverting to pointlike...");
+                        
+                        // warn only once
+                        static bool warned=false;
+                        if (warned==false) {
+                            ORSA_DEBUG("bodies too close: R<R1+R2, R=%g R1=%g R2=%g [km] [b1:%s] [b2:%s]",
+                                       orsa::FromUnits(R.length(),orsa::Unit::KM,-1),
+                                       orsa::FromUnits(b_radius,orsa::Unit::KM,-1),
+                                       orsa::FromUnits(ref_b_radius,orsa::Unit::KM,-1),
+                                       b->getName().c_str(),
+                                       ref_b->getName().c_str());
 #warning should handle this better....
-	   
+                            ORSA_DEBUG("NOTE: warning only once about this problem...");
+                            warned=true;
+                        }
+                    }
+                    
+#warning RE-INCLUDE THIS!!!
+                    if (0 && (b_radius+ref_b_radius) > R.length()) {
+                        
+                        // warn only once
+                        static bool warned=false;
+                        if (warned==false) {
+                            ORSA_DEBUG("bodies too close: R<R1+R2, R=%g R1=%g R2=%g [km] [b1:%s] [b2:%s]  reverting to pointlike...",
+                                       orsa::FromUnits(R.length(),orsa::Unit::KM,-1),
+                                       orsa::FromUnits(b_radius,orsa::Unit::KM,-1),
+                                       orsa::FromUnits(ref_b_radius,orsa::Unit::KM,-1),
+                                       b->getName().c_str(),
+                                       ref_b->getName().c_str());
+#warning should handle this better....
+                            ORSA_DEBUG("NOTE: warning only once about this problem...");
+                            warned=true;
+                        }
+                        
                         orsa::Vector _d =
                             b_ibps.translational->position() - 
                             ref_b_ibps.translational->position();
@@ -454,7 +479,7 @@ bool Interaction::acceleration(InteractionVector & a,
       
             // thrust
             if (ref_b->propulsion.get()) {
-                if (m_ref_b < orsa::epsilon()) {
+                if (m_ref_b <= 0.0) {
                     ORSA_DEBUG("Propulsion problems: non-positive mass...");
                 } else {
                     /* ORSA_DEBUG("adding propulsion thrust for body [%s]",bl[j]->getName().c_str());
