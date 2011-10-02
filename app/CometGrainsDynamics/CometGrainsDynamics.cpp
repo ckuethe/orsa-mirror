@@ -129,7 +129,9 @@ int main (int argc, char **argv) {
                                        orsa::Vector(0,0,0),
                                        u_ray,
                                        false);
-        const orsa::Vector r0 = intersectionPoint;
+        // const orsa::Vector r0 = intersectionPoint;
+        // just above the surface, to avoid roundoff problems
+        const orsa::Vector r0 = intersectionPoint*1.001;
         const orsa::Vector n0 = normal;
         
         const orsa::Vector u_rot =
