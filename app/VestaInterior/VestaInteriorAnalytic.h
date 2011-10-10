@@ -56,6 +56,7 @@ public:
     orsa::Cache<size_t> uK_size;
     std::vector<double> factor;
     orsa::Cache<double> minimumDensity;
+    orsa::Cache<double> maximumDensity;
     orsa::Cache<double> penaltyThreshold;
 };
 
@@ -76,6 +77,7 @@ void SIMAN_copy (void * source, void * dest) {
     d->uK_size             = s->uK_size;
     d->factor              = s->factor;
     d->minimumDensity      = s->minimumDensity;
+    d->maximumDensity      = s->maximumDensity;
     d->penaltyThreshold    = s->penaltyThreshold;
 }
 
@@ -203,6 +205,7 @@ double E1(void * xp) {
     */
     
     if ( (minDensity >= x->minimumDensity) &&
+         (maxDensity <= x->maximumDensity) &&
          (penalty <= x->penaltyThreshold) ) {
         // another quick output...
 #warning pass filename as parameter...
@@ -249,13 +252,13 @@ double E1(void * xp) {
 #warning choose one return value, should be a parameter!
     
     // most flat
-    // return (maxDensity-minDensity)+10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity));
+    // return (maxDensity-minDensity)+10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
     
     // most peaks
-    // return (minDensity-maxDensity)+10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity));
+    // return (minDensity-maxDensity)+10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
     
     // generic
-    return 10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity));
+    return 10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
     
     // return penalty;
 }
