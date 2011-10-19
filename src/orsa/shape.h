@@ -224,7 +224,7 @@ namespace orsa {
         }  
         
     protected:
-        mutable std::vector< std::list<unsigned int > > vertexInFace;
+        mutable std::vector< std::list<unsigned int> > vertexInFace;
         
     public:
         //! This normal is the average of the normals of all the faces containing this vertex
@@ -324,12 +324,14 @@ namespace orsa {
             _c(c),
             _c2(c*c),
             _cm2(1/_c2) {
+            // ORSA_DEBUG("allocating (*this) = %x",this);
             _init();
         }
     private:
         void _init();
     protected:
         ~EllipsoidShape() {
+            // ORSA_DEBUG("freeing (*this) = %x",this);
             gsl_root_fdfsolver_free (s);
         }
     

@@ -177,6 +177,7 @@ bool TriShape::_updateCache() const {
     }
     //
     if (vertexInFace.size() != _vertex.size()) {
+        vertexInFace.clear();
         vertexInFace.resize(_vertex.size());
         for (unsigned int _f=0; _f<_face.size(); ++_f) {
             vertexInFace[_face[_f].i()].push_back(_f);
