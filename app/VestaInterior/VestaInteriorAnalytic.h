@@ -249,6 +249,9 @@ double E1(void * xp) {
        (x->minimumDensity-minDensity));
     */
     
+    // make sure this is called before leaving...
+    gsl_vector_free(cT);
+    
 #warning choose one return value, should be a parameter!
     
     // most flat
