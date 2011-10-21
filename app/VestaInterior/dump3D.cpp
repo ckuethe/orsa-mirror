@@ -107,13 +107,13 @@ int main(int argc, char **argv) {
                 const orsa::Vector v(orsa::FromUnits(x,orsa::Unit::KM),
                                      orsa::FromUnits(y,orsa::Unit::KM),
                                      orsa::FromUnits(z,orsa::Unit::KM));
-                double density = 0.0;
+                
                 if (shapeModel->isInside(v)) {
-                    density = md->density(v);
-                }                            
-                fprintf(fp,"%g %g %g %g\n",
-                        x,y,z,
-                        orsa::FromUnits(orsa::FromUnits(density,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+                    fprintf(fp,"%g %g %g %g\n",
+                            x,y,z,
+                            orsa::FromUnits(orsa::FromUnits(md->density(v),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+                    // orsa::FromUnits(v.length(),orsa::Unit::KM,-1));
+                }
                 
                 z += z_step;
             }
