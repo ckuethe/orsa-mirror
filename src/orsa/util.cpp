@@ -661,7 +661,7 @@ void orsa::diagonalizedInertiaMatrix(orsa::Matrix & shapeToLocal,
                 stat_Iyz->insert(density*(-v.getY()*v.getZ()));
             }
         }
-    
+        
         inertiaMatrix.set(stat_Ixx->average(),
                           stat_Ixy->average(),
                           stat_Ixz->average(),
@@ -671,11 +671,11 @@ void orsa::diagonalizedInertiaMatrix(orsa::Matrix & shapeToLocal,
                           stat_Ixz->average(),
                           stat_Iyz->average(),
                           stat_Izz->average());
-    
+        
         orsa::principalAxis(shapeToLocal,
                             inertiaMatrix,
                             inertiaMatrix);
-    
+        
         // correct, in case some of the axes got reflected
         {
             const double rot_11 = ((shapeToLocal*orsa::Vector(1,0,0))*orsa::Vector(1,0,0) < 0) ? -1 : 1;
