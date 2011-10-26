@@ -5,6 +5,7 @@
 #include <orsa/datetime.h>
 #include <orsa/matrix.h>
 #include <orsa/orbit.h>
+#include <orsa/paulMoment.h>
 #include <orsa/quaternion.h>
 
 #include <orsaSolarSystem/data.h>
@@ -90,6 +91,25 @@ namespace orsa {
         if (c.isSet()) {
             ORSA_DEBUG("cache val: [below]");
             orsa::print((*c));
+        }
+    }
+    
+    inline void print(const orsa::PaulMoment * pm) {
+        // not completed yet...
+        ORSA_DEBUG("PaulMoment order: %i",pm->order);
+        for (unsigned int focusOrder=0; focusOrder<=pm->order; ++focusOrder) {
+            for (unsigned int i=0; i<=focusOrder; ++i) {
+                for (unsigned int j=0; j<=focusOrder; ++j) {
+                    for (unsigned int k=0; k<=focusOrder; ++k) {
+                        if (i+j+k==focusOrder) {
+                            ORSA_DEBUG("ijk = (%i,%i,%i)   M = %g   dM = %g",
+                                       i,j,k,
+                                       pm->M(i,j,k),
+                                       pm->M_uncertainty(i,j,k));
+                        }
+                    }
+                }
+            }
         }
     }
     
