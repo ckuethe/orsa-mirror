@@ -82,6 +82,45 @@ void PaulMoment::setM_uncertainty (const double & val,
 
 /***/
 
+bool orsa::translate(PaulMoment * const pm,
+                     const PaulMoment * const pm0,
+                     const orsa::Vector & delta) {
+    
+    if (pm->order != pm0->order) {
+        ORSA_DEBUG("problem: the two PaulMoment must have same order");
+        return false;
+    }
+    
+    const unsigned int order_plus_one = pm0->order+1;
+    
+    for (unsigned int i=0; i<order_plus_one; ++i) {
+        for (unsigned int j=0; j<order_plus_one-i; ++j) {
+            for (unsigned int k=0; k<order_plus_one-i-j; ++k) {
+                double M_ijk = 0.0;
+                for (size_t bi=0; bi<=i; ++bi) {
+                    for (size_t bj=0; bj<=j; ++bj) {
+                        for (size_t bk=0; bk<=k; ++bk) {
+                            M_ijk +=
+                                mpz_class(orsa::binomial(i,bi)*
+                                          orsa::binomial(j,bj)*
+                                          orsa::binomial(k,bk)).get_d()*
+                                orsa::int_pow(delta.getX(),bi)*
+                                orsa::int_pow(delta.getY(),bj)*
+                                orsa::int_pow(delta.getZ(),bk)*
+                                pm0->M(i-bi,j-bj,k-bk);
+                        }
+                    }
+                }
+                
+            }
+        }
+    }
+    
+    return true;
+}
+
+/***/
+
 const orsa::triIndex_mpq orsa::conversionCoefficients_C_integral(const size_t & l_ask, const size_t & m_ask) {
     static std::deque< std::deque<orsa::triIndex_mpq> > coeff;
     if (coeff.size() > l_ask) {
@@ -488,6 +527,8 @@ const orsa::triIndex_d orsa::conversionCoefficients_S_norm(const size_t & l_ask,
 
 /***/
 
+
+#warning should use conversionCoefficients* above
 void orsa::convert(std::vector< std::vector<mpf_class> > & C,
                    std::vector< std::vector<mpf_class> > & S,
                    std::vector< std::vector<mpf_class> > & norm_C,

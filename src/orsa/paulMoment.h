@@ -32,7 +32,11 @@ namespace orsa {
     public:
         const unsigned int order;
     };
-
+    
+    bool translate(PaulMoment * const pm,
+                   const PaulMoment * const pm0,
+                   const orsa::Vector & delta);
+    
     typedef std::vector< std::vector< std::vector<double> > >    triIndex_d;
     typedef std::vector< std::vector< std::vector<mpq_class> > > triIndex_mpq;
     const triIndex_mpq conversionCoefficients_C_integral(const size_t & l, const size_t & m);
