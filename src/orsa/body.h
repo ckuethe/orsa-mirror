@@ -719,7 +719,7 @@ namespace orsa {
            orsa::Cache<double> _mass;
            orsa::Cache<double> _mu;
         */
-    
+        
     public:
         bool setInitialConditions(const orsa::IBPS & ibps) {
             // these checks do not completely enforce presence of inertial and translational components, but help indeed achieve this goal.
@@ -740,7 +740,7 @@ namespace orsa {
         }
     protected:
         orsa::Cache<orsa::IBPS> _ibps;
-    
+        
         /* 
            public:
            bool setRadius(const double & r) {
