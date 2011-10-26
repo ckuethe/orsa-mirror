@@ -111,7 +111,7 @@ bool orsa::translate(PaulMoment * const pm,
                         }
                     }
                 }
-                
+                pm->setM(M_ijk,i,j,k);
             }
         }
     }
