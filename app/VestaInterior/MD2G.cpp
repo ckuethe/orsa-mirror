@@ -498,19 +498,34 @@ int main(int argc, char **argv) {
             // NOTE: model densities are adjusted automatically later in order to conserve total mass
 
 
-            // OblateCore
+            // Test
             const orsa::Vector coreCenter = orsa::Vector(0,0,0)*km;
-            const double coreRx = 130*km;
-            const double coreRy = 120*km;
-            const double coreRz = 100*km;
-            const double coreDensity = 8.0*gcm3;
+            const double coreRx = 115*km;
+            const double coreRy = 115*km;
+            const double coreRz = 115*km;
+            const double coreDensity = 3.4*gcm3;
             const double coreMantleInterfaceThickness = 10.0*km;
-            const double mantleDensity = 3.5*gcm3;
+            const double mantleDensity = 3.4*gcm3;
             const double mantleCrustInterfaceThickness = 10.0*km;
-            const double crustDensity = 3.5*gcm3;
+            const double crustDensity = 3.4*gcm3;
             const double crustRx = 220*km;
             const double crustRy = 210*km;
             const double crustRz = 180*km;
+            
+            // OblateCore
+            /* const orsa::Vector coreCenter = orsa::Vector(0,0,0)*km;
+               const double coreRx = 130*km;
+               const double coreRy = 120*km;
+               const double coreRz = 100*km;
+               const double coreDensity = 8.0*gcm3;
+               const double coreMantleInterfaceThickness = 10.0*km;
+               const double mantleDensity = 3.5*gcm3;
+               const double mantleCrustInterfaceThickness = 10.0*km;
+               const double crustDensity = 3.5*gcm3;
+               const double crustRx = 220*km;
+               const double crustRy = 210*km;
+               const double crustRz = 180*km;
+            */
             
             massDistribution =
                 new ThreeComponentsMassDistribution(coreCenter,
@@ -527,7 +542,7 @@ int main(int argc, char **argv) {
                                                     crustRz);
         }
 
-        if (1) {
+        if (0) {
             // add a masscon?
             const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
             const double gcm3 = orsa::FromUnits(orsa::FromUnits(1.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
@@ -851,7 +866,8 @@ int main(int argc, char **argv) {
         gmp_fprintf(fp,"Izz / (M*R0^2) = %9.6f   [R0=%g km]\n",
                     inertiaMomentZZ_over_plateModelR0squared,
                     orsa::FromUnits(plateModelR0,orsa::Unit::KM,-1));
-        fclose(fp);        
+        gmp_fprintf(fp,"Volume: %.6e [km^3]\n",orsa::FromUnits(si->getIntegral(0,0,0)*orsa::cube(plateModelR0),orsa::Unit::KM,-3));
+        fclose(fp);
     }
     
 #warning track precision of operations
