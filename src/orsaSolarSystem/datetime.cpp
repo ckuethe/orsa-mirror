@@ -416,16 +416,34 @@ orsa::Time orsaSolarSystem::FromTimeScale(const orsa::Time & t,
                                           const orsaSolarSystem::TimeScale ts) {
     int y,m,d,H,M,S,ms;
     gregorDay(t,y,m,d,H,M,S,ms);
-    const orsa::Time dt = orsa::Time(0,0,0,0,1000000*deltaSeconds(y,m,d,ts));
-    return (t+dt);
+    double delta = 1000000*deltaSeconds(y,m,d,ts);
+    // No need of gmp
+    if (fabs(delta)<((double)(9223372036854775800LL))) {
+        long long int delta_ll = deltaSeconds(y,m,d,ts);
+        long long int dt = 1000000*delta_ll;
+        return (t+dt);
+    // Large time, need gmp
+    } else {
+        const orsa::Time dt = orsa::Time(0,0,0,0,delta);
+        return (t+dt);
+    }
 }
 
 orsa::Time orsaSolarSystem::ToTimeScale(const orsa::Time & t,
                                         const orsaSolarSystem::TimeScale ts) {
     int y,m,d,H,M,S,ms;
     gregorDay(t,y,m,d,H,M,S,ms);
-    const orsa::Time dt = orsa::Time(0,0,0,0,1000000*deltaSeconds(y,m,d,ts));
-    return (t-dt);
+    double delta = 1000000*deltaSeconds(y,m,d,ts);
+    // No need of gmp
+    if (fabs(delta)<((double)(9223372036854775800LL))) {
+        long long int delta_ll = deltaSeconds(y,m,d,ts);
+        long long int dt = 1000000*delta_ll;
+        return (t-dt);
+    // Large time, need gmp
+    } else {
+        const orsa::Time dt = orsa::Time(0,0,0,0,delta);
+        return (t-dt);
+    }
 }
 
 orsa::Time orsaSolarSystem::gregorTime(int y, 
@@ -471,12 +489,27 @@ orsa::Time orsaSolarSystem::gregorTime(int y,
         d -= 1;
         H += 24;
     }
-  
-    return Time(GregorianToSdn(y,m,d),
+    
+    // Test
+    double test = ((((((double)(H))*((double)(60.))+((double)(M)))*((double)(60.))+((double)(S)))*((double)(1000.))+((double)(ms)))*((double)(1000.)));
+    
+    // No need of gmp
+    if (fabs(test)<((double)(9223372036854775800LL))) {
+        long long int musec = ((((((long long int)(H))*((long long int)(60))+((long long int)(M)))*((long long int)(60))+((long long int)(S)))*((long long int)(1000))+((long long int)(ms)))*((long long int)(1000)));
+        return Time(GregorianToSdn(y,m,d),
                 0,
                 0,
                 0,
-                mpz_class(mpz_class(mpz_class(H*60 + M)*60 + S)*1000 + ms)*1000);
+                musec);
+    
+    // Large time, need gmp
+    } else {
+        return Time(GregorianToSdn(y,m,d),
+                    0,
+                    0,
+                    0,
+                    mpz_class(mpz_class(mpz_class(H*60 + M)*60 + S)*1000 + ms)*1000);
+    }
 }
 
 orsa::Time orsaSolarSystem::gregorTime(int y, 
@@ -502,25 +535,52 @@ void orsaSolarSystem::gregorDay(const orsa::Time & t,
                                 int & M,
                                 int & S,
                                 int & ms) {
-    const mpz_class muDay("86400000000");
-    const mpz_class muHour("3600000000");
-    const mpz_class muMinute("60000000");
-    const mpz_class muSecond( "1000000");
-  
-    SdnToGregorian(mpz_class(t.getMuSec() / muDay).get_si(),
-                   &y,
-                   &m,
-                   &d);
-    mpz_class dayFractionMuSec = mpz_class(t.getMuSec() % muDay);
-    //
-    H = mpz_class(dayFractionMuSec / muHour).get_si();
-    dayFractionMuSec -= H * muHour;
-    M = mpz_class(dayFractionMuSec / muMinute).get_si();
-    dayFractionMuSec -= M * muMinute;
-    S = mpz_class(dayFractionMuSec / muSecond).get_si();
-    dayFractionMuSec -= S * muSecond;
-    ms = mpz_class(dayFractionMuSec / 1000).get_si();
-    dayFractionMuSec -= ms * 1000;
+    bool ok = false;
+    long long int tMuSec_ll = t.get_ll(ok);
+    
+    // No need of gmp
+    if (ok) {
+        const long long int muDay_ll = 86400000000LL;
+        const long long int muHour_ll = 3600000000LL;
+        const long long int muMinute_ll = 60000000LL;
+        const long long int muSecond_ll = 1000000LL;
+        
+        SdnToGregorian((int)(tMuSec_ll / muDay_ll),
+                       &y,
+                       &m,
+                       &d);
+        long long int dayFractionMuSec_ll = tMuSec_ll % muDay_ll;
+        H = dayFractionMuSec_ll / muHour_ll;
+        dayFractionMuSec_ll -= H * muHour_ll;
+        M = dayFractionMuSec_ll / muMinute_ll;
+        dayFractionMuSec_ll -= M * muMinute_ll;
+        S = dayFractionMuSec_ll / muSecond_ll;
+        dayFractionMuSec_ll -= S * muSecond_ll;
+        ms = dayFractionMuSec_ll / ((long long int)(1000));
+        dayFractionMuSec_ll -= ms * ((long long int)(1000));
+    
+    // Large time, need gmp
+    } else {
+        const mpz_class muDay("86400000000");
+        const mpz_class muHour("3600000000");
+        const mpz_class muMinute("60000000");
+        const mpz_class muSecond( "1000000");
+      
+        SdnToGregorian(mpz_class(t.getMuSec() / muDay).get_si(),
+                       &y,
+                       &m,
+                       &d);
+        mpz_class dayFractionMuSec = mpz_class(t.getMuSec() % muDay);
+        //
+        H = mpz_class(dayFractionMuSec / muHour).get_si();
+        dayFractionMuSec -= H * muHour;
+        M = mpz_class(dayFractionMuSec / muMinute).get_si();
+        dayFractionMuSec -= M * muMinute;
+        S = mpz_class(dayFractionMuSec / muSecond).get_si();
+        dayFractionMuSec -= S * muSecond;
+        ms = mpz_class(dayFractionMuSec / 1000).get_si();
+        dayFractionMuSec -= ms * 1000;
+    }
 }
 
 void orsaSolarSystem::gregorDay(const orsa::Time & t,
@@ -528,15 +588,31 @@ void orsaSolarSystem::gregorDay(const orsa::Time & t,
                                 int & m,
                                 int & d,
                                 double & fd) {
-  
-    const mpz_class muDay("86400000000");
-  
-    SdnToGregorian(mpz_class(t.getMuSec() / muDay).get_si(),
-                   &y,
-                   &m,
-                   &d);
-    mpz_class dayFractionMuSec = mpz_class(t.getMuSec() % muDay);
-    fd = dayFractionMuSec.get_d() / muDay.get_d();
+    bool ok = false;
+    long long int tMuSec_ll = t.get_ll(ok);
+    
+    // No need of gmp
+    if (ok) {
+        const long long int muDay_ll = 86400000000LL;
+        
+        SdnToGregorian((int)(tMuSec_ll / muDay_ll),
+                       &y,
+                       &m,
+                       &d);
+        long long int dayFractionMuSec_ll = tMuSec_ll % muDay_ll;
+        fd = ((double)(((double)(dayFractionMuSec_ll))/((double)(muDay_ll))));
+                       
+    // Large time, need gmp
+    } else {
+        const mpz_class muDay("86400000000");
+      
+        SdnToGregorian(mpz_class(t.getMuSec() / muDay).get_si(),
+                       &y,
+                       &m,
+                       &d);
+        mpz_class dayFractionMuSec = mpz_class(t.getMuSec() % muDay);
+        fd = dayFractionMuSec.get_d() / muDay.get_d();
+    }
 }
 
 double orsaSolarSystem::timeToJulian(const orsa::Time & t) {

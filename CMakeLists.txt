@@ -38,10 +38,13 @@ SET(USER_LIBRARY_PATH /0/Qwt/qwt-5.2.2/lib/ /0/Cspice/cspice/lib/ /usr/local/lib
 
 # SEARCH DIRECTORIES
 SET(CMAKE_INCLUDE_PATH ${CMAKE_INCLUDE_PATH} /usr/include/ ${USER_INCLUDE_PATH})
-SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /usr/lib/ /usr/lib64/ /lib/ /lib/i386-linux-gnu/ ${USER_LIBRARY_PATH})
+SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /lib/i386-linux-gnu/ /usr/lib/i386-linux-gnu/ /usr/lib/ /usr/lib64/ /lib/ ${USER_LIBRARY_PATH})
 
 # FLAGS
-SET(CMAKE_CXX_FLAGS "-std=c++0x -Wall -O3")
+#SET(CMAKE_CXX_FLAGS "-std=c++0x -O3")
+#SET(CMAKE_CXX_FLAGS "-std=c++0x -O2")
+#SET(CMAKE_CXX_FLAGS "-std=c++0x")
+SET(CMAKE_CXX_FLAGS "-std=c++0x -O3 -Wall -fopenmp")
 # ---------------------------------------------------------------------------- #
 
 
@@ -281,7 +284,7 @@ SET(SYSTEM_LIBRARIES ${GLIB_LIBRARY} ${GOBJECT_LIBRARY})
 SET(ALL_EXTERNAL_INCLUDES
                            ${OPENSCENEGRAPH_INCLUDE_DIRS}
                            ${BOINC_INCLUDE_DIRS}
-		           ${GMP_INCLUDE_DIRS}
+		                   ${GMP_INCLUDE_DIRS}
                            ${GSL_INCLUDE_DIRS}
                            ${QWT_INCLUDE_DIRS}
                            ${SPICE_INCLUDE_DIRS}
@@ -293,7 +296,7 @@ SET(ALL_EXTERNAL_LIBRARIES
                            ${QT_LIBRARIES} 
                            ${OPENSCENEGRAPH_LIBRARIES}
                            ${BOINC_LIBRARIES}
-		           ${GMP_LIBRARIES}
+		           		   ${GMP_LIBRARIES}
                            ${GSL_LIBRARIES}
                            ${QWT_LIBRARIES}
                            ${SPICE_LIBRARIES}

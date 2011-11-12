@@ -89,20 +89,15 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
        }
     */
     //
-    if (!bg->getInteraction()->acceleration(acc,  
-                                            bg,
-                                            start)) {
-        ORSA_DEBUG("problems...");
-        return false;
+    if (!bg->getInteraction()->accelerationAndTorque(acc,
+						     torque,
+						     bg,
+						     start)) {
+      ORSA_DEBUG("problems...");
+      std::cout<<"false"<<std::endl;
+      return false;
     }
-    //
-    if (!bg->getInteraction()->torque(torque,  
-                                      bg,
-                                      start)) {
-        ORSA_DEBUG("problems...");
-        return false;
-    }
-  
+    
     // ORSA_DEBUG("--MARK--");
   
     // unsigned int j,k;
@@ -852,22 +847,16 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                }
             */
             //
-            if (!bg->getInteraction()->acceleration(acc,  
-                                                    bg,
-                                                    start+orsa::Time(FromUnits(h[j]*timestep.get_d(),Unit::MICROSECOND,-1)))) {
-                ORSA_DEBUG("problems...");
-                return false;
+            if (!bg->getInteraction()->accelerationAndTorque(acc,
+							     torque,
+							     bg,
+							     start+orsa::Time(FromUnits(h[j]*timestep.get_d(),Unit::MICROSECOND,-1)))) {
+	      ORSA_DEBUG("problems...");
+	      std::cout<<"false"<<std::endl;
+	      return false;
             }
-            //
-            if (!bg->getInteraction()->torque(torque,  
-                                              bg,
-                                              start+orsa::Time(FromUnits(h[j]*timestep.get_d(),Unit::MICROSECOND,-1)))) {
-                ORSA_DEBUG("problems...");
-                return false;
-            }
-      
-            // ORSA_DEBUG("--MARK--");
-      
+	    // ORSA_DEBUG("--MARK--");
+	    
             /* 
                for(k=0;k<frame_out.size();++k) {
                if (interaction->IsSkippingJPLPlanets() && frame_in[k].JPLPlanet() != NONE) continue;

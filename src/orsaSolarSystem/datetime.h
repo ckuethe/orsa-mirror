@@ -3,6 +3,8 @@
 
 #include <orsa/datetime.h>
 #include <orsa/double.h>
+#include <limits>
+#include <cmath>
 
 namespace orsaSolarSystem {
   
