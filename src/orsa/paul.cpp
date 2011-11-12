@@ -293,7 +293,10 @@ double Paul::gravitationalPotential(const orsa::PaulMoment * M1,
                 }
             }
         }
-
+	
+	delete[] expplgamma;
+	delete[] expmlgamma;
+	
     } else {
     // Without optimization
 
@@ -632,7 +635,10 @@ orsa::Vector Paul::gravitationalForce(const orsa::PaulMoment * M1,
                 }
             }
         }
-
+	
+	delete[] expplgamma;
+	delete[] expmlgamma;
+	
     } else {
     // Without optimization
 
@@ -1011,7 +1017,10 @@ orsa::Vector Paul::gravitationalTorque(const orsa::PaulMoment * M1,
                 }
             }
         }
-
+	
+	delete[] expplgamma;
+	delete[] expmlgamma;
+	
     } else {
     // Without optimization
 
