@@ -3,7 +3,6 @@
 
 // #include <map>
 #include <vector>
-
 #include <QHash>
 
 #include <orsa/integrator.h>

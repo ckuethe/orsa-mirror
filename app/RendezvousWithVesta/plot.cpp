@@ -225,6 +225,9 @@ VestaPlot::~VestaPlot() {
     delete marker_altitude;
     marker_altitude = 0;
 
+    // delete data_altitude;
+    // data_altitude = 0;
+    
     delete plotFillThread;
     plotFillThread = 0;
   
@@ -247,7 +250,7 @@ VestaPlot::VestaPlot(orsa::BodyGroup        * bg,
   
     setAutoReplot(false);
   
-    setMargin(3);
+    // setMargin(3);
   
     setAxisTitle(xBottom,"time [s]");
     setAxisTitle(yLeft,  "[km]");
@@ -337,6 +340,8 @@ VestaPlot::VestaPlot(orsa::BodyGroup        * bg,
     // marker_altitude->setLineStyle(QwtPlotMarker::VLine);
     marker_altitude->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
     marker_altitude->attach(this);
+    
+    // data_altitude = new QwtPointSeriesData;
     
     {
         const orsa::Time dt(0,0,15,0,0);
@@ -523,16 +528,19 @@ void VestaPlot::moveAltitudeCurve(const orsa::Time & t) {
     }
     //
     plotFillThread->dataMutex.unlock();
-  
-    curve_altitude->setData(xData,
-                            yData,
-                            2);
-    // this below will work with Qwt 5.3
-    /* curve_altitude->setData(QwtPointArrayData(xData,
+    
+    /* curve_altitude->setData(xData,
        yData,
-       2));
+       2);
     */
-  
+    // this below will work with Qwt 5.3
+    QVector<QPointF> qvec;
+    qvec.resize(2);
+    qvec[0] = QPointF(xData[0],yData[0]);
+    qvec[1] = QPointF(xData[1],yData[1]);
+    // data_altitude->setSamples(qvec);
+    curve_altitude->setData(qvec);
+    
     {
         // altitude marker
     
@@ -631,39 +639,60 @@ void VestaPlot::plotFill() {
                                     orsa::Unit::KM,-1));
         ++it;
     }
-  
-    curve_distance->setData(xData,
-                            yData_distance);
-    curve_sphere_radius->setData(xData,
-                                 yData_sphere_radius);
-    curve_vesta_profile->setData(xData,
-                                 yData_vesta_profile);
-  
-    curve_q->setData(xData,
-                     yData_q);
-    curve_a->setData(xData,
-                     yData_a);
-    curve_Q->setData(xData,
-                     yData_Q);
-  
-    // this below will work with Qwt 5.3
-    /* curve_distance->setData(QwtPointArrayData(xData,
-       yData_distance));
-       curve_sphere_radius->setData(QwtPointArrayData(xData,
-       yData_sphere_radius));
-       curve_vesta_profile->setData(QwtPointArrayData(xData,
-       yData_vesta_profile));
-     
-       curve_q->setData(QwtPointArrayData(xData,
-       yData_q));
-       curve_a->setData(QwtPointArrayData(xData,
-       yData_a));
-       curve_Q->setData(QwtPointArrayData(xData,
-       yData_Q));
+    
+    /* 
+       curve_distance->setData(xData,
+       yData_distance);
+       curve_sphere_radius->setData(xData,
+       yData_sphere_radius);
+       curve_vesta_profile->setData(xData,
+       yData_vesta_profile);
+       
+       curve_q->setData(xData,
+       yData_q);
+       curve_a->setData(xData,
+       yData_a);
+       curve_Q->setData(xData,
+       yData_Q);
     */
-  
+    
+    // this below will work with Qwt 5.3
+    
+    QVector<QPointF> qvec;
+    qvec.resize(xData.size());
+    
+    for (unsigned int k=0; k<xData.size(); ++k) {
+      qvec[k] = QPointF(xData[k],yData_distance[k]);
+    }	
+    curve_distance->setData(qvec);
+    
+    for (unsigned int k=0; k<xData.size(); ++k) {
+      qvec[k] = QPointF(xData[k],yData_sphere_radius[k]);
+    }	
+    curve_sphere_radius->setData(qvec);
+    
+    for (unsigned int k=0; k<xData.size(); ++k) {
+      qvec[k] = QPointF(xData[k],yData_vesta_profile[k]);
+    }	
+    curve_vesta_profile->setData(qvec);
+    
+    for (unsigned int k=0; k<xData.size(); ++k) {
+      qvec[k] = QPointF(xData[k],yData_q[k]);
+    }	
+    curve_q->setData(qvec);
+    
+    for (unsigned int k=0; k<xData.size(); ++k) {
+      qvec[k] = QPointF(xData[k],yData_a[k]);
+    }	
+    curve_a->setData(qvec);
+    
+    for (unsigned int k=0; k<xData.size(); ++k) {
+      qvec[k] = QPointF(xData[k],yData_Q[k]);
+    }	
+    curve_Q->setData(qvec);
+    
     plotFillThread->dataMutex.unlock();
-  
+    
     _canvasCacheDirty = true;
     replot();
 }
@@ -671,120 +700,5 @@ void VestaPlot::plotFill() {
 void VestaPlot::closeEvent(QCloseEvent *) {
     if (plotFillThread) {
         plotFillThread->abort();
-    }
-}
-
-void VestaPlot::drawItems(QPainter          * painter, 
-                          const QRect       & rect,
-                          const QwtScaleMap   maps[axisCnt],
-                          const QwtPlotPrintFilter & filter) const {
-  
-    // this below will work with Qwt 5.3
-    // const QRect rect = rectf.toRect();
-  
-    if (autoReplot()) {
-        ORSA_ERROR("warning: this method does not work properly when autoReplot is enabled");
-        return QwtPlot::drawItems(painter, 
-                                  rect, 
-                                  maps,
-                                  filter);
-    }
-  
-    /* 
-       if (_canvasCache) {
-       // debug info
-       std::cerr << " rect: " <<          rect.size().width() << "x" <<          rect.size().height() << " at (" <<          rect.x() << "," <<          rect.y() << ")" << std::endl;
-       std::cerr << "cache: " << _canvasCache->size().width() << "x" << _canvasCache->size().height() << std::endl;
-       } 
-    */
-  
-    if (!_canvasCache) {
-        _canvasCache      = new QPixmap(rect.size());
-        _canvasCacheDirty = true;
-    }
-  
-    const QwtPlotItemList & itmList = itemList();
-    if ( (!_canvasCacheDirty) && 
-         (rect.size() == _canvasCache->size()) ) {
-        // using cache...
-        // ORSA_DEBUG("using cache...");
-        painter->drawPixmap(rect,(*_canvasCache));
-        // painter->drawPixmap(rect,(*_canvasCache),rect); // this call offsets the moving items by 2 pixels, and the rect (x,y) = (2,2) so maybe the solution to this problem lies in modifying the QRect appropriately
-    } else {
-        // not using cache...
-        // ORSA_DEBUG("not using cache...");
-        for (QwtPlotItemIterator it = itmList.begin(); it != itmList.end(); ++it) {
-            {
-                VestaPlotCurve * curve = dynamic_cast< VestaPlotCurve * > (*it);
-                if (curve) {
-                    if (!curve->_staticData) {
-                        curve->setVisible(false);
-                    }	
-                }
-            }
-            //
-            {
-                VestaPlotMarker * marker = dynamic_cast< VestaPlotMarker * > (*it);
-                if (marker) {
-                    if (!marker->_staticData) {
-                        marker->setVisible(false);
-                    }	
-                }
-            }
-        }
-        //
-        QwtPlot::drawItems(painter, 
-                           rect, 
-                           maps,
-                           filter);
-        //
-        for (QwtPlotItemIterator it = itmList.begin(); it != itmList.end(); ++it) {
-            {
-                VestaPlotCurve * curve = dynamic_cast< VestaPlotCurve * > (*it);
-                if (curve) {
-                    if (!curve->_staticData) {
-                        curve->setVisible(true);
-                    }	
-                }
-            }
-            //
-            {
-                VestaPlotMarker * marker = dynamic_cast< VestaPlotMarker * > (*it);
-                if (marker) {
-                    if (!marker->_staticData) {
-                        marker->setVisible(true);
-                    }	
-                }
-            }
-        }
-        //
-        (*_canvasCache)   = canvas()->paintCache()->copy();
-        _canvasCacheDirty = false;
-    }
-  
-    for (QwtPlotItemIterator it = itmList.begin(); it != itmList.end(); ++it) {
-        {
-            VestaPlotCurve * curve = dynamic_cast< VestaPlotCurve * > (*it);
-            if (curve) {
-                if (!curve->_staticData) {
-                    curve->draw(painter,
-                                maps[curve->xAxis()],
-                                maps[curve->yAxis()],
-                                rect);
-                }	
-            }
-        }
-        //
-        {
-            VestaPlotMarker * marker = dynamic_cast< VestaPlotMarker * > (*it);
-            if (marker) {
-                if (!marker->_staticData) {
-                    marker->draw(painter,
-                                 maps[marker->xAxis()],
-                                 maps[marker->yAxis()],
-                                 rect);
-                }	
-            }
-        }
     }
 }

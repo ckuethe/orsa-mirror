@@ -2,6 +2,7 @@
 #define __VESTA_PLOT_H__
 
 #include <qwt_plot.h>
+#include <qwt_plot_canvas.h>
 #include <qwt_plot_curve.h>
 #include <qwt_plot_marker.h>
 
@@ -61,8 +62,8 @@ public:
 protected:
     void run();
   
-             public slots:
-             void abort();
+    public slots:
+    void abort();
 private:
     bool doAbort;
   
@@ -82,9 +83,21 @@ class VestaPlotCurve : public QwtPlotCurve {
 public:
     VestaPlotCurve(bool staticData) : 
         QwtPlotCurve(),
-        _staticData(staticData) { }
-public:
+        _staticData(staticData) { 
+      pointSeriesData = new QwtPointSeriesData;
+    }
+ public:
+    ~VestaPlotCurve() {
+      delete pointSeriesData;
+    }
+ public:
+    void setData(const QVector<QPointF> & data) {
+      pointSeriesData->setSamples(data);
+      QwtPlotCurve::setData(pointSeriesData);
+    }
+ public:
     const bool _staticData;
+    QwtPointSeriesData * pointSeriesData;
 };
 
 class VestaPlotMarker : public QwtPlotMarker {
@@ -107,10 +120,10 @@ public:
   
 public:
     ~VestaPlot();
-  
-                protected slots:
-                void plotFill();
-  
+    
+protected slots:
+    void plotFill();
+    
 protected:
     VestaPlotCurve * curve_distance; 
     VestaPlotCurve * curve_sphere_radius; 
@@ -120,23 +133,25 @@ protected:
     VestaPlotCurve * curve_q; 
     VestaPlotCurve * curve_a; 
     VestaPlotCurve * curve_Q; 
-  
+    
 protected:
-    VestaPlotCurve  *  curve_altitude; 
-    VestaPlotMarker * marker_altitude;
-  
-                protected slots:
-                void moveAltitudeCurve(const orsa::Time & t);
+    VestaPlotCurve   *  curve_altitude; 
+    VestaPlotMarker  * marker_altitude; 
+    // QwtPointSeriesData * data_altitude;
+    
+protected slots:
+    void moveAltitudeCurve(const orsa::Time & t);
 protected:
     mutable QTime moveTime;
   
 protected:
     PlotFillThread * plotFillThread;
     mutable QTimer   plotFillTimer;
-    void drawItems(QPainter *, 
-                   const QRect &,
-                   const QwtScaleMap maps[axisCnt],
-                   const QwtPlotPrintFilter &) const;
+    /* void drawItems(QPainter *, 
+       const QRect &,
+       const QwtScaleMap maps[axisCnt],
+       const QwtPlotPrintFilter &) const;
+    */
     // this below will work with Qwt 5.3
     /* void drawItems(QPainter *, 
        const QRectF &,
