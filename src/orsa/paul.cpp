@@ -263,10 +263,9 @@ double Paul::gravitationalPotential(const orsa::PaulMoment * M1,
 
                                                         innerSum +=
                                                             fiveSum *
-                                                            ((double)(
-                                                            expplgamma[i2+1] * expmlgamma[i2-i3+1] * expmlgamma[i4+1] * expmlgamma[i3-i4+1] *
-                                                            expplgamma[j2+1] * expmlgamma[j2-j3+1] * expmlgamma[j4+1] * expmlgamma[j3-j4+1] *
-                                                            expplgamma[k2+1] * expmlgamma[k2-k3+1] * expmlgamma[k4+1] * expmlgamma[k3-k4+1])) *
+                                                            ((double)(expplgamma[i2+1] * expmlgamma[i2-i3+1] * expmlgamma[i4+1] * expmlgamma[i3-i4+1] *
+                                                                      expplgamma[j2+1] * expmlgamma[j2-j3+1] * expmlgamma[j4+1] * expmlgamma[j3-j4+1] *
+                                                                      expplgamma[k2+1] * expmlgamma[k2-k3+1] * expmlgamma[k4+1] * expmlgamma[k3-k4+1])) *
                                                             pow(lx,double(i4)) * pow(mx,double(i3-i4)) * pow(nx,double(i2-i3)) *
                                                             pow(ly,double(j4)) * pow(my,double(j3-j4)) * pow(ny,double(j2-j3)) *
                                                             pow(lz,double(k4)) * pow(mz,double(k3-k4)) * pow(nz,double(k2-k3));
@@ -293,10 +292,10 @@ double Paul::gravitationalPotential(const orsa::PaulMoment * M1,
                 }
             }
         }
-	
-	delete[] expplgamma;
-	delete[] expmlgamma;
-	
+        
+        delete[] expplgamma;
+        delete[] expmlgamma;
+        
     } else {
     // Without optimization
 
@@ -525,9 +524,7 @@ orsa::Vector Paul::gravitationalForce(const orsa::PaulMoment * M1,
     double ntR = 0;
     double commonInnerFactor = 0;
     double commonFactor = 0;
-
-
-
+    
     if (use_optimization) {
     // With optimization
 
@@ -575,41 +572,44 @@ orsa::Vector Paul::gravitationalForce(const orsa::PaulMoment * M1,
                                                         for (unsigned int L=0; L<=i5; ++L) {
                                                             for (unsigned int M=0; M<=j5; ++M) {
                                                                 for (unsigned int N=0; N<=k5; ++N) {
+                                                                    const double local_t = orsa::Paul::t_lmnLMN::instance()->get_d(i5,j5,k5,L,M,N);
+                                                                    if (local_t == 0.0) {
+                                                                        continue;
+                                                                    }
                                                                     //
-                                                                    tR = orsa::Paul::t_lmnLMN::instance()->get_d(i5,j5,k5,L,M,N) *
-                                                                         pow(csi1,(double)(L)) * pow(eta1,(double)(M)) * pow(zeta1,(double)(N)) *
-                                                                         pow(oneOverR,(double)(L+M+N));
-                                                                    ntR = ((double)(i5+j5+k5+L+M+N+1)) * oneOverR * oneOverR * tR;
+                                                                    tR = local_t * pow(oneOverR,(double)(L+M+N));
+                                                                    ntR = local_t *
+                                                                        pow(csi1,(double)(L)) * pow(eta1,(double)(M)) * pow(zeta1,(double)(N)) *
+                                                                        pow(oneOverR,(double)(L+M+N+2)) * ((double)(i5+j5+k5+L+M+N+1));
                                                                     //
                                                                     fiveSumFx -= ntR*csi1;
-                                                                    if (L != 0 && fabs(csi1) > 0.) fiveSumFx += tR * ((double)(L)) / csi1;
+                                                                    if (L != 0) fiveSumFx += tR * L * pow(csi1,(double)(L-1)) * pow(eta1,(double)(M)) * pow(zeta1,(double)(N));
                                                                     //
                                                                     fiveSumFy -= ntR*eta1;
-                                                                    if (M != 0 && fabs(eta1) > 0.) fiveSumFy += tR * ((double)(M)) / eta1;
+                                                                    if (M != 0) fiveSumFy += tR * M * pow(csi1,(double)(L)) * pow(eta1,(double)(M-1)) * pow(zeta1,(double)(N));
                                                                     //
                                                                     fiveSumFz -= ntR*zeta1;
-                                                                    if (N != 0 && fabs(zeta1) > 0.) fiveSumFz += tR * ((double)(N)) / zeta1;
+                                                                    if (N != 0) fiveSumFz += tR * N * pow(csi1,(double)(L)) * pow(eta1,(double)(M)) * pow(zeta1,(double)(N-1));
                                                                 }
                                                             }
                                                         }
-
+                                                        
                                                         commonInnerFactor =
-                                                            ((double)(
-                                                            expplgamma[i2+1] * expmlgamma[i2-i3+1] * expmlgamma[i4+1] * expmlgamma[i3-i4+1] *
-                                                            expplgamma[j2+1] * expmlgamma[j2-j3+1] * expmlgamma[j4+1] * expmlgamma[j3-j4+1] *
-                                                            expplgamma[k2+1] * expmlgamma[k2-k3+1] * expmlgamma[k4+1] * expmlgamma[k3-k4+1])) *
+                                                            ((double)(expplgamma[i2+1] * expmlgamma[i2-i3+1] * expmlgamma[i4+1] * expmlgamma[i3-i4+1] *
+                                                                      expplgamma[j2+1] * expmlgamma[j2-j3+1] * expmlgamma[j4+1] * expmlgamma[j3-j4+1] *
+                                                                      expplgamma[k2+1] * expmlgamma[k2-k3+1] * expmlgamma[k4+1] * expmlgamma[k3-k4+1])) *
                                                             pow(lx,double(i4)) * pow(mx,double(i3-i4)) * pow(nx,double(i2-i3)) *
                                                             pow(ly,double(j4)) * pow(my,double(j3-j4)) * pow(ny,double(j2-j3)) *
                                                             pow(lz,double(k4)) * pow(mz,double(k3-k4)) * pow(nz,double(k2-k3));
-
+                                                        
                                                         innerFx += fiveSumFx * commonInnerFactor;
                                                         innerFy += fiveSumFy * commonInnerFactor;
                                                         innerFz += fiveSumFz * commonInnerFactor;
-
+                                                        
                                                     }
                                                 }
                                             }
-
+                                            
                                         }
                                     }
                                 }
@@ -623,7 +623,7 @@ orsa::Vector Paul::gravitationalForce(const orsa::PaulMoment * M1,
                                     ((double)(expplgamma[i1+1] * expplgamma[i2+1] *
                                               expplgamma[j1+1] * expplgamma[j2+1] *
                                               expplgamma[k1+1] * expplgamma[k2+1] ));
-
+                                
                                 Fx += innerFx * commonFactor;
                                 Fy += innerFy * commonFactor;
                                 Fz += innerFz * commonFactor;
@@ -635,10 +635,10 @@ orsa::Vector Paul::gravitationalForce(const orsa::PaulMoment * M1,
                 }
             }
         }
-	
-	delete[] expplgamma;
-	delete[] expmlgamma;
-	
+        
+        delete[] expplgamma;
+        delete[] expmlgamma;
+        
     } else {
     // Without optimization
 
@@ -715,24 +715,28 @@ orsa::Vector Paul::gravitationalForce(const orsa::PaulMoment * M1,
                                                         for (unsigned int L=0; L<=i5; ++L) {
                                                             for (unsigned int M=0; M<=j5; ++M) {
                                                                 for (unsigned int N=0; N<=k5; ++N) {
+                                                                    const double local_t = orsa::Paul::t_lmnLMN::instance()->get_d(i5,j5,k5,L,M,N);
+                                                                    if (local_t == 0.0) {
+                                                                        continue;
+                                                                    }
                                                                     //
-                                                                    tR = orsa::Paul::t_lmnLMN::instance()->get_d(i5,j5,k5,L,M,N) *
-                                                                         csi1_PC.get(L) * eta1_PC.get(M) * zeta1_PC.get(N) *
-                                                                         oneOverR_PC.get(L+M+N);
-                                                                    ntR = ((double)(i5+j5+k5+L+M+N+1)) * oneOverR_PC.get(2) * tR;
+                                                                    tR = local_t * oneOverR_PC.get(L+M+N);
+                                                                    ntR = local_t *
+                                                                        csi1_PC.get(L) * eta1_PC.get(M) * zeta1_PC.get(N) *
+                                                                        oneOverR_PC.get(L+M+N+2) * ((double)(i5+j5+k5+L+M+N+1));
                                                                     //
                                                                     fiveSumFx -= ntR*csi1;
-                                                                    if (L != 0 && fabs(csi1) > 0.) fiveSumFx += tR * ((double)(L)) / csi1;
+                                                                    if (L != 0) fiveSumFx += tR * L * pow(csi1,(double)(L-1)) * pow(eta1,(double)(M)) * pow(zeta1,(double)(N));
                                                                     //
                                                                     fiveSumFy -= ntR*eta1;
-                                                                    if (M != 0 && fabs(eta1) > 0.) fiveSumFy += tR * ((double)(M)) / eta1;
+                                                                    if (M != 0) fiveSumFy += tR * M * pow(csi1,(double)(L)) * pow(eta1,(double)(M-1)) * pow(zeta1,(double)(N));
                                                                     //
                                                                     fiveSumFz -= ntR*zeta1;
-                                                                    if (N != 0 && fabs(zeta1) > 0.) fiveSumFz += tR * ((double)(N)) / zeta1;
+                                                                    if (N != 0) fiveSumFz += tR * N * pow(csi1,(double)(L)) * pow(eta1,(double)(M)) * pow(zeta1,(double)(N-1));
                                                                 }
                                                             }
                                                         }
-
+                                                        
                                                         commonInnerFactor =
                                                             mpz_class(orsa::binomial(i2,i3) * orsa::binomial(i3,i4) *
                                                                       orsa::binomial(j2,j3) * orsa::binomial(j3,j4) *
@@ -957,33 +961,36 @@ orsa::Vector Paul::gravitationalTorque(const orsa::PaulMoment * M1,
                                                         for (unsigned int L=0; L<=i5; ++L) {
                                                             for (unsigned int M=0; M<=j5; ++M) {
                                                                 for (unsigned int N=0; N<=k5; ++N) {
+                                                                    const double local_t = orsa::Paul::t_lmnLMN::instance()->get_d(i5,j5,k5,L,M,N);
+                                                                    if (local_t == 0.0) {
+                                                                        continue;
+                                                                    }
                                                                     //
-                                                                    tR = orsa::Paul::t_lmnLMN::instance()->get_d(i5,j5,k5,L,M,N) *
-                                                                         pow(csi1,(double)(L)) * pow(eta1,(double)(M)) * pow(zeta1,(double)(N)) *
-                                                                         pow(oneOverR,(double)(L+M+N));
-                                                                    ntR = ((double)(i5+j5+k5+L+M+N+1)) * oneOverR * oneOverR * tR;
+                                                                    tR = local_t * pow(oneOverR,(double)(L+M+N));
+                                                                    ntR = local_t *
+                                                                        pow(csi1,(double)(L)) * pow(eta1,(double)(M)) * pow(zeta1,(double)(N)) *
+                                                                        pow(oneOverR,(double)(L+M+N+2)) * ((double)(i5+j5+k5+L+M+N+1));
                                                                     //
                                                                     fiveSumFx -= ntR*csi1;
-                                                                    if (L != 0 && fabs(csi1) > 0.) fiveSumFx += tR * ((double)(L)) / csi1;
+                                                                    if (L != 0) fiveSumFx += tR * L * pow(csi1,(double)(L-1)) * pow(eta1,(double)(M)) * pow(zeta1,(double)(N));
                                                                     //
                                                                     fiveSumFy -= ntR*eta1;
-                                                                    if (M != 0 && fabs(eta1) > 0.) fiveSumFy += tR * ((double)(M)) / eta1;
+                                                                    if (M != 0) fiveSumFy += tR * M * pow(csi1,(double)(L)) * pow(eta1,(double)(M-1)) * pow(zeta1,(double)(N));
                                                                     //
                                                                     fiveSumFz -= ntR*zeta1;
-                                                                    if (N != 0 && fabs(zeta1) > 0.) fiveSumFz += tR * ((double)(N)) / zeta1;
+                                                                    if (N != 0) fiveSumFz += tR * N * pow(csi1,(double)(L)) * pow(eta1,(double)(M)) * pow(zeta1,(double)(N-1));
                                                                 }
                                                             }
                                                         }
-
+                                                        
                                                         commonInnerFactor =
-                                                            ((double)(
-                                                            expplgamma[i2+1] * expmlgamma[i2-i3+1] * expmlgamma[i4+1] * expmlgamma[i3-i4+1] *
-                                                            expplgamma[j2+1] * expmlgamma[j2-j3+1] * expmlgamma[j4+1] * expmlgamma[j3-j4+1] *
-                                                            expplgamma[k2+1] * expmlgamma[k2-k3+1] * expmlgamma[k4+1] * expmlgamma[k3-k4+1])) *
+                                                            ((double)(expplgamma[i2+1] * expmlgamma[i2-i3+1] * expmlgamma[i4+1] * expmlgamma[i3-i4+1] *
+                                                                      expplgamma[j2+1] * expmlgamma[j2-j3+1] * expmlgamma[j4+1] * expmlgamma[j3-j4+1] *
+                                                                      expplgamma[k2+1] * expmlgamma[k2-k3+1] * expmlgamma[k4+1] * expmlgamma[k3-k4+1])) *
                                                             pow(lx,double(i4)) * pow(mx,double(i3-i4)) * pow(nx,double(i2-i3)) *
                                                             pow(ly,double(j4)) * pow(my,double(j3-j4)) * pow(ny,double(j2-j3)) *
                                                             pow(lz,double(k4)) * pow(mz,double(k3-k4)) * pow(nz,double(k2-k3));
-
+                                                        
                                                         innerFx += fiveSumFx * commonInnerFactor;
                                                         innerFy += fiveSumFy * commonInnerFactor;
                                                         innerFz += fiveSumFz * commonInnerFactor;
@@ -1017,10 +1024,10 @@ orsa::Vector Paul::gravitationalTorque(const orsa::PaulMoment * M1,
                 }
             }
         }
-	
-	delete[] expplgamma;
-	delete[] expmlgamma;
-	
+        
+        delete[] expplgamma;
+        delete[] expmlgamma;
+        
     } else {
     // Without optimization
 
@@ -1088,24 +1095,28 @@ orsa::Vector Paul::gravitationalTorque(const orsa::PaulMoment * M1,
                                                         for (unsigned int L=0; L<=i5; ++L) {
                                                             for (unsigned int M=0; M<=j5; ++M) {
                                                                 for (unsigned int N=0; N<=k5; ++N) {
+                                                                    const double local_t = orsa::Paul::t_lmnLMN::instance()->get_d(i5,j5,k5,L,M,N);
+                                                                    if (local_t == 0.0) {
+                                                                        continue;
+                                                                    }
                                                                     //
-                                                                    tR = orsa::Paul::t_lmnLMN::instance()->get_d(i5,j5,k5,L,M,N) *
-                                                                         csi1_PC.get(L) * eta1_PC.get(M) * zeta1_PC.get(N) *
-                                                                         oneOverR_PC.get(L+M+N);
-                                                                    ntR = ((double)(i5+j5+k5+L+M+N+1)) * oneOverR_PC.get(2) * tR;
+                                                                    tR = local_t * oneOverR_PC.get(L+M+N);
+                                                                    ntR = local_t *
+                                                                        csi1_PC.get(L) * eta1_PC.get(M) * zeta1_PC.get(N) *
+                                                                        oneOverR_PC.get(L+M+N+2) * ((double)(i5+j5+k5+L+M+N+1));
                                                                     //
                                                                     fiveSumFx -= ntR*csi1;
-                                                                    if (L != 0 && fabs(csi1) > 0.) fiveSumFx += tR * ((double)(L)) / csi1;
+                                                                    if (L != 0) fiveSumFx += tR * L * pow(csi1,(double)(L-1)) * pow(eta1,(double)(M)) * pow(zeta1,(double)(N));
                                                                     //
                                                                     fiveSumFy -= ntR*eta1;
-                                                                    if (M != 0 && fabs(eta1) > 0.) fiveSumFy += tR * ((double)(M)) / eta1;
+                                                                    if (M != 0) fiveSumFy += tR * M * pow(csi1,(double)(L)) * pow(eta1,(double)(M-1)) * pow(zeta1,(double)(N));
                                                                     //
                                                                     fiveSumFz -= ntR*zeta1;
-                                                                    if (N != 0 && fabs(zeta1) > 0.) fiveSumFz += tR * ((double)(N)) / zeta1;
+                                                                    if (N != 0) fiveSumFz += tR * N * pow(csi1,(double)(L)) * pow(eta1,(double)(M)) * pow(zeta1,(double)(N-1));
                                                                 }
                                                             }
                                                         }
-
+                                                        
                                                         commonInnerFactor =
                                                             mpz_class(orsa::binomial(i2,i3) * orsa::binomial(i3,i4) *
                                                                       orsa::binomial(j2,j3) * orsa::binomial(j3,j4) *
