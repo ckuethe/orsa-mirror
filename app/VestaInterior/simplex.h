@@ -45,6 +45,16 @@ public:
             aux[fi].simplexVertexVector[2] = oneOverR0*vv[fv[fi].j()];
             aux[fi].simplexVertexVector[3] = oneOverR0*vv[fv[fi].k()];
             //
+            // test: is R0 large enough? later we need vars to be between -1 and 1, because they are arguments
+            //       of ChebyshevT polynomials, which are orthogonal only in this interval
+            if ( (aux[fi].simplexVertexVector[0].length() > 1.0) ||
+                 (aux[fi].simplexVertexVector[1].length() > 1.0) ||
+                 (aux[fi].simplexVertexVector[2].length() > 1.0) ||
+                 (aux[fi].simplexVertexVector[3].length() > 1.0) ) {
+                ORSA_DEBUG("problem: R0 value too small");
+                exit(0);
+            }
+            //
             // volume of simplex with the face as base and the origin as 4th vertex
             // if moving 4th point away from origin, more terms must be added
             // aux[fi].volume = fabs((vv[fv[fi].i()]*orsa::externalProduct(vv[fv[fi].j()],vv[fv[fi].k()])) / 6);

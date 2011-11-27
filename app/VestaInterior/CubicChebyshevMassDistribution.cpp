@@ -102,9 +102,20 @@ double CubicChebyshevMassDistribution::density(const orsa::Vector & p) const {
     if (coeff.size() == 0) return 0.0;
     const size_t degree = coeff.size()-1;
     std::vector<double> Tx, Ty, Tz;
-    orsa::ChebyshevT(Tx,degree,p.getX()*oneOverR0);
-    orsa::ChebyshevT(Ty,degree,p.getY()*oneOverR0);
-    orsa::ChebyshevT(Tz,degree,p.getZ()*oneOverR0);
+    const double Tx_arg = p.getX()*oneOverR0;
+    const double Ty_arg = p.getY()*oneOverR0;
+    const double Tz_arg = p.getZ()*oneOverR0;
+    //
+    if ( (fabs(Tx_arg) > 1.0) ||
+         (fabs(Ty_arg) > 1.0) ||
+         (fabs(Tz_arg) > 1.0) ) {
+        ORSA_DEBUG("problem: R0 value too small");
+        exit(0);
+    }
+    //
+    orsa::ChebyshevT(Tx,degree,Tx_arg);
+    orsa::ChebyshevT(Ty,degree,Ty_arg);
+    orsa::ChebyshevT(Tz,degree,Tz_arg);
     double density = 0.0;
     for (size_t i=0; i<=degree; ++i) {
         for (size_t j=0; j<=degree-i; ++j) {
