@@ -470,8 +470,8 @@ orsa::BodyGroup * run(const double orbitRadius,
     
         if (1) {
             // print out...
-            std::vector< std::vector<double> > C, S, norm_C, norm_S;
-            std::vector<double> J;
+            std::vector< std::vector<mpf_class> > C, S, norm_C, norm_S;
+            std::vector<mpf_class> J;
             orsa::convert(C, S, norm_C, norm_S, J,
                           paulMoment, 
                           FromUnits(300,orsa::Unit::KM));
@@ -490,22 +490,22 @@ orsa::BodyGroup * run(const double orbitRadius,
             ORSA_DEBUG("\%\\hline");
             for (unsigned int l=2; l<=degree; ++l) {
                 // J_l is minus C_l0, where C_l0 is not normalized
-                ORSA_DEBUG("$J_{%i}$    & $%+9.6f$ \\\\",l,-C[l][0]);
+                ORSA_DEBUG("$J_{%i}$    & $%+9.6f$ \\\\",l,-C[l][0].get_d());
             }
             ORSA_DEBUG("\%\\hline");
             for (unsigned int l=2; l<=degree; ++l) {
                 for (unsigned int m=0; m<=l; ++m) {
                     // LaTeX Tabular style
-                    ORSA_DEBUG("$C_{%i%i}$   & $%+9.6f$ \\\\",l,m,norm_C[l][m]);
+                    ORSA_DEBUG("$C_{%i%i}$   & $%+9.6f$ \\\\",l,m,norm_C[l][m].get_d());
                     if (m!=0) {
-                        ORSA_DEBUG("$S_{%i%i}$   & $%+9.6f$ \\\\",l,m,norm_S[l][m]);
+                        ORSA_DEBUG("$S_{%i%i}$   & $%+9.6f$ \\\\",l,m,norm_S[l][m].get_d());
                     }
                 }
             }
             for (unsigned int l=2; l<=degree; ++l) {
                 double var_l=0; // variance_l, or sigma_l squared
                 for (unsigned int m=0; m<=l; ++m) {
-                    var_l += orsa::square(norm_C[l][m])+orsa::square(norm_S[l][m]);
+                    var_l += orsa::square(norm_C[l][m].get_d())+orsa::square(norm_S[l][m].get_d());
                 }
                 var_l /= (2*l+1); // definitions may vary...
                 ORSA_DEBUG("power: %2i %e",l,var_l);
