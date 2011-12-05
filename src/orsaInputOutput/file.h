@@ -354,7 +354,7 @@ namespace orsaInputOutput {
             char line[length], lineAbove[length];
             _file->rewind();
             while (_file->gets(line,length)) {
-                line[strlen(line)-1] = '\0'; // remove trailing \n
+                if (strlen(line) > 0) line[strlen(line)-1] = '\0'; // remove trailing \n
                 if (goodLine(line)) {
                     // uncomment while debugging
                     // ORSA_DEBUG("accepted line: [%s]",line);
