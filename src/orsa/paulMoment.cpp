@@ -85,6 +85,11 @@ void PaulMoment::setM_uncertainty (const double & val,
 bool orsa::translate(PaulMoment * const pm,
                      const PaulMoment * const pm0,
                      const orsa::Vector & delta) {
+
+    if (pm == pm0) {
+        ORSA_DEBUG("problem: the two PaulMoment must be distinct variables");
+        return false;  
+    }
     
     if (pm->order != pm0->order) {
         ORSA_DEBUG("problem: the two PaulMoment must have same order");
@@ -892,10 +897,11 @@ void orsa::EllipsoidExpansion(PaulMoment   * pm,
                         //
                         const double M_ijk         = factor.get_d()*orsa::int_pow(a,i)*orsa::int_pow(b,j)*orsa::int_pow(c,k);
                         pm->setM(M_ijk,i,j,k);
-                        ORSA_DEBUG("ijk: %i %i %i   factor: %Zi/%Zi  M: %g",
-                                   i,j,k,
-                                   factor.get_num().get_mpz_t(),factor.get_den().get_mpz_t(),
-                                   M_ijk); 
+                        /* ORSA_DEBUG("ijk: %i %i %i   factor: %Zi/%Zi  M: %g",
+                           i,j,k,
+                           factor.get_num().get_mpz_t(),factor.get_den().get_mpz_t(),
+                           M_ijk); 
+                        */
                     }
                 }
             }
