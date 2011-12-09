@@ -729,11 +729,15 @@ int main(int argc, char **argv) {
                 x0.uK = &uK[0];
                 x0.uK_size = N-M;
                 x0.factor.resize(x0.uK_size);
-                x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(2.00,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+                x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(2.50,orsa::Unit::GRAM),orsa::Unit::CM,-3);
                 x0.maximumDensity = orsa::FromUnits(orsa::FromUnits(8.00,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-                x0.penaltyThreshold = 0.50;
-                for (size_t b=0; b<x0.uK_size; ++b) {
+                x0.penaltyThreshold = 1.00;
 
+#warning FINISH HERE!!!
+                x0.layerData = 0;
+                
+                for (size_t b=0; b<x0.uK_size; ++b) {
+                    
                     // orig
                     // x0.factor[b] = 0.0;
                     

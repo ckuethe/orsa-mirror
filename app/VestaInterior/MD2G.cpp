@@ -264,6 +264,7 @@ public:
     std::vector<orsa::Vector> rv;
     orsa::Cache<double> ref_penalty;
     std::vector<double> ref_dv;
+    osg::ref_ptr<LayerData> layerData;
 };
 
 void SIMAN_copy (void * source, void * dest) {
@@ -275,6 +276,7 @@ void SIMAN_copy (void * source, void * dest) {
     d->rv          = s->rv;
     d->ref_penalty = s->ref_penalty;
     d->ref_dv      = s->ref_dv;
+    d->layerData   = s->layerData;
 }
 
 void * SIMAN_copy_construct (void * xp) {
@@ -294,7 +296,8 @@ double E1(void * xp) {
     osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
         new CubicChebyshevMassDistribution(x->coeff,
                                            x->bulkDensity,
-                                           x->R0_plate);
+                                           x->R0_plate,
+                                           x->layerData);
     
     double delta = 0.0;
     for (size_t k=0; k<x->rv.size(); ++k) {
@@ -321,6 +324,7 @@ double E1(void * xp) {
         data.R0 = x->R0_plate;
         data.SH_degree = 0;
         data.coeff = x->coeff;
+        data.layerData = x->layerData;
         CubicChebyshevMassDistributionFile::append(data,"MD2G.CCMDF.search.out");
     }
     
@@ -437,6 +441,7 @@ int main(int argc, char **argv) {
     
     CubicChebyshevMassDistribution::CoefficientType densityCCC; // CCC=CubicChebyshevCoefficient
     CubicChebyshevMassDistribution::resize(densityCCC,T_degree_input);
+    osg::ref_ptr<LayerData> layerData;
     
     osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape;
     {
@@ -460,6 +465,7 @@ int main(int argc, char **argv) {
             ORSA_DEBUG("CCMDF [%s] should contain only one set of coefficients.",CCMDF_filename.c_str());
         }
         densityCCC = CCMDF[0].coeff;
+        layerData  = CCMDF[0].layerData;
         
     } else {
         
@@ -496,8 +502,10 @@ int main(int argc, char **argv) {
             const double gcm3 = orsa::FromUnits(orsa::FromUnits(1.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
             
             // NOTE: model densities are adjusted automatically later in order to conserve total mass
-
-
+            
+#warning \"force\" layers by using layerData?            
+            // use and set layerData ??
+            
             // Test
             const orsa::Vector coreCenter = orsa::Vector(0,0,0)*km;
             const double coreRx = 115*km;
@@ -589,7 +597,8 @@ int main(int argc, char **argv) {
                 x0.R0_plate    = plateModelR0;
                 x0.rv          = rv;
                 x0.ref_penalty = ref_penalty;
-                x0.ref_dv      = dv; 
+                x0.ref_dv      = dv;
+                x0.layerData   = layerData;
                 
                 gsl_rng * rng = ::gsl_rng_alloc(gsl_rng_gfsr4);
                 const int randomSeed = time(NULL)*getpid();
@@ -697,7 +706,8 @@ int main(int argc, char **argv) {
                     CubicChebyshevMassDistributionDecomposition(massDistribution,
                                                                 T_degree_input,
                                                                 bulkDensity,
-                                                                plateModelR0);
+                                                                plateModelR0,
+                                                                layerData);
                 densityCCC = CCMD->coeff;
             }
             break;
@@ -798,7 +808,8 @@ int main(int argc, char **argv) {
         osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
             new CubicChebyshevMassDistribution(densityCCC,
                                                bulkDensity,     
-                                               plateModelR0);
+                                               plateModelR0,
+                                               layerData);
         randomPointsInShape->updateMassDistribution(massDistribution.get());
         
         std::vector<orsa::Vector> rv;
@@ -847,6 +858,7 @@ int main(int argc, char **argv) {
         data.R0 = plateModelR0;
         data.SH_degree = gravityData->degree;
         data.coeff = densityCCC;
+        data.layerData = layerData;
         CubicChebyshevMassDistributionFile::write(data,"MD2G.CCMDF.out");
     }
     

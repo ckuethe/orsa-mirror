@@ -7,7 +7,9 @@
 // "wedding cake" layers, with a base density, and excess densities on smaller and smaller volumes contaning each other
 class LayerData : public osg::Referenced {
 public:
-    LayerData() : osg::Referenced(true) { }
+    LayerData() : osg::Referenced(true) {
+        baseDensity = 0.0;
+    }
 protected:
     virtual ~LayerData() { }
 public:
@@ -54,7 +56,7 @@ public:
 #warning errors should be generated in the code using the Layers if layer A is not inside layer B, and layer B is not inside layer A (they are crossing each other)
     };
 public:
-    orsa::Cache<double> baseDensity;
+    double baseDensity;
 public:
     typedef std::vector< osg::ref_ptr<EllipsoidLayer> > EllipsoidLayerVectorType;
     EllipsoidLayerVectorType ellipsoidLayerVector;
@@ -158,5 +160,12 @@ protected:
 protected:
     static bool write(const DataType & data, FILE * fp);
 };
+
+inline CubicChebyshevMassDistribution * CCMD(const CubicChebyshevMassDistributionFile::CCMDF_data & data) {
+    return new CubicChebyshevMassDistribution(data.coeff,
+                                              data.densityScale,
+                                              data.R0,
+                                              data.layerData);
+}
 
 #endif // CUBIC_CHEBYSHEV_MASS_DISTRIBUTION_H

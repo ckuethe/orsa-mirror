@@ -76,11 +76,8 @@ int main(int argc, char **argv) {
     it_CCMDF = CCMDF.end();
     --it_CCMDF;
     
-    osg::ref_ptr<CubicChebyshevMassDistribution> md =
-        new CubicChebyshevMassDistribution((*it_CCMDF).coeff,
-                                           (*it_CCMDF).densityScale,
-                                           (*it_CCMDF).R0);
-
+    osg::ref_ptr<CubicChebyshevMassDistribution> md = CCMD(*it_CCMDF);
+    
     char filename[1024];
     sprintf(filename,"dump_%gkm.3D",step_km);
     FILE * fp = fopen(filename,"w");

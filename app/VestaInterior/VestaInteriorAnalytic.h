@@ -12,9 +12,6 @@
 #include "CubicChebyshevMassDistribution.h"
 #include "penalty.h"
 
-#include <orsaUtil/adaptiveInterval.h>
-#include <orsaUtil/adaptiveMonteCarlo.h>
-
 // GSL Simulated Annealing
 
 /* how many points do we try before stepping */      
@@ -46,7 +43,6 @@ public:
     orsa::Cache<double> R0_plate;
     orsa::Cache<double> R0_gravity;
     orsa::Cache<double> bulkDensity;
-    // osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape;
     std::vector<orsa::Vector> rv;
     orsa::Cache<size_t> SH_degree;
     orsa::Cache<size_t> T_degree;
@@ -58,6 +54,7 @@ public:
     orsa::Cache<double> minimumDensity;
     orsa::Cache<double> maximumDensity;
     orsa::Cache<double> penaltyThreshold;
+    osg::ref_ptr<LayerData> layerData;
 };
 
 
@@ -67,7 +64,6 @@ void SIMAN_copy (void * source, void * dest) {
     d->R0_plate            = s->R0_plate;
     d->R0_gravity          = s->R0_gravity;
     d->bulkDensity         = s->bulkDensity;
-    // d->randomPointsInShape = s->randomPointsInShape;
     d->rv                  = s->rv;
     d->SH_degree           = s->SH_degree;
     d->T_degree            = s->T_degree;
@@ -79,6 +75,7 @@ void SIMAN_copy (void * source, void * dest) {
     d->minimumDensity      = s->minimumDensity;
     d->maximumDensity      = s->maximumDensity;
     d->penaltyThreshold    = s->penaltyThreshold;
+    d->layerData           = s->layerData;
 }
 
 void * SIMAN_copy_construct (void * xp) {
@@ -118,7 +115,7 @@ double E1(void * xp) {
     }
     
     osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
-        new CubicChebyshevMassDistribution(coeff,x->bulkDensity,x->R0_plate);
+        new CubicChebyshevMassDistribution(coeff,x->bulkDensity,x->R0_plate,x->layerData);
     
     // x->randomPointsInShape->updateMassDistribution(massDistribution);
 
@@ -218,6 +215,7 @@ double E1(void * xp) {
         data.R0 = x->R0_plate;
         data.SH_degree = x->SH_degree;
         data.coeff = coeff;
+        data.layerData = x->layerData;
         CubicChebyshevMassDistributionFile::append(data,"CCMDF.out");
     }
     
@@ -255,13 +253,13 @@ double E1(void * xp) {
 #warning choose one return value, should be a parameter!
     
     // most flat
-    // return (maxDensity-minDensity)+10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
+    return (maxDensity-minDensity)+10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
     
     // most peaks
     // return (minDensity-maxDensity)+10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
     
     // generic
-    return 10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
+    // return 10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
     
     // return penalty;
 }
