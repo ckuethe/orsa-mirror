@@ -163,7 +163,8 @@ int main(int argc, char **argv) {
     // mpf_set_default_prec(512);
     // ORSA_DEBUG("updated mpf precision: %i",mpf_get_default_prec());
     
-    if (argc != 14) {
+    if ( (argc != 13) &&
+         (argc != 14) ) {
         printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> <num-sample-points> [CCMDF-input-file]\n",argv[0]);
         exit(0);
     }   
@@ -738,7 +739,6 @@ int main(int argc, char **argv) {
                 x0.R0_plate   = plateModelR0;
                 x0.R0_gravity = gravityData->R0;
                 x0.bulkDensity = bulkDensity;
-                // x0.randomPointsInShape = randomPointsInShape;
                 x0.rv = rv;
                 x0.SH_degree = SH_degree;
                 x0.T_degree = T_degree;
@@ -756,26 +756,44 @@ int main(int argc, char **argv) {
                 } else {
                     x0.layerData = 0;
                 }
+
+                // fix value of x0.factor[]  
                 
-                for (size_t b=0; b<x0.uK_size; ++b) {
+                if (have_CCMDF_file) {
                     
-                    // orig
-                    // x0.factor[b] = 0.0;
-                    
-#warning the start model, or hint model, should be one of the user arguments
-                    // test: get as close as possible to cT = {1,0,0,0,0...} = constant density
-                    // projectr (1,0,0,0..) - cT0 along uK_b
-                    x0.factor[b] = 0.0;
-                    for (size_t s=0; s<N; ++s) {
-                        if (s==0) {
-                            // first element of target cT = 1
-                            x0.factor[b] += (1.0-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
-                        } else {
-                            // all other elements of target cT = 0
-                            x0.factor[b] += (0.0-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
+                    // using the input CCMDF
+                    const size_t cT_CCMDF_degree = massDistribution->coeff.size()-1;
+                    const size_t cT_CCMDF_size   = CubicChebyshevMassDistribution::totalSize(cT_CCMDF_degree);
+                    size_t Tx,Ty,Tz;
+                    for (size_t b=0; b<x0.uK_size; ++b) {
+                        x0.factor[b] = 0.0;
+                        for (size_t s=0; s<N; ++s) {
+                            double cT_CCMDF = 0.0; // default value
+                            if (s < cT_CCMDF_size) {
+                                CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,s);
+                                cT_CCMDF = massDistribution->coeff[Tx][Ty][Tz];
+                            }
+                            x0.factor[b] += (cT_CCMDF-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
                         }
+                        ORSA_DEBUG("factor[%03i] = %g",b,x0.factor[b]);
                     }
-                    ORSA_DEBUG("factor[%03i] = %g",b,x0.factor[b]);
+                    
+                } else {
+                    // get as close as possible to cT = {1,0,0,0,0...} = constant density
+                    // project (1,0,0,0..) - cT0 along uK_b
+                    for (size_t b=0; b<x0.uK_size; ++b) {
+                        x0.factor[b] = 0.0;
+                        for (size_t s=0; s<N; ++s) {
+                            if (s==0) {
+                                // first element of target cT = 1
+                                x0.factor[b] += (1.0-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
+                            } else {
+                                // all other elements of target cT = 0
+                                x0.factor[b] += (0.0-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
+                            }
+                        }
+                        ORSA_DEBUG("factor[%03i] = %g",b,x0.factor[b]);
+                    }
                 }
                 
                 gsl_siman_solve(rng, &x0, E1, S1, M1, P1,
