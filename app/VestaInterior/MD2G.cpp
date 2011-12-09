@@ -264,7 +264,7 @@ public:
     std::vector<orsa::Vector> rv;
     orsa::Cache<double> ref_penalty;
     std::vector<double> ref_dv;
-    osg::ref_ptr<LayerData> layerData;
+    osg::ref_ptr<const LayerData> layerData;
 };
 
 void SIMAN_copy (void * source, void * dest) {
@@ -441,7 +441,7 @@ int main(int argc, char **argv) {
     
     CubicChebyshevMassDistribution::CoefficientType densityCCC; // CCC=CubicChebyshevCoefficient
     CubicChebyshevMassDistribution::resize(densityCCC,T_degree_input);
-    osg::ref_ptr<LayerData> layerData;
+    osg::ref_ptr<const LayerData> layerData;
     
     osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape;
     {
@@ -464,8 +464,8 @@ int main(int argc, char **argv) {
         if (CCMDF.size() > 1) {
             ORSA_DEBUG("CCMDF [%s] should contain only one set of coefficients.",CCMDF_filename.c_str());
         }
-        densityCCC = CCMDF[0].coeff;
-        layerData  = CCMDF[0].layerData;
+        densityCCC = CCMDF[CCMDF.size()-1].coeff;
+        layerData  = CCMDF[CCMDF.size()-1].layerData;
         
     } else {
         

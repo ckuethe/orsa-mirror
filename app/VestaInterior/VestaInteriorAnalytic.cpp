@@ -163,8 +163,8 @@ int main(int argc, char **argv) {
     // mpf_set_default_prec(512);
     // ORSA_DEBUG("updated mpf precision: %i",mpf_get_default_prec());
     
-    if (argc != 13) {
-        printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> <num-sample-points>\n",argv[0]);
+    if (argc != 14) {
+        printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> <num-sample-points> [CCMDF-input-file]\n",argv[0]);
         exit(0);
     }   
     
@@ -180,6 +180,8 @@ int main(int argc, char **argv) {
     const double CM_sy = orsa::FromUnits(atof(argv[10]),orsa::Unit::KM);
     const double CM_sz = orsa::FromUnits(atof(argv[11]),orsa::Unit::KM);
     const int numSamplePoints = atoi(argv[12]);
+    const bool have_CCMDF_file = (argc == 14);
+    const std::string CCMDF_filename = (argc == 14) ? argv[13] : "";
     
     // safer over NFS
     sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
@@ -384,6 +386,22 @@ int main(int argc, char **argv) {
     if (T_size <= SH_size) {
         ORSA_DEBUG("this method works only when the problem is under-determined, exiting");
         exit(0);
+    }
+    
+    osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution;
+    if (have_CCMDF_file) {
+        
+        CubicChebyshevMassDistributionFile::DataContainer CCMDF;
+        CubicChebyshevMassDistributionFile::read(CCMDF,CCMDF_filename);
+        if (CCMDF.size() == 0) {
+            ORSA_DEBUG("empty CCMDF file: [%s]",CCMDF_filename.c_str());
+            exit(0);
+        }
+        if (CCMDF.size() > 1) {
+            ORSA_DEBUG("CCMDF [%s] should contain only one set of coefficients.",CCMDF_filename.c_str());
+        }
+        
+        massDistribution = CCMD(CCMDF[CCMDF.size()-1]);
     }
     
 #warning check if there is any ROTATION between reference systems
@@ -732,9 +750,12 @@ int main(int argc, char **argv) {
                 x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(2.50,orsa::Unit::GRAM),orsa::Unit::CM,-3);
                 x0.maximumDensity = orsa::FromUnits(orsa::FromUnits(8.00,orsa::Unit::GRAM),orsa::Unit::CM,-3);
                 x0.penaltyThreshold = 1.00;
-
-#warning FINISH HERE!!!
-                x0.layerData = 0;
+                
+                if (massDistribution.get() != 0) {
+                    x0.layerData = massDistribution->layerData;
+                } else {
+                    x0.layerData = 0;
+                }
                 
                 for (size_t b=0; b<x0.uK_size; ++b) {
                     

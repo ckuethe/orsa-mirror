@@ -311,10 +311,13 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
             }
         }
     }
-    data.layerData = new LayerData;
-    if (1 == gmp_fscanf(fp,"%lf",&data.layerData->baseDensity)) {
-        data.layerData->baseDensity = orsa::FromUnits(orsa::FromUnits(data.layerData->baseDensity,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+    bool haveLayerData=false;
+    double baseDensity;
+    if (1 == gmp_fscanf(fp,"%lf",&baseDensity)) {
+        haveLayerData=true;
+        baseDensity = orsa::FromUnits(orsa::FromUnits(baseDensity,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     }
+    LayerData::EllipsoidLayerVectorType ellipsoidLayerVector;
     size_t ellipsoidLayerVectorSize;
     if (1 == gmp_fscanf(fp,"%zi",&ellipsoidLayerVectorSize)) {
         double excessDensity;
@@ -336,11 +339,14 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
                 v0x = orsa::FromUnits(v0x,orsa::Unit::KM,1);
                 v0y = orsa::FromUnits(v0y,orsa::Unit::KM,1);
                 v0z = orsa::FromUnits(v0z,orsa::Unit::KM,1);
-                data.layerData->ellipsoidLayerVector.push_back(new LayerData::EllipsoidLayer(excessDensity,a,b,c,orsa::Vector(v0x,v0y,v0z)));
+                ellipsoidLayerVector.push_back(new LayerData::EllipsoidLayer(excessDensity,a,b,c,orsa::Vector(v0x,v0y,v0z)));
             } else {
                 return false;
             }
         }
+    }
+    if (haveLayerData) {
+        data.layerData = new LayerData(baseDensity,ellipsoidLayerVector);
     }
     return true;
 }

@@ -54,7 +54,7 @@ public:
     orsa::Cache<double> minimumDensity;
     orsa::Cache<double> maximumDensity;
     orsa::Cache<double> penaltyThreshold;
-    osg::ref_ptr<LayerData> layerData;
+    osg::ref_ptr<const LayerData> layerData;
 };
 
 

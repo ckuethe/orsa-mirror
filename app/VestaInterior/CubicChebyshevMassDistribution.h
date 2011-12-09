@@ -7,12 +7,6 @@
 // "wedding cake" layers, with a base density, and excess densities on smaller and smaller volumes contaning each other
 class LayerData : public osg::Referenced {
 public:
-    LayerData() : osg::Referenced(true) {
-        baseDensity = 0.0;
-    }
-protected:
-    virtual ~LayerData() { }
-public:
     class EllipsoidLayer : public osg::Referenced {
     public:
         EllipsoidLayer(const double & excessDensity_,
@@ -56,10 +50,10 @@ public:
 #warning errors should be generated in the code using the Layers if layer A is not inside layer B, and layer B is not inside layer A (they are crossing each other)
     };
 public:
-    double baseDensity;
+    const double baseDensity;
 public:
     typedef std::vector< osg::ref_ptr<EllipsoidLayer> > EllipsoidLayerVectorType;
-    EllipsoidLayerVectorType ellipsoidLayerVector;
+    const EllipsoidLayerVectorType ellipsoidLayerVector;
 public:
     // check if layers are not crossing
     bool valid() {
@@ -74,6 +68,14 @@ public:
         }
         return true;
     }
+public:
+    LayerData(const double & baseDensity_,
+              const EllipsoidLayerVectorType & ellipsoidLayerVector_) :
+        osg::Referenced(true),
+        baseDensity(baseDensity_),
+        ellipsoidLayerVector(ellipsoidLayerVector_) { }
+protected:
+    virtual ~LayerData() { }
 public:
     // the density at a given point is baseDensity plus
     // the sum of all the excessDensities of all layers contining the point
@@ -142,7 +144,7 @@ public:
         size_t SH_degree;
         // size_T T_degree;
         CubicChebyshevMassDistribution::CoefficientType coeff;
-        osg::ref_ptr<LayerData> layerData;
+        osg::ref_ptr<const LayerData> layerData;
     };
 public:
     typedef CCMDF_data DataType;
