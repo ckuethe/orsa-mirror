@@ -321,16 +321,16 @@ int main(int argc, char **argv) {
                 while (y<y_max) {
                     
                     // XZ
-                    const orsa::Vector v(orsa::FromUnits(x,orsa::Unit::KM),
-                                         orsa::FromUnits(0,orsa::Unit::KM),
-                                         orsa::FromUnits(y,orsa::Unit::KM));
+                    /* const orsa::Vector v(orsa::FromUnits(x,orsa::Unit::KM),
+                       orsa::FromUnits(0,orsa::Unit::KM),
+                       orsa::FromUnits(y,orsa::Unit::KM));
+                    */
                     
                     // XY
-                    /* const orsa::Vector v(orsa::FromUnits(x,orsa::Unit::KM),
-                       orsa::FromUnits(y,orsa::Unit::KM),
-                       orsa::FromUnits(0,orsa::Unit::KM));
-                    */
-
+                    const orsa::Vector v(orsa::FromUnits(x,orsa::Unit::KM),
+                                         orsa::FromUnits(y,orsa::Unit::KM),
+                                         orsa::FromUnits(0,orsa::Unit::KM));
+                    
                     if (shapeModel->isInside(v)) {
                         rv_in.push_back(v);
                     }
@@ -347,22 +347,24 @@ int main(int argc, char **argv) {
         xVector.resize(varDefinition.size());
         // double toKM = orsa::FromUnits(1,orsa::Unit::KM,-1);
         CubicChebyshevMassDistributionFile::DataContainer::const_iterator it_CCMDF = CCMDF.begin();
+        
+#warning EDIT: PLOT LAST ONE ONLY...
+        it_CCMDF = CCMDF.end();
+        --it_CCMDF;
+        
         while (it_CCMDF != CCMDF.end()) {
-            osg::ref_ptr<CubicChebyshevMassDistribution> md =
-                new CubicChebyshevMassDistribution((*it_CCMDF).coeff,
-                                                   (*it_CCMDF).densityScale,
-                                                   (*it_CCMDF).R0);
+            osg::ref_ptr<CubicChebyshevMassDistribution> md = CCMD(*it_CCMDF);
             std::deque<orsa::Vector>::const_iterator it_rv_in = rv_in.begin();
             while (it_rv_in != rv_in.end()) {
 #warning double-check why adding step here...
                 // XZ
-                xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1) + x_step;
-                xVector[1] = orsa::FromUnits((*it_rv_in).getZ(),orsa::Unit::KM,-1) + y_step;
+                /* xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1) + x_step;
+                   xVector[1] = orsa::FromUnits((*it_rv_in).getZ(),orsa::Unit::KM,-1) + y_step;
+                */
                 
                 // XY
-                /* xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1) + x_step;
-                   xVector[1] = orsa::FromUnits((*it_rv_in).getY(),orsa::Unit::KM,-1) + y_step;
-                */
+                xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1) + x_step;
+                xVector[1] = orsa::FromUnits((*it_rv_in).getY(),orsa::Unit::KM,-1) + y_step;
                 
                 plotStats->insert(xVector,
                                   orsa::FromUnits(orsa::FromUnits(md->density((*it_rv_in)),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
@@ -382,6 +384,7 @@ int main(int argc, char **argv) {
                ++it_rv_out;
                }
             */
+            
             ++it_CCMDF;
         }
     }
@@ -447,7 +450,7 @@ int main(int argc, char **argv) {
     
     
     /*** DISLIN ***/
-    page(4000,4000);
+    page(3500,3000);
     pagmod("LAND");
     
     // output file name
@@ -493,7 +496,8 @@ int main(int argc, char **argv) {
     /* axspos(200,1300);
        axslen(1350,1050);
     */
-    axspos( 500,3500);
+    // axspos( 250,3750);
+    axspos(-500,3000);
     axslen(2500,2500);
     
     // select a color table
@@ -607,7 +611,7 @@ int main(int argc, char **argv) {
     //
     // other... LINEAR 0->1
     // const double z_min=1.0e-5; const double z_max=1.0e-3;
-    const double z_min=2.0; const double z_max=8.0;
+    const double z_min=1.0; const double z_max=8.0;
     // const double z_min=0.0; const double z_max=1.0;
     //
     // a,i
@@ -700,8 +704,11 @@ int main(int argc, char **argv) {
         const size_t ny = var_y->size();
         digits(1,"contour");
         labels("FLOAT","CONTUR");
-        double T=3.0;
-        while (T<z_max) {
+        // double T=3.0;
+        double T = ceil(mesh_min);
+        // double T = 4.0;
+        // while (T<floor(mesh_max)) {
+        while (T<=20.0) {
             // conmat((float *)mesh,NX,NY,T);
             conmat((float *)mesh,nx,ny,T);
             T += 1.0;

@@ -69,13 +69,34 @@ int main(int argc, char **argv) {
         ORSA_ERROR("problems encountered while reading shape file...");
         exit(0);
     }
-    
-    /* osg::ref_ptr<VestaShape> vestaShape = new VestaShape;
-       if (!vestaShape->read("cube.dat")) {
-       ORSA_ERROR("problems encountered while reading shape file...");
-       exit(0);
-       }
-    */
+
+    {
+        // output .xyz file for plotting with GMT
+        char filename[1024];
+        sprintf(filename,"%s.xyz",inputFile.c_str());
+        FILE * fp;
+        fp = fopen(filename,"r");
+        if (fp != 0) {
+            ORSA_DEBUG("file [%s] already existing, skipping",filename);
+            fclose(fp);
+        } else {
+            fp = fopen(filename,"w");
+            ORSA_DEBUG("writing file [%s]",filename);
+            orsa::TriShape::VertexVector vertex = shapeModel->getVertexVector();
+            orsa::TriShape::VertexVector::const_iterator it = vertex.begin();
+            while (it != vertex.end()) {
+                const orsa::Vector & v = (*it);
+                const double lat = asin(v.getZ()/v.length());
+                const double lon = atan2(v.getY(),v.getX());
+                fprintf(fp,"%g %g %g\n",
+                        lon*orsa::radToDeg(),
+                        lat*orsa::radToDeg(),
+                        orsa::FromUnits(v.length(),orsa::Unit::KM,-1));
+                ++it;
+            }
+            fclose(fp);
+        }
+    }
     
     osg::ref_ptr<SimplexIntegration<T> > si = new SimplexIntegration<T>(shapeModel.get(), R0, SQLiteDBFileName);
     // osg::ref_ptr<SimplexIntegration> si_unit_R0 = new SimplexIntegration(vestaShape.get(),1.0);
