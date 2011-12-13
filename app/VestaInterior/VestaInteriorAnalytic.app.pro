@@ -21,8 +21,7 @@ unix:!macx {
 	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaSolarSystem -lorsaEssentialOSG -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads -lqd -L/home/tricaric/sqlite -lsqlite3
 }
 
-
-HEADERS += VestaInteriorAnalytic.h   vesta.h  CubicChebyshevMassDistribution.h gaskell.h penalty.h
-SOURCES += VestaInteriorAnalytic.cpp CubicChebyshevMassDistribution.cpp
+HEADERS += VestaInteriorAnalytic.h   vesta.h  CubicChebyshevMassDistribution.h gaskell.h penalty.h CCMD2SH.h
+SOURCES += VestaInteriorAnalytic.cpp CubicChebyshevMassDistribution.cpp CCMD2SH.cpp
 
 
