@@ -47,7 +47,7 @@ public:
             // simple one; a better one should consided difference in v0 and actual a,b,c values (tricky in particular cases...)
             return (volume > layer->volume);
         }
-#warning errors should be generated in the code using the Layers if layer A is not inside layer B, and layer B is not inside layer A (they are crossing each other)
+#warning errors should be generated in the code using the Layers if layer A is not inside layer B, and layer B is not inside layer A (i.e., they are crossing each other)
     };
 public:
     const double baseDensity;
@@ -101,6 +101,9 @@ public:
     osg::ref_ptr<const LayerData> layerData;
 public:
     static size_t totalSize(const size_t & degree);
+public:
+    static size_t degree(const CoefficientType & coeff);
+    size_t degree() const;
 public:
     static void resize(CoefficientType & coeff, const size_t & degree);
 protected:

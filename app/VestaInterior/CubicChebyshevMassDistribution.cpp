@@ -8,6 +8,19 @@ size_t CubicChebyshevMassDistribution::totalSize(const size_t & degree) {
     return (degree+1)*(degree+2)*(degree+3)/6;
 }
 
+size_t CubicChebyshevMassDistribution::degree(const CoefficientType & coeff) {
+    if (coeff.size() == 0) {
+        ORSA_DEBUG("PROBLEM: degree not defined when coeff.size() == 0");
+        return 0;
+    } else {
+        return coeff.size()-1;
+    }
+}
+
+size_t CubicChebyshevMassDistribution::degree() const { 
+    return degree(coeff);
+}
+
 void CubicChebyshevMassDistribution::resize(CoefficientType & coeff, const size_t & degree) {
     coeff.resize(degree+1);
     for (size_t i=0; i<=degree; ++i) {
@@ -25,14 +38,14 @@ size_t CubicChebyshevMassDistribution::index(const size_t & nx, const size_t & n
 }
 
 void CubicChebyshevMassDistribution::triIndex(size_t & nx, size_t & ny, size_t & nz, const size_t & index) {
-    size_t degree=0;
-    while (CubicChebyshevMassDistribution::totalSize(degree)<=index) { ++degree; }
-    updateIndexTable(degree);
-    for (nx=0; nx<=degree; ++nx) {
-        for (ny=0; ny<=degree; ++ny) {
-            for (nz=0; nz<=degree; ++nz) {
-                if (nx+ny+nz==degree) {
-                    // ORSA_DEBUG("nx: %i  ny: %i  nz: %i  index: %i  degree: %i",nx,ny,nz,index,degree);
+    size_t localDegree=0;
+    while (CubicChebyshevMassDistribution::totalSize(localDegree)<=index) { ++localDegree; }
+    updateIndexTable(localDegree);
+    for (nx=0; nx<=localDegree; ++nx) {
+        for (ny=0; ny<=localDegree; ++ny) {
+            for (nz=0; nz<=localDegree; ++nz) {
+                if (nx+ny+nz==localDegree) {
+                    // ORSA_DEBUG("nx: %i  ny: %i  nz: %i  index: %i  localDegree: %i",nx,ny,nz,index,localDegree);
                     if (indexTable[nx][ny][nz]==index) return;
                 }
             }
@@ -51,19 +64,19 @@ void CubicChebyshevMassDistribution::updateIndexTable(const size_t & requestedDe
             }
         }
         size_t idx=0;
-        size_t degree=0;
-        while (degree <= requestedDegree) {
-            for (unsigned int i=0; i<=degree; ++i) {
-                for (unsigned int j=0; j<=degree; ++j) {
-                    for (unsigned int k=0; k<=degree; ++k) {
-                        if (i+j+k==degree) {
+        size_t localDegree=0;
+        while (localDegree <= requestedDegree) {
+            for (unsigned int i=0; i<=localDegree; ++i) {
+                for (unsigned int j=0; j<=localDegree; ++j) {
+                    for (unsigned int k=0; k<=localDegree; ++k) {
+                        if (i+j+k==localDegree) {
                             // ORSA_DEBUG("inserting %i-%i-%i  index: %i",i,j,k,idx);
                             indexTable[i][j][k] = idx++;
                         }
                     }
                 }
             }
-            ++degree;
+            ++localDegree;
         }
     }
 }
@@ -77,19 +90,6 @@ CubicChebyshevMassDistribution::CubicChebyshevMassDistribution(const Coefficient
     densityScale(densityScale_),
     oneOverR0(1.0/R0),
     layerData(layerData_) {
-    /* const size_t degree = coeff.size()-1;
-       for (unsigned int printDegree=0; printDegree<=degree; ++printDegree) {
-       for (unsigned int i=0; i<=degree; ++i) {
-       for (unsigned int j=0; j<=degree; ++j) {
-       for (unsigned int k=0; k<=degree; ++k) {
-       if (i+j+k==printDegree) {
-       ORSA_DEBUG("coeff[%i][%i][%i] = %g",i,j,k,coeff[i][j][k]);
-       }
-       }
-       }
-       }
-       }
-    */
 }
 
 CubicChebyshevMassDistribution::~CubicChebyshevMassDistribution() { }
@@ -106,7 +106,6 @@ double CubicChebyshevMassDistribution::density(const orsa::Vector & p) const {
          (layerData.get() == 0) ) {
         return 0.0;
     }
-    const size_t degree = coeff.size()-1;
     std::vector<double> Tx, Ty, Tz;
     const double Tx_arg = p.getX()*oneOverR0;
     const double Ty_arg = p.getY()*oneOverR0;
@@ -119,13 +118,14 @@ double CubicChebyshevMassDistribution::density(const orsa::Vector & p) const {
         exit(0);
     }
     //
-    orsa::ChebyshevT(Tx,degree,Tx_arg);
-    orsa::ChebyshevT(Ty,degree,Ty_arg);
-    orsa::ChebyshevT(Tz,degree,Tz_arg);
+    const size_t T_degree = degree();
+    orsa::ChebyshevT(Tx,T_degree,Tx_arg);
+    orsa::ChebyshevT(Ty,T_degree,Ty_arg);
+    orsa::ChebyshevT(Tz,T_degree,Tz_arg);
     double density = 0.0;
-    for (size_t i=0; i<=degree; ++i) {
-        for (size_t j=0; j<=degree-i; ++j) {
-            for (size_t k=0; k<=degree-i-j; ++k) {
+    for (size_t i=0; i<=T_degree; ++i) {
+        for (size_t j=0; j<=T_degree-i; ++j) {
+            for (size_t k=0; k<=T_degree-i-j; ++k) {
                 density += coeff[i][j][k]*Tx[i]*Ty[j]*Tz[k];
             }
         }
@@ -359,7 +359,7 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
     gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.densityScale,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
     gmp_fprintf(fp,"%g ",orsa::FromUnits(data.R0,orsa::Unit::KM,-1));
     gmp_fprintf(fp,"%i ",data.SH_degree);
-    const size_t T_degree = data.coeff.size()-1;
+    const size_t T_degree = CubicChebyshevMassDistribution::degree(data.coeff);
     gmp_fprintf(fp,"%i ",T_degree);
     for (size_t runningDegree=0; runningDegree<=T_degree; ++runningDegree) {
         for (size_t i=0; i<=T_degree; ++i) {
