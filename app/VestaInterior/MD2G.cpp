@@ -717,6 +717,13 @@ int main(int argc, char **argv) {
     
     const size_t T_degree = densityCCC.size()-1;
     
+    osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
+        new CubicChebyshevMassDistribution(densityCCC,
+                                           bulkDensity,     
+                                           plateModelR0,
+                                           layerData);
+    randomPointsInShape->updateMassDistribution(massDistribution.get());
+    
     // const double radiusCorrectionRatio = plateModelR0/gravityData->R0;
     
     double i1d =0.0;
@@ -806,12 +813,13 @@ int main(int argc, char **argv) {
     orsa::Cache<double> penalty;
     orsa::Cache<double> minDensity, maxDensity;
     {
-        osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
-            new CubicChebyshevMassDistribution(densityCCC,
-                                               bulkDensity,     
-                                               plateModelR0,
-                                               layerData);
-        randomPointsInShape->updateMassDistribution(massDistribution.get());
+        /* osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
+           new CubicChebyshevMassDistribution(densityCCC,
+           bulkDensity,     
+           plateModelR0,
+           layerData);
+           randomPointsInShape->updateMassDistribution(massDistribution.get());
+        */
         
         std::vector<orsa::Vector> rv;
         std::vector<double> dv;
@@ -893,7 +901,7 @@ int main(int argc, char **argv) {
             norm_S,
             gravityData->degree,
             si.get(),
-            densityCCC,
+            massDistribution,
             plateModelR0,
             gravityData->R0);
     

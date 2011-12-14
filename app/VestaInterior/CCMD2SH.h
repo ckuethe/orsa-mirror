@@ -12,11 +12,11 @@ void CCMD2SH(orsa::Vector & CM, /* note: CM is just an output variable */
              std::vector< std::vector<mpf_class> > & norm_S,
              const size_t                          & SH_degree,
              const SimplexIntegration<T>           * si,
-             const CubicChebyshevMassDistribution::CoefficientType & coeff,
+             const CubicChebyshevMassDistribution  * CCMD,
              const double                          & plateModelR0,
              const double                          & gravityDataR0) {
     
-    const size_t T_degree = CubicChebyshevMassDistribution::degree(coeff);
+    const size_t T_degree = CCMD->degree();
     const double radiusCorrectionRatio = plateModelR0/gravityDataR0;
     
     double i1d =0.0;
@@ -38,7 +38,7 @@ void CCMD2SH(orsa::Vector & CM, /* note: CM is just an output variable */
                         for (size_t ck=0; ck<=tk; ++ck) {
                             if (cTk[ck] == 0) continue;
                             const double baseFactor =
-                                coeff[ti][tj][tk] *
+                                CCMD->coeff[ti][tj][tk] *
                                 mpz_class(cTi[ci] * cTj[cj] * cTk[ck]).get_d();
                             i1d  += baseFactor * si->getIntegral(ci,cj,ck);
                             iXd  += baseFactor * si->getIntegral(ci+1,cj,ck);
@@ -103,7 +103,7 @@ void CCMD2SH(orsa::Vector & CM, /* note: CM is just an output variable */
                                                             if (C_tri_integral[ni][nj][nk] != 0) {
                                                                 norm_C[l][m] +=
                                                                     orsa::power_sign(bi+bj+bk) *
-                                                                    coeff[ti][tj][tk] *
+                                                                    CCMD->coeff[ti][tj][tk] *
                                                                     C_tri_norm[ni][nj][nk] *
                                                                     mpz_class(orsa::binomial(ni,bi) *
                                                                               orsa::binomial(nj,bj) *
@@ -118,7 +118,7 @@ void CCMD2SH(orsa::Vector & CM, /* note: CM is just an output variable */
                                                             if (S_tri_integral[ni][nj][nk] != 0) {
                                                                 norm_S[l][m] +=
                                                                     orsa::power_sign(bi+bj+bk) *
-                                                                    coeff[ti][tj][tk] *
+                                                                    CCMD->coeff[ti][tj][tk] *
                                                                     S_tri_norm[ni][nj][nk] *
                                                                     mpz_class(orsa::binomial(ni,bi) *
                                                                               orsa::binomial(nj,bj) *
