@@ -13,15 +13,16 @@ template <typename T> std::vector< std::vector< std::vector<size_t> > > SimplexI
 template <typename T> std::vector< std::vector< std::vector< std::vector<size_t> > > > SimplexIntegration<T>::index4Table;
 
 template <typename T>
-void CCMD2SH(std::vector< std::vector<mpf_class> > & norm_C,
+void CCMD2SH(orsa::Vector & CM,
+             std::vector< std::vector<mpf_class> > & norm_C,
              std::vector< std::vector<mpf_class> > & norm_S,
              const size_t                          & SH_degree,
              const SimplexIntegration<T>           * si,
-             const CubicChebyshevMassDistribution  * CCMD,
+             const CubicChebyshevMassDistribution::coeff & coeff,
              const double                          & plateModelR0,
              const double                          & gravityDataR0) {
     
-    const size_t T_degree = CCMD->degree();
+    const size_t T_degree = CubicChebyshevMassDistribution::degree(coeff);
     const double radiusCorrectionRatio = plateModelR0/gravityDataR0;
     
     double i1d =0.0;
@@ -43,7 +44,7 @@ void CCMD2SH(std::vector< std::vector<mpf_class> > & norm_C,
                         for (size_t ck=0; ck<=tk; ++ck) {
                             if (cTk[ck] == 0) continue;
                             const double baseFactor =
-                                CCMD->coeff[ti][tj][tk] *
+                                coeff[ti][tj][tk] *
                                 mpz_class(cTi[ci] * cTj[cj] * cTk[ck]).get_d();
                             i1d  += baseFactor * si->getIntegral(ci,cj,ck);
                             iXd  += baseFactor * si->getIntegral(ci+1,cj,ck);
@@ -58,6 +59,11 @@ void CCMD2SH(std::vector< std::vector<mpf_class> > & norm_C,
     const double CMx_over_plateModelR0 = iXd / i1d;
     const double CMy_over_plateModelR0 = iYd / i1d;
     const double CMz_over_plateModelR0 = iZd / i1d;
+    
+    // output
+    CM = orsa::Vector(CMx_over_plateModelR0*plateModelR0,
+                      CMy_over_plateModelR0*plateModelR0,
+                      CMz_over_plateModelR0*plateModelR0);
     
     norm_C.resize(SH_degree+1);
     norm_S.resize(SH_degree+1);
@@ -103,7 +109,7 @@ void CCMD2SH(std::vector< std::vector<mpf_class> > & norm_C,
                                                             if (C_tri_integral[ni][nj][nk] != 0) {
                                                                 norm_C[l][m] +=
                                                                     orsa::power_sign(bi+bj+bk) *
-                                                                    CCMD->coeff[ti][tj][tk] *
+                                                                    coeff[ti][tj][tk] *
                                                                     C_tri_norm[ni][nj][nk] *
                                                                     mpz_class(orsa::binomial(ni,bi) *
                                                                               orsa::binomial(nj,bj) *
@@ -118,7 +124,7 @@ void CCMD2SH(std::vector< std::vector<mpf_class> > & norm_C,
                                                             if (S_tri_integral[ni][nj][nk] != 0) {
                                                                 norm_S[l][m] +=
                                                                     orsa::power_sign(bi+bj+bk) *
-                                                                    CCMD->coeff[ti][tj][tk] *
+                                                                    coeff[ti][tj][tk] *
                                                                     S_tri_norm[ni][nj][nk] *
                                                                     mpz_class(orsa::binomial(ni,bi) *
                                                                               orsa::binomial(nj,bj) *
