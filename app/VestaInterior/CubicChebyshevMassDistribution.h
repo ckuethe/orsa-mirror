@@ -91,6 +91,7 @@ public:
     }
 };
 
+// this class now also includes layerData data
 class CubicChebyshevMassDistribution : public orsa::MassDistribution {
 public:
     typedef std::vector< std::vector< std::vector<double> > > CoefficientType;

@@ -333,12 +333,12 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
                                 &v0y,
                                 &v0z)) {
                 excessDensity = orsa::FromUnits(orsa::FromUnits(excessDensity,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-                a = orsa::FromUnits(a,orsa::Unit::KM,1);
-                b = orsa::FromUnits(b,orsa::Unit::KM,1);
-                c = orsa::FromUnits(c,orsa::Unit::KM,1);
-                v0x = orsa::FromUnits(v0x,orsa::Unit::KM,1);
-                v0y = orsa::FromUnits(v0y,orsa::Unit::KM,1);
-                v0z = orsa::FromUnits(v0z,orsa::Unit::KM,1);
+                a = orsa::FromUnits(a,orsa::Unit::KM);
+                b = orsa::FromUnits(b,orsa::Unit::KM);
+                c = orsa::FromUnits(c,orsa::Unit::KM);
+                v0x = orsa::FromUnits(v0x,orsa::Unit::KM);
+                v0y = orsa::FromUnits(v0y,orsa::Unit::KM);
+                v0z = orsa::FromUnits(v0z,orsa::Unit::KM);
                 ellipsoidLayerVector.push_back(new LayerData::EllipsoidLayer(excessDensity,a,b,c,orsa::Vector(v0x,v0y,v0z)));
             } else {
                 return false;
