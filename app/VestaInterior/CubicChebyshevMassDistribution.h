@@ -50,7 +50,7 @@ public:
 #warning errors should be generated in the code using the Layers if layer A is not inside layer B, and layer B is not inside layer A (i.e., they are crossing each other)
     };
 public:
-    const double baseDensity;
+    // const double baseDensity;
 public:
     typedef std::vector< osg::ref_ptr<EllipsoidLayer> > EllipsoidLayerVectorType;
     const EllipsoidLayerVectorType ellipsoidLayerVector;
@@ -69,10 +69,15 @@ public:
         return true;
     }
 public:
-    LayerData(const double & baseDensity_,
-              const EllipsoidLayerVectorType & ellipsoidLayerVector_) :
+    /* LayerData(const double & baseDensity_,
+       const EllipsoidLayerVectorType & ellipsoidLayerVector_) :
+       osg::Referenced(true),
+       baseDensity(baseDensity_),
+       ellipsoidLayerVector(ellipsoidLayerVector_) { }
+    */
+public:
+    LayerData(const EllipsoidLayerVectorType & ellipsoidLayerVector_) :
         osg::Referenced(true),
-        baseDensity(baseDensity_),
         ellipsoidLayerVector(ellipsoidLayerVector_) { }
 protected:
     virtual ~LayerData() { }
@@ -80,7 +85,8 @@ public:
     // the density at a given point is baseDensity plus
     // the sum of all the excessDensities of all layers contining the point
     double density(const orsa::Vector & p) const {
-        double density = baseDensity;
+        // double density = baseDensity;
+        double density = 0.0;
         const EllipsoidLayerVectorType & lv = ellipsoidLayerVector;
         for (unsigned int k=0; k<lv.size(); ++k) {
             if (lv[k]->containsPoint(p)) {

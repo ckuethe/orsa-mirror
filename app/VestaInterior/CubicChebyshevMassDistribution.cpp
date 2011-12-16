@@ -312,14 +312,16 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
         }
     }
     bool haveLayerData=false;
-    double baseDensity;
-    if (1 == gmp_fscanf(fp,"%lf",&baseDensity)) {
-        haveLayerData=true;
-        baseDensity = orsa::FromUnits(orsa::FromUnits(baseDensity,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-    }
+    /* double baseDensity;
+       if (1 == gmp_fscanf(fp,"%lf",&baseDensity)) {
+       haveLayerData=true;
+       baseDensity = orsa::FromUnits(orsa::FromUnits(baseDensity,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+       }
+    */
     LayerData::EllipsoidLayerVectorType ellipsoidLayerVector;
     size_t ellipsoidLayerVectorSize;
     if (1 == gmp_fscanf(fp,"%zi",&ellipsoidLayerVectorSize)) {
+        haveLayerData=true;
         double excessDensity;
         double a,b,c;
         double v0x,v0y,v0z;
@@ -346,7 +348,8 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
         }
     }
     if (haveLayerData) {
-        data.layerData = new LayerData(baseDensity,ellipsoidLayerVector);
+        // data.layerData = new LayerData(baseDensity,ellipsoidLayerVector);
+        data.layerData = new LayerData(ellipsoidLayerVector);
     }
     return true;
 }
@@ -373,18 +376,20 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
         }
     }
     if (data.layerData.get() != 0) {
-        gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.layerData->baseDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+        // gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.layerData->baseDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
         const LayerData::EllipsoidLayerVectorType & lv = data.layerData->ellipsoidLayerVector;
-        gmp_fprintf(fp,"%i ",lv.size());
-        for (unsigned int k=0; k<lv.size(); ++k) {
-            gmp_fprintf(fp,"%.3f %.g %.g %.g %.g %.g %.g ",
-                        orsa::FromUnits(orsa::FromUnits(lv[k]->excessDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
-                        orsa::FromUnits(lv[k]->a,orsa::Unit::KM,-1),
-                        orsa::FromUnits(lv[k]->b,orsa::Unit::KM,-1),
-                        orsa::FromUnits(lv[k]->c,orsa::Unit::KM,-1),
-                        orsa::FromUnits(lv[k]->v0.getX(),orsa::Unit::KM,-1),
-                        orsa::FromUnits(lv[k]->v0.getY(),orsa::Unit::KM,-1),
-                        orsa::FromUnits(lv[k]->v0.getZ(),orsa::Unit::KM,-1));
+        if (lv.size() > 0) {
+            gmp_fprintf(fp,"%i ",lv.size());
+            for (unsigned int k=0; k<lv.size(); ++k) {
+                gmp_fprintf(fp,"%.3f %.g %.g %.g %.g %.g %.g ",
+                            orsa::FromUnits(orsa::FromUnits(lv[k]->excessDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+                            orsa::FromUnits(lv[k]->a,orsa::Unit::KM,-1),
+                            orsa::FromUnits(lv[k]->b,orsa::Unit::KM,-1),
+                            orsa::FromUnits(lv[k]->c,orsa::Unit::KM,-1),
+                            orsa::FromUnits(lv[k]->v0.getX(),orsa::Unit::KM,-1),
+                            orsa::FromUnits(lv[k]->v0.getY(),orsa::Unit::KM,-1),
+                            orsa::FromUnits(lv[k]->v0.getZ(),orsa::Unit::KM,-1));
+            }
         }
     }
     gmp_fprintf(fp,"\n");
