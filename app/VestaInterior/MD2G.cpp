@@ -463,7 +463,11 @@ int main(int argc, char **argv) {
             exit(0);
         }
         if (CCMDF.size() > 1) {
-            ORSA_DEBUG("CCMDF [%s] should contain only one set of coefficients.",CCMDF_filename.c_str());
+            ORSA_DEBUG("CCMDF [%s] should contain only one set of coefficients, instead of %i",CCMDF_filename.c_str(),CCMDF.size());
+            /* for (size_t j=0; j<CCMDF.size(); ++j) {
+               CCMDF[j].print();
+               }
+            */
         }
         densityCCC = CCMDF[CCMDF.size()-1].coeff;
         layerData  = CCMDF[CCMDF.size()-1].layerData;
@@ -725,6 +729,8 @@ int main(int argc, char **argv) {
     randomPointsInShape->updateMassDistribution(massDistribution.get());
     
     // const double radiusCorrectionRatio = plateModelR0/gravityData->R0;
+
+#warning not using layerData...
     
     double i1d =0.0;
     double iXd =0.0;
@@ -794,18 +800,23 @@ int main(int argc, char **argv) {
     ORSA_DEBUG("inertiaMomentYY_over_plateModelR0squared: %g",inertiaMomentYY_over_plateModelR0squared);
     ORSA_DEBUG("inertiaMomentZZ_over_plateModelR0squared: %g",inertiaMomentZZ_over_plateModelR0squared);
     
-    {
+    
+#warning USE THIS OR NOT??
+    if (0) {
         // adjust coefficients in order to conserve total mass
         // NOTE: this changes the input densities a little (or a lot)
         //       depending on how far the generated total mass is from the nominal total mass
+        
+#warning not using layerData...
+        
         const double correctionFactor = si->getIntegral(0,0,0)/i1d;
         for (size_t ti=0; ti<=T_degree; ++ti) {
             for (size_t tj=0; tj<=T_degree-ti; ++tj) {
                 for (size_t tk=0; tk<=T_degree-ti-tj; ++tk) {
                     densityCCC[ti][tj][tk] *= correctionFactor;
-                    /* ORSA_DEBUG("coeff[%02i][%02i][%02i] = %20.12f",
-                       ti,tj,tk,densityCCC[ti][tj][tk]);
-                    */
+                    
+                    ORSA_DEBUG("coeff[%02i][%02i][%02i] = %20.12f",
+                               ti,tj,tk,densityCCC[ti][tj][tk]);
                 }
             }
         }
@@ -896,7 +907,7 @@ int main(int argc, char **argv) {
     
 #warning track precision of operations
     
-    orsa::Vector CM;
+    orsa::Cache<orsa::Vector> CM;
     std::vector< std::vector<mpf_class> > norm_C;
     std::vector< std::vector<mpf_class> > norm_S;
     CCMD2SH(CM,

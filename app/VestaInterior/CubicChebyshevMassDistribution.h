@@ -152,9 +152,10 @@ public:
         double densityScale;
         double R0;
         size_t SH_degree;
-        // size_T T_degree;
         CubicChebyshevMassDistribution::CoefficientType coeff;
         osg::ref_ptr<const LayerData> layerData;
+    public:
+        void print() const;
     };
 public:
     typedef CCMDF_data DataType;

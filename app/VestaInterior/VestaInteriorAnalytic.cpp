@@ -14,6 +14,8 @@
 
 #include "simplex.h"
 
+#include "CCMD2SH.h"
+
 /*** CHOOSE ONE ***/
 // typedef double simplex_T;
 // typedef mpf_class simplex_T;
@@ -433,8 +435,8 @@ int main(int argc, char **argv) {
         // if (l==1) continue;
         const double radiusCorrectionFactor = orsa::int_pow(radiusCorrectionRatio,l);
         for (size_t m=0; m<=l; ++m) {
-
-            ORSA_DEBUG("l: %i m: %i",l,m);
+            
+            ORSA_DEBUG("l=%i   m=%i",l,m);
             
             const orsa::triIndex_mpq C_tri_integral = orsa::conversionCoefficients_C_integral(l,m);
             const orsa::triIndex_d   C_tri_norm     = orsa::conversionCoefficients_C_norm(l,m);
@@ -536,14 +538,15 @@ int main(int argc, char **argv) {
         }
     }
     
-    for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
-        for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
-            size_t Tx,Ty,Tz;
-            CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-            ORSA_DEBUG("cT2sh[%03i][%03i] = %+9.6f [%s -> cT[%i][%i][%i]]",
-                       z_sh,z_cT,gsl_matrix_get(cT2sh,z_sh,z_cT),mod_gravityData_key(gravityData.get(),z_sh).toStdString().c_str(),Tx,Ty,Tz);
-        }
-    }
+    /* for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
+       for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
+       size_t Tx,Ty,Tz;
+       CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
+       ORSA_DEBUG("cT2sh[%03i][%03i] = %+9.6f [%s -> cT[%i][%i][%i]]",
+       z_sh,z_cT,gsl_matrix_get(cT2sh,z_sh,z_cT),mod_gravityData_key(gravityData.get(),z_sh).toStdString().c_str(),Tx,Ty,Tz);
+       }
+       }
+    */
     
     {
         
@@ -606,11 +609,12 @@ int main(int argc, char **argv) {
         
         gsl_blas_dgemm(CblasNoTrans,CblasNoTrans,1.0,A,AT,0.0,A_AT);
         
-        for (size_t j=0; j<M; ++j) {
-            for (size_t k=0; k<M; ++k) {
-                ORSA_DEBUG("(A A^T)[%03i][%03i] = %+12.6g",j,k,gsl_matrix_get(A_AT,j,k));
-            }
-        }
+        /* for (size_t j=0; j<M; ++j) {
+           for (size_t k=0; k<M; ++k) {
+           ORSA_DEBUG("(A A^T)[%03i][%03i] = %+12.6g",j,k,gsl_matrix_get(A_AT,j,k));
+           }
+           }
+        */
         
         // compute (A_AT)^(-1)
         gsl_matrix * inv_A_AT = gsl_matrix_alloc(M,M);
@@ -681,7 +685,38 @@ int main(int argc, char **argv) {
         gsl_vector * sampleCoeff_x  = gsl_vector_alloc(mod_gravityData_numberOfCoefficients(gravityData.get()));
         gsl_vector * sampleCoeff_y  = gsl_vector_alloc(mod_gravityData_numberOfCoefficients(gravityData.get())); 
         
-        for (size_t gen=0; gen<1000; ++gen) {
+        // for (size_t gen=0; gen<1000; ++gen) {
+        {
+            
+            std::vector< std::vector<mpf_class> > layerData_norm_C;
+            std::vector< std::vector<mpf_class> > layerData_norm_S;
+            if (massDistribution.get() != 0) {
+                if (massDistribution->layerData.get() != 0) {
+                    CubicChebyshevMassDistribution::CoefficientType md_lD_coeff;
+                    CubicChebyshevMassDistribution::resize(md_lD_coeff,0);
+                    md_lD_coeff[0][0][0] = 0;
+                    osg::ref_ptr<CubicChebyshevMassDistribution> md_lD =
+                        new CubicChebyshevMassDistribution(md_lD_coeff,
+                                                           0.0,    
+                                                           plateModelR0,
+                                                           massDistribution->layerData.get());
+                    
+                    orsa::Cache<orsa::Vector> CM = sampled_CM;
+                    CM.lock();
+                    CCMD2SH(CM,
+                            layerData_norm_C,
+                            layerData_norm_S,
+                            gravityData->degree,
+                            si.get(),
+                            md_lD,
+                            plateModelR0,
+                            gravityData->R0);
+
+                    
+#warning FINISH HERE!!!
+                    
+                }
+            }
             
             for (size_t i=0; i<mod_gravityData_numberOfCoefficients(gravityData.get()); ++i) {
                 gsl_vector_set(sampleCoeff_x,i,orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(sigma[i]));
@@ -708,8 +743,7 @@ int main(int argc, char **argv) {
             
             gsl_vector * cT0 = gsl_vector_calloc(N);
             gsl_vector_memcpy(cT0,cT);
-
-
+            
             if (1) {
                 
                 // trying simulated annealing approach
@@ -756,7 +790,7 @@ int main(int argc, char **argv) {
                 } else {
                     x0.layerData = 0;
                 }
-
+                
                 // fix value of x0.factor[]  
                 
                 if (have_CCMDF_file) {
