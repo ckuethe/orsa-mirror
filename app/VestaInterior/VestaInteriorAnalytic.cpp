@@ -367,18 +367,10 @@ int main(int argc, char **argv) {
     const size_t SH_degree = gravityDegree; // shperical harmonics degree
     const size_t  T_degree = polynomialDegree; // chebyshev polynomials degree
     
-#warning which GM value to use? gravityData->GM  OR gravityData->getCoeff("GM") ??
-    const double GM = gravityData->GM; 
-    
-    // sh size: (l+1)^2 +1; +1 due to GM factor; -4 because C00, C10, C11, S11 are missing
-    // const size_t  SH_size = (SH_degree+1)*(SH_degree+1)+1-4;
-    // 
-    // sh size: (l+1)^2 +1; GM replaces C00, and the C10,C11,S11 terms are included but forced to zero (barycenteric system)
     const size_t  SH_size = (SH_degree+1)*(SH_degree+1);
-    //
-    const size_t   T_size = CubicChebyshevMassDistribution::totalSize( T_degree);
+    const size_t   T_size = CubicChebyshevMassDistribution::totalSize(T_degree);
     
-    // const size_t alt_SH_size = SH_size + 3; // include C10, C11, S11 to set them to zero
+    const double GM = gravityData->GM; 
     
     ORSA_DEBUG("SH_size: %d   T_size: %d   mod_gravityData_numberOfCoefficients: %d",SH_size,T_size,mod_gravityData_numberOfCoefficients(gravityData.get()));
     
@@ -788,17 +780,24 @@ int main(int argc, char **argv) {
                 // const double sampled_coeff = gsl_vector_get(pds_coeff,i) - layer_coeff + gsl_vector_get(sampleCoeff_y,i);
                 
                 
-                gsl_vector_set(sampleCoeff_y,i,sampled_coeff);
-            }
-            
-            for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
-                gsl_vector_set(sh,z_sh,gsl_vector_get(sampleCoeff_y,z_sh));
+                // gsl_vector_set(sampleCoeff_y,i,sampled_coeff);
+                // gsl_vector_set(sh,z_sh,gsl_vector_get(sampleCoeff_y,z_sh));
+                //
+                gsl_vector_set(sh,i,sampled_coeff);
+
+                // get again pds_covm because old one has been destroyed by the call to gsl_eigen_symmv
+                gsl_matrix * pds_covm  = mod_gravityData_getCovarianceMatrix(gravityData.get());
                 
-                ORSA_DEBUG("%7s =  %+12.3g [sampled]   nominal: %+12.3g   delta: %+12.3g",
-                           mod_gravityData_key(gravityData.get(),z_sh).toStdString().c_str(),
-                           gsl_vector_get(sh,z_sh),
-                           mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),z_sh)),
-                           gsl_vector_get(sh,z_sh)-mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),z_sh)));
+                ORSA_DEBUG("%7s = %12.6g [sampled] = %12.6g [layers] + %12.6g   nominal: %+12.6g   delta: %+12.6g   sigma: %12.6g",
+                           mod_gravityData_key(gravityData.get(),i).toStdString().c_str(),
+                           gsl_vector_get(sh,i)+(*layer_coeff),
+                           (*layer_coeff),
+                           gsl_vector_get(sh,i),
+                           mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),i)),
+                           gsl_vector_get(sh,i)+(*layer_coeff)-mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),i)),
+                           sqrt(gsl_matrix_get(pds_covm,i,i)));
+                
+                gsl_matrix_free(pds_covm);
             }
             
             // solving here!
