@@ -336,10 +336,6 @@ int main(int argc, char **argv) {
     new orsaPDS::RadioScienceGravityFile(radioScienceGravityFile,512,1518);
     */
     
-    gsl_vector * pds_coeff    = mod_gravityData_getCoefficientVector(gravityData.get());
-    gsl_matrix * pds_covm     = mod_gravityData_getCovarianceMatrix(gravityData.get());
-    gsl_matrix * pds_inv_covm = mod_gravityData_getInverseCovarianceMatrix(gravityData.get());
-    
     /* if (0) {
        gsl_matrix * identity = gsl_matrix_alloc(gravityData->numberOfCoefficients,gravityData->numberOfCoefficients);
        // gsl_blas_dgemm(CblasNoTrans,CblasNoTrans,1.0,pds_covm,pds_inv_covm,0.0,identity);
@@ -384,10 +380,16 @@ int main(int argc, char **argv) {
     
     // const size_t alt_SH_size = SH_size + 3; // include C10, C11, S11 to set them to zero
     
-    ORSA_DEBUG("SH_size: %d  T_size: %d",SH_size,T_size);
+    ORSA_DEBUG("SH_size: %d   T_size: %d   mod_gravityData_numberOfCoefficients: %d",SH_size,T_size,mod_gravityData_numberOfCoefficients(gravityData.get()));
     
     if (T_size <= SH_size) {
         ORSA_DEBUG("this method works only when the problem is under-determined, exiting");
+        exit(0);
+    }
+    
+    if (gravityDegree > gravityData->degree) {
+        ORSA_DEBUG("requested gravity degree [%i] is larger than the RadioScienceGravityFile [%s] degree [%i]; exiting",
+                   gravityDegree,radioScienceGravityFile.c_str(),gravityData->degree);
         exit(0);
     }
     
@@ -548,6 +550,13 @@ int main(int argc, char **argv) {
        }
     */
     
+    gsl_vector * pds_coeff    = mod_gravityData_getCoefficientVector(gravityData.get());
+    gsl_matrix * pds_covm     = mod_gravityData_getCovarianceMatrix(gravityData.get());
+    gsl_matrix * pds_inv_covm = mod_gravityData_getInverseCovarianceMatrix(gravityData.get());
+    
+    gsl_matrix_view     pds_covm_view = gsl_matrix_submatrix(    pds_covm, 0, 0, SH_size, SH_size);
+    gsl_matrix_view pds_inv_covm_view = gsl_matrix_submatrix(pds_inv_covm, 0, 0, SH_size, SH_size);
+    
     {
         
         // A x = b
@@ -666,15 +675,15 @@ int main(int argc, char **argv) {
         gsl_vector * cT = gsl_vector_calloc(N); // x  of A x = b
         
         // sample from SH covariance matrix
-        gsl_eigen_symmv_workspace * w = gsl_eigen_symmv_alloc(mod_gravityData_numberOfCoefficients(gravityData.get())); // workspace for eigenvectors/values
-        gsl_vector * eval = gsl_vector_alloc(mod_gravityData_numberOfCoefficients(gravityData.get()));    // eigenvalues
-        gsl_matrix * evec = gsl_matrix_alloc(mod_gravityData_numberOfCoefficients(gravityData.get()),
-                                             mod_gravityData_numberOfCoefficients(gravityData.get()));  // eigenvectors
+        gsl_eigen_symmv_workspace * w = gsl_eigen_symmv_alloc(M); // workspace for eigenvectors/values
+        gsl_vector * eval = gsl_vector_alloc(M);   // eigenvalues
+        gsl_matrix * evec = gsl_matrix_alloc(M,M); // eigenvectors
         //
-        gsl_eigen_symmv(pds_covm, eval, evec, w); // NOTE: The diagonal and lower triangular part of A are destroyed during the computation
+        // gsl_eigen_symmv(pds_covm, eval, evec, w); // NOTE: The diagonal and lower triangular part of A are destroyed during the computation
+        gsl_eigen_symmv(&pds_covm_view.matrix, eval, evec, w); // NOTE: The diagonal and lower triangular part of A are destroyed during the computation
         //
-        double sigma[mod_gravityData_numberOfCoefficients(gravityData.get())];
-        for (size_t i=0; i<mod_gravityData_numberOfCoefficients(gravityData.get()); ++i) {
+        double sigma[M];
+        for (size_t i=0; i<M; ++i) {
             // ORSA_DEBUG("eval[%i] = %g",i,gsl_vector_get(eval,i));
             if (gsl_vector_get(eval,i) == 0.0) {
                 ORSA_ERROR("problems with the covariance matrix: null eigenvalue found.");
@@ -682,14 +691,26 @@ int main(int argc, char **argv) {
             sigma[i] = sqrt(fabs(gsl_vector_get(eval,i)));
             // ORSA_DEBUG("sigma[%i] = %g",i,sigma[i]);
         }
-        gsl_vector * sampleCoeff_x  = gsl_vector_alloc(mod_gravityData_numberOfCoefficients(gravityData.get()));
-        gsl_vector * sampleCoeff_y  = gsl_vector_alloc(mod_gravityData_numberOfCoefficients(gravityData.get())); 
+        gsl_vector * sampleCoeff_x  = gsl_vector_alloc(M);
+        gsl_vector * sampleCoeff_y  = gsl_vector_alloc(M); 
         
         // for (size_t gen=0; gen<1000; ++gen) {
         {
             
             std::vector< std::vector<mpf_class> > layerData_norm_C;
             std::vector< std::vector<mpf_class> > layerData_norm_S;
+            //
+            layerData_norm_C.resize(SH_degree+1);
+            layerData_norm_S.resize(SH_degree+1);
+            for (size_t l=0; l<=SH_degree; ++l) {
+                layerData_norm_C[l].resize(l+1);
+                layerData_norm_S[l].resize(l+1);
+                for (size_t m=0; m<=l; ++m) {
+                    layerData_norm_C[l][m] = 0.0;
+                    layerData_norm_S[l][m] = 0.0;
+                }
+            }
+            
             if (massDistribution.get() != 0) {
                 if (massDistribution->layerData.get() != 0) {
                     CubicChebyshevMassDistribution::CoefficientType md_lD_coeff;
@@ -700,32 +721,74 @@ int main(int argc, char **argv) {
                                                            0.0,    
                                                            plateModelR0,
                                                            massDistribution->layerData.get());
-                    
                     orsa::Cache<orsa::Vector> CM = sampled_CM;
                     CM.lock();
                     CCMD2SH(CM,
                             layerData_norm_C,
                             layerData_norm_S,
-                            gravityData->degree,
+                            SH_degree, // gravityData->degree,
                             si.get(),
                             md_lD,
                             plateModelR0,
                             gravityData->R0);
 
-                    
-#warning FINISH HERE!!!
+                    // scale coefficients 
+                    const double layerMassFraction = massDistribution->layerData->totalExcessMass() / (GM/orsa::Unit::G());
+                    for (size_t l=0; l<=SH_degree; ++l) {
+                        for (size_t m=0; m<=l; ++m) {
+                            layerData_norm_C[l][m] *= layerMassFraction;
+                            layerData_norm_S[l][m] *= layerMassFraction;
+                        }
+                    }
                     
                 }
             }
             
-            for (size_t i=0; i<mod_gravityData_numberOfCoefficients(gravityData.get()); ++i) {
+            for (size_t i=0; i<M; ++i) {
                 gsl_vector_set(sampleCoeff_x,i,orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(sigma[i]));
             }
             //
             gsl_blas_dgemv(CblasNoTrans,1.0,evec,sampleCoeff_x,0.0,sampleCoeff_y);
             //
-            for (size_t i=0; i<mod_gravityData_numberOfCoefficients(gravityData.get()); ++i) {
-                gsl_vector_set(sampleCoeff_y,i,gsl_vector_get(sampleCoeff_y,i)+gsl_vector_get(pds_coeff,i));
+            for (size_t i=0; i<M; ++i) {
+                
+                // correction due to layers
+                orsa::Cache<double> layer_coeff;
+                if (massDistribution.get() == 0) {
+                    layer_coeff = 0.0;
+                } else if (massDistribution->layerData.get() == 0) {
+                    layer_coeff = 0.0;
+                } else {
+                    const QString ref_key = mod_gravityData_key(gravityData.get(),i);
+                    if (ref_key == "GM") {
+                        // ORSA_DEBUG("found: [%s]",ref_key.toStdString().c_str());
+                        layer_coeff = massDistribution->layerData->totalExcessMass()*orsa::Unit::G();
+                    } else {
+                        for (size_t l=1; l<=SH_degree; ++l) {
+                            for (size_t m=0; m<=l; ++m) {
+                                if (orsaPDS::RadioScienceGravityData::keyC(l,m) == ref_key) {
+                                    // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
+                                    layer_coeff = layerData_norm_C[l][m].get_d();
+                                } else if (orsaPDS::RadioScienceGravityData::keyS(l,m) == ref_key) {
+                                    // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
+                                    layer_coeff = layerData_norm_S[l][m].get_d();
+                                }                       
+                            }
+                        }
+                    }
+                }
+                if (!layer_coeff.isSet()) {
+                    ORSA_DEBUG("problems...");
+                    exit(0);
+                }
+                // choose here if sampling or using nominal value
+                // nominal (no covariance sampling)
+                const double sampled_coeff = gsl_vector_get(pds_coeff,i) - layer_coeff;
+                // use covariance sampling
+                // const double sampled_coeff = gsl_vector_get(pds_coeff,i) - layer_coeff + gsl_vector_get(sampleCoeff_y,i);
+                
+                
+                gsl_vector_set(sampleCoeff_y,i,sampled_coeff);
             }
             
             for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {

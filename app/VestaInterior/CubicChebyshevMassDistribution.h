@@ -95,6 +95,14 @@ public:
         }
         return density;
     }
+    double totalExcessMass() const {
+        double M = 0.0;
+        const EllipsoidLayerVectorType & lv = ellipsoidLayerVector;
+        for (unsigned int k=0; k<lv.size(); ++k) {
+            M += lv[k]->excessMass;
+        }
+        return M;
+    }
 };
 
 // this class now also includes layerData data
