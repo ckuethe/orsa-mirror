@@ -397,7 +397,7 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
         if (lv.size() > 0) {
             gmp_fprintf(fp,"%i ",lv.size());
             for (unsigned int k=0; k<lv.size(); ++k) {
-                gmp_fprintf(fp,"%.3f %.g %.g %.g %.g %.g %.g ",
+                gmp_fprintf(fp,"%.3f %g %g %g %g %g %g ",
                             orsa::FromUnits(orsa::FromUnits(lv[k]->excessDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
                             orsa::FromUnits(lv[k]->a,orsa::Unit::KM,-1),
                             orsa::FromUnits(lv[k]->b,orsa::Unit::KM,-1),
