@@ -46,13 +46,14 @@ using namespace orsa;
 */
 
 const Vector & TriShape::_getVertexNormal(const unsigned int vertex_index) const {
+    _updateCache();
     if (_vertex_normal.size() != _vertex.size()) {
         _vertex_normal.resize(_vertex.size());
         
         Vector _n;
         for (unsigned int _v=0; _v<_vertex.size(); ++_v) {
             if (vertexInFace[_v].size() == 0) {
-                ORSA_DEBUG("PROBLEM: vertex %d is not contained in any face... v:",_v);
+                // ORSA_DEBUG("PROBLEM: vertex %d is not contained in any face... v:",_v);
             } else {
                 _n.set(0,0,0);
                 std::list<unsigned int>::const_iterator it = vertexInFace[_v].begin();
@@ -465,9 +466,9 @@ bool TriShape::rayIntersection(orsa::Vector & intersectionPoint,
                                   fullLine)) {
       
             normal = _getFaceNormal(j);
-            if ((normal*u) < 0) {
-                return true;
-            }
+            // if ((normal*u) < 0) {
+            return true;
+            // }
         }
     }
     return false;
@@ -889,7 +890,8 @@ const Vector EllipsoidShape::closestVertex(const Vector & P) const {
     int status;
     int iter = 0, max_iter = 100;
     double l0;
-    double l = cV_l; // initial guess
+    // double l = cV_l; // initial guess
+    double l = 0.0;
     
     // much of the initialization has been moved to _init()
     
@@ -965,7 +967,7 @@ const Vector EllipsoidShape::closestVertex(const Vector & P) const {
     // gsl_root_fdfsolver_free (s);
     
     // save l to cV_l for faster solution at next call
-    cV_l = l;
+    // cV_l = l;
     
     return cV;
 }
@@ -974,7 +976,7 @@ void EllipsoidShape::_init() {
     
     closestVertexEpsilonRelative = 1.0e-3;
     
-    cV_l = 1.0;
+    // cV_l = 1.0;
     
     params.a2 = _a2;
     params.b2 = _b2;

@@ -216,6 +216,7 @@ bool RadioScienceGravityFile::read(RadioScienceGravityData * data,
             if (k == data->index("GM")) {
                 // GM is in km^2/s^2
                 d = orsa::FromUnits(orsa::FromUnits(d,orsa::Unit::KM,3),orsa::Unit::SECOND,-2);
+                // ORSA_DEBUG("--units factor--");
             }
             data->coeff[k] = d;
         }

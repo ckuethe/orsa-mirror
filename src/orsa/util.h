@@ -285,8 +285,12 @@ namespace orsa {
         std::vector<bool> in;
         std::vector< orsa::Cache<double> > density; 
         std::vector<orsa::Vector> vec;
+    public:
+        virtual RandomPointsInShape * clone() const {
+            return new RandomPointsInShape(*this);
+        }
     };
-
+    
     //! this is the normalization coefficient needed to use the
     //! non-normalized spherical harmonics coefficients
     //! directly in the potential expansion formula

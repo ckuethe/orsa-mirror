@@ -246,7 +246,7 @@ bool Interaction::accelerationAndTorque(InteractionVector & a,
 
                                 } else {
                                     accTerm =
-				      Paul::gravitationalForce(ref_b_pm.get(),
+                                        Paul::gravitationalForce(ref_b_pm.get(),
                                                                  ref_b_g2l,
                                                                  b_pm.get(),
                                                                  b_g2l,
