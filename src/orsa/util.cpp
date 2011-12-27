@@ -443,7 +443,148 @@ RandomPointsInShape::RandomPointsInShape(const orsa::Shape * s,
             ++numInside;
         }
         ++counter;
+        
+        // ORSA_DEBUG("progress: %i/%i/%i",numInside,counter,size);
     }
+    reset();
+}
+
+class TriShapeInternals {
+public:
+    std::vector<orsa::Vector> vertexVector;
+    orsa::Cache<double> volume;
+    orsa::Cache<double> volumeCumulativeFraction;
+};
+
+class TriShapeInternals_LessThan {
+public:
+    bool operator() (const TriShapeInternals & left, const TriShapeInternals & right) {
+        return left.volumeCumulativeFraction < right.volumeCumulativeFraction;
+    }
+    bool operator() (const TriShapeInternals & left, const double & right) {
+        return left.volumeCumulativeFraction < right;
+    }
+    bool operator() (const double & left, const TriShapeInternals & right) {
+        return left < right.volumeCumulativeFraction;
+    }
+};
+
+RandomPointsInShape::RandomPointsInShape(const orsa::TriShape * s,
+                                         const orsa::MassDistribution * massDistribution,
+                                         const size_t & samplePoints,
+                                         const bool & /* localStoreVector */) :
+    osg::Referenced(),
+    shape(s),
+    md(massDistribution),
+    size(samplePoints),
+    saveVector(true),
+    randomSeed(orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform_int(maxRandomSeed)) {
+    reset();
+    //
+    in.clear();
+    density.clear();
+    vec.clear();
+    //
+    in.resize(size);
+    density.resize(size);
+    if (saveVector) {
+        vec.resize(size);
+    }
+    
+#warning if shape is strongly concave and a simplex covers volume outside the body shape, then the results are incorrect (including volume computations...)
+    ORSA_DEBUG("warning: if shape is strongly concave and a simplex covers volume outside the body shape, then the results are incorrect (including volume computations...)");
+    
+    osg::ref_ptr<const orsa::TriShape> triShape = s;
+    
+    const orsa::TriShape::VertexVector & vv = triShape->getVertexVector();
+    const orsa::TriShape::FaceVector   & fv = triShape->getFaceVector();
+    std::vector<TriShapeInternals> aux;
+    aux.resize(fv.size());
+    for (size_t fi=0; fi<fv.size(); ++fi) {
+        aux[fi].vertexVector.resize(4);
+        aux[fi].vertexVector[0] = orsa::Vector(0,0,0);
+        aux[fi].vertexVector[1] = vv[fv[fi].i()];
+        aux[fi].vertexVector[2] = vv[fv[fi].j()];
+        aux[fi].vertexVector[3] = vv[fv[fi].k()];
+        aux[fi].volume =
+            fabs((aux[fi].vertexVector[1]-aux[fi].vertexVector[0]) *
+                 orsa::externalProduct(aux[fi].vertexVector[2]-aux[fi].vertexVector[0],
+                                       aux[fi].vertexVector[3]-aux[fi].vertexVector[0]) / 6.0);
+    }
+    
+    double totalVolume = 0.0;
+    for (size_t fi=0; fi<fv.size(); ++fi) {
+        totalVolume += aux[fi].volume;
+    }
+    
+    // std::vector<double> volumeCumulativeFraction;
+    // volumeCumulativeFraction.resize(fv.size());
+    for (size_t fi=0; fi<fv.size(); ++fi) {
+        aux[fi].volumeCumulativeFraction =  aux[fi].volume/totalVolume;
+        if (fi != 0) aux[fi].volumeCumulativeFraction += aux[fi-1].volumeCumulativeFraction;
+        
+        // ORSA_DEBUG("volumeCumulativeFraction[%09i] = %12.9f",fi,(*aux[fi].volumeCumulativeFraction));
+    }
+    
+    
+    // set numInside so that the volume obtained from RPIS is correct
+    numInside = size*totalVolume/shape->boundingBox().volume();
+    
+    //    Algorithm: 
+    //    C. Rocchini and P. Cignoni.
+    //    Generating random points in a tetrahedron.
+    //    Journal of graphics tools, 5(4):9-12, 2000
+    
+    for (size_t counter=0; counter<size; ++counter) {
+        if (counter<numInside) {
+            in[counter] = true;
+            
+            double s = rng->gsl_rng_uniform();
+            double t = rng->gsl_rng_uniform();
+            double u = rng->gsl_rng_uniform();
+            if (s+t>1.0) { // cut'n fold the cube into a prism
+                s = 1.0 - s;
+                t = 1.0 - t;
+            }
+            if (t+u>1.0) { // cut'n fold the prism into a tetrahedron
+                double tmp = u;
+                u = 1.0 - s - t;
+                t = 1.0 - tmp;
+            } else if (s+t+u>1.0) {
+                double tmp = u;
+                u = s + t + u - 1.0;
+                s = 1 - t - tmp;
+            }
+            double a=1-s-t-u; // a,s,t,u are the barycentric coordinates of the random point.
+
+            const double volumeCumulativeFractionSelector = rng->gsl_rng_uniform();
+
+            std::vector<TriShapeInternals>::const_iterator it = lower_bound(aux.begin(),
+                                                                            aux.end(),
+                                                                            volumeCumulativeFractionSelector,
+                                                                            TriShapeInternals_LessThan());
+            
+            // ORSA_DEBUG("val: %g lb: %g",volumeCumulativeFractionSelector,(*(*it).volumeCumulativeFraction));
+            
+            const orsa::Vector v =
+                (*it).vertexVector[0]*a+
+                (*it).vertexVector[1]*s+
+                (*it).vertexVector[2]*t+
+                (*it).vertexVector[3]*u;
+
+            if (md.get() != 0) {
+                density[counter] = md->density(v);
+            }
+            if (saveVector) {
+                vec[counter] = v;
+            }
+            
+        } else {
+            in[counter] = false;
+            
+        }        
+    }
+    
     reset();
 }
 

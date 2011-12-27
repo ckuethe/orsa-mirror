@@ -247,6 +247,11 @@ namespace orsa {
                             const orsa::MassDistribution * massDistribution,
                             const size_t & samplePoints,
                             const bool & localStoreVector=true);
+    public:
+        RandomPointsInShape(const orsa::TriShape * shape,
+                            const orsa::MassDistribution * massDistribution,
+                            const size_t & samplePoints,
+                            const bool & localStoreVector=true);
     protected:
         virtual ~RandomPointsInShape() { } 
     public:
