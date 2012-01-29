@@ -163,7 +163,7 @@ public:
         const orsa::Vector thrust =
             sign*0.5*rho*dV*dV*Cd*grainArea*V_Gas_c.normalized();
 
-        if (0) {
+        if (1) {
             gmp_printf("%12.6f %12.3f %12.6f %12.6f %12.6f %12.6f %g %g %g\n",
                        orsa::FromUnits(t.get_d(),orsa::Unit::DAY,-1),
                        orsa::FromUnits(R_c.length(),orsa::Unit::KM,-1),

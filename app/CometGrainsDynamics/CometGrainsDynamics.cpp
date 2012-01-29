@@ -16,7 +16,7 @@ int main (int argc, char **argv) {
     // all depends on the gas_drag_coefficient value
     
     // input
-    const double r_comet = orsa::FromUnits(1.0,orsa::Unit::AU);
+    const double r_comet = orsa::FromUnits(2.0,orsa::Unit::AU);
     const double nucleus_ax = orsa::FromUnits(4.0,orsa::Unit::KM);
     const double nucleus_ay = orsa::FromUnits(3.0,orsa::Unit::KM);
     const double nucleus_az = orsa::FromUnits(2.0,orsa::Unit::KM);
@@ -83,6 +83,19 @@ int main (int argc, char **argv) {
                                  nucleus_ax,
                                  nucleus_ay,
                                  nucleus_az);
+        if (1) {
+            // test
+            std::vector< std::vector<mpf_class> > C, S, norm_C, norm_S;
+            std::vector<mpf_class> J;
+            orsa::convert(C,
+                          S,
+                          norm_C,
+                          norm_S,
+                          J,
+                          pm.get(),
+                          orsa::FromUnits(1560.8,orsa::Unit::KM),
+                          true);
+        }
         ibps.inertial = new orsa::ConstantInertialBodyProperty(nucleus_mass,
                                                                nucleus_shape.get(),
                                                                orsa::Vector(0,0,0),
@@ -185,7 +198,7 @@ int main (int argc, char **argv) {
         */
         
         // reset cV_l on ellipsoid shape
-        nucleus_shape->cV_l = 0.0;        
+        // nucleus_shape->cV_l = 0.0;        
         
         // osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
         
