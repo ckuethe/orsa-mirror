@@ -25,8 +25,13 @@ double GrainBetaToRadius(const double & grainBeta,
     static const double MSun = orsaSolarSystem::Data::MSun();
     static const double    c = orsa::Unit::c();
     // static const double  Qpr = 1.0;
-    
     return (3*L)/(16*orsa::pi()*G*MSun*c) * (Qpr)/(grainBeta*grainDensity);
+}
+double GrainRadiusToBeta(const double & grainRadius,
+                         const double & grainDensity,
+                         const double & Qpr = 1.0) {
+    // actually, can call same function...
+    return GrainBetaToRadius(grainRadius,grainDensity,Qpr);
 }
 
 class GasDrag : public orsa::Propulsion {
