@@ -207,7 +207,11 @@ namespace orsa {
     public:
         bool run_nmsimplex(const unsigned int maxIter = 4096,
                            const double       epsAbs  = 1.0e-3) const;
-    
+        
+    public:
+        bool run_nmsimplex2(const unsigned int maxIter = 4096,
+                            const double       epsAbs  = 1.0e-3) const;
+        
     public:
         bool run_conjugate_fr(const unsigned int maxIter         = 4096,
                               const double       initialStepSize = 0.01,

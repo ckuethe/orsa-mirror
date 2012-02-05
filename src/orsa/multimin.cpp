@@ -571,6 +571,130 @@ bool Multimin::run_nmsimplex(const unsigned int maxIter,
     }
 }
 
+bool Multimin::run_nmsimplex2(const unsigned int maxIter,
+                              const double       epsAbs) const {
+    
+    if (_par.get() == 0) {
+        ORSA_ERROR("no parameters");
+        return false;
+    }
+  
+    gsl_multimin_fminimizer * s = 
+        gsl_multimin_fminimizer_alloc(gsl_multimin_fminimizer_nmsimplex2, 
+                                      _par->size());
+    
+    MultiminGlue::instance()->_mm = this;
+  
+    gsl_multimin_function mf;
+  
+    mf.f      = &multimin_global_f_gsl;
+    mf.n      = _par->size();
+    mf.params = 0; // it's a (void *)
+  
+    gsl_vector * x = gsl_vector_alloc(_par->size());
+    //
+    for (unsigned int k=0; k<_par->size(); ++k) {
+        gsl_vector_set(x, k, _par->get(k));
+    }
+  
+    gsl_vector * step = gsl_vector_alloc (_par->size());
+    //
+    for (unsigned int k=0; k<_par->size(); ++k) {
+        gsl_vector_set(step, k, _par->getStep(k));
+    }
+  
+    gsl_multimin_fminimizer_set(s,&mf,x,step);
+  
+    unsigned int iter = 0;
+    const unsigned int local_max_iter = maxIter;
+    int it_status;
+    int cv_status;
+    do {
+        ++iter;
+    
+        it_status = gsl_multimin_fminimizer_iterate (s);
+        //
+        // ORSA_DEBUG("itaration status = %s",gsl_strerror(it_status));
+    
+        // if (it_status == GSL_ENOPROG) break;
+    
+        // ORSA_DEBUG("s->size: %g",s->size);
+    
+        cv_status = gsl_multimin_test_size(s->size, epsAbs);
+        //
+        /* 
+           {
+           gsl_vector * g = gsl_vector_alloc(_par->size());
+           gsl_multimin_gradient(s->J, s->f, g);
+           //
+           cv_status = gsl_multimin_test_gradient(g, 1.0e-3); 
+           //
+           gsl_vector_free(g);
+           }
+        */
+        //
+        // ORSA_DEBUG("convergence status = %s", gsl_strerror(cv_status));
+    
+        if (0) {
+            // debug only
+            ORSA_DEBUG("iter: %i",iter);
+            for (unsigned int k=0; k<_par->size(); ++k) {
+                ORSA_DEBUG("par[%03i] = \"%s\" = %+24.15e",
+                           k,
+                           _par->name(k).c_str(),
+                           _par->get(k));
+            }
+        }
+    
+        if (0) {
+            if (logFile.isSet()) {
+	
+                FILE * fp = fopen((*logFile).c_str(),"a");
+                if (fp == 0) {
+                    ORSA_ERROR("cannot open file %s",(*logFile).c_str());
+                    return false;
+                }
+	
+                fclose(fp);
+            }
+        }
+    
+        { 
+            for (unsigned int k=0; k<_par->size(); ++k) {
+                _par->set(k, gsl_vector_get(s->x,k));
+            }
+      
+            singleIterationDone(_par.get());
+        }
+    
+    } while (((cv_status == GSL_CONTINUE) || (it_status == GSL_CONTINUE)) && (iter < local_max_iter));
+  
+    if (cv_status == GSL_SUCCESS) {
+        success(_par.get());
+    }	
+    
+    // ORSA_DEBUG("total iterations: %i",iter);
+  
+    for (unsigned int k=0; k<_par->size(); ++k) {
+        _par->set(k, gsl_vector_get(s->x,k));
+    }
+  
+    gsl_multimin_fminimizer_free (s);
+    gsl_vector_free (x);
+    gsl_vector_free (step);
+  
+    if (MultiminGlue::instance()->_mm != this) {
+        ORSA_ERROR("mf should never change during the run... use a lock?");
+        return false;
+    }
+    
+    if ((cv_status == GSL_CONTINUE) || (it_status == GSL_CONTINUE)) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
 bool Multimin::run_conjugate_fr(const unsigned int maxIter,
                                 const double       initialStepSize,
                                 const double       tollerance,
