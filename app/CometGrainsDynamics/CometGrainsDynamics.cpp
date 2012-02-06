@@ -2,9 +2,11 @@
 
 int main (int argc, char **argv) {
     
+#warning comment out Random Seed in production
+    
     // set randomSeed for testing purposes only
     // orsa::GlobalRNG::randomSeed = 1376174123;
-    // orsa::GlobalRNG::randomSeed = 1119056643;
+    orsa::GlobalRNG::randomSeed = 1119056643;
     // orsa::GlobalRNG::randomSeed = -128300218;
     // orsa::GlobalRNG::randomSeed = -124766705;
     // orsa::GlobalRNG::randomSeed = 1617326819;
@@ -14,6 +16,13 @@ int main (int argc, char **argv) {
     // 2) start with v=(rotational component only) and then gas drag increases it
     //
     // all depends on the gas_drag_coefficient value
+    
+#warning TODO: consider using fractal density for grains?
+#warning TODO: mascons gravity
+#warning TODO: fraction of active nucleus (list of lat-lon ranges) and correlate with total production rate
+#warning TODO: remove the ejection velocity and vertical angle code...
+#warning TODO: fraction of grain as ice, fraction as dust
+#warning TODO: 
     
     // input
     const double r_comet = orsa::FromUnits(2.0,orsa::Unit::AU);
@@ -26,16 +35,18 @@ int main (int argc, char **argv) {
     const double rotation_period = orsa::FromUnits(6.0,orsa::Unit::HOUR);
     const double pole_ecliptic_longitude =  0.0*orsa::degToRad();
     const double pole_ecliptic_latitude  = 90.0*orsa::degToRad();
-    const double min_ejection_velocity_constant = 0.5; // in the relation between beta and ejection velocity
-    const double max_ejection_velocity_constant = 1.5; // in the relation between beta and ejection velocity
-    const double ejection_velocity_beta_exponent = 0.5; // nominal: 0.5
-    const double ejection_velocity_radial_exponent = -0.5; // nominal: -0.5
+    // const double min_ejection_velocity_constant = 0.5; // in the relation between beta and ejection velocity
+    // const double max_ejection_velocity_constant = 1.5; // in the relation between beta and ejection velocity
+    // const double ejection_velocity_beta_exponent = 0.5; // nominal: 0.5
+    // const double ejection_velocity_radial_exponent = -0.5; // nominal: -0.5
     const double min_latitude = -90.0*orsa::degToRad();
     const double max_latitude = +90.0*orsa::degToRad();
-    const double min_vertical_angle =  0.0*orsa::degToRad();
-    const double max_vertical_angle = 45.0*orsa::degToRad();
-    const double min_beta = 1.0e-6;
-    const double max_beta = 3.0;
+    // const double min_vertical_angle =  0.0*orsa::degToRad();
+    // const double max_vertical_angle = 45.0*orsa::degToRad();
+    // const double min_beta = 1.0e-6;
+    // const double max_beta = 3.0;
+    const double min_grain_radius = orsa::FromUnits(0.01,orsa::Unit::METER);
+    const double max_grain_radius = orsa::FromUnits(0.01,orsa::Unit::METER);    
     const int max_time_days = 100;
     
     // gas drag coefficients
@@ -44,6 +55,13 @@ int main (int argc, char **argv) {
     const double gas_molar_mass = 18; // 18 for H20
     const double gas_drag_coefficient = 0.40; // Cd nominal: 0.40
     
+    // molecules per unit area per unit time
+#warning EYE ON THIS!!! (zero?)
+    const double grain_sublimation_rate = orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1);
+    const double grain_sublimation_molecule_mass = orsa::FromUnits(gas_molar_mass*1.66e-27,orsa::Unit::KG); // conversion from molar
+    
+#warning drag coefficient Cd should be close to 2.0 when the grain size is close to the free mean path
+        
     const orsa::Time t0 = orsa::Time(0);
     const orsa::Time max_time(max_time_days,0,0,0,0);
     
@@ -57,7 +75,7 @@ int main (int argc, char **argv) {
     osg::ref_ptr<orsa::Body> sun = new orsa::Body;
     {
         sun->setName("sun");
-        IBPS ibps;
+        orsa::IBPS ibps;
         ibps.time = t0;
         ibps.inertial = new orsa::PointLikeConstantInertialBodyProperty(orsaSolarSystem::Data::MSun());
         ibps.translational = new orsa::DynamicTranslationalBodyProperty;
@@ -116,15 +134,21 @@ int main (int argc, char **argv) {
     }
     
     osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
+
+#warning increase max iter...
     
     size_t iter=0;
-    while (iter < 100000) {
+    while (iter < 400) {
         
         // loop on grains
         
-        const double grain_beta = exp(log(min_beta) + (log(max_beta)-log(min_beta))*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
-        const double grain_radius = GrainBetaToRadius(grain_beta,grain_density);
-        const double grain_mass = 4.0*orsa::pi()*orsa::cube(grain_radius)*grain_density/3.0;
+        /* const double grain_beta = exp(log(min_beta) + (log(max_beta)-log(min_beta))*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
+           const double grain_radius = GrainBetaToRadius(grain_beta,grain_density);
+           const double grain_mass = 4.0*orsa::pi()*orsa::cube(grain_radius)*grain_density/3.0;
+        */
+        
+        const double grain_initial_radius = exp(log(min_grain_radius) + (log(max_grain_radius)-log(min_grain_radius))*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
+        const double grain_initial_beta   = GrainRadiusToBeta(grain_initial_radius,grain_density);
         
         // position of grain on the nucleus surface
         const double lon = orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
@@ -155,35 +179,40 @@ int main (int argc, char **argv) {
             orsa::externalProduct(n0,u_rot).normalized();
         
         // horizontal direction of ejection of grain, measured from the direction of rotation
-        const double phi = orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
-        double s_phi, c_phi;
-        sincos(phi,&s_phi,&c_phi);
-        // vertical angle
-        const double theta = min_vertical_angle + (max_vertical_angle-min_vertical_angle)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
-        double s_theta, c_theta;
-        sincos(theta,&s_theta,&c_theta);
+        /* const double phi = orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+           double s_phi, c_phi;
+           sincos(phi,&s_phi,&c_phi);
+           // vertical angle
+           const double theta = min_vertical_angle + (max_vertical_angle-min_vertical_angle)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+           double s_theta, c_theta;
+           sincos(theta,&s_theta,&c_theta);
+        */
         
         // not including rotation yet
 #warning escape velocity approximate for points within the bounding sphere of the body
         const double escape_velocity = sqrt(2*orsa::Unit::G()*nucleus_mass/r0.length());
         // const double ejection_velocity =
         // escape_velocity*(min_escape_velocity_factor + (max_escape_velocity_factor-min_escape_velocity_factor)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
-        const double ejection_velocity =
-            (min_ejection_velocity_constant+(max_ejection_velocity_constant-min_ejection_velocity_constant)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()) *
-            // sqrt(grain_beta/orsa::FromUnits(r_comet,orsa::Unit::AU,-1));
-            pow(grain_beta,ejection_velocity_beta_exponent) *
-            pow(orsa::FromUnits(r_comet,orsa::Unit::AU,-1),ejection_velocity_radial_exponent);
+        /* const double ejection_velocity =
+           (min_ejection_velocity_constant+(max_ejection_velocity_constant-min_ejection_velocity_constant)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()) *
+           // sqrt(grain_beta/orsa::FromUnits(r_comet,orsa::Unit::AU,-1));
+           pow(grain_beta,ejection_velocity_beta_exponent) *
+           pow(orsa::FromUnits(r_comet,orsa::Unit::AU,-1),ejection_velocity_radial_exponent);
+        */
         // ORSA_DEBUG("ejection_velocity: %g",ejection_velocity);
         
         // set velocity vector, including effect of nucleus rotation
         const orsa::Vector v0_rotational_component =
             orsa::externalProduct(orsa::Vector(0,0,omega),r0);
+        /* const orsa::Vector v0 =
+           (gas_drag_coefficient > 0.0) ?
+           v0_rotational_component :
+           n0*ejection_velocity*c_theta +
+           u_rot*ejection_velocity*s_theta*c_phi +
+           u_pol*ejection_velocity*s_theta*s_phi +
+           v0_rotational_component;
+        */
         const orsa::Vector v0 =
-            (gas_drag_coefficient > 0.0) ?
-            v0_rotational_component :
-            n0*ejection_velocity*c_theta +
-            u_rot*ejection_velocity*s_theta*c_phi +
-            u_pol*ejection_velocity*s_theta*s_phi +
             v0_rotational_component;
         
         /* ORSA_DEBUG("lat: %g [deg]",lat*orsa::radToDeg());
@@ -207,11 +236,20 @@ int main (int argc, char **argv) {
             grain->setName("grain");
             IBPS ibps;
             ibps.time = t0;
-            ibps.inertial = new orsa::PointLikeConstantInertialBodyProperty(grain_mass);
+            // #warning check this! can use 0.0 grain mass, or must update it 
+            // ibps.inertial = new orsa::PointLikeConstantInertialBodyProperty(grain_mass);
+            ibps.inertial = new GrainDynamicInertialBodyProperty(t0,
+                                                                 grain_initial_radius,
+                                                                 grain_density,
+                                                                 grain_sublimation_rate,
+                                                                 grain_sublimation_molecule_mass,
+                                                                 grain.get());
             ibps.translational = new orsa::DynamicTranslationalBodyProperty;
             ibps.translational->setPosition(r0+nucleus_r0);
             ibps.translational->setVelocity(v0+nucleus_v0);
-            grain->beta = grain_beta;
+            // grain->beta = grain_beta;
+#warning need to keep updating beta...
+            grain->beta = grain_initial_beta;
             grain->betaSun = sun.get();
             // gas drag
             if (gas_drag_coefficient > 0.0) {
@@ -310,7 +348,7 @@ int main (int argc, char **argv) {
             */
         }
         
-        osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),nucleus.get(),bound_radius,6);
+        osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),grain_initial_radius,grain_density,nucleus.get(),bound_radius,6);
         // call singleStepDone once before starting, to perform initial checks
         orsa::Time dummy_time(0);
         integrator->singleStepDone(bg.get(),t0,dummy_time,dummy_time);
@@ -387,14 +425,14 @@ int main (int argc, char **argv) {
                         gas_drag_coefficient,
                         lon*orsa::radToDeg(),
                         lat*orsa::radToDeg(),
-                        /* 20 */ phi*orsa::radToDeg(),
-                        theta*orsa::radToDeg(),
+                        /* 20 */ 0.0,
+                        0.0,
                         orsa::FromUnits(orsa::FromUnits(escape_velocity,orsa::Unit::METER,-1),orsa::Unit::SECOND),
-                        orsa::FromUnits(orsa::FromUnits(ejection_velocity,orsa::Unit::METER,-1),orsa::Unit::SECOND),
+                        0.0, // orsa::FromUnits(orsa::FromUnits(ejection_velocity,orsa::Unit::METER,-1),orsa::Unit::SECOND),
                         orsa::FromUnits(orsa::FromUnits(v0_rotational_component.length(),orsa::Unit::METER,-1),orsa::Unit::SECOND),
                         /* 25 */ orsa::FromUnits(orsa::FromUnits(v0.length(),orsa::Unit::METER,-1),orsa::Unit::SECOND),
-                        (*grain->beta),
-                        orsa::FromUnits(grain_radius,orsa::Unit::METER,-1),
+                        grain_initial_beta, // (*grain->beta),
+                        orsa::FromUnits(grain_initial_radius,orsa::Unit::METER,-1),
                         orsa::FromUnits(common_stop_time.get_d(),orsa::Unit::DAY,-1),
                         orsa::FromUnits(integrator->crossing_time[0].get_d(),orsa::Unit::DAY,-1),
                         /* 30 */ orsa::FromUnits(integrator->crossing_time[1].get_d(),orsa::Unit::DAY,-1),

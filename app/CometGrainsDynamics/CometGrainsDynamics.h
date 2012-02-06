@@ -16,6 +16,7 @@
 
 using namespace orsa;
 
+
 // Burns, Lamy, Soter 1979, Eq. (19)
 double GrainBetaToRadius(const double & grainBeta,
                          const double & grainDensity,
@@ -33,6 +34,116 @@ double GrainRadiusToBeta(const double & grainRadius,
     // actually, can call same function...
     return GrainBetaToRadius(grainRadius,grainDensity,Qpr);
 }
+
+/* double GrainRadius(const double & initialGrainRadius,
+   const orsa::Time & t) {
+   #warning COMPLETE THIS ONE!!!
+   return initialGrainRadius;
+   }
+*/
+
+class GrainDynamicInertialBodyProperty : public InertialBodyProperty {
+public:
+    GrainDynamicInertialBodyProperty(const orsa::Time & t0,
+                                     const double & initialRadius,
+                                     const double & density,
+                                     const double & sublimationRate, /* molecules per unit area per unit time */
+                                     const double & moleculeMass, /* water molecule mass */
+                                     const orsa::Body * grain) : 
+        InertialBodyProperty(),
+        _t0(t0),
+        _initialRadius(initialRadius),
+        _density(density),
+        _dRadius_dt(sublimationRate*moleculeMass/(4.0*density)), /* check factors! i.e. the factor 4.0 due to energy balance, so it's sublimating from pi*Rg^2 instead of 4*pi*Rg^2 */
+        _grain(grain) { }
+public:
+    GrainDynamicInertialBodyProperty(const GrainDynamicInertialBodyProperty & ibp) : 
+        InertialBodyProperty(ibp),
+        _t0(ibp._t0),
+        _initialRadius(ibp._initialRadius),
+        _density(ibp._density),
+        _dRadius_dt(ibp._dRadius_dt),
+        _grain(ibp._grain) { }
+public:
+    /* GrainDynamicInertialBodyProperty & operator = (const GrainDynamicInertialBodyProperty &) {
+       return (*this);
+       }
+    */
+protected:
+    const orsa::Time _t0;
+    const double _initialRadius;
+    const double _density;
+    const double _dRadius_dt; // radius shrinking rate
+    const orsa::Body * _grain;
+protected:
+    double _radius; // updated by update(t) calls
+    double _mass;   // updated by update(t) calls
+protected:
+    double radius() const { return _radius; }
+    double mass() const { return _mass; }
+    const orsa::Shape * originalShape() const { return 0; }
+    orsa::Vector centerOfMass() const { return orsa::Vector(0,0,0); }
+    orsa::Matrix shapeToLocal() const { return orsa::Matrix::identity(); }
+    orsa::Matrix localToShape() const { return orsa::Matrix::identity(); }
+    orsa::Matrix inertiaMatrix() const { return orsa::Matrix::identity(); }
+    const orsa::PaulMoment * paulMoment() const { return 0; }
+public:
+    bool setMass(const double &) {
+        ORSA_ERROR("this method should not have been called, please check your code.");
+        return false;
+    }
+    bool setOriginalShape(const orsa::Shape *) {
+        ORSA_ERROR("this method should not have been called, please check your code.");
+        return false;
+    }
+    bool setCenterOfMass(const orsa::Vector &) {
+        ORSA_ERROR("this method should not have been called, please check your code.");
+        return false;
+    }
+    bool setShapeToLocal(const orsa::Matrix &) {
+        ORSA_ERROR("this method should not have been called, please check your code.");
+        return false;
+    }
+    bool setLocalToShape(const orsa::Matrix &) {
+        ORSA_ERROR("this method should not have been called, please check your code.");
+        return false;
+    }
+    bool setInertiaMatrix(const orsa::Matrix &) {
+        ORSA_ERROR("this method should not have been called, please check your code.");
+        return false;
+    }
+    bool setPaulMoment(const orsa::PaulMoment *) {
+        ORSA_ERROR("this method should not have been called, please check your code.");
+        return false;
+    }
+public:
+    InertialBodyProperty * clone() const {
+        return new GrainDynamicInertialBodyProperty(*this);
+    }
+public:
+    BodyPropertyType type() const { return BP_DYNAMIC; }
+public:
+    bool update(const orsa::Time & t) {
+        // orsa::print(t);
+        const double dt = (t-_t0).get_d();
+        
+        _radius = _initialRadius - _dRadius_dt * dt;
+        
+        // ORSA_DEBUG("dt: %g  _radius: %g",dt,_radius);
+        
+#warning check this and IMPROVE... (slow sublimation at 10 microns)
+#warning this is not correct for icy grains that have an initial radius BELOW 10 microns
+        if (_radius < orsa::FromUnits(1.0e-5,orsa::Unit::METER)) {
+            _radius = orsa::FromUnits(1.0e-5,orsa::Unit::METER);
+        }
+        
+        _mass = 4.0/3.0*orsa::pi()*orsa::cube(_radius)*_density;
+        _grain->beta = GrainRadiusToBeta(_radius,_density);
+    }
+public:
+    void lock() { }
+    void unlock() { }
+};
 
 class GasDrag : public orsa::Propulsion {
 public:
@@ -169,6 +280,9 @@ public:
             sign*0.5*rho*dV*dV*Cd*grainArea*V_Gas_c.normalized();
 
         if (1) {
+            
+#warning add output of grain radius vs. time...
+            
             gmp_printf("%12.6f %12.3f %12.6f %12.6f %12.6f %12.6f %g %g %g\n",
                        orsa::FromUnits(t.get_d(),orsa::Unit::DAY,-1),
                        orsa::FromUnits(R_c.length(),orsa::Unit::KM,-1),
@@ -209,15 +323,19 @@ public:
     // gB: grain
     // nB: comet nucleus
     CGDIntegrator(const orsa::Body * gB,
+                  const double & grain_initial_radius,
+                  const double & grain_density,
                   const orsa::Body * nB,
                   const double & bound_distance,
                   const size_t & pow_10_max_distance) :
         orsa::IntegratorRadau(),
         grain(gB),
+        grainInitialRadius(grain_initial_radius),
+        grainDensity(grain_density),
         nucleus(nB),
         r_bound(bound_distance),
         crossing_size(1+pow_10_max_distance) {
-        _accuracy = 1.0e-6;
+        _accuracy = 1.0e-3;
         outcome = ORBITING;
         crossing_distance.resize(crossing_size);
         crossing_velocity.resize(crossing_size);
@@ -236,6 +354,8 @@ public:
     };
 protected:
     const orsa::Body * grain;
+    const double grainInitialRadius;
+    const double grainDensity;
     const orsa::Body * nucleus;
     const double r_bound;
 public:
@@ -262,6 +382,15 @@ public:
                                   v,
                                   grain,
                                   t);
+
+        // this is now done by the inertial body property? via automatic update(t) calls
+        /* const double grain_radius = GrainRadius(grainInitialRadius,t);
+           const double grain_beta = GrainRadiusToBeta(grain_radius,grainDensity);
+           ORSA_DEBUG("updating grain beta from %g to %g",(*grain->beta),grain_beta);
+           grain->beta = grain_beta;
+        */
+        // #warning STILL NEED TO UPDATE beta!
+        
         const orsa::Vector grain_r_relative_global = r - nucleus_r_global;
         const orsa::Vector grain_v_relative_global = v - nucleus_v_global;
         const orsa::Matrix g2l = orsa::globalToLocal(nucleus,bg,t);
