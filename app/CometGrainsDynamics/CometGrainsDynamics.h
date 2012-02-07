@@ -55,7 +55,9 @@ public:
         _initialRadius(initialRadius),
         _density(density),
         _dRadius_dt(sublimationRate*moleculeMass/(4.0*density)), /* check factors! i.e. the factor 4.0 due to energy balance, so it's sublimating from pi*Rg^2 instead of 4*pi*Rg^2 */
-        _grain(grain) { }
+        _grain(grain) {
+        // ORSA_DEBUG("dRdt: %g",_dRadius_dt);
+    }
 public:
     GrainDynamicInertialBodyProperty(const GrainDynamicInertialBodyProperty & ibp) : 
         InertialBodyProperty(ibp),

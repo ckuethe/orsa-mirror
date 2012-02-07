@@ -2,14 +2,15 @@
 
 int main (int argc, char **argv) {
     
-#warning comment out Random Seed in production
+    // #warning comment out Random Seed in production
     
     // set randomSeed for testing purposes only
     // orsa::GlobalRNG::randomSeed = 1376174123;
-    orsa::GlobalRNG::randomSeed = 1119056643;
+    // orsa::GlobalRNG::randomSeed = 1119056643;
     // orsa::GlobalRNG::randomSeed = -128300218;
     // orsa::GlobalRNG::randomSeed = -124766705;
     // orsa::GlobalRNG::randomSeed = 1617326819;
+    orsa::GlobalRNG::randomSeed = 777;
     
     // NOTE: two alternative mechanisms for ejection velocity
     // 1) sampling distribution= rotational component + ejection velocity model (no gas drag)
@@ -25,14 +26,14 @@ int main (int argc, char **argv) {
 #warning TODO: 
     
     // input
-    const double r_comet = orsa::FromUnits(2.0,orsa::Unit::AU);
-    const double nucleus_ax = orsa::FromUnits(4.0,orsa::Unit::KM);
-    const double nucleus_ay = orsa::FromUnits(3.0,orsa::Unit::KM);
-    const double nucleus_az = orsa::FromUnits(2.0,orsa::Unit::KM);
+    const double r_comet = orsa::FromUnits(1.07,orsa::Unit::AU);
+    const double nucleus_ax = orsa::FromUnits(1.2,orsa::Unit::KM);
+    const double nucleus_ay = orsa::FromUnits(0.4,orsa::Unit::KM);
+    const double nucleus_az = orsa::FromUnits(0.4,orsa::Unit::KM);
     const size_t gravity_degree = 2;
     const double comet_density = orsa::FromUnits(orsa::FromUnits(0.4,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-    const double grain_density = orsa::FromUnits(orsa::FromUnits(1.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-    const double rotation_period = orsa::FromUnits(6.0,orsa::Unit::HOUR);
+    const double grain_density = orsa::FromUnits(orsa::FromUnits(0.5,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+    const double rotation_period = orsa::FromUnits(18.0,orsa::Unit::HOUR);
     const double pole_ecliptic_longitude =  0.0*orsa::degToRad();
     const double pole_ecliptic_latitude  = 90.0*orsa::degToRad();
     // const double min_ejection_velocity_constant = 0.5; // in the relation between beta and ejection velocity
@@ -45,9 +46,9 @@ int main (int argc, char **argv) {
     // const double max_vertical_angle = 45.0*orsa::degToRad();
     // const double min_beta = 1.0e-6;
     // const double max_beta = 3.0;
-    const double min_grain_radius = orsa::FromUnits(0.01,orsa::Unit::METER);
-    const double max_grain_radius = orsa::FromUnits(0.01,orsa::Unit::METER);    
-    const int max_time_days = 100;
+    const double min_grain_radius = orsa::FromUnits(0.10,orsa::Unit::METER);
+    const double max_grain_radius = orsa::FromUnits(0.10,orsa::Unit::METER);    
+    const int max_time_days = 10; // 100;
     
     // gas drag coefficients
     const double gas_production_rate_at_1AU = orsa::FromUnits(1.0e28,orsa::Unit::SECOND,-1); // molecules/second
@@ -134,11 +135,11 @@ int main (int argc, char **argv) {
     }
     
     osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
-
-#warning increase max iter...
+    
+    // #warning increase max iter...
     
     size_t iter=0;
-    while (iter < 400) {
+    while (iter < 100000) {
         
         // loop on grains
         
