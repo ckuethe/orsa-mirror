@@ -80,7 +80,7 @@ protected:
 protected:
     double _radius; // updated by update(t) calls
     double _mass;   // updated by update(t) calls
-protected:
+public:
     double radius() const { return _radius; }
     double mass() const { return _mass; }
     const orsa::Shape * originalShape() const { return 0; }
@@ -153,7 +153,7 @@ public:
             const orsa::Body * sun_in,
             const orsa::Body * comet_in,
             const orsa::Body * grain_in,
-            const double & grain_beta_in,
+            // const double & grain_beta_in,
             const double & grain_density_in,
             const double & gas_production_rate_at_1AU,
             const double & gas_velocity_at_1AU,
@@ -164,10 +164,10 @@ public:
         sun(sun_in),
         comet(comet_in),
         grain(grain_in),
-        grainBeta(grain_beta_in),
+        // grainBeta(grain_beta_in),
         grainDensity(grain_density_in),
-        grainRadius(GrainBetaToRadius(grainBeta,grainDensity)),
-        grainArea(orsa::pi()*orsa::square(grainRadius)),
+        // grainRadius(GrainBetaToRadius(grainBeta,grainDensity)),
+        // grainArea(orsa::pi()*orsa::square(grainRadius)),
         Q_1AU(gas_production_rate_at_1AU),
         Vgas_1AU(gas_velocity_at_1AU),
         Mgas(orsa::FromUnits(gas_molar_mass*1.66e-27,orsa::Unit::KG)), // conversion from molar
@@ -269,6 +269,12 @@ public:
             const orsa::Vector normal_g = l2g*normal_l;
             u_gas = normal_g;
         }
+
+        orsa::IBPS grain_ibps;
+        bg->getIBPS(grain_ibps,grain,t);
+        osg::ref_ptr <GrainDynamicInertialBodyProperty> inertial = dynamic_cast < GrainDynamicInertialBodyProperty*> (grain_ibps.inertial.get());
+        const double grainRadius = inertial->radius();
+        const double grainArea = orsa::pi()*orsa::square(grainRadius);
         
         // NOTE: gas direction is proportional to normal_g, which gets close to radial at large distances
         
@@ -280,12 +286,17 @@ public:
         const double sign = (dV>0) ? -1 : +1;
         const orsa::Vector thrust =
             sign*0.5*rho*dV*dV*Cd*grainArea*V_Gas_c.normalized();
-
+        
+        // force due to sublimation? acc = mol*Vgas*Z / (Rg*rho_grain)
+/* #warning MUST pass the parameters as arguments...
+   #warning what is the multiplicative factor in front?
+   const double grain_sublimation_rate = orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1);
+   const orsa::Vector sublimationForce = Mgas*grain_sublimation_rate*v_gas_h/(grainRadius*grainDensity);
+*/
+        
         if (1) {
             
-#warning add output of grain radius vs. time...
-            
-            gmp_printf("%12.6f %12.3f %12.6f %12.6f %12.6f %12.6f %g %g %g\n",
+            gmp_printf("%12.6f %12.3f %12.6f %12.6f %12.6f %12.6f %g %g %g %g\n",
                        orsa::FromUnits(t.get_d(),orsa::Unit::DAY,-1),
                        orsa::FromUnits(R_c.length(),orsa::Unit::KM,-1),
                        dist_ratio,
@@ -294,7 +305,8 @@ public:
                        orsa::radToDeg()*acos(std::min(1.0,(rSun-rComet).normalized()*(R_c.normalized()))),
                        orsa::FromUnits(R_c*uS,orsa::Unit::KM,-1),
                        orsa::FromUnits(R_c*uV,orsa::Unit::KM,-1),
-                       orsa::FromUnits(R_c*uN,orsa::Unit::KM,-1));
+                       orsa::FromUnits(R_c*uN,orsa::Unit::KM,-1),
+                       orsa::FromUnits(grainRadius,orsa::Unit::METER,-1));
         }
         
         return thrust;
@@ -309,10 +321,10 @@ protected:
     osg::ref_ptr<const orsa::Body> sun;
     osg::ref_ptr<const orsa::Body> comet;
     osg::ref_ptr<const orsa::Body> grain;
-    const double grainBeta;
+    // const double grainBeta;
     const double grainDensity;
-    const double grainRadius;
-    const double grainArea;
+    // const double grainRadius;
+    // const double grainArea;
     const double Q_1AU; // gas production rate at 1 AU [units: number/second]
     const double Vgas_1AU; // gas velocity at 1 AU
     const double Mgas; // gas molecule mass (already converted from molar to KG)

@@ -46,9 +46,9 @@ int main (int argc, char **argv) {
     // const double max_vertical_angle = 45.0*orsa::degToRad();
     // const double min_beta = 1.0e-6;
     // const double max_beta = 3.0;
-    const double min_grain_radius = orsa::FromUnits(0.10,orsa::Unit::METER);
+    const double min_grain_radius = orsa::FromUnits(0.01,orsa::Unit::METER);
     const double max_grain_radius = orsa::FromUnits(0.10,orsa::Unit::METER);    
-    const int max_time_days = 10; // 100;
+    const int max_time_days = 100; // 100;
     
     // gas drag coefficients
     const double gas_production_rate_at_1AU = orsa::FromUnits(1.0e28,orsa::Unit::SECOND,-1); // molecules/second
@@ -58,7 +58,7 @@ int main (int argc, char **argv) {
     
     // molecules per unit area per unit time
 #warning EYE ON THIS!!! (zero?)
-    const double grain_sublimation_rate = orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1);
+    const double grain_sublimation_rate = 0.0*orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1);
     const double grain_sublimation_molecule_mass = orsa::FromUnits(gas_molar_mass*1.66e-27,orsa::Unit::KG); // conversion from molar
     
 #warning drag coefficient Cd should be close to 2.0 when the grain size is close to the free mean path
@@ -258,7 +258,7 @@ int main (int argc, char **argv) {
                                                 sun,
                                                 nucleus,
                                                 grain,
-                                                grain->beta,
+                                                // grain->beta,
                                                 grain_density,
                                                 gas_production_rate_at_1AU,
                                                 gas_velocity_at_1AU,
