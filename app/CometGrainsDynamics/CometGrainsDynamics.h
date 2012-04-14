@@ -236,7 +236,11 @@ public:
         const orsa::Matrix g2l = orsa::globalToLocal(comet,bg,t);
         const orsa::Matrix l2g = orsa::localToGlobal(comet,bg,t);
         orsa::IBPS ibps;
-        bg->getIBPS(ibps,comet,t);
+        if (!bg->getIBPS(ibps,comet,t)) {
+            ORSA_DEBUG("problems at t:");
+            orsa::print(t);
+            orsa::crash();
+        }
         const orsa::EllipsoidShape * nucleus_shape =
             dynamic_cast<const orsa::EllipsoidShape *> (ibps.inertial->originalShape());
         double na, nb, nc;
@@ -288,11 +292,16 @@ public:
             sign*0.5*rho*dV*dV*Cd*grainArea*V_Gas_c.normalized();
         
         // force due to sublimation? acc = mol*Vgas*Z / (Rg*rho_grain)
-/* #warning MUST pass the parameters as arguments...
-   #warning what is the multiplicative factor in front?
-   const double grain_sublimation_rate = orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1);
-   const orsa::Vector sublimationForce = Mgas*grain_sublimation_rate*v_gas_h/(grainRadius*grainDensity);
-*/
+        orsa::Vector sublimationForce(0,0,0);
+        if (0) {
+#warning MUST pass the parameters as arguments...
+#warning what is the multiplicative factor in front?
+            const double sublimationForceFactor = 0.01;
+            const double grain_sublimation_rate = orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1);
+            sublimationForce =
+                // -uS*sublimationForceFactor*Mgas*grain_sublimation_rate*v_gas_h/(grainRadius*grainDensity); // this is just acc
+                -uS*sublimationForceFactor*Mgas*grain_sublimation_rate*v_gas_h*grainArea;
+        }
         
         if (1) {
             
@@ -309,7 +318,10 @@ public:
                        orsa::FromUnits(grainRadius,orsa::Unit::METER,-1));
         }
         
-        return thrust;
+#warning make sure the expressions used are for a thrust, not for an acceleration
+        
+        // return thrust;
+        return thrust+sublimationForce;
     }
 public:
     bool nextEventTime(orsa::Time      &,
@@ -396,14 +408,6 @@ public:
                                   v,
                                   grain,
                                   t);
-
-        // this is now done by the inertial body property? via automatic update(t) calls
-        /* const double grain_radius = GrainRadius(grainInitialRadius,t);
-           const double grain_beta = GrainRadiusToBeta(grain_radius,grainDensity);
-           ORSA_DEBUG("updating grain beta from %g to %g",(*grain->beta),grain_beta);
-           grain->beta = grain_beta;
-        */
-        // #warning STILL NEED TO UPDATE beta!
         
         const orsa::Vector grain_r_relative_global = r - nucleus_r_global;
         const orsa::Vector grain_v_relative_global = v - nucleus_v_global;
