@@ -10,7 +10,7 @@ int main (int argc, char **argv) {
     // orsa::GlobalRNG::randomSeed = -128300218;
     // orsa::GlobalRNG::randomSeed = -124766705;
     // orsa::GlobalRNG::randomSeed = 1617326819;
-    orsa::GlobalRNG::randomSeed = 777;
+    // orsa::GlobalRNG::randomSeed = 555;
     
     // NOTE: two alternative mechanisms for ejection velocity
     // 1) sampling distribution= rotational component + ejection velocity model (no gas drag)
@@ -27,13 +27,13 @@ int main (int argc, char **argv) {
     
     // input
     const double r_comet = orsa::FromUnits(1.07,orsa::Unit::AU);
-    const double nucleus_ax = orsa::FromUnits(1.2,orsa::Unit::KM);
-    const double nucleus_ay = orsa::FromUnits(0.4,orsa::Unit::KM);
-    const double nucleus_az = orsa::FromUnits(0.4,orsa::Unit::KM);
+    const double nucleus_ax = orsa::FromUnits(3.5,orsa::Unit::KM);
+    const double nucleus_ay = orsa::FromUnits(2.4,orsa::Unit::KM);
+    const double nucleus_az = orsa::FromUnits(2.2,orsa::Unit::KM);
     const size_t gravity_degree = 2;
     const double comet_density = orsa::FromUnits(orsa::FromUnits(0.4,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double grain_density = orsa::FromUnits(orsa::FromUnits(0.5,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-    const double rotation_period = orsa::FromUnits(18.0,orsa::Unit::HOUR);
+    const double rotation_period = orsa::FromUnits(6.0,orsa::Unit::HOUR);
     const double pole_ecliptic_longitude =  0.0*orsa::degToRad();
     const double pole_ecliptic_latitude  = 90.0*orsa::degToRad();
     // const double min_ejection_velocity_constant = 0.5; // in the relation between beta and ejection velocity
@@ -46,19 +46,19 @@ int main (int argc, char **argv) {
     // const double max_vertical_angle = 45.0*orsa::degToRad();
     // const double min_beta = 1.0e-6;
     // const double max_beta = 3.0;
-    const double min_grain_radius = orsa::FromUnits(0.01,orsa::Unit::METER);
-    const double max_grain_radius = orsa::FromUnits(0.10,orsa::Unit::METER);    
+    const double min_grain_radius = orsa::FromUnits(0.010,orsa::Unit::METER);
+    const double max_grain_radius = orsa::FromUnits(0.010,orsa::Unit::METER);    
     const int max_time_days = 100; // 100;
     
     // gas drag coefficients
     const double gas_production_rate_at_1AU = orsa::FromUnits(1.0e28,orsa::Unit::SECOND,-1); // molecules/second
     const double gas_velocity_at_1AU = orsa::FromUnits(orsa::FromUnits(0.5,orsa::Unit::KM),orsa::Unit::SECOND,-1);
     const double gas_molar_mass = 18; // 18 for H20
-    const double gas_drag_coefficient = 0.40; // Cd nominal: 0.40
+    const double gas_drag_coefficient = 2.00; // Cd nominal: 0.40 (OR 2.00 ??)
     
     // molecules per unit area per unit time
 #warning EYE ON THIS!!! (zero?)
-    const double grain_sublimation_rate = 0.0*orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1);
+    const double grain_sublimation_rate =  0.0; // orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1);
     const double grain_sublimation_molecule_mass = orsa::FromUnits(gas_molar_mass*1.66e-27,orsa::Unit::KG); // conversion from molar
     
 #warning drag coefficient Cd should be close to 2.0 when the grain size is close to the free mean path
@@ -192,27 +192,10 @@ int main (int argc, char **argv) {
         // not including rotation yet
 #warning escape velocity approximate for points within the bounding sphere of the body
         const double escape_velocity = sqrt(2*orsa::Unit::G()*nucleus_mass/r0.length());
-        // const double ejection_velocity =
-        // escape_velocity*(min_escape_velocity_factor + (max_escape_velocity_factor-min_escape_velocity_factor)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
-        /* const double ejection_velocity =
-           (min_ejection_velocity_constant+(max_ejection_velocity_constant-min_ejection_velocity_constant)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()) *
-           // sqrt(grain_beta/orsa::FromUnits(r_comet,orsa::Unit::AU,-1));
-           pow(grain_beta,ejection_velocity_beta_exponent) *
-           pow(orsa::FromUnits(r_comet,orsa::Unit::AU,-1),ejection_velocity_radial_exponent);
-        */
-        // ORSA_DEBUG("ejection_velocity: %g",ejection_velocity);
         
         // set velocity vector, including effect of nucleus rotation
         const orsa::Vector v0_rotational_component =
             orsa::externalProduct(orsa::Vector(0,0,omega),r0);
-        /* const orsa::Vector v0 =
-           (gas_drag_coefficient > 0.0) ?
-           v0_rotational_component :
-           n0*ejection_velocity*c_theta +
-           u_rot*ejection_velocity*s_theta*c_phi +
-           u_pol*ejection_velocity*s_theta*s_phi +
-           v0_rotational_component;
-        */
         const orsa::Vector v0 =
             v0_rotational_component;
         

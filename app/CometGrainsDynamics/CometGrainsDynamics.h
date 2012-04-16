@@ -303,7 +303,7 @@ public:
                 -uS*sublimationForceFactor*Mgas*grain_sublimation_rate*v_gas_h*grainArea;
         }
         
-        if (1) {
+        if (0) {
             
             gmp_printf("%12.6f %12.3f %12.6f %12.6f %12.6f %12.6f %g %g %g %g\n",
                        orsa::FromUnits(t.get_d(),orsa::Unit::DAY,-1),
