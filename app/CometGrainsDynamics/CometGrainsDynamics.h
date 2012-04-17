@@ -144,6 +144,8 @@ public:
         
         _mass = 4.0/3.0*orsa::pi()*orsa::cube(_radius)*_density;
         _grain->beta = GrainRadiusToBeta(_radius,_density);
+
+        return true;
     }
 public:
     void lock() { }

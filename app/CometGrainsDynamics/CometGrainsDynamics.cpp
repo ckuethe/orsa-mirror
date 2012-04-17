@@ -28,8 +28,8 @@ int main (int argc, char **argv) {
     
     // input
     // const double r_comet = orsa::FromUnits(1.07,orsa::Unit::AU);
-    const double comet_orbit_q = orsa::FromUnits(1.07,orsa::Unit::AU);
-    const double comet_orbit_e = 0.2;
+    const double comet_orbit_q = orsa::FromUnits(1.60,orsa::Unit::AU);
+    const double comet_orbit_e = 0.55;
     const double comet_orbit_i = 25.0*orsa::degToRad();
     const double comet_orbit_node = 0.0;
     const double comet_orbit_peri = 0.0;
@@ -52,9 +52,11 @@ int main (int argc, char **argv) {
     // const double ejection_velocity_radial_exponent = -0.5; // nominal: -0.5
     const double min_latitude = -90.0*orsa::degToRad();
     const double max_latitude = +90.0*orsa::degToRad();
-    const double min_grain_radius = orsa::FromUnits(0.0010,orsa::Unit::METER);
+    const double min_grain_radius = orsa::FromUnits(1.0e-5,orsa::Unit::METER);
     const double max_grain_radius = orsa::FromUnits(0.2000,orsa::Unit::METER);    
-    const int max_time_days = 60; // 100;
+#warning check min_time_second with Nalin
+    const int min_time_seconds =  5; // grains flying less than this time are not included
+    const int max_time_days    = 60; // 100;
     
     // gas drag coefficients
     const double gas_production_rate_at_1AU = orsa::FromUnits(1.0e28,orsa::Unit::SECOND,-1); // molecules/second
@@ -69,9 +71,6 @@ int main (int argc, char **argv) {
     const double grain_sublimation_molecule_mass = orsa::FromUnits(gas_molar_mass*1.66e-27,orsa::Unit::KG); // conversion from molar
     
 #warning drag coefficient Cd should be close to 2.0 when the grain size is close to the free mean path
-    
-    // const orsa::Time t0 = orsa::Time(0);
-    // const orsa::Time max_time(max_time_days,0,0,0,0);
     
     // const orsa::Time t_snapshot = comet_orbit_Tp - orsa::Time(60,0,0,0,0);
     const orsa::Time t_snapshot = comet_orbit_Tp + orsa::Time(30,0,0,0,0);
@@ -101,7 +100,10 @@ int main (int argc, char **argv) {
 
         // start integration up to max_time_days before t_snapshot
         // const orsa::Time t0 = t_snapshot - orsa::Time(max_time_days,0,0,0,0)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
-        const orsa::Time t0 = t_snapshot - orsa::Time((max_time_days*86400)*(1000000*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()));
+        // const orsa::Time t0 = t_snapshot - orsa::Time((max_time_days*86400)*(1000000*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()));
+        // #warning maybe use log scale for interval sampling!?
+#warning have a minimumum here too? as it is, the minimum is 1 mu-sec...
+        const orsa::Time t0 = t_snapshot - orsa::Time(exp(log(min_time_seconds*1e6) + (log(max_time_days*86400.0*1.0e6)-log(min_time_seconds*1e6))*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()));
         
         // osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
         bg->clear();
@@ -485,24 +487,42 @@ int main (int argc, char **argv) {
             
             // colden = column density file (including all the particles that do nor reach t_snapshot, to normalize production)
             {
-                const orsa::Time t = t_snapshot;
-                orsa::Vector r,v;
-                bg->getInterpolatedPosVel(r,
-                                          v,
-                                          sun,
-                                          t);
-                const orsa::Vector sun_r_global = r;
-                const orsa::Vector sun_v_global = v;
-                bg->getInterpolatedPosVel(r,
-                                          v,
-                                          nucleus,
-                                          t);
-                const orsa::Vector nucleus_r_global = r;
-                const orsa::Vector nucleus_v_global = v;
-
+                // init to 0 for grains that don't make it to t_snapshot
                 double grainRadius = 0.0;
                 double grainArea   = 0.0;
+                //
+                double grain_distance = 0.0;
+                //
+                double grain_R_sun = 0.0;
+                double grain_R_orbit_pole  = 0.0;
+                double grain_R_orbit_plane = 0.0;
+                //
+                double grain_V = 0.0;
+                //
                 if ((common_stop_time-t0) > (t_snapshot-t0)) {
+                    
+                    const orsa::Time t = t_snapshot;
+                    orsa::Vector r,v;
+                    bg->getInterpolatedPosVel(r,
+                                              v,
+                                              sun,
+                                              t);
+                    const orsa::Vector sun_r_global = r;
+                    const orsa::Vector sun_v_global = v;
+                    
+                    bg->getInterpolatedPosVel(r,
+                                              v,
+                                              nucleus,
+                                              t);
+                    const orsa::Vector nucleus_r_global = r;
+                    const orsa::Vector nucleus_v_global = v;
+                    
+                    const orsa::Vector u_sun = (sun_r_global-nucleus_r_global).normalized();
+                    const orsa::Vector u_tmp = (nucleus_v_global-sun_v_global).normalized();
+                    const orsa::Vector u_orbit_pole  = orsa::externalProduct(u_tmp,u_sun).normalized();
+                    const orsa::Vector u_orbit_plane = orsa::externalProduct(u_orbit_pole,u_sun).normalized();
+                    // u_orbit_plane is in the general direction of comet velocity, but also orthogonal to orbit pole and sun direction
+                    
                     bg->getInterpolatedPosVel(r,
                                               v,
                                               grain,
@@ -518,20 +538,43 @@ int main (int argc, char **argv) {
                     inertial->update(t_snapshot);
                     grainRadius = inertial->radius();
                     grainArea = orsa::pi()*orsa::square(grainRadius);
+                    
+                    grain_distance = grain_r_relative_global.length();
+                    
+                    grain_R_sun         = grain_r_relative_global*u_sun;
+                    grain_R_orbit_pole  = grain_r_relative_global*u_orbit_pole;
+                    grain_R_orbit_plane = grain_r_relative_global*u_orbit_plane;
+                    
+                    grain_V = grain_v_relative_global.length();
                 }
                 
+#warning note: some grains are behind the comet nucleus, so should not contribute to the column density...
+                
                 char line[4096];
-                gmp_sprintf(line,"%.6f %f %f %6.3f %6.3f %.3e %.3e %.3e",
+                gmp_sprintf(line,"%.6f   %.3f %.3e %.3e   %.3e %.3e %.3e   %+10.3f   %+10.3f %+10.3f %+10.3f   %.3e",
                             
                             
                             orsa::FromUnits(r_comet_t0,orsa::Unit::AU,-1),
+                            //
                             orsaSolarSystem::timeToJulian(t0),
-                            orsaSolarSystem::timeToJulian(t_snapshot),
                             orsa::FromUnits((t_snapshot-t0).get_d(),orsa::Unit::DAY,-1),
                             orsa::FromUnits((common_stop_time-t0).get_d(),orsa::Unit::DAY,-1),
+                            //
                             orsa::FromUnits(grain_initial_radius,orsa::Unit::METER,-1),
                             orsa::FromUnits(grainRadius,orsa::Unit::METER,-1),
-                            orsa::FromUnits(grainArea,orsa::Unit::METER,-2)
+                            orsa::FromUnits(grainArea,orsa::Unit::METER,-2),
+                            //
+                            orsa::FromUnits(grain_distance,orsa::Unit::KM,-1),
+                            //
+                            orsa::FromUnits(grain_R_sun,orsa::Unit::KM,-1),
+                            orsa::FromUnits(grain_R_orbit_pole,orsa::Unit::KM,-1),
+                            orsa::FromUnits(grain_R_orbit_plane,orsa::Unit::KM,-1),
+                            
+#warning add: ecliptic coordinates, and earth/ra/dec ones
+                            
+                            
+                            
+                            orsa::FromUnits(orsa::FromUnits(grain_V,orsa::Unit::METER,-1),orsa::Unit::SECOND)
                             
                             // dr grain
                             // dv grain
