@@ -377,6 +377,10 @@ public:
             crossing_velocity[k] = -99.0;
         }
     }
+protected:
+    ~CGDIntegrator() {
+        
+    }
 public:
     enum OUTCOME_TYPE {
         ESCAPE=1,

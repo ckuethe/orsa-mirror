@@ -29,7 +29,7 @@ int main (int argc, char **argv) {
     // input
     // const double r_comet = orsa::FromUnits(1.07,orsa::Unit::AU);
     const double comet_orbit_q = orsa::FromUnits(1.07,orsa::Unit::AU);
-    const double comet_orbit_e = 0.0;
+    const double comet_orbit_e = 0.2;
     const double comet_orbit_i = 25.0*orsa::degToRad();
     const double comet_orbit_node = 0.0;
     const double comet_orbit_peri = 0.0;
@@ -54,7 +54,7 @@ int main (int argc, char **argv) {
     const double max_latitude = +90.0*orsa::degToRad();
     const double min_grain_radius = orsa::FromUnits(0.0001,orsa::Unit::METER);
     const double max_grain_radius = orsa::FromUnits(0.2000,orsa::Unit::METER);    
-    const int max_time_days = 100; // 100;
+    const int max_time_days = 60; // 100;
     
     // gas drag coefficients
     const double gas_production_rate_at_1AU = orsa::FromUnits(1.0e28,orsa::Unit::SECOND,-1); // molecules/second
@@ -92,6 +92,7 @@ int main (int argc, char **argv) {
     comet_orbit.M                = twopi()*(comet_orbit_epoch-comet_orbit_Tp).get_d()/comet_orbit.period();
     comet_orbit.epoch = comet_orbit_epoch;
     
+    osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
     
     size_t iter=0;
     while (iter < 100000) {
@@ -100,7 +101,8 @@ int main (int argc, char **argv) {
         // const orsa::Time t0 = t_snapshot - orsa::Time(max_time_days,0,0,0,0)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
         const orsa::Time t0 = t_snapshot - orsa::Time((max_time_days*86400)*(1000000*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()));
         
-        osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
+        // osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
+        bg->clear();
         
         osg::ref_ptr<Body> sun = new Body;
         {
@@ -175,7 +177,7 @@ int main (int argc, char **argv) {
                               norm_S,
                               J,
                               pm.get(),
-                              orsa::FromUnits(1560.8,orsa::Unit::KM),
+                              orsa::FromUnits(10.0,orsa::Unit::KM),
                               true);
             }
             
