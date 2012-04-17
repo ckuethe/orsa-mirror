@@ -52,7 +52,7 @@ int main (int argc, char **argv) {
     // const double ejection_velocity_radial_exponent = -0.5; // nominal: -0.5
     const double min_latitude = -90.0*orsa::degToRad();
     const double max_latitude = +90.0*orsa::degToRad();
-    const double min_grain_radius = orsa::FromUnits(0.0001,orsa::Unit::METER);
+    const double min_grain_radius = orsa::FromUnits(0.0010,orsa::Unit::METER);
     const double max_grain_radius = orsa::FromUnits(0.2000,orsa::Unit::METER);    
     const int max_time_days = 60; // 100;
     
@@ -64,7 +64,8 @@ int main (int argc, char **argv) {
     
     // molecules per unit area per unit time
 #warning EYE ON THIS!!! (zero?)
-    const double grain_sublimation_rate =  0.0; // orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1);
+#warning FACTOR for NON-pure ICE...
+    const double grain_sublimation_rate = 0.0; // orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1);
     const double grain_sublimation_molecule_mass = orsa::FromUnits(gas_molar_mass*1.66e-27,orsa::Unit::KG); // conversion from molar
     
 #warning drag coefficient Cd should be close to 2.0 when the grain size is close to the free mean path
@@ -72,7 +73,8 @@ int main (int argc, char **argv) {
     // const orsa::Time t0 = orsa::Time(0);
     // const orsa::Time max_time(max_time_days,0,0,0,0);
     
-    const orsa::Time t_snapshot = comet_orbit_Tp - orsa::Time(60,0,0,0,0);
+    // const orsa::Time t_snapshot = comet_orbit_Tp - orsa::Time(60,0,0,0,0);
+    const orsa::Time t_snapshot = comet_orbit_Tp + orsa::Time(30,0,0,0,0);
     
     const double nucleus_volume = 4.0*orsa::pi()*nucleus_ax*nucleus_ay*nucleus_az/3.0;
     const double nucleus_mass = comet_density*nucleus_volume; 
@@ -480,7 +482,9 @@ int main (int argc, char **argv) {
                         ((common_stop_time-t0) > (t_snapshot-t0)));
             fclose (fp);
             
-            if ((common_stop_time-t0) > (t_snapshot-t0)) {
+            
+            // colden = column density file (including all the particles that do nor reach t_snapshot, to normalize production)
+            {
                 const orsa::Time t = t_snapshot;
                 orsa::Vector r,v;
                 bg->getInterpolatedPosVel(r,
@@ -495,29 +499,37 @@ int main (int argc, char **argv) {
                                           t);
                 const orsa::Vector nucleus_r_global = r;
                 const orsa::Vector nucleus_v_global = v;
-                bg->getInterpolatedPosVel(r,
-                                          v,
-                                          grain,
-                                          t);
-                const orsa::Vector grain_r_relative_global = r - nucleus_r_global;
-                const orsa::Vector grain_v_relative_global = v - nucleus_v_global;
-                const orsa::Matrix g2l = orsa::globalToLocal(nucleus,bg,t);
-                const orsa::Vector grain_r_relative_local = g2l*grain_r_relative_global;
-                const orsa::Vector grain_v_relative_local = g2l*grain_v_relative_global;
 
-                osg::ref_ptr <GrainDynamicInertialBodyProperty> inertial = dynamic_cast < GrainDynamicInertialBodyProperty*> (grain_ibps.inertial.get());
-                inertial->update(t_snapshot);
-                const double grainRadius = inertial->radius();
-                const double grainArea = orsa::pi()*orsa::square(grainRadius);
+                double grainRadius = 0.0;
+                double grainArea   = 0.0;
+                if ((common_stop_time-t0) > (t_snapshot-t0)) {
+                    bg->getInterpolatedPosVel(r,
+                                              v,
+                                              grain,
+                                              t);
+                    const orsa::Vector grain_r_relative_global = r - nucleus_r_global;
+                    const orsa::Vector grain_v_relative_global = v - nucleus_v_global;
+                    /* const orsa::Matrix g2l = orsa::globalToLocal(nucleus,bg,t);
+                       const orsa::Vector grain_r_relative_local = g2l*grain_r_relative_global;
+                       const orsa::Vector grain_v_relative_local = g2l*grain_v_relative_global;
+                    */
+                    
+                    osg::ref_ptr <GrainDynamicInertialBodyProperty> inertial = dynamic_cast < GrainDynamicInertialBodyProperty*> (grain_ibps.inertial.get());
+                    inertial->update(t_snapshot);
+                    grainRadius = inertial->radius();
+                    grainArea = orsa::pi()*orsa::square(grainRadius);
+                }
                 
-                fp = fopen("colden.out","a");
-                gmp_fprintf(fp,"%.6f %f %f %6.3f %6.3f %.3e %.3e\n",
+                char line[4096];
+                gmp_sprintf(line,"%.6f %f %f %6.3f %6.3f %.3e %.3e %.3e",
+                            
                             
                             orsa::FromUnits(r_comet_t0,orsa::Unit::AU,-1),
                             orsaSolarSystem::timeToJulian(t0),
                             orsaSolarSystem::timeToJulian(t_snapshot),
                             orsa::FromUnits((t_snapshot-t0).get_d(),orsa::Unit::DAY,-1),
                             orsa::FromUnits((common_stop_time-t0).get_d(),orsa::Unit::DAY,-1),
+                            orsa::FromUnits(grain_initial_radius,orsa::Unit::METER,-1),
                             orsa::FromUnits(grainRadius,orsa::Unit::METER,-1),
                             orsa::FromUnits(grainArea,orsa::Unit::METER,-2)
                             
@@ -530,7 +542,12 @@ int main (int argc, char **argv) {
                             
                             
                     );
+                
+                fp = fopen("colden.out","a");
+                gmp_fprintf(fp,"%s\n",line);
                 fclose(fp);
+                
+                
             }
             
         }
