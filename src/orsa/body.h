@@ -817,9 +817,9 @@ namespace orsa {
     
         // comet particle beta
     public:
-        orsa::Cache<double>      beta;
+        mutable orsa::Cache<double> beta;
         osg::ref_ptr<const orsa::Body> betaSun;
-    
+        
         // bio
     public:
         mutable orsa::Cache<orsa::Time> birthTime;
