@@ -104,18 +104,27 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
   
     // kick h
     // orsa::Interaction::VectorHash a;
-    orsa::Interaction::InteractionVector a, N;
+    orsa::Interaction::InteractionVector a;
     //
-    if (!bg->getInteraction()->accelerationAndTorque(a,  
-						     N,
-						     bg,
-						     start+_h2)) {
+    if (!bg->getInteraction()->acceleration(a,  
+                                            bg,
+                                            start+_h2)) {
         ORSA_DEBUG("problems...");
         return false;
     }
-    
+  
+    // orsa::Interaction::VectorHash N;
+    orsa::Interaction::InteractionVector N;
+    //
+    if (!bg->getInteraction()->torque(N,  
+                                      bg,
+                                      start+_h2)) {
+        ORSA_DEBUG("problems...");
+        return false;
+    }
+
     BodyGroup::BodyList bl = bg->getBodyList();
-    
+  
     // _b_it = bg->getBodyList().begin();
     //while (_b_it != bg->getBodyList().end()) {
     //
