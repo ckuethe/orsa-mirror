@@ -29,7 +29,7 @@ int main (int argc, char **argv) {
     // input
     // const double r_comet = orsa::FromUnits(1.07,orsa::Unit::AU);
     const double comet_orbit_q = orsa::FromUnits(1.07,orsa::Unit::AU);
-    const double comet_orbit_e = 0.67;
+    const double comet_orbit_e = 0.0;
     const double comet_orbit_i = 25.0*orsa::degToRad();
     const double comet_orbit_node = 0.0;
     const double comet_orbit_peri = 0.0;
@@ -139,14 +139,17 @@ int main (int argc, char **argv) {
             }
             
             orsa::Vector rOrbit, vOrbit;
-            // linearly propagate the comet orbit to t0
-            orsa::Orbit localOrbit = comet_orbit;
-            localOrbit.M = fmod(comet_orbit.M + 
-                                orsa::twopi() * (t0-comet_orbit.epoch).get_d()/comet_orbit.period(),
-                                orsa::twopi());
-            localOrbit.relativePosVel(rOrbit,vOrbit);
-            rOrbit += rSun;
-            vOrbit += vSun;
+            {
+                // linearly propagate the comet orbit to t0
+                orsa::Orbit localOrbit = comet_orbit;
+                localOrbit.M = fmod(comet_orbit.M + 
+                                    orsa::twopi() * (t0-comet_orbit.epoch).get_d()/comet_orbit.period(),
+                                    orsa::twopi());
+                localOrbit.relativePosVel(rOrbit,vOrbit);
+                
+                rOrbit += rSun;
+                vOrbit += vSun;
+            }
             
             // 'export'
             nucleus_r0 = rOrbit;
@@ -439,7 +442,7 @@ int main (int argc, char **argv) {
             }
             
             FILE * fp = fopen("CGD.out","a");
-            gmp_fprintf(fp,"%.6f %g %g %g /5/ %.3e %.3e %.3e %.3e %g /10/ %g %g %g %g %g /15/ %g %g %g %7.3f %+7.3f /20/ %7.3f %7.3f %.3f %.3f %.3f /25/ %.3f %.3e %.3e %10.6f %10.6f /30/ %10.6f %10.6f %10.6f %10.6f %10.6f /35/ %+.3e %+.3e %+.3e %+.3e %+.3e /40/ %+.3e %.3e %.3e %.3e %i /45/ %8.3f %+8.3f %+8.3f %+8.3f %+8.3f /50/ %10.6f \n",
+            gmp_fprintf(fp,"%.6f %g %g %g     %.3e %.3e %.3e %.3e %g     %g %g %g %g %g     %g %g %g %7.3f %+7.3f     %7.3f %7.3f %.3f %.3f %.3f     %.3f %.3e %.3e %10.6f %10.6f     %10.6f %10.6f %10.6f %10.6f %10.6f     %+.3e %+.3e %+.3e %+.3e %+.3e     %+.3e %.3e %.3e %.3e %i     %8.3f %+8.3f %+8.3f %+8.3f %+8.3f     %10.6f %i \n",
                         orsa::FromUnits(r_comet_t0,orsa::Unit::AU,-1),
                         orsa::FromUnits(nucleus_ax,orsa::Unit::KM,-1),
                         orsa::FromUnits(nucleus_ay,orsa::Unit::KM,-1),
@@ -489,7 +492,8 @@ int main (int argc, char **argv) {
                         orsa::radToDeg()*sun_initial_angle,
                         orsa::radToDeg()*sun_initial_angle_360,
                         orsa::radToDeg()*sun_final_angle,
-                        /* 50 */ orsa::FromUnits((t_snapshot-t0).get_d(),orsa::Unit::DAY,-1));
+                        /* 50 */ orsa::FromUnits((t_snapshot-t0).get_d(),orsa::Unit::DAY,-1),
+                        ((common_stop_time-t0) > (t_snapshot-t0)));
             fclose (fp);  
         }
         
