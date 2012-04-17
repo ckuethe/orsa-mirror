@@ -2,6 +2,8 @@
 
 int main (int argc, char **argv) {
     
+    orsa::Debug::instance()->initTimer();
+    
     // #warning comment out Random Seed in production
     
     // set randomSeed for testing purposes only
@@ -21,12 +23,19 @@ int main (int argc, char **argv) {
 #warning TODO: consider using fractal density for grains?
 #warning TODO: mascons gravity
 #warning TODO: fraction of active nucleus (list of lat-lon ranges) and correlate with total production rate
-#warning TODO: remove the ejection velocity and vertical angle code...
 #warning TODO: fraction of grain as ice, fraction as dust
 #warning TODO: 
     
     // input
-    const double r_comet = orsa::FromUnits(1.07,orsa::Unit::AU);
+    // const double r_comet = orsa::FromUnits(1.07,orsa::Unit::AU);
+    const double comet_orbit_q = orsa::FromUnits(1.07,orsa::Unit::AU);
+    const double comet_orbit_e = 0.67;
+    const double comet_orbit_i = 25.0*orsa::degToRad();
+    const double comet_orbit_node = 0.0;
+    const double comet_orbit_peri = 0.0;
+    const orsa::Time comet_orbit_Tp = orsaSolarSystem::gregorTime(2000,1,1.70);
+    const orsa::Time comet_orbit_epoch = comet_orbit_Tp; // orsaSolarSystem::gregorTime(2010,1,1);
+    //
     const double nucleus_ax = orsa::FromUnits(3.5,orsa::Unit::KM);
     const double nucleus_ay = orsa::FromUnits(2.4,orsa::Unit::KM);
     const double nucleus_az = orsa::FromUnits(2.2,orsa::Unit::KM);
@@ -34,6 +43,7 @@ int main (int argc, char **argv) {
     const double comet_density = orsa::FromUnits(orsa::FromUnits(0.4,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double grain_density = orsa::FromUnits(orsa::FromUnits(0.5,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double rotation_period = orsa::FromUnits(6.0,orsa::Unit::HOUR);
+    const double pole_phi_Tp = 0.0*orsa::degToRad(); // rotation angle at time Tp
     const double pole_ecliptic_longitude =  0.0*orsa::degToRad();
     const double pole_ecliptic_latitude  = 90.0*orsa::degToRad();
     // const double min_ejection_velocity_constant = 0.5; // in the relation between beta and ejection velocity
@@ -42,12 +52,8 @@ int main (int argc, char **argv) {
     // const double ejection_velocity_radial_exponent = -0.5; // nominal: -0.5
     const double min_latitude = -90.0*orsa::degToRad();
     const double max_latitude = +90.0*orsa::degToRad();
-    // const double min_vertical_angle =  0.0*orsa::degToRad();
-    // const double max_vertical_angle = 45.0*orsa::degToRad();
-    // const double min_beta = 1.0e-6;
-    // const double max_beta = 3.0;
-    const double min_grain_radius = orsa::FromUnits(0.010,orsa::Unit::METER);
-    const double max_grain_radius = orsa::FromUnits(0.010,orsa::Unit::METER);    
+    const double min_grain_radius = orsa::FromUnits(0.0001,orsa::Unit::METER);
+    const double max_grain_radius = orsa::FromUnits(0.2000,orsa::Unit::METER);    
     const int max_time_days = 100; // 100;
     
     // gas drag coefficients
@@ -62,91 +68,133 @@ int main (int argc, char **argv) {
     const double grain_sublimation_molecule_mass = orsa::FromUnits(gas_molar_mass*1.66e-27,orsa::Unit::KG); // conversion from molar
     
 #warning drag coefficient Cd should be close to 2.0 when the grain size is close to the free mean path
-        
-    const orsa::Time t0 = orsa::Time(0);
-    const orsa::Time max_time(max_time_days,0,0,0,0);
+    
+    // const orsa::Time t0 = orsa::Time(0);
+    // const orsa::Time max_time(max_time_days,0,0,0,0);
+    
+    const orsa::Time t_snapshot = comet_orbit_Tp - orsa::Time(60,0,0,0,0);
     
     const double nucleus_volume = 4.0*orsa::pi()*nucleus_ax*nucleus_ay*nucleus_az/3.0;
     const double nucleus_mass = comet_density*nucleus_volume; 
-    const double Hill_radius = orsa::HillRadius(r_comet,nucleus_mass,orsaSolarSystem::Data::MSun());
     const double omega = orsa::twopi()/rotation_period;
     
-    orsa::Debug::instance()->initTimer();
+    orsaSPICE::SPICE::instance()->setDefaultObserver("SSB");
+    orsaSPICE::SPICE::instance()->loadKernel("de405.bsp");
     
-    osg::ref_ptr<orsa::Body> sun = new orsa::Body;
-    {
-        sun->setName("sun");
-        orsa::IBPS ibps;
-        ibps.time = t0;
-        ibps.inertial = new orsa::PointLikeConstantInertialBodyProperty(orsaSolarSystem::Data::MSun());
-        ibps.translational = new orsa::DynamicTranslationalBodyProperty;
-        ibps.translational->setPosition(orsa::Vector(0,0,0));
-        ibps.translational->setVelocity(orsa::Vector(0,0,0));
-        sun->setInitialConditions(ibps);
-    }
+    // comet orbit
+    orsaSolarSystem::OrbitWithEpoch comet_orbit;
+    comet_orbit.mu = orsaSolarSystem::Data::GMSun();
+    comet_orbit.e = comet_orbit_e;
+    comet_orbit.a = comet_orbit_q/(1.0-comet_orbit.e);
+    comet_orbit.i = comet_orbit_i;
+    comet_orbit.omega_node       = comet_orbit_node;
+    comet_orbit.omega_pericenter = comet_orbit_peri;
+    comet_orbit.M                = twopi()*(comet_orbit_epoch-comet_orbit_Tp).get_d()/comet_orbit.period();
+    comet_orbit.epoch = comet_orbit_epoch;
     
-    osg::ref_ptr<orsa::Body> nucleus = new orsa::Body;
-    osg::ref_ptr<orsa::EllipsoidShape> nucleus_shape =
-        new orsa::EllipsoidShape(nucleus_ax,nucleus_ay,nucleus_az);
-    nucleus_shape->closestVertexEpsilonRelative = 1.0e-3;
-    const orsa::Vector nucleus_r0 = orsa::Vector(r_comet,0,0);
-    const orsa::Vector nucleus_v0 = orsa::Vector(0,sqrt(orsaSolarSystem::Data::GMSun()/r_comet),0); // circular orbit approximation, to keep the Hill sphere radius constant
-    {
-        nucleus->setName("nucleus");
-        IBPS ibps;
-        ibps.time = t0;
-        // const double volume = 4.0*orsa::pi()*nucleus_ax*nucleus_ay*nucleus_az/3.0;
-        // const double nucleus_mass = comet_density*volume;
-        osg::ref_ptr<orsa::PaulMoment> pm = new orsa::PaulMoment(gravity_degree);
-        orsa::EllipsoidExpansion(pm.get(),
-                                 nucleus_ax,
-                                 nucleus_ay,
-                                 nucleus_az);
-        if (1) {
-            // test
-            std::vector< std::vector<mpf_class> > C, S, norm_C, norm_S;
-            std::vector<mpf_class> J;
-            orsa::convert(C,
-                          S,
-                          norm_C,
-                          norm_S,
-                          J,
-                          pm.get(),
-                          orsa::FromUnits(1560.8,orsa::Unit::KM),
-                          true);
-        }
-        ibps.inertial = new orsa::ConstantInertialBodyProperty(nucleus_mass,
-                                                               nucleus_shape.get(),
-                                                               orsa::Vector(0,0,0),
-                                                               orsa::Matrix::identity(),
-                                                               orsa::Matrix::identity(),
-                                                               orsa::Matrix::identity(),
-                                                               pm.get());
-        ibps.translational = new orsa::DynamicTranslationalBodyProperty;
-        ibps.translational->setPosition(nucleus_r0);
-        ibps.translational->setVelocity(nucleus_v0);
-        // NOTE: initial angle will change again later...
-        ibps.rotational = new orsaSolarSystem::ConstantZRotationEcliptic_RotationalBodyProperty(t0,
-                                                                                                0.0,
-                                                                                                omega,
-                                                                                                pole_ecliptic_longitude,
-                                                                                                pole_ecliptic_latitude);
-        nucleus->setInitialConditions(ibps);
-    }
-    
-    osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
-    
-    // #warning increase max iter...
     
     size_t iter=0;
     while (iter < 100000) {
+
+        // start integration up to max_time_days before t_snapshot
+        // const orsa::Time t0 = t_snapshot - orsa::Time(max_time_days,0,0,0,0)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+        const orsa::Time t0 = t_snapshot - orsa::Time((max_time_days*86400)*(1000000*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()));
         
-        // loop on grains
+        osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
         
-        /* const double grain_beta = exp(log(min_beta) + (log(max_beta)-log(min_beta))*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
-           const double grain_radius = GrainBetaToRadius(grain_beta,grain_density);
-           const double grain_mass = 4.0*orsa::pi()*orsa::cube(grain_radius)*grain_density/3.0;
-        */
+        osg::ref_ptr<Body> sun = new Body;
+        {
+            sun->setName("SUN");
+            sun->isLightSource = true;
+            orsaSPICE::SpiceBodyTranslationalCallback * sbtc = new orsaSPICE::SpiceBodyTranslationalCallback(sun->getName());
+            orsa::IBPS ibps;
+            ibps.inertial = new PointLikeConstantInertialBodyProperty(orsaSolarSystem::Data::MSun());
+            ibps.translational = sbtc;
+            sun->setInitialConditions(ibps);
+        }
+        bg->addBody(sun.get());
+        
+        osg::ref_ptr<Body> earth = new Body;
+        {
+            earth->setName("EARTH");
+            orsaSPICE::SpiceBodyTranslationalCallback * sbtc = new orsaSPICE::SpiceBodyTranslationalCallback(earth->getName());
+            orsa::IBPS ibps;
+            ibps.inertial = new PointLikeConstantInertialBodyProperty(0.0); // no need for gravity perturbation from Earth, just need Earth position to project observations
+            ibps.translational = sbtc;
+            earth->setInitialConditions(ibps);
+        }
+        bg->addBody(earth);        
+        
+        osg::ref_ptr<orsa::Body> nucleus = new orsa::Body;
+        osg::ref_ptr<orsa::EllipsoidShape> nucleus_shape;
+        orsa::Vector nucleus_r0;
+        orsa::Vector nucleus_v0;
+        {
+            nucleus_shape = new orsa::EllipsoidShape(nucleus_ax,nucleus_ay,nucleus_az);
+            nucleus_shape->closestVertexEpsilonRelative = 1.0e-3;
+            
+            orsa::Vector rSun, vSun;
+            if (!bg->getInterpolatedPosVel(rSun,vSun,sun.get(),t0)) {
+                ORSA_DEBUG("problems...");
+            }
+            
+            orsa::Vector rOrbit, vOrbit;
+            // linearly propagate the comet orbit to t0
+            orsa::Orbit localOrbit = comet_orbit;
+            localOrbit.M = fmod(comet_orbit.M + 
+                                orsa::twopi() * (t0-comet_orbit.epoch).get_d()/comet_orbit.period(),
+                                orsa::twopi());
+            localOrbit.relativePosVel(rOrbit,vOrbit);
+            rOrbit += rSun;
+            vOrbit += vSun;
+            
+            // 'export'
+            nucleus_r0 = rOrbit;
+            nucleus_v0 = vOrbit;
+            
+            nucleus->setName("nucleus");
+            IBPS ibps;
+            ibps.time = t0;
+            // const double volume = 4.0*orsa::pi()*nucleus_ax*nucleus_ay*nucleus_az/3.0;
+            // const double nucleus_mass = comet_density*volume;
+            osg::ref_ptr<orsa::PaulMoment> pm = new orsa::PaulMoment(gravity_degree);
+            orsa::EllipsoidExpansion(pm.get(),
+                                     nucleus_ax,
+                                     nucleus_ay,
+                                     nucleus_az);
+            if (1) {
+                // test
+                std::vector< std::vector<mpf_class> > C, S, norm_C, norm_S;
+                std::vector<mpf_class> J;
+                orsa::convert(C,
+                              S,
+                              norm_C,
+                              norm_S,
+                              J,
+                              pm.get(),
+                              orsa::FromUnits(1560.8,orsa::Unit::KM),
+                              true);
+            }
+            
+            ibps.inertial = new orsa::ConstantInertialBodyProperty(nucleus_mass,
+                                                                   nucleus_shape.get(),
+                                                                   orsa::Vector(0,0,0),
+                                                                   orsa::Matrix::identity(),
+                                                                   orsa::Matrix::identity(),
+                                                                   orsa::Matrix::identity(),
+                                                                   pm.get());
+            ibps.translational = new orsa::DynamicTranslationalBodyProperty;
+            ibps.translational->setPosition(nucleus_r0);
+            ibps.translational->setVelocity(nucleus_v0);
+            // NOTE: initial angle will change again later...
+            ibps.rotational = new orsaSolarSystem::ConstantZRotationEcliptic_RotationalBodyProperty(comet_orbit_Tp,
+                                                                                                    pole_phi_Tp,
+                                                                                                    omega,
+                                                                                                    pole_ecliptic_longitude,
+                                                                                                    pole_ecliptic_latitude);
+            nucleus->setInitialConditions(ibps);
+        }
+        bg->addBody(nucleus);
         
         const double grain_initial_radius = exp(log(min_grain_radius) + (log(max_grain_radius)-log(min_grain_radius))*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
         const double grain_initial_beta   = GrainRadiusToBeta(grain_initial_radius,grain_density);
@@ -179,16 +227,6 @@ int main (int argc, char **argv) {
         const orsa::Vector u_pol =
             orsa::externalProduct(n0,u_rot).normalized();
         
-        // horizontal direction of ejection of grain, measured from the direction of rotation
-        /* const double phi = orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
-           double s_phi, c_phi;
-           sincos(phi,&s_phi,&c_phi);
-           // vertical angle
-           const double theta = min_vertical_angle + (max_vertical_angle-min_vertical_angle)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
-           double s_theta, c_theta;
-           sincos(theta,&s_theta,&c_theta);
-        */
-        
         // not including rotation yet
 #warning escape velocity approximate for points within the bounding sphere of the body
         const double escape_velocity = sqrt(2*orsa::Unit::G()*nucleus_mass/r0.length());
@@ -220,8 +258,6 @@ int main (int argc, char **argv) {
             grain->setName("grain");
             IBPS ibps;
             ibps.time = t0;
-            // #warning check this! can use 0.0 grain mass, or must update it 
-            // ibps.inertial = new orsa::PointLikeConstantInertialBodyProperty(grain_mass);
             ibps.inertial = new GrainDynamicInertialBodyProperty(t0,
                                                                  grain_initial_radius,
                                                                  grain_density,
@@ -229,8 +265,11 @@ int main (int argc, char **argv) {
                                                                  grain_sublimation_molecule_mass,
                                                                  grain.get());
             ibps.translational = new orsa::DynamicTranslationalBodyProperty;
-            ibps.translational->setPosition(r0+nucleus_r0);
-            ibps.translational->setVelocity(v0+nucleus_v0);
+            const orsa::Matrix nucleus_l2g_t0 = orsa::localToGlobal(nucleus.get(),
+                                                                    bg.get(),
+                                                                    t0);
+            ibps.translational->setPosition(nucleus_r0+nucleus_l2g_t0*r0);
+            ibps.translational->setVelocity(nucleus_v0+nucleus_l2g_t0*v0);
             // grain->beta = grain_beta;
 #warning need to keep updating beta...
             grain->beta = grain_initial_beta;
@@ -251,30 +290,35 @@ int main (int argc, char **argv) {
             //
             grain->setInitialConditions(ibps);
         }
-        
-        {
-            // change initial angle of nucleus
-            IBPS ibps = nucleus->getInitialConditions();        
-            ibps.rotational = new orsaSolarSystem::ConstantZRotationEcliptic_RotationalBodyProperty(t0,
-                                                                                                    orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),
-                                                                                                    omega,
-                                                                                                    pole_ecliptic_longitude,
-                                                                                                    pole_ecliptic_latitude);
-            nucleus->setInitialConditions(ibps);
-        }
-
-        bg->clear();
-        bg->addBody(sun);
-        bg->addBody(nucleus);
         bg->addBody(grain);
-        
-        const double exo_radius = r_comet*sqrt(nucleus_mass/(grain->beta*orsaSolarSystem::Data::MSun()));
-        const double bound_radius = std::min(Hill_radius,exo_radius);
 
+        // NOT ANYMORE!
+        /* 
+           {
+           // change initial angle of nucleus
+           IBPS ibps = nucleus->getInitialConditions();        
+           ibps.rotational = new orsaSolarSystem::ConstantZRotationEcliptic_RotationalBodyProperty(t0,
+           orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),
+           omega,
+           pole_ecliptic_longitude,
+           pole_ecliptic_latitude);
+           nucleus->setInitialConditions(ibps);
+           }
+        */
+        
+        // compute at t_snapshot
+        // const double Hill_radius = orsa::HillRadius( r_Comet   ,nucleus_mass,orsaSolarSystem::Data::MSun());
+        // const double exo_radius = r_comet*sqrt(nucleus_mass/(grain->beta*orsaSolarSystem::Data::MSun()));
+        // const double bound_radius = std::min(Hill_radius,exo_radius);
+        
         // gather some more initial conditions
         double initial_distance;
         double sun_initial_angle;
         double sun_initial_angle_360;
+        double r_comet_t0;
+        double Hill_radius;
+        double exo_radius;
+        double bound_radius;
         {
             const orsa::Time t = t0;
             orsa::Vector r,v;
@@ -322,6 +366,12 @@ int main (int argc, char **argv) {
             
             sun_initial_angle_360 = atan2(grain_r_relative_local.normalized()*u_ortho,
                                           grain_r_relative_local.normalized()*u_sun);
+
+            r_comet_t0 = sun_r_relative_global.length();
+            
+            Hill_radius  = orsa::HillRadius(r_comet_t0,nucleus_mass,orsaSolarSystem::Data::MSun());
+            exo_radius   = r_comet_t0*sqrt(nucleus_mass/(grain->beta*orsaSolarSystem::Data::MSun()));
+            bound_radius = std::min(Hill_radius,exo_radius);
             
             /* orsa::print((sun_r_global-nucleus_r_global).normalized()*grain_r_relative_global.normalized());
                orsa::print(sun_r_relative_local.normalized()*grain_r_relative_local.normalized());
@@ -332,13 +382,13 @@ int main (int argc, char **argv) {
             */
         }
         
-        osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),grain_initial_radius,grain_density,nucleus.get(),bound_radius,6);
+        osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),grain_initial_radius,grain_density,nucleus.get(),bound_radius,6,t0);
         // call singleStepDone once before starting, to perform initial checks
         orsa::Time dummy_time(0);
         integrator->singleStepDone(bg.get(),t0,dummy_time,dummy_time);
         integrator->integrate(bg.get(),
                               t0,
-                              max_time,
+                              t0+orsa::Time(max_time_days,0,0,0,0),
                               orsa::Time(0,0,0,1,0));
         
         orsa::Time common_start_time, common_stop_time;
@@ -389,8 +439,8 @@ int main (int argc, char **argv) {
             }
             
             FILE * fp = fopen("CGD.out","a");
-            gmp_fprintf(fp,"%g %g %g %g %.3e %.3e %.3e %.3e %g %g %g %g %g %g %g %g %g %7.3f %+7.3f %7.3f %7.3f %.3f %.3f %.3f %.3f %.3e %.3e %10.6f %10.6f %10.6f %10.6f %10.6f %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %.3e %i %8.3f %+8.3f %+8.3f %+8.3f %+8.3f\n",
-                        orsa::FromUnits(r_comet,orsa::Unit::AU,-1),
+            gmp_fprintf(fp,"%.6f %g %g %g /5/ %.3e %.3e %.3e %.3e %g /10/ %g %g %g %g %g /15/ %g %g %g %7.3f %+7.3f /20/ %7.3f %7.3f %.3f %.3f %.3f /25/ %.3f %.3e %.3e %10.6f %10.6f /30/ %10.6f %10.6f %10.6f %10.6f %10.6f /35/ %+.3e %+.3e %+.3e %+.3e %+.3e /40/ %+.3e %.3e %.3e %.3e %i /45/ %8.3f %+8.3f %+8.3f %+8.3f %+8.3f /50/ %10.6f \n",
+                        orsa::FromUnits(r_comet_t0,orsa::Unit::AU,-1),
                         orsa::FromUnits(nucleus_ax,orsa::Unit::KM,-1),
                         orsa::FromUnits(nucleus_ay,orsa::Unit::KM,-1),
                         orsa::FromUnits(nucleus_az,orsa::Unit::KM,-1),
@@ -417,13 +467,13 @@ int main (int argc, char **argv) {
                         /* 25 */ orsa::FromUnits(orsa::FromUnits(v0.length(),orsa::Unit::METER,-1),orsa::Unit::SECOND),
                         grain_initial_beta, // (*grain->beta),
                         orsa::FromUnits(grain_initial_radius,orsa::Unit::METER,-1),
-                        orsa::FromUnits(common_stop_time.get_d(),orsa::Unit::DAY,-1),
-                        orsa::FromUnits(integrator->crossing_time[0].get_d(),orsa::Unit::DAY,-1),
-                        /* 30 */ orsa::FromUnits(integrator->crossing_time[1].get_d(),orsa::Unit::DAY,-1),
-                        orsa::FromUnits(integrator->crossing_time[2].get_d(),orsa::Unit::DAY,-1),
-                        orsa::FromUnits(integrator->crossing_time[3].get_d(),orsa::Unit::DAY,-1),
-                        orsa::FromUnits(integrator->crossing_time[4].get_d(),orsa::Unit::DAY,-1),
-                        orsa::FromUnits(integrator->crossing_time[5].get_d(),orsa::Unit::DAY,-1),
+                        orsa::FromUnits((common_stop_time-t0).get_d(),orsa::Unit::DAY,-1),
+                        orsa::FromUnits((integrator->crossing_time[0]-t0).get_d(),orsa::Unit::DAY,-1),
+                        /* 30 */ orsa::FromUnits((integrator->crossing_time[1]-t0).get_d(),orsa::Unit::DAY,-1),
+                        orsa::FromUnits((integrator->crossing_time[2]-t0).get_d(),orsa::Unit::DAY,-1),
+                        orsa::FromUnits((integrator->crossing_time[3]-t0).get_d(),orsa::Unit::DAY,-1),
+                        orsa::FromUnits((integrator->crossing_time[4]-t0).get_d(),orsa::Unit::DAY,-1),
+                        orsa::FromUnits((integrator->crossing_time[5]-t0).get_d(),orsa::Unit::DAY,-1),
                         /* 35 */ orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[0],orsa::Unit::METER,-1),orsa::Unit::SECOND),
                         orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[1],orsa::Unit::METER,-1),orsa::Unit::SECOND),
                         orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[2],orsa::Unit::METER,-1),orsa::Unit::SECOND),
@@ -438,7 +488,8 @@ int main (int argc, char **argv) {
                         lat_impact*orsa::radToDeg(),
                         orsa::radToDeg()*sun_initial_angle,
                         orsa::radToDeg()*sun_initial_angle_360,
-                        orsa::radToDeg()*sun_final_angle);
+                        orsa::radToDeg()*sun_final_angle,
+                        /* 50 */ orsa::FromUnits((t_snapshot-t0).get_d(),orsa::Unit::DAY,-1));
             fclose (fp);  
         }
         

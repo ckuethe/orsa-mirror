@@ -13,9 +13,12 @@
 #include <orsa/util.h>
 
 #include <orsaSolarSystem/attitude.h>
+#include <orsaSolarSystem/orbit.h>
+
+#include <orsaSPICE/spice.h>
+#include <orsaSPICE/spiceBodyTranslationalCallback.h>
 
 using namespace orsa;
-
 
 // Burns, Lamy, Soter 1979, Eq. (19)
 double GrainBetaToRadius(const double & grainBeta,
@@ -353,14 +356,16 @@ public:
                   const double & grain_density,
                   const orsa::Body * nB,
                   const double & bound_distance,
-                  const size_t & pow_10_max_distance) :
+                  const size_t & pow_10_max_distance,
+                  const orsa::Time & t0_) :
         orsa::IntegratorRadau(),
         grain(gB),
         grainInitialRadius(grain_initial_radius),
         grainDensity(grain_density),
         nucleus(nB),
         r_bound(bound_distance),
-        crossing_size(1+pow_10_max_distance) {
+        crossing_size(1+pow_10_max_distance),
+        t0(t0_) {
         _accuracy = 1.0e-3;
         outcome = ORBITING;
         crossing_distance.resize(crossing_size);
@@ -368,8 +373,8 @@ public:
         crossing_time.resize(crossing_size);
         for (size_t k=0; k<crossing_size; ++k) {
             crossing_distance[k] = orsa::FromUnits(pow(10,k),orsa::Unit::KM);
-            crossing_time[k] = orsa::Time(-99);
-            crossing_velocity[k] = -99;
+            crossing_time[k] = t0;
+            crossing_velocity[k] = -99.0;
         }
     }
 public:
@@ -388,6 +393,7 @@ public:
     mutable OUTCOME_TYPE outcome;
     mutable orsa::Cache<double> max_distance;
     const size_t crossing_size;
+    const orsa::Time & t0;
     std::vector<double> crossing_distance;
     mutable std::vector<double> crossing_velocity;
     mutable std::vector<orsa::Time> crossing_time;
@@ -428,7 +434,7 @@ public:
         
         for (size_t k=0; k<crossing_size; ++k) {
             if (grain_r_relative_local.length() > crossing_distance[k]) {
-                if (crossing_time[k] == orsa::Time(-99)) {
+                if (crossing_time[k] == t0) {
                     crossing_time[k] = t;
                     crossing_velocity[k] = grain_v_relative_local.length();
                 }
