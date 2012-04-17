@@ -259,22 +259,23 @@ int main (int argc, char **argv) {
         // osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
         
         osg::ref_ptr<orsa::Body> grain = new orsa::Body;
+        IBPS grain_ibps;
         {
             grain->setName("grain");
-            IBPS ibps;
-            ibps.time = t0;
-            ibps.inertial = new GrainDynamicInertialBodyProperty(t0,
-                                                                 grain_initial_radius,
-                                                                 grain_density,
-                                                                 grain_sublimation_rate,
-                                                                 grain_sublimation_molecule_mass,
-                                                                 grain.get());
-            ibps.translational = new orsa::DynamicTranslationalBodyProperty;
+            // IBPS ibps;
+            grain_ibps.time = t0;
+            grain_ibps.inertial = new GrainDynamicInertialBodyProperty(t0,
+                                                                       grain_initial_radius,
+                                                                       grain_density,
+                                                                       grain_sublimation_rate,
+                                                                       grain_sublimation_molecule_mass,
+                                                                       grain.get());
+            grain_ibps.translational = new orsa::DynamicTranslationalBodyProperty;
             const orsa::Matrix nucleus_l2g_t0 = orsa::localToGlobal(nucleus.get(),
                                                                     bg.get(),
                                                                     t0);
-            ibps.translational->setPosition(nucleus_r0+nucleus_l2g_t0*r0);
-            ibps.translational->setVelocity(nucleus_v0+nucleus_l2g_t0*v0);
+            grain_ibps.translational->setPosition(nucleus_r0+nucleus_l2g_t0*r0);
+            grain_ibps.translational->setVelocity(nucleus_v0+nucleus_l2g_t0*v0);
             // grain->beta = grain_beta;
 #warning need to keep updating beta...
             grain->beta = grain_initial_beta;
@@ -293,28 +294,9 @@ int main (int argc, char **argv) {
                                                 gas_drag_coefficient);
             }
             //
-            grain->setInitialConditions(ibps);
+            grain->setInitialConditions(grain_ibps);
         }
         bg->addBody(grain);
-
-        // NOT ANYMORE!
-        /* 
-           {
-           // change initial angle of nucleus
-           IBPS ibps = nucleus->getInitialConditions();        
-           ibps.rotational = new orsaSolarSystem::ConstantZRotationEcliptic_RotationalBodyProperty(t0,
-           orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),
-           omega,
-           pole_ecliptic_longitude,
-           pole_ecliptic_latitude);
-           nucleus->setInitialConditions(ibps);
-           }
-        */
-        
-        // compute at t_snapshot
-        // const double Hill_radius = orsa::HillRadius( r_Comet   ,nucleus_mass,orsaSolarSystem::Data::MSun());
-        // const double exo_radius = r_comet*sqrt(nucleus_mass/(grain->beta*orsaSolarSystem::Data::MSun()));
-        // const double bound_radius = std::min(Hill_radius,exo_radius);
         
         // gather some more initial conditions
         double initial_distance;
@@ -496,7 +478,61 @@ int main (int argc, char **argv) {
                         orsa::radToDeg()*sun_final_angle,
                         /* 50 */ orsa::FromUnits((t_snapshot-t0).get_d(),orsa::Unit::DAY,-1),
                         ((common_stop_time-t0) > (t_snapshot-t0)));
-            fclose (fp);  
+            fclose (fp);
+            
+            if ((common_stop_time-t0) > (t_snapshot-t0)) {
+                const orsa::Time t = t_snapshot;
+                orsa::Vector r,v;
+                bg->getInterpolatedPosVel(r,
+                                          v,
+                                          sun,
+                                          t);
+                const orsa::Vector sun_r_global = r;
+                const orsa::Vector sun_v_global = v;
+                bg->getInterpolatedPosVel(r,
+                                          v,
+                                          nucleus,
+                                          t);
+                const orsa::Vector nucleus_r_global = r;
+                const orsa::Vector nucleus_v_global = v;
+                bg->getInterpolatedPosVel(r,
+                                          v,
+                                          grain,
+                                          t);
+                const orsa::Vector grain_r_relative_global = r - nucleus_r_global;
+                const orsa::Vector grain_v_relative_global = v - nucleus_v_global;
+                const orsa::Matrix g2l = orsa::globalToLocal(nucleus,bg,t);
+                const orsa::Vector grain_r_relative_local = g2l*grain_r_relative_global;
+                const orsa::Vector grain_v_relative_local = g2l*grain_v_relative_global;
+
+                osg::ref_ptr <GrainDynamicInertialBodyProperty> inertial = dynamic_cast < GrainDynamicInertialBodyProperty*> (grain_ibps.inertial.get());
+                inertial->update(t_snapshot);
+                const double grainRadius = inertial->radius();
+                const double grainArea = orsa::pi()*orsa::square(grainRadius);
+                
+                fp = fopen("colden.out","a");
+                gmp_fprintf(fp,"%.6f %f %f %6.3f %6.3f %.3e %.3e\n",
+                            
+                            orsa::FromUnits(r_comet_t0,orsa::Unit::AU,-1),
+                            orsaSolarSystem::timeToJulian(t0),
+                            orsaSolarSystem::timeToJulian(t_snapshot),
+                            orsa::FromUnits((t_snapshot-t0).get_d(),orsa::Unit::DAY,-1),
+                            orsa::FromUnits((common_stop_time-t0).get_d(),orsa::Unit::DAY,-1),
+                            orsa::FromUnits(grainRadius,orsa::Unit::METER,-1),
+                            orsa::FromUnits(grainArea,orsa::Unit::METER,-2)
+                            
+                            // dr grain
+                            // dv grain
+                            
+                            
+                            // gas number density
+                            // gas mass density
+                            
+                            
+                    );
+                fclose(fp);
+            }
+            
         }
         
         ++iter;
