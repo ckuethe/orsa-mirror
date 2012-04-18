@@ -13,6 +13,7 @@ int main (int argc, char **argv) {
     // orsa::GlobalRNG::randomSeed = -124766705;
     // orsa::GlobalRNG::randomSeed = 1617326819;
     // orsa::GlobalRNG::randomSeed = 555;
+    // orsa::GlobalRNG::randomSeed = 869523156;
     
     // NOTE: two alternative mechanisms for ejection velocity
     // 1) sampling distribution= rotational component + ejection velocity model (no gas drag)
@@ -93,11 +94,11 @@ int main (int argc, char **argv) {
     comet_orbit.M                = twopi()*(comet_orbit_epoch-comet_orbit_Tp).get_d()/comet_orbit.period();
     comet_orbit.epoch = comet_orbit_epoch;
     
-    osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
+    // osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
     
     size_t iter=0;
     while (iter < 100000) {
-
+        
         // start integration up to max_time_days before t_snapshot
         // const orsa::Time t0 = t_snapshot - orsa::Time(max_time_days,0,0,0,0)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
         // const orsa::Time t0 = t_snapshot - orsa::Time((max_time_days*86400)*(1000000*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()));
@@ -106,9 +107,10 @@ int main (int argc, char **argv) {
         const orsa::Time t0 = t_snapshot - orsa::Time(exp(log(min_time_seconds*1e6) + (log(max_time_days*86400.0*1.0e6)-log(min_time_seconds*1e6))*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()));
         
         // osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
+        osg::ref_ptr<orsa::BodyGroup> bg = new orsa::BodyGroup;
         bg->clear();
         
-        osg::ref_ptr<Body> sun = new Body;
+        osg::ref_ptr<Body> sun = new orsa::Body;
         {
             sun->setName("SUN");
             sun->isLightSource = true;
@@ -120,7 +122,7 @@ int main (int argc, char **argv) {
         }
         bg->addBody(sun.get());
         
-        osg::ref_ptr<Body> earth = new Body;
+        osg::ref_ptr<Body> earth = new orsa::Body;
         {
             earth->setName("EARTH");
             orsaSPICE::SpiceBodyTranslationalCallback * sbtc = new orsaSPICE::SpiceBodyTranslationalCallback(earth->getName());
@@ -171,7 +173,7 @@ int main (int argc, char **argv) {
                                      nucleus_ax,
                                      nucleus_ay,
                                      nucleus_az);
-            if (1) {
+            if (0) {
                 // test
                 std::vector< std::vector<mpf_class> > C, S, norm_C, norm_S;
                 std::vector<mpf_class> J;
@@ -376,10 +378,10 @@ int main (int argc, char **argv) {
         osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),grain_initial_radius,grain_density,nucleus.get(),bound_radius,6,t0);
         // call singleStepDone once before starting, to perform initial checks
         orsa::Time dummy_time(0);
-        integrator->singleStepDone(bg.get(),t0,dummy_time,dummy_time);
-        integrator->integrate(bg.get(),
+        integrator->singleStepDone(bg,t0,dummy_time,dummy_time);
+        integrator->integrate(bg,
                               t0,
-                              t0+orsa::Time(max_time_days,0,0,0,0),
+                              t_snapshot, // t0+orsa::Time(max_time_days,0,0,0,0),
                               orsa::Time(0,0,0,1,0));
         
         orsa::Time common_start_time, common_stop_time;
@@ -499,7 +501,7 @@ int main (int argc, char **argv) {
                 //
                 double grain_V = 0.0;
                 //
-                if ((common_stop_time-t0) > (t_snapshot-t0)) {
+                if ((common_stop_time-t0) >= (t_snapshot-t0)) {
                     
                     const orsa::Time t = t_snapshot;
                     orsa::Vector r,v;
@@ -551,12 +553,14 @@ int main (int argc, char **argv) {
 #warning note: some grains are behind the comet nucleus, so should not contribute to the column density...
                 
                 char line[4096];
-                gmp_sprintf(line,"%.6f   %.3f %.3e %.3e   %.3e %.3e %.3e   %+10.3f   %+10.3f %+10.3f %+10.3f   %.3e",
+                gmp_sprintf(line,"%.6f   %.5f %.5f   %.3e %.3e   %.3e %.3e %.3e   %.3e   %+.3e %+.3e %+.3e   %.3e",
                             
                             
                             orsa::FromUnits(r_comet_t0,orsa::Unit::AU,-1),
                             //
                             orsaSolarSystem::timeToJulian(t0),
+                            orsaSolarSystem::timeToJulian(t_snapshot),
+                            //
                             orsa::FromUnits((t_snapshot-t0).get_d(),orsa::Unit::DAY,-1),
                             orsa::FromUnits((common_stop_time-t0).get_d(),orsa::Unit::DAY,-1),
                             //

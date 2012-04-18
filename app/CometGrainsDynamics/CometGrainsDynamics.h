@@ -60,6 +60,7 @@ public:
         _dRadius_dt(sublimationRate*moleculeMass/(4.0*density)), /* check factors! i.e. the factor 4.0 due to energy balance, so it's sublimating from pi*Rg^2 instead of 4*pi*Rg^2 */
         _grain(grain) {
         // ORSA_DEBUG("dRdt: %g",_dRadius_dt);
+        _init();
     }
 public:
     GrainDynamicInertialBodyProperty(const GrainDynamicInertialBodyProperty & ibp) : 
@@ -68,12 +69,15 @@ public:
         _initialRadius(ibp._initialRadius),
         _density(ibp._density),
         _dRadius_dt(ibp._dRadius_dt),
-        _grain(ibp._grain) { }
-public:
-    /* GrainDynamicInertialBodyProperty & operator = (const GrainDynamicInertialBodyProperty &) {
-       return (*this);
-       }
-    */
+        _grain(ibp._grain) {
+        _init();
+    }
+protected:
+    virtual ~GrainDynamicInertialBodyProperty() { }
+protected:
+    void _init() {
+        update(_t0);
+    }
 protected:
     const orsa::Time _t0;
     const double _initialRadius;
@@ -95,6 +99,7 @@ public:
 public:
     bool setMass(const double &) {
         ORSA_ERROR("this method should not have been called, please check your code.");
+        // orsa::crash();
         return false;
     }
     bool setOriginalShape(const orsa::Shape *) {
@@ -179,24 +184,24 @@ public:
         Cd(gas_drag_coefficient),
         newton(orsa::FromUnits(orsa::FromUnits(orsa::FromUnits(1,orsa::Unit::KG),orsa::Unit::METER),orsa::Unit::SECOND,-2)) { }
 protected:
-    ~GasDrag() { }
+    virtual ~GasDrag() { }
 public:	
     orsa::Vector getThrust(const orsa::Time & t) const {
         
         if (Cd == 0.0) return orsa::Vector(0,0,0);
         
         orsa::Vector rSun, vSun;
-        if (!bg->getInterpolatedPosVel(rSun,vSun,sun.get(),t)) {
+        if (!bg->getInterpolatedPosVel(rSun,vSun,sun,t)) {
             ORSA_DEBUG("problems...");
         }	
         
         orsa::Vector rComet, vComet;
-        if (!bg->getInterpolatedPosVel(rComet,vComet,comet.get(),t)) {
+        if (!bg->getInterpolatedPosVel(rComet,vComet,comet,t)) {
             ORSA_DEBUG("problems...");
         }
         
         orsa::Vector rGrain,vGrain;
-        if (!bg->getInterpolatedPosVel(rGrain,vGrain,grain.get(),t)) {
+        if (!bg->getInterpolatedPosVel(rGrain,vGrain,grain,t)) {
             ORSA_DEBUG("problems...");
         }	
 
@@ -281,7 +286,7 @@ public:
 
         orsa::IBPS grain_ibps;
         bg->getIBPS(grain_ibps,grain,t);
-        osg::ref_ptr <GrainDynamicInertialBodyProperty> inertial = dynamic_cast < GrainDynamicInertialBodyProperty*> (grain_ibps.inertial.get());
+        osg::ref_ptr <GrainDynamicInertialBodyProperty> inertial = dynamic_cast <GrainDynamicInertialBodyProperty*> (grain_ibps.inertial.get());
         const double grainRadius = inertial->radius();
         const double grainArea = orsa::pi()*orsa::square(grainRadius);
         
@@ -380,9 +385,7 @@ public:
         }
     }
 protected:
-    ~CGDIntegrator() {
-        
-    }
+    virtual ~CGDIntegrator() { }
 public:
     enum OUTCOME_TYPE {
         ESCAPE=1,
