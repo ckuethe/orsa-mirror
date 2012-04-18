@@ -188,6 +188,8 @@ protected:
 public:	
     orsa::Vector getThrust(const orsa::Time & t) const {
         
+        // ORSA_DEBUG("referenceCount(): %i",referenceCount());
+        
         if (Cd == 0.0) return orsa::Vector(0,0,0);
         
         orsa::Vector rSun, vSun;

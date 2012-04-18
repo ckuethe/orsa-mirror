@@ -94,7 +94,10 @@ int main (int argc, char **argv) {
     comet_orbit.M                = twopi()*(comet_orbit_epoch-comet_orbit_Tp).get_d()/comet_orbit.period();
     comet_orbit.epoch = comet_orbit_epoch;
     
-    // osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
+    osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
+    
+    osg::ref_ptr<orsa::Body> grain = new orsa::Body;
+    IBPS grain_ibps;
     
     size_t iter=0;
     while (iter < 100000) {
@@ -106,8 +109,7 @@ int main (int argc, char **argv) {
 #warning have a minimumum here too? as it is, the minimum is 1 mu-sec...
         const orsa::Time t0 = t_snapshot - orsa::Time(exp(log(min_time_seconds*1e6) + (log(max_time_days*86400.0*1.0e6)-log(min_time_seconds*1e6))*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()));
         
-        // osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
-        osg::ref_ptr<orsa::BodyGroup> bg = new orsa::BodyGroup;
+        // osg::ref_ptr<orsa::BodyGroup> bg = new orsa::BodyGroup;
         bg->clear();
         
         osg::ref_ptr<Body> sun = new orsa::Body;
@@ -264,8 +266,8 @@ int main (int argc, char **argv) {
         
         // osg::ref_ptr<orsa::BodyGroup> bg = new BodyGroup;
         
-        osg::ref_ptr<orsa::Body> grain = new orsa::Body;
-        IBPS grain_ibps;
+        // osg::ref_ptr<orsa::Body> grain = new orsa::Body;
+        // IBPS grain_ibps;
         {
             grain->setName("grain");
             // IBPS ibps;
@@ -536,7 +538,7 @@ int main (int argc, char **argv) {
                        const orsa::Vector grain_v_relative_local = g2l*grain_v_relative_global;
                     */
                     
-                    osg::ref_ptr <GrainDynamicInertialBodyProperty> inertial = dynamic_cast < GrainDynamicInertialBodyProperty*> (grain_ibps.inertial.get());
+                    osg::ref_ptr <GrainDynamicInertialBodyProperty> inertial = dynamic_cast <GrainDynamicInertialBodyProperty*> (grain_ibps.inertial.get());
                     inertial->update(t_snapshot);
                     grainRadius = inertial->radius();
                     grainArea = orsa::pi()*orsa::square(grainRadius);
@@ -548,7 +550,11 @@ int main (int argc, char **argv) {
                     grain_R_orbit_plane = grain_r_relative_global*u_orbit_plane;
                     
                     grain_V = grain_v_relative_global.length();
+                    
+                    // ORSA_DEBUG("rC: %i",inertial->referenceCount());
                 }
+                
+                // ORSA_DEBUG("rC: %i",grain_ibps.inertial->referenceCount());
                 
 #warning note: some grains are behind the comet nucleus, so should not contribute to the column density...
                 
