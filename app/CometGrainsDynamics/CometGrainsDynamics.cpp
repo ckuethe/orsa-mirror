@@ -564,6 +564,8 @@ int main (int argc, char **argv) {
                 // ORSA_DEBUG("rC: %i",grain_ibps.inertial->referenceCount());
                 
 #warning note: some grains are behind the comet nucleus, so should not contribute to the column density...
+
+#warning keep fields in sync with histo.cpp
                 
                 char line[4096];
                 gmp_sprintf(line,"%.6f   %.5f %.5f   %.3e %.3e   %.3e %.3e %.3e   %.3e   %+.3e %+.3e %+.3e   %.3e",

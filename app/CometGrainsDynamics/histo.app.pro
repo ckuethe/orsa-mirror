@@ -7,7 +7,7 @@ CONFIG += gmp_include gmp_lib gsl_include gsl_lib osg_include osg_lib spice_incl
 
 include(../../orsa.pri)
 
-TARGET   = CometGrainsDynamics
+TARGET   = histo
 
 INCLUDEPATH += ../../src/
 DEPENDPATH  += ../../src/
@@ -25,5 +25,5 @@ macx {
 	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaSolarSystem -lorsaEssentialOSG -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads
 }
 
-HEADERS += CometGrainsDynamics.h
-SOURCES += CometGrainsDynamics.cpp
+HEADERS += histo.h
+SOURCES += histo.cpp
