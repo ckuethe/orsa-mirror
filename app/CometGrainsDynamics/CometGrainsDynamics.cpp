@@ -537,6 +537,13 @@ int main (int argc, char **argv) {
                        const orsa::Vector grain_r_relative_local = g2l*grain_r_relative_global;
                        const orsa::Vector grain_v_relative_local = g2l*grain_v_relative_global;
                     */
+                    const double obliquity = acos((orsa::localToGlobal(nucleus,bg,t)*orsa::Vector(0,0,1))*u_orbit_pole);
+                    static bool print_obliquity=false;
+                    if (!print_obliquity) {
+                        ORSA_DEBUG("nucleus obliquity: %g [deg]",obliquity*orsa::radToDeg());
+                        print_obliquity=true;
+                    }
+                    // orsa::print(orsa::localToGlobal(nucleus,bg,t));
                     
                     osg::ref_ptr <GrainDynamicInertialBodyProperty> inertial = dynamic_cast <GrainDynamicInertialBodyProperty*> (grain_ibps.inertial.get());
                     inertial->update(t_snapshot);
