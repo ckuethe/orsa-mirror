@@ -24,9 +24,9 @@
 
 // all in SI units
 
-inline double bondAlbedo() { return 0.20; }
+inline double bondAlbedo() { return 0.05; } // 0.20
 
-inline double emissivity() { return 0.90; }
+inline double emissivity() { return 1.00; } // 0.90
 
 inline double sigma() { return 5.67040e-8; } // Stefan-Boltzmann
 
@@ -58,7 +58,7 @@ inline double Tss(const double & hdist) {
     return pow((1.0-bondAlbedo())*(solar()/pow(orsa::FromUnits(hdist,orsa::Unit::AU,-1),2))/(emissivity()*sigma()),0.25);
 }
 
-inline double theta(const double hdist) { return thermalInertia()*sqrt(omega())/(emissivity()*sigma()*pow(Tss(hdist),3)); }
+inline double theta(const double hdist) { return thermalInertia()*sqrt(omega())/(emissivity()*sigma()*pow(Tss(hdist),3)); } 
 
 class Slice {
 public:
@@ -109,7 +109,8 @@ protected:
     ThermalData old_data;
 };
 
-bool ComputePeriodicThermalProfile(Profile & profile,
+bool ComputePeriodicThermalHistory(History & history,
+                                   const size_t numSlices, // typically equal to numSkinDepths*numSlicesPerSkinDepth
                                    const double & initial_deep_T, // K
                                    const std::vector<double> & Fs,
                                    const double dx,
@@ -119,12 +120,14 @@ bool ComputePeriodicThermalProfile(Profile & profile,
                                    const double & convergence_eps=1.0e-9) {
     
     // Profile profile(numSkinDepths*numSlicesPerSkinDepth);  
+    Profile profile(numSlices);  
   
-    History history;
+    // History history;
     // const unsigned int history_skip = numTimeStepsPerRotation/10000; // save memory, same results, affects print-out density of results too
     // const unsigned int history_skip = 1; // save memory, similar results, affects print-out density of results too
     // ORSA_DEBUG("history_skip: %i",history_skip);
-  
+    history.clear();
+    
     // initial temperature at max depth
     // double deep_T = 150.0; // K
     // double deep_T = 0.0; // K
