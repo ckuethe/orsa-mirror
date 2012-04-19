@@ -361,9 +361,13 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
         double s[9];
     
         for(unsigned int j=1; j<8; ++j) {
-      
+
+            // do this only once and then reuse-it
+            const orsa::Time timestep_j = orsa::Time(FromUnits(h[j]*timestep.get_d(),Unit::MICROSECOND,-1));
+            
             // s[0] = timestep * h[j];
-            s[0] = timestep.get_d() * h[j];
+            // s[0] = timestep.get_d() * h[j];
+            s[0] = timestep_j.get_d();
             s[1] = s[0] * s[0] * 0.5;
             s[2] = s[1] * h[j] * 0.3333333333333333;
             s[3] = s[2] * h[j] * 0.5;
@@ -568,7 +572,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
             {
                 // if (bg->getInteraction()->dependsOnVelocity()) {	
 	
-                s[0] = timestep.get_d() * h[j];
+                s[0] = timestep_j.get_d();
                 s[1] = s[0] * h[j] * 0.5;
                 s[2] = s[1] * h[j] * 0.6666666666666667;
                 s[3] = s[2] * h[j] * 0.75;
@@ -739,7 +743,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
 
                     ibps.lock();
                     
-                    ibps.time = start + orsa::Time(FromUnits(h[j]*timestep.get_d(),Unit::MICROSECOND,-1));
+                    ibps.time = start + timestep_j;
 	  
                     if (!k->alive(ibps.time)) {
                         ++bl_it;
@@ -854,14 +858,14 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
             //
             if (!bg->getInteraction()->acceleration(acc,  
                                                     bg,
-                                                    start+orsa::Time(FromUnits(h[j]*timestep.get_d(),Unit::MICROSECOND,-1)))) {
+                                                    start+timestep_j)) {
                 ORSA_DEBUG("problems...");
                 return false;
             }
             //
             if (!bg->getInteraction()->torque(torque,  
                                               bg,
-                                              start+orsa::Time(FromUnits(h[j]*timestep.get_d(),Unit::MICROSECOND,-1)))) {
+                                              start+timestep_j)) {
                 ORSA_DEBUG("problems...");
                 return false;
             }
@@ -902,10 +906,10 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                     }
 	  
                     IBPS ibps;
-                    if (!bg->getInterpolatedIBPS(ibps,b,start+orsa::Time(FromUnits(h[j]*timestep.get_d(),Unit::MICROSECOND,-1)))) {
+                    if (!bg->getInterpolatedIBPS(ibps,b,start+timestep_j)) {
                         ORSA_DEBUG("problem, body: [%s]",b->getName().c_str());
                     }
-	  
+                    
                     const orsa::Body * k = b;
 	  
                     if (b->getInitialConditions().translational.get()) {
@@ -923,10 +927,10 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                             if (ibps.inertial->paulMoment()) {
 		
                                 double m;
-                                if (!bg->getInterpolatedMass(m,b,start+orsa::Time(FromUnits(h[j]*timestep.get_d(),Unit::MICROSECOND,-1)))) {
+                                if (!bg->getInterpolatedMass(m,b,start+timestep_j)) {
                                     ORSA_DEBUG("problems...");
                                 }		
-		
+                                
                                 orsa::Matrix inertiaMoment = 
                                     m * 
                                     ibps.inertial->inertiaMatrix();
@@ -968,9 +972,9 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                                     // const orsa::Matrix g2l = attitude->globalToLocal(start+orsa::Time(FromUnits(h[j]*timestep.get_d(),Unit::MICROSECOND,-1)));
                                     // const orsa::Matrix l2g = attitude->localToGlobal(start+orsa::Time(FromUnits(h[j]*timestep.get_d(),Unit::MICROSECOND,-1)));
 		  
-                                    const orsa::Matrix g2l = orsa::globalToLocal(b,bg,start+orsa::Time(FromUnits(h[j]*timestep.get_d(),Unit::MICROSECOND,-1)));
-                                    const orsa::Matrix l2g = orsa::localToGlobal(b,bg,start+orsa::Time(FromUnits(h[j]*timestep.get_d(),Unit::MICROSECOND,-1)));
-		  
+                                    const orsa::Matrix g2l = orsa::globalToLocal(b,bg,start+timestep_j);
+                                    const orsa::Matrix l2g = orsa::localToGlobal(b,bg,start+timestep_j);
+                                    
                                     const orsa::Vector omega = RotationalBodyProperty::omega(Q[k],QDot[k]);
                                     const orsa::Matrix I     = inertiaMoment;
                                     const orsa::Vector T     = torque[bodyIndex];
