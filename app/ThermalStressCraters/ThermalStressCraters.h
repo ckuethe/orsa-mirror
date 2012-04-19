@@ -110,8 +110,8 @@ protected:
 };
 
 bool ComputePeriodicThermalProfile(Profile & profile,
-                                   std::vector<double> Fs,
-                                   double & deep_T, // K
+                                   const double & initial_deep_T, // K
+                                   const std::vector<double> & Fs,
                                    const double dx,
                                    const double dt,
                                    const unsigned int & history_skip=1,
@@ -128,6 +128,7 @@ bool ComputePeriodicThermalProfile(Profile & profile,
     // initial temperature at max depth
     // double deep_T = 150.0; // K
     // double deep_T = 0.0; // K
+    double deep_T = initial_deep_T;
     
     for (unsigned int k=0; k<profile.data.size(); ++k) {
         profile.data[k].T = deep_T;
@@ -193,8 +194,8 @@ bool ComputePeriodicThermalProfile(Profile & profile,
                                        stability_eps,
                                        k,
                                        history[0].size(),
-                                       j,
-                                       history.size());
+                                       history_skip*j,
+                                       history_skip*history.size());
                             stable=false;
                             break;
                         }   
@@ -311,6 +312,7 @@ bool ComputePeriodicThermalProfile(Profile & profile,
             }
             deep_T = new_deep_T;
         } else {
+            ORSA_DEBUG("converged");
             /* char cmd[1024];
                sprintf(cmd,"cp %s temperature_orbital_%+05.2f_%g_%sgcm2_final.dat",filename,lat*orsa::radToDeg(),lon*orsa::radToDeg(),argv[3]);
                ORSA_DEBUG("executing: [%s]",cmd);
