@@ -14,6 +14,9 @@ int main (int argc, char **argv) {
     // orsa::GlobalRNG::randomSeed = 1617326819;
     // orsa::GlobalRNG::randomSeed = 555;
     // orsa::GlobalRNG::randomSeed = 869523156;
+    // orsa::GlobalRNG::randomSeed = -1316703212;
+    // orsa::GlobalRNG::randomSeed = 1960578200;
+    // orsa::GlobalRNG::randomSeed = 97180168;
     
     // NOTE: two alternative mechanisms for ejection velocity
     // 1) sampling distribution= rotational component + ejection velocity model (no gas drag)
@@ -28,18 +31,17 @@ int main (int argc, char **argv) {
 #warning TODO: 
     
     // input
-    // const double r_comet = orsa::FromUnits(1.07,orsa::Unit::AU);
-    const double comet_orbit_q = orsa::FromUnits(1.60,orsa::Unit::AU);
-    const double comet_orbit_e = 0.55;
-    const double comet_orbit_i = 25.0*orsa::degToRad();
+    const double comet_orbit_q = orsa::FromUnits(0.9,orsa::Unit::AU);
+    const double comet_orbit_e = 0.00;
+    const double comet_orbit_i = 1.00*orsa::degToRad();
     const double comet_orbit_node = 0.0;
     const double comet_orbit_peri = 0.0;
     const orsa::Time comet_orbit_Tp = orsaSolarSystem::gregorTime(2000,1,1.70);
     const orsa::Time comet_orbit_epoch = comet_orbit_Tp; // orsaSolarSystem::gregorTime(2010,1,1);
     //
-    const double nucleus_ax = orsa::FromUnits(3.5,orsa::Unit::KM);
-    const double nucleus_ay = orsa::FromUnits(2.4,orsa::Unit::KM);
-    const double nucleus_az = orsa::FromUnits(2.2,orsa::Unit::KM);
+    const double nucleus_ax = orsa::FromUnits(3.0,orsa::Unit::KM);
+    const double nucleus_ay = orsa::FromUnits(2.5,orsa::Unit::KM);
+    const double nucleus_az = orsa::FromUnits(2.4,orsa::Unit::KM);
     const size_t gravity_degree = 2;
     const double comet_density = orsa::FromUnits(orsa::FromUnits(0.4,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double grain_density = orsa::FromUnits(orsa::FromUnits(0.5,orsa::Unit::GRAM),orsa::Unit::CM,-3);
@@ -53,11 +55,11 @@ int main (int argc, char **argv) {
     // const double ejection_velocity_radial_exponent = -0.5; // nominal: -0.5
     const double min_latitude = -90.0*orsa::degToRad();
     const double max_latitude = +90.0*orsa::degToRad();
-    const double min_grain_radius = orsa::FromUnits(1.0e-5,orsa::Unit::METER);
-    const double max_grain_radius = orsa::FromUnits(0.2000,orsa::Unit::METER);    
+    const double min_grain_radius = orsa::FromUnits(0.000001,orsa::Unit::METER);
+    const double max_grain_radius = orsa::FromUnits(0.200000,orsa::Unit::METER);    
 #warning check min_time_second with Nalin
-    const int min_time_seconds =  5; // grains flying less than this time are not included
-    const int max_time_days    = 60; // 100;
+    const int min_time_seconds =   5; // grains flying less than this time are not included
+    const int max_time_days    = 100; // 100;
     
     // gas drag coefficients
     const double gas_production_rate_at_1AU = orsa::FromUnits(1.0e28,orsa::Unit::SECOND,-1); // molecules/second
@@ -74,7 +76,7 @@ int main (int argc, char **argv) {
 #warning drag coefficient Cd should be close to 2.0 when the grain size is close to the free mean path
     
     // const orsa::Time t_snapshot = comet_orbit_Tp - orsa::Time(60,0,0,0,0);
-    const orsa::Time t_snapshot = comet_orbit_Tp + orsa::Time(30,0,0,0,0);
+    const orsa::Time t_snapshot = comet_orbit_Tp; // + orsa::Time(30,0,0,0,0);
     
     const double nucleus_volume = 4.0*orsa::pi()*nucleus_ax*nucleus_ay*nucleus_az/3.0;
     const double nucleus_mass = comet_density*nucleus_volume; 
@@ -377,7 +379,7 @@ int main (int argc, char **argv) {
             */
         }
         
-        osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),grain_initial_radius,grain_density,nucleus.get(),bound_radius,6,t0);
+        osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),grain_initial_radius,grain_density,nucleus.get(),bound_radius,4,t0);
         // call singleStepDone once before starting, to perform initial checks
         orsa::Time dummy_time(0);
         integrator->singleStepDone(bg,t0,dummy_time,dummy_time);
@@ -467,14 +469,14 @@ int main (int argc, char **argv) {
                         /* 30 */ orsa::FromUnits((integrator->crossing_time[1]-t0).get_d(),orsa::Unit::DAY,-1),
                         orsa::FromUnits((integrator->crossing_time[2]-t0).get_d(),orsa::Unit::DAY,-1),
                         orsa::FromUnits((integrator->crossing_time[3]-t0).get_d(),orsa::Unit::DAY,-1),
-                        orsa::FromUnits((integrator->crossing_time[4]-t0).get_d(),orsa::Unit::DAY,-1),
-                        orsa::FromUnits((integrator->crossing_time[5]-t0).get_d(),orsa::Unit::DAY,-1),
+                        0.0, // orsa::FromUnits((integrator->crossing_time[4]-t0).get_d(),orsa::Unit::DAY,-1),
+                        0.0, // orsa::FromUnits((integrator->crossing_time[5]-t0).get_d(),orsa::Unit::DAY,-1),
                         /* 35 */ orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[0],orsa::Unit::METER,-1),orsa::Unit::SECOND),
                         orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[1],orsa::Unit::METER,-1),orsa::Unit::SECOND),
                         orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[2],orsa::Unit::METER,-1),orsa::Unit::SECOND),
                         orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[3],orsa::Unit::METER,-1),orsa::Unit::SECOND),
-                        orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[4],orsa::Unit::METER,-1),orsa::Unit::SECOND),
-                        /* 40 */ orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[5],orsa::Unit::METER,-1),orsa::Unit::SECOND),
+                        0.0, // orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[4],orsa::Unit::METER,-1),orsa::Unit::SECOND),
+                        /* 40 */ 0.0, // orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[5],orsa::Unit::METER,-1),orsa::Unit::SECOND),
                         orsa::FromUnits(initial_distance,orsa::Unit::KM,-1),
                         orsa::FromUnits((*integrator->max_distance),orsa::Unit::KM,-1),
                         orsa::FromUnits(final_distance,orsa::Unit::KM,-1),
