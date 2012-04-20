@@ -6,7 +6,7 @@ int main (int argc, char **argv) {
     
     orsa::Debug::instance()->initTimer();
     
-    const double pixelScale = orsa::FromUnits(5.0,orsa::Unit::KM);
+    const double pixelScale = orsa::FromUnits(50.0,orsa::Unit::KM);
     // every axis has 2*N pixels, from -N to N-1
     const int N = __ORSA_FITS_N__/2;
     
@@ -169,8 +169,8 @@ int main (int argc, char **argv) {
         }
 
         size_t populatedPixels=0;
-
-#warning write zeroes?
+        
+        // #warning write zeroes?
         FILE * fp = fopen("histo_2D.out","w");
         for (size_t i=0; i<2*N; ++i) {
             for (size_t j=0; j<2*N; ++j) {
