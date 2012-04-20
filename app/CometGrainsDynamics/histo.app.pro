@@ -25,5 +25,5 @@ macx {
 	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaSolarSystem -lorsaEssentialOSG -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads
 }
 
-HEADERS += histo.h
+HEADERS += histo.h histosize.h
 SOURCES += histo.cpp
