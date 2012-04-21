@@ -4,11 +4,11 @@ int main (int argc, char **argv) {
     
     orsa::Debug::instance()->initTimer();
     
-    if (argc != 9999) {
-        ORSA_DEBUG("Usage: %s <D,km> <d,km> <lat,deg> <lon,deg> <R,km> <slope-out,deg> <slope-azimuth,deg> <slope-rim,deg> <shape-par> <pole-R.A.,deg> <pole-Dec.,deg> <pole-phi-J2000,deg> <a,AU> <ecc> <i,deg> <node,deg> <peri,deg> <off-North,km> <off-East,km>",argv[0]);
-        // exit(0);
-    }
-
+    /* if (argc != 9999) {
+       ORSA_DEBUG("Usage: %s <D,km> <d,km> <lat,deg> <lon,deg> <R,km> <slope-out,deg> <slope-azimuth,deg> <slope-rim,deg> <shape-par> <pole-R.A.,deg> <pole-Dec.,deg> <pole-phi-J2000,deg> <a,AU> <ecc> <i,deg> <node,deg> <peri,deg> <off-North,km> <off-East,km>",argv[0]);
+       // exit(0);
+       }
+    */
 
     if (0) {
         // test
@@ -20,6 +20,43 @@ int main (int argc, char **argv) {
             r+=0.01;
         }
     }
+    
+
+    // body orientation, g2l of sun direction, scalar product with vector normal to central crater point (or to local zenith/radial direction?), if positive then start to check if given point is illuminated...
+    
+    
+    // sun must be above "global" horizon (spherical body) and "local" horizon (crater local tilted reference plane)
+    
+    
+    // note: body position + radius to crater =~ body position alone, when the sun is so far away...
+    
+    
+    // body orbit
+    orsa::Orbit orbit;
+    orbit.mu = orsaSolarSystem::Data::GMSun();
+    orbit.a = orsa::FromUnits(3.4,orsa::Unit::AU);
+    orbit.e = 0.35;
+    orbit.i = 10.0*orsa::degToRad();
+    orbit.omega_node       = 0.0*orsa::degToRad();
+    orbit.omega_pericenter = 0.0*orsa::degToRad(); 
+    // orbit.M is sampled anyway to compute Fs
+    
+    const double craterDiameter = orsa::FromUnits(50.0,orsa::Unit::KM);
+    const double craterDepth    = orsa::FromUnits( 8.0,orsa::Unit::KM);
+    const double craterCenterSlope = tan( 0.0*orsa::degToRad());
+    const double craterRimSlope    = tan(40.0*orsa::degToRad());
+    const double craterLatitude = -45.0*orsa::degToRad();
+    // longitude is not relevant, assuming 0.0;
+    const double bodyRadius     = orsa::FromUnits(500.0,orsa::Unit::KM);
+#warning check that body radius >> crater diameter...
+    const double craterPlaneSlope = tan(5.0*orsa::degToRad());
+    const double craterPlaneSlopeAzimuth = 90.0*orsa::degToRad(); // 0=N, 90=E, 180=S, 270=W, points from high to low
+    const double bodyPoleEclipticLatitude  = 90.0*orsa::degToRad();
+    const double bodyPoleEclipticLongitude = 00.0*orsa::degToRad();
+    
+#warning OFF-North (km) and OFF-East (km) should be arguments!
+    
+#warning print obliquity...
     
     const size_t numSlices=400;
     History history;
