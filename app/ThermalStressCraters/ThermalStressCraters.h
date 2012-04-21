@@ -24,7 +24,7 @@
 
 // all in SI units
 
-inline double bondAlbedo() { return 0.05; } // 0.20
+inline double bondAlbedo() { return 0.10; } // 0.20
 
 inline double emissivity() { return 1.00; } // 0.90
 
@@ -33,7 +33,7 @@ inline double sigma() { return 5.67040e-8; } // Stefan-Boltzmann
 inline double solar() { return 1370.0; } // W m^-2 at 1 AU
 
 #warning update rotationPeriod
-inline double rotationPeriod() { return 6.0*3600.0; } // s
+inline double rotationPeriod() { return 12.0*3600.0; } // s
 
 inline double omega() { return orsa::twopi()/rotationPeriod(); } // s^-1
 
@@ -191,7 +191,7 @@ bool ComputePeriodicThermalHistory(History & history,
                     for (unsigned int j=0; j<history.size(); ++j) {
                         if (!stable) break;
                         if (fabs((history[j][k].T-old_history[j][k].T)/old_history[j][k].T) > stability_eps) {
-                            ORSA_DEBUG("stable search did not converge yet, cycle # %03i   delta = %g > %g at bin: %03i/%03i time: %05i/%05i",
+                            ORSA_DEBUG("stable search did not converge yet, cycle # %03i   delta = %.3e > %.3e at bin: %i/%i time: %i/%i",
                                        cycles,
                                        fabs((history[j][k].T-old_history[j][k].T)/(orsa::epsilon()+old_history[j][k].T)),
                                        stability_eps,
@@ -328,6 +328,45 @@ bool ComputePeriodicThermalHistory(History & history,
     }
     
     return converged;
+}
+
+bool CraterShape(double & h, /* elevation, from 0.0 (rim) to -d (center) */
+                 double & dhdr, /* slope at the point r */
+                 const double & r, /* point in crater, from 0 (center) to R=D/2 (rim=edge) */
+                 const double & D, /* Diameter */
+                 const double & d, /* depth */
+                 const double & alpha0, /* slope at crater center = tan(slope_angle)*/
+                 const double & alphaR /* slope at crater rim */) {
+
+    const double R = 0.5*D;
+
+    
+    
+    if (alpha0<0.0) {
+        ORSA_DEBUG("negative slope at center of the crater");
+        return false;
+    }
+    
+    if (alpha0>=(d/R)) {
+        ORSA_DEBUG("too steep at center of the crater");
+        return false;
+    }
+    
+    if (alphaR<=(d/R)) {
+        ORSA_DEBUG("too shallow at the rim of the crater");
+        return false;
+    }
+    
+    if (alphaR>=orsa::pi()) {
+        ORSA_DEBUG("too steep at the rim of the crater");
+        return false;
+    }
+    
+    const double gamma = (alphaR-d/R)/(d/R-alpha0);
+    h = alpha0*r+(alphaR-alpha0)*pow(r/R,gamma+1)*R/(gamma+1)-d;
+    dhdr = alpha0+(alphaR-alpha0)*pow(r/R,gamma);
+    
+    return true;
 }
 
 
