@@ -124,8 +124,6 @@ int main (int argc, char **argv) {
     const orsa::Vector local_crater_point_normal =
         cos(crater_point_slope_angle)*local_u_radial - sin(crater_point_slope_angle)*(sin(crater_phi)*local_u_horizontal+cos(crater_phi)*local_u_low_to_high);
     
-#warning CRATER_POINT CAN BE OUTSIDE THE CRATER!!! that is legit and should be handled correctly
-    
     orsa::print(local_crater_point);
     orsa::print(local_crater_point_normal);
     
@@ -173,16 +171,23 @@ int main (int argc, char **argv) {
         const orsa::Vector local_u_sun = globalToLocal*(-orbitPosition.normalized());
         if (local_u_sun*local_u_up > 0.0) {
             
-#warning MUST CHECK FOR SHADOWING!!!
-            const double d = (local_crater_center_h0-local_crater_point)*local_u_up;
-            const double beta = acos(local_u_up*local_u_sun);
-            const double l = d/cos(beta);
-            const orsa::Vector P = local_crater_point+local_u_sun*l;
-            const double dist = (P-local_crater_center_h0).length();
+            bool illuminated=true;
+            // if needed for ponts outside crater...
+            if (crater_pR<=0.5*craterDiameter) {
+                // this checks for self-shadowing    
+                const double d = (local_crater_center_h0-local_crater_point)*local_u_up;
+                const double beta = acos(local_u_up*local_u_sun);
+                const double l = d/cos(beta);
+                const orsa::Vector P = local_crater_point+local_u_sun*l;
+                const double dist = (P-local_crater_center_h0).length();
+                if (dist>0.5*craterDiameter) {
+                    illuminated=false;
+                }
+            }
             
             // ORSA_DEBUG("d: %g   beta: %g   l: %g   dist: %g",d,beta,l,dist);
 
-            if (dist <= 0.5*craterDiameter) {
+            if (illuminated) {
                 Fs[p] = solar()/pow(orsa::FromUnits(hdist,orsa::Unit::AU,-1),2) *
                     std::max(0.0,local_u_sun*local_crater_point_normal);
             } else {
@@ -192,7 +197,7 @@ int main (int argc, char **argv) {
         } else {
             Fs[p] = 0.0;
         }       
-
+        
             
         // test
         /* Fs[p] = solar()/pow(orsa::FromUnits(hdist,orsa::Unit::AU,-1),2) *

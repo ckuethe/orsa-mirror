@@ -350,10 +350,8 @@ bool CraterShape(double & h, /* elevation, from 0.0 (rim) to -d (center) */
                  const double & d, /* depth */
                  const double & alpha0, /* slope at crater center = tan(slope_angle)*/
                  const double & alphaR /* slope at crater rim */) {
-
-    const double R = 0.5*D;
-
     
+    const double R = 0.5*D;
     
     if (alpha0<0.0) {
         ORSA_DEBUG("negative slope at center of the crater");
@@ -373,6 +371,18 @@ bool CraterShape(double & h, /* elevation, from 0.0 (rim) to -d (center) */
     if (alphaR>=orsa::pi()) {
         ORSA_DEBUG("too steep at the rim of the crater");
         return false;
+    }
+
+    if (r<0.0) {
+        ORSA_DEBUG("problem: negative radius");
+        return false;
+    }
+
+    if (r>=R) {
+        ORSA_DEBUG("point is outside crater");
+        h = 0.0;
+        dhdr = 0.0;
+        return true;
     }
     
     const double gamma = (alphaR-d/R)/(d/R-alpha0);
