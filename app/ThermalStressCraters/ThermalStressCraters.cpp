@@ -11,12 +11,14 @@ int main (int argc, char **argv) {
     */
     //
     if (argc != 3) {
-        ORSA_DEBUG("Usage: %s <off-North,km> <off-East,km>",argv[0]);
+        ORSA_DEBUG("Usage: %s <dX,km> <dY,km>",argv[0]);
         exit(0);
     }
     
-    const double delta_North = orsa::FromUnits(atof(argv[1]),orsa::Unit::KM);
-    const double delta_East  = orsa::FromUnits(atof(argv[2]),orsa::Unit::KM);
+    const double crater_pX = orsa::FromUnits(atof(argv[1]),orsa::Unit::KM);
+    const double crater_pY = orsa::FromUnits(atof(argv[2]),orsa::Unit::KM);
+    const double crater_pR = sqrt(orsa::square(crater_pX)+orsa::square(crater_pY));
+    const double crater_phi = atan2(crater_pY,crater_pX);
     
     if (0) {
         // test
@@ -42,15 +44,16 @@ int main (int argc, char **argv) {
     // body orbit
     orsa::Orbit orbit;
     orbit.mu = orsaSolarSystem::Data::GMSun();
-    orbit.a = orsa::FromUnits(3.2,orsa::Unit::AU);
-    orbit.e = 0.00;
-    orbit.i = 0.00*orsa::degToRad();
+    orbit.a = orsa::FromUnits(2.54,orsa::Unit::AU);
+    orbit.e = 0.20;
+    orbit.i = 5.00*orsa::degToRad();
     orbit.omega_node       = 0.0*orsa::degToRad();
     orbit.omega_pericenter = 0.0*orsa::degToRad(); 
     // all values of orbit.M are sampled, to compute Fs
+    const double orbit_period = orbit.period();
     
-    const double craterDiameter = orsa::FromUnits(50.0,orsa::Unit::KM);
-    const double craterDepth    = orsa::FromUnits( 8.0,orsa::Unit::KM);
+    const double craterDiameter = orsa::FromUnits(100.0,orsa::Unit::KM);
+    const double craterDepth    = orsa::FromUnits( 10.0,orsa::Unit::KM);
     const double craterCenterSlope = tan( 0.0*orsa::degToRad());
     const double craterRimSlope    = tan(40.0*orsa::degToRad());
     const double craterLatitude = 30.0*orsa::degToRad();
@@ -71,6 +74,9 @@ int main (int argc, char **argv) {
     ORSA_DEBUG("thermal inertia: %g (SI)",thermalInertia());
     
 #warning need to double-check these vectors when working at latitudes below equator
+    
+#warning the crater is surrounded by a plane... should it be on a sphere? more complex, real gain?
+#warning also because in general the body radius seems to be not central to the main computations
     
     const orsa::Vector local_u_pole(0,0,1);
     const orsa::Vector local_u_radial(cos(craterLatitude),0.0,sin(craterLatitude));
@@ -93,21 +99,102 @@ int main (int argc, char **argv) {
     orsa::print(local_u_low_to_high);
     
     // so now the 3 cartesial vectos wich are in crater coordinates are local_u_horizontal, local_u_low_to_high (both at h=0), and local_u_up
-    // const orsa::Vector local_crater_center = 
     
+    const orsa::Vector local_crater_center_h0 = local_u_radial*bodyRadius;
+    const orsa::Vector local_crater_center    = local_crater_center_h0 - local_u_up*craterDepth;
+    //
+    double h,dhdr;
+    const bool goodCrater = CraterShape(h,
+                                        dhdr,
+                                        crater_pR,
+                                        craterDiameter,
+                                        craterDepth,
+                                        craterCenterSlope,
+                                        craterRimSlope);
+    ORSA_DEBUG("cs %g %g %g",crater_pR,h,atan(dhdr)*orsa::radToDeg());
+    if (!goodCrater) {
+        ORSA_DEBUG("problems...");
+        exit(0);
+    }
+    //
+    const double crater_point_slope = dhdr;
+    const double crater_point_slope_angle = atan(dhdr);
+    const orsa::Vector local_crater_point =
+        local_crater_center_h0 + crater_pX*sin(crater_phi)*local_u_horizontal + crater_pY*cos(crater_phi)*local_u_low_to_high + local_u_up*h;
+    const orsa::Vector local_crater_point_normal =
+        cos(crater_point_slope_angle)*local_u_radial - sin(crater_point_slope_angle)*(sin(crater_phi)*local_u_horizontal+cos(crater_phi)*local_u_low_to_high);
+    
+#warning CRATER_POINT CAN BE OUTSIDE THE CRATER!!! that is legit and should be handled correctly
+    
+    orsa::print(local_crater_point);
+    orsa::print(local_crater_point_normal);
+    
+    const orsa::Time t0_Time(0);
+    const double t0 = t0_Time.get_d();
+    
+    osg::ref_ptr<orsaSolarSystem::ConstantZRotationEcliptic_RotationalBodyProperty> rot =
+        new orsaSolarSystem::ConstantZRotationEcliptic_RotationalBodyProperty(t0_Time,
+                                                                              0.0,
+                                                                              omega(),
+                                                                              bodyPoleEclipticLongitude,
+                                                                              bodyPoleEclipticLatitude);
     
     const size_t numSlices=400;
     History history;
-    const size_t NS=100000;
-    const size_t days=70;
-    const double hdist = orsa::FromUnits(3.0,orsa::Unit::AU); // heliocentric distance
-    ORSA_DEBUG("big-theta: %g",theta(hdist));
+    const size_t NS=1000000;
+    const size_t days=ceil(orbit_period/rotationPeriod());
+    const double total_simulation_time = days*rotationPeriod(); // slightly larger than orbit_period because of the ceil(...) above (need integer days)
+    const double dt = total_simulation_time/NS;
+    const orsa::Time dt_Time(mpz_class(1000000)*dt);
+    orsa::print(dt_Time);
+    // const double hdist = orsa::FromUnits(3.0,orsa::Unit::AU); // heliocentric distance
+    // ORSA_DEBUG("big-theta: %g",theta(hdist));
     std::vector<double> Fs;
     Fs.resize(NS);
+    orsa::Vector orbitPosition;
     for (size_t p=0; p<NS; ++p) {
-#warning restore this one!
-        // Fs[p] = solar()/pow(orsa::FromUnits(hdist,orsa::Unit::AU,-1),2)*std::max(cos(days*orsa::twopi()*(double)p/(double)NS),0.0);
+        const orsa::Time t_Time = dt_Time*p;
+        const double t = t_Time.get_d();
+        orbit.M = orsa::twopi()*(t_Time-t0_Time).get_d()/orbit_period;
+        orbit.relativePosition(orbitPosition);
+        const double hdist = orbitPosition.length();
+        // ORSA_DEBUG("hdist: %g",orsa::FromUnits(hdist,orsa::Unit::AU,-1));
+
         
+        /* Fs[p] = solar()/pow(orsa::FromUnits(hdist,orsa::Unit::AU,-1),2) *
+           std::max(cos(days*orsa::twopi()*(double)p/(double)NS),0.0);
+        */
+        
+        rot->update(t_Time);
+        const orsa::Matrix m = orsa::QuaternionToMatrix(rot->getQ());
+        orsa::Matrix m_tr;
+        orsa::Matrix::transpose(m, m_tr);
+        const orsa::Matrix globalToLocal = m_tr;
+        // orsa::print(globalToLocal);
+        const orsa::Vector local_u_sun = globalToLocal*(-orbitPosition.normalized());
+        if (local_u_sun*local_u_up > 0.0) {
+            
+#warning MUST CHECK FOR SHADOWING!!!
+            const double d = (local_crater_center_h0-local_crater_point)*local_u_up;
+            const double beta = acos(local_u_up*local_u_sun);
+            const double l = d/cos(beta);
+            const orsa::Vector P = local_crater_point+local_u_sun*l;
+            const double dist = (P-local_crater_center_h0).length();
+            
+            // ORSA_DEBUG("d: %g   beta: %g   l: %g   dist: %g",d,beta,l,dist);
+
+            if (dist <= 0.5*craterDiameter) {
+                Fs[p] = solar()/pow(orsa::FromUnits(hdist,orsa::Unit::AU,-1),2) *
+                    std::max(0.0,local_u_sun*local_crater_point_normal);
+            } else {
+                Fs[p] = 0.0; // self-shadowing of rim over the crater point
+            }
+            
+        } else {
+            Fs[p] = 0.0;
+        }       
+
+            
         // test
         /* Fs[p] = solar()/pow(orsa::FromUnits(hdist,orsa::Unit::AU,-1),2) *
            std::max(cos(days*orsa::twopi()*(double)p/(double)NS),0.0) *
@@ -116,10 +203,10 @@ int main (int argc, char **argv) {
         */
         
         // TEST!
-        double proj = std::max(cos(days*orsa::twopi()*(double)p/(double)NS),0.0);
-        if (proj < 0.5) proj = 0.0;
-        Fs[p] = solar()/pow(orsa::FromUnits(hdist,orsa::Unit::AU,-1),2)*proj;
-        
+        /* double proj = std::max(cos(days*orsa::twopi()*(double)p/(double)NS),0.0);
+           if (proj < 0.5) proj = 0.0;
+           Fs[p] = solar()/pow(orsa::FromUnits(hdist,orsa::Unit::AU,-1),2)*proj;
+        */
     }
     
     /* for (size_t p=0; p<NS; ++p) {
@@ -128,8 +215,8 @@ int main (int argc, char **argv) {
     */
     
     const double dx = 0.2*skinDepth(); // or a fraction of skinDepth = ls
-    const double dt = days*rotationPeriod()/NS;
-    const unsigned int history_skip = 1;
+    // const double dt = days*rotationPeriod()/NS;
+    const unsigned int history_skip = 10;
     
     ComputePeriodicThermalHistory(history,
                                   numSlices,
