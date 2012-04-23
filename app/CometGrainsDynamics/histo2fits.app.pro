@@ -18,7 +18,7 @@ MOC_DIR     = .moc/$${PLATFORM_NAME}
 OBJECTS_DIR = .obj/$${PLATFORM_NAME}
 DESTDIR     = .
 
-unix:LIBS += -L ../../lib/$${PLATFORM_NAME} -lorsa -lorsaSolarSystem -lorsaEssentialOSG -lorsaSPICE -lcfitsio
+unix:LIBS += -L ../../lib/$${PLATFORM_NAME} -lorsa -lorsaSolarSystem -lorsaEssentialOSG -lorsaSPICE -lcfitsio -lOpenThreads
 
 HEADERS = histosize.h
 SOURCES = histo2fits.cpp
