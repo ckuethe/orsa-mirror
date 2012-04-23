@@ -28,7 +28,7 @@
 
 inline double bondAlbedo() { return 0.05; } // 0.05 // 0.20
 
-inline double emissivity() { return 1.00; } // 0.90
+inline double emissivity() { return 0.90; } // 0.90
 
 inline double sigma() { return 5.67040e-8; } // Stefan-Boltzmann
 
@@ -87,20 +87,31 @@ public:
         const double dX = dx/ls;
     
         old_data = data;
-    
+        
+        for (int k=0; k<numSlices; ++k) {
+            if (old_data[k].T < 0.0) {
+                ORSA_DEBUG("problems: negative temperature...");
+                exit(0);
+            }
+        }
+        
+        // ORSA_DEBUG("dX: %g dt: %g tI: %g Fs: %g Om: %g pw: %g old_data[0].T: %g",dX,dt,thermalInertia(),Fs,omega(),pow(old_data[0].T,4),old_data[0].T);
+        
         // surface
         data[0].T =
             old_data[0].T
             + 2*dt*omega()/(dX*dX)*(old_data[1].T-old_data[0].T) 
-            - 2*dt*sqrt(omega())/(thermalInertia()*dX)*(emissivity()*sigma()*pow(old_data[0].T,4)-(1-bondAlbedo())*Fs);
-    
+            - 2*dt*sqrt(omega())/(thermalInertia()*dX)*(emissivity()*sigma()*pow(old_data[0].T,4)-(1.0-bondAlbedo())*Fs);
+        // orsa::check(data[0].T);
+        
         // explicitly skip k==0 and k==numSlices
         for (int k=1; k<numSlices; ++k) {
             data[k].T = 
                 old_data[k].T
                 + (dt*omega())/(dX*dX)*(old_data[k+1].T - 2*old_data[k].T + old_data[k-1].T);
+            // orsa::check(data[k].T);
         }
-    
+        
     }
 public:
     const int numSlices;

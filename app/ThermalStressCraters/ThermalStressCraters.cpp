@@ -141,7 +141,7 @@ int main (int argc, char **argv) {
     
     const size_t numSlices=400;
     History history;
-    const size_t NS=1000000;
+    const size_t NS=10000000;
     const size_t days=ceil(orbit_period/rotationPeriod());
     const double total_simulation_time = days*rotationPeriod(); // slightly larger than orbit_period because of the ceil(...) above (need integer days)
     const double dt = total_simulation_time/NS;
@@ -213,6 +213,8 @@ int main (int argc, char **argv) {
        ORSA_DEBUG("Fs[%06i] = %g",p,Fs[p]);
        }
     */
+    
+    ORSA_DEBUG("ls: %g",skinDepth());
     
     const double dx = 0.2*skinDepth(); // or a fraction of skinDepth = ls
     // const double dt = days*rotationPeriod()/NS;
