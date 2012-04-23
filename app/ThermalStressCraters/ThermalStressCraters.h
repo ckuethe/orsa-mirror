@@ -7,8 +7,10 @@
 #include <algorithm>
 
 #include <orsa/debug.h>
+#include <orsa/matrix.h>
 #include <orsa/orbit.h>
 #include <orsa/util.h>
+
 #include <orsaSolarSystem/attitude.h>
 #include <orsaSolarSystem/data.h>
 #include <orsaSolarSystem/print.h>
@@ -24,7 +26,7 @@
 
 // all in SI units
 
-inline double bondAlbedo() { return 0.10; } // 0.20
+inline double bondAlbedo() { return 0.05; } // 0.05 // 0.20
 
 inline double emissivity() { return 1.00; } // 0.90
 
@@ -33,7 +35,7 @@ inline double sigma() { return 5.67040e-8; } // Stefan-Boltzmann
 inline double solar() { return 1370.0; } // W m^-2 at 1 AU
 
 #warning update rotationPeriod
-inline double rotationPeriod() { return 12.0*3600.0; } // s
+inline double rotationPeriod() { return 10.0*3600.0; } // s
 
 inline double omega() { return orsa::twopi()/rotationPeriod(); } // s^-1
 

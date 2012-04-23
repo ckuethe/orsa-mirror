@@ -9,7 +9,15 @@ int main (int argc, char **argv) {
        // exit(0);
        }
     */
-
+    //
+    if (argc != 3) {
+        ORSA_DEBUG("Usage: %s <off-North,km> <off-East,km>",argv[0]);
+        exit(0);
+    }
+    
+    const double delta_North = orsa::FromUnits(atof(argv[1]),orsa::Unit::KM);
+    const double delta_East  = orsa::FromUnits(atof(argv[2]),orsa::Unit::KM);
+    
     if (0) {
         // test
         double r=0.0;
@@ -34,29 +42,59 @@ int main (int argc, char **argv) {
     // body orbit
     orsa::Orbit orbit;
     orbit.mu = orsaSolarSystem::Data::GMSun();
-    orbit.a = orsa::FromUnits(3.4,orsa::Unit::AU);
-    orbit.e = 0.35;
-    orbit.i = 10.0*orsa::degToRad();
+    orbit.a = orsa::FromUnits(3.2,orsa::Unit::AU);
+    orbit.e = 0.00;
+    orbit.i = 0.00*orsa::degToRad();
     orbit.omega_node       = 0.0*orsa::degToRad();
     orbit.omega_pericenter = 0.0*orsa::degToRad(); 
-    // orbit.M is sampled anyway to compute Fs
+    // all values of orbit.M are sampled, to compute Fs
     
     const double craterDiameter = orsa::FromUnits(50.0,orsa::Unit::KM);
     const double craterDepth    = orsa::FromUnits( 8.0,orsa::Unit::KM);
     const double craterCenterSlope = tan( 0.0*orsa::degToRad());
     const double craterRimSlope    = tan(40.0*orsa::degToRad());
-    const double craterLatitude = -45.0*orsa::degToRad();
+    const double craterLatitude = 30.0*orsa::degToRad();
     // longitude is not relevant, assuming 0.0;
     const double bodyRadius     = orsa::FromUnits(500.0,orsa::Unit::KM);
 #warning check that body radius >> crater diameter...
-    const double craterPlaneSlope = tan(5.0*orsa::degToRad());
-    const double craterPlaneSlopeAzimuth = 90.0*orsa::degToRad(); // 0=N, 90=E, 180=S, 270=W, points from high to low
-    const double bodyPoleEclipticLatitude  = 90.0*orsa::degToRad();
-    const double bodyPoleEclipticLongitude = 00.0*orsa::degToRad();
+    const double craterPlaneSlope = tan(0.0*orsa::degToRad());
+    const double craterPlaneSlopeAzimuth   =  0.0*orsa::degToRad(); // 0=N, 90=E, 180=S, 270=W, points from high to low
+    const double bodyPoleEclipticLatitude  =  90.0*orsa::degToRad();
+    const double bodyPoleEclipticLongitude =   0.0*orsa::degToRad();
     
-#warning OFF-North (km) and OFF-East (km) should be arguments!
+    // #warning OFF-North (km) and OFF-East (km) should be arguments!
     
 #warning print obliquity...
+    
+#warning in most cases, the value of bodyRadius is not essential, only the orientation of the crater matters
+    
+    ORSA_DEBUG("thermal inertia: %g (SI)",thermalInertia());
+    
+#warning need to double-check these vectors when working at latitudes below equator
+    
+    const orsa::Vector local_u_pole(0,0,1);
+    const orsa::Vector local_u_radial(cos(craterLatitude),0.0,sin(craterLatitude));
+    const orsa::Vector local_u_east(orsa::externalProduct(local_u_pole,local_u_radial).normalized());
+    const orsa::Vector local_u_north(orsa::externalProduct(local_u_radial,local_u_east).normalized());
+
+    // local_u_horizontal is a vector on the h=z=0 level, horizontal (no slope, no matter what the slope of the crater is)
+    const orsa::Vector local_u_horizontal =
+        cos(craterPlaneSlopeAzimuth-orsa::halfpi())*local_u_north +
+        sin(craterPlaneSlopeAzimuth-orsa::halfpi())*local_u_east;
+    // local_u_up is up from the crater (zenith?)
+    const orsa::Vector local_u_up = orsa::Matrix::axisRotation(local_u_horizontal,craterPlaneSlope)*local_u_radial;
+    const orsa::Vector local_u_low_to_high(orsa::externalProduct(local_u_up,local_u_horizontal).normalized());
+    
+    orsa::print(local_u_radial);
+    orsa::print(local_u_east);
+    orsa::print(local_u_north);
+    orsa::print(local_u_horizontal);
+    orsa::print(local_u_up);
+    orsa::print(local_u_low_to_high);
+    
+    // so now the 3 cartesial vectos wich are in crater coordinates are local_u_horizontal, local_u_low_to_high (both at h=0), and local_u_up
+    // const orsa::Vector local_crater_center = 
+    
     
     const size_t numSlices=400;
     History history;
@@ -67,20 +105,21 @@ int main (int argc, char **argv) {
     std::vector<double> Fs;
     Fs.resize(NS);
     for (size_t p=0; p<NS; ++p) {
-        // #warning restore this one!
+#warning restore this one!
         // Fs[p] = solar()/pow(orsa::FromUnits(hdist,orsa::Unit::AU,-1),2)*std::max(cos(days*orsa::twopi()*(double)p/(double)NS),0.0);
-
+        
         // test
-        Fs[p] = solar()/pow(orsa::FromUnits(hdist,orsa::Unit::AU,-1),2) *
-            std::max(cos(days*orsa::twopi()*(double)p/(double)NS),0.0) *
-            std::max(0.5+0.7*cos(orsa::twopi()*(double)p/(double)NS),0.0);
-        if (p%99==0) Fs[p] = 0.0;
+        /* Fs[p] = solar()/pow(orsa::FromUnits(hdist,orsa::Unit::AU,-1),2) *
+           std::max(cos(days*orsa::twopi()*(double)p/(double)NS),0.0) *
+           std::max(0.5+0.7*cos(orsa::twopi()*(double)p/(double)NS),0.0);
+           if (p%99==0) Fs[p] = 0.0;
+        */
         
         // TEST!
-        /* double proj = std::max(cos(days*orsa::twopi()*(double)p/(double)NS),0.0);
-           if (proj < 0.5) proj = 0.0;
-           Fs[p] = solar()/pow(orsa::FromUnits(hdist,orsa::Unit::AU,-1),2)*proj;
-        */
+        double proj = std::max(cos(days*orsa::twopi()*(double)p/(double)NS),0.0);
+        if (proj < 0.5) proj = 0.0;
+        Fs[p] = solar()/pow(orsa::FromUnits(hdist,orsa::Unit::AU,-1),2)*proj;
+        
     }
     
     /* for (size_t p=0; p<NS; ++p) {
