@@ -44,7 +44,7 @@ int main (int argc, char **argv) {
     // body orbit
     orsa::Orbit orbit;
     orbit.mu = orsaSolarSystem::Data::GMSun();
-    orbit.a = orsa::FromUnits(2.54,orsa::Unit::AU);
+    orbit.a = orsa::FromUnits(3.54,orsa::Unit::AU);
     orbit.e = 0.20;
     orbit.i = 5.00*orsa::degToRad();
     orbit.omega_node       = 0.0*orsa::degToRad();
@@ -55,14 +55,14 @@ int main (int argc, char **argv) {
     const double craterDiameter = orsa::FromUnits(100.0,orsa::Unit::KM);
     const double craterDepth    = orsa::FromUnits( 10.0,orsa::Unit::KM);
     const double craterCenterSlope = tan( 0.0*orsa::degToRad());
-    const double craterRimSlope    = tan(40.0*orsa::degToRad());
-    const double craterLatitude = 30.0*orsa::degToRad();
+    const double craterRimSlope    = tan(30.0*orsa::degToRad());
+    const double craterLatitude = 55.0*orsa::degToRad();
     // longitude is not relevant, assuming 0.0;
     const double bodyRadius     = orsa::FromUnits(500.0,orsa::Unit::KM);
 #warning check that body radius >> crater diameter...
-    const double craterPlaneSlope = tan(0.0*orsa::degToRad());
-    const double craterPlaneSlopeAzimuth   =  0.0*orsa::degToRad(); // 0=N, 90=E, 180=S, 270=W, points from high to low
-    const double bodyPoleEclipticLatitude  =  90.0*orsa::degToRad();
+    const double craterPlaneSlope = tan(15.0*orsa::degToRad());
+    const double craterPlaneSlopeAzimuth   = 220.0*orsa::degToRad(); // 0=N, 90=E, 180=S, 270=W, points from high to low
+    const double bodyPoleEclipticLatitude  =  60.0*orsa::degToRad();
     const double bodyPoleEclipticLongitude =   0.0*orsa::degToRad();
     
     // #warning OFF-North (km) and OFF-East (km) should be arguments!
@@ -139,7 +139,6 @@ int main (int argc, char **argv) {
                                                                               bodyPoleEclipticLongitude,
                                                                               bodyPoleEclipticLatitude);
     
-    const size_t numSlices=400;
     History history;
     const size_t NS=10000000;
     const size_t days=ceil(orbit_period/rotationPeriod());
@@ -216,7 +215,8 @@ int main (int argc, char **argv) {
     
     ORSA_DEBUG("ls: %g",skinDepth());
     
-    const double dx = 0.2*skinDepth(); // or a fraction of skinDepth = ls
+    const size_t numSlices=100;
+    const double dx = 0.5*skinDepth(); // or a fraction of skinDepth = ls
     // const double dt = days*rotationPeriod()/NS;
     const unsigned int history_skip = 10;
     
@@ -238,6 +238,8 @@ int main (int argc, char **argv) {
         
         unsigned int jpp = (j==(history.size()-1)) ? (0) : (j+1);
         const double dTdt = (history[jpp][0].T-history[j][0].T)/dt;
+        
+#warning for Fs should write the daily duty cycle, and the max. value of Fs daily
         
         gmp_fprintf(fp,
                     "%g %g %g %g %g\n",
