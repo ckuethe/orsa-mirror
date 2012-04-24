@@ -34,6 +34,7 @@ int main (int argc, char **argv) {
     
     FILE * fp = fopen(inputFile.c_str(),"r");
     if (!fp) {
+        ORSA_DEBUG("cannot open file [%s]",inputFile.c_str());
         exit(0);
     }
     
