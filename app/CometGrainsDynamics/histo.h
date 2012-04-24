@@ -7,6 +7,8 @@
 #include <orsa/datetime.h>
 #include <orsa/debug.h>
 
+#include <list>
+
 class ColDenData {
 public:
     orsa::Cache<double> r0; // initial grain radius (at t0)
@@ -23,6 +25,7 @@ public:
     }
 };
 
+typedef std::list<ColDenData> ColDenDataContainer;
 
 // grain size distribution 
 // differential distribution:

@@ -8,12 +8,10 @@ int main (int argc, char **argv) {
     
     orsa::Debug::instance()->initTimer();
     
-    if (argc != 2) {
-        ORSA_DEBUG("Usage: %s <input-colden-file>",argv[0]);
+    if (argc == 1) {
+        ORSA_DEBUG("Usage: %s <input-colden-file(s)>",argv[0]);
         exit(0);
     }
-    
-    const std::string inputFile = argv[1];
     
     const double pixelScale = orsa::FromUnits(50.0,orsa::Unit::KM);
     // every axis has 2*N pixels, from -N to N-1
@@ -32,15 +30,18 @@ int main (int argc, char **argv) {
     const size_t min_selected = 1; // 2
     const size_t min_grains_per_pixel = 1; // 2
     
-    FILE * fp = fopen(inputFile.c_str(),"r");
-    if (!fp) {
-        ORSA_DEBUG("cannot open file [%s]",inputFile.c_str());
-        exit(0);
-    }
-    
-    typedef std::list<ColDenData> ColDenDataContainer;
     ColDenDataContainer colden;
-    {
+    
+    for (size_t inputFileID=1; inputFileID<argc; ++inputFileID) {
+        
+        FILE * fp = fopen(argv[inputFileID],"r");
+        if (fp) {
+            ORSA_DEBUG("reading file [%s]",argv[inputFileID]);
+        } else {
+            ORSA_DEBUG("cannot open file [%s]",argv[inputFileID]);
+            exit(0);
+        }
+        
         char line[4096];
         double r0,rF,AF,dt,pos_sun,pos_orbit_pole,pos_orbit_plane;
 #warning keep fields in sync with CometGrainsDynamics.cpp
