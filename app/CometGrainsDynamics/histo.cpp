@@ -4,10 +4,16 @@
 #include <deque>
 #include <list>
 
-// int main (int argc, char **argv) {
-int main() {
+int main (int argc, char **argv) {
     
     orsa::Debug::instance()->initTimer();
+    
+    if (argc != 2) {
+        ORSA_DEBUG("Usage: %s <input-colden-file>",argv[0]);
+        exit(0);
+    }
+    
+    const std::string inputFile = argv[1];
     
     const double pixelScale = orsa::FromUnits(50.0,orsa::Unit::KM);
     // every axis has 2*N pixels, from -N to N-1
@@ -26,7 +32,7 @@ int main() {
     const size_t min_selected = 1; // 2
     const size_t min_grains_per_pixel = 1; // 2
     
-    FILE * fp = fopen("colden.out","r");
+    FILE * fp = fopen(inputFile.c_str(),"r");
     if (!fp) {
         exit(0);
     }

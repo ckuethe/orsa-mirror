@@ -3,6 +3,19 @@
 int main (int argc, char **argv) {
     
     orsa::Debug::instance()->initTimer();
+
+    if (argc != 2) {
+        ORSA_DEBUG("Usage: %s <runID>",argv[0]);
+        exit(0);
+    }
+    
+    const int runID = atoi(argv[1]);
+
+    char filename[4096];
+    sprintf(filename,"CGD_%02i.out",runID);
+    const std::string filename_CGD = filename;
+    sprintf(filename,"colden_%02i.out",runID);
+    const std::string filename_colden = filename;
     
     // #warning comment out Random Seed in production
     
@@ -448,7 +461,7 @@ int main (int argc, char **argv) {
                 sun_final_angle = acos((sun_r_global-nucleus_r_global).normalized()*grain_r_relative_global.normalized());
             }
             
-            FILE * fp = fopen("CGD.out","a");
+            FILE * fp = fopen(filename_CGD.c_str(),"a");
             gmp_fprintf(fp,"%.6f %g %g %g     %.3e %.3e %.3e %.3e %g     %g %g %g %g %g     %g %g %g %7.3f %+7.3f     %7.3f %7.3f %.3f %.3f %.3f     %.3f %.3e %.3e %10.6f %10.6f     %10.6f %10.6f %10.6f %10.6f %10.6f     %+.3e %+.3e %+.3e %+.3e %+.3e     %+.3e %.3e %.3e %.3e %i     %8.3f %+8.3f %+8.3f %+8.3f %+8.3f     %10.6f %i \n",
                         orsa::FromUnits(r_comet_t0,orsa::Unit::AU,-1),
                         orsa::FromUnits(nucleus_ax,orsa::Unit::KM,-1),
@@ -620,11 +633,9 @@ int main (int argc, char **argv) {
                             
                     );
                 
-                fp = fopen("colden.out","a");
+                fp = fopen(filename_colden.c_str(),"a");
                 gmp_fprintf(fp,"%s\n",line);
                 fclose(fp);
-                
-                
             }
             
         }
@@ -634,7 +645,6 @@ int main (int argc, char **argv) {
     
     return 0;
 }
-
 
 bool GrainUpdateIBPS::update(const orsa::Time & t,
                              InertialBodyProperty * inertial,
