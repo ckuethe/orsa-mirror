@@ -60,8 +60,8 @@ int main (int argc, char **argv) {
     const double grain_density = orsa::FromUnits(orsa::FromUnits(0.5,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double rotation_period = orsa::FromUnits(10.0,orsa::Unit::HOUR);
     const double pole_phi_Tp = 0.0*orsa::degToRad(); // rotation angle at time Tp
-    const double pole_ecliptic_longitude =  0.0*orsa::degToRad();
-    const double pole_ecliptic_latitude  = 90.0*orsa::degToRad();
+    const double pole_ecliptic_longitude = 90.0*orsa::degToRad();
+    const double pole_ecliptic_latitude  = 20.0*orsa::degToRad();
     // const double min_ejection_velocity_constant = 0.5; // in the relation between beta and ejection velocity
     // const double max_ejection_velocity_constant = 1.5; // in the relation between beta and ejection velocity
     // const double ejection_velocity_beta_exponent = 0.5; // nominal: 0.5
@@ -405,7 +405,7 @@ int main (int argc, char **argv) {
             */
         }
         
-        osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),grain_initial_radius,grain_density,nucleus.get(),bound_radius,4,t0);
+        osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),grain_initial_radius,grain_density,nucleus.get(),bound_radius,5,t0);
         // call singleStepDone once before starting, to perform initial checks
         orsa::Time dummy_time(0);
         integrator->singleStepDone(bg,t0,dummy_time,dummy_time);
