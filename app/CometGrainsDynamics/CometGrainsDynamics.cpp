@@ -525,9 +525,21 @@ int main (int argc, char **argv) {
                 //
                 double grain_distance = 0.0;
                 //
+                double grain_R_X = 0.0;
+                double grain_R_Y = 0.0;
+                double grain_R_Z = 0.0;
+                //
                 double grain_R_sun = 0.0;
                 double grain_R_orbit_pole  = 0.0;
                 double grain_R_orbit_plane = 0.0;
+                //
+                double grain_R_orbit_velocity = 0.0;
+                // grain_R_orbit_pole same as above;
+                double grain_R_sunish = 0.0;
+                //
+                double grain_R_earth = 0.0;
+                double grain_R_RA = 0.0;
+                double grain_R_Dec = 0.0;
                 //
                 double grain_V = 0.0;
                 //
@@ -544,16 +556,39 @@ int main (int argc, char **argv) {
                     
                     bg->getInterpolatedPosVel(r,
                                               v,
+                                              earth,
+                                              t);
+                    const orsa::Vector earth_r_global = r;
+                    const orsa::Vector earth_v_global = v;
+                    
+                    bg->getInterpolatedPosVel(r,
+                                              v,
                                               nucleus,
                                               t);
                     const orsa::Vector nucleus_r_global = r;
                     const orsa::Vector nucleus_v_global = v;
                     
+                    // absolute ecliptic coordinate directions
+                    const orsa::Vector u_X(1,0,0);
+                    const orsa::Vector u_Y(0,1,0);
+                    const orsa::Vector u_Z(0,0,1);
+
+                    // sun, orbit pole, orbit plane
                     const orsa::Vector u_sun = (sun_r_global-nucleus_r_global).normalized();
                     const orsa::Vector u_tmp = (nucleus_v_global-sun_v_global).normalized();
                     const orsa::Vector u_orbit_pole  = orsa::externalProduct(u_tmp,u_sun).normalized();
                     const orsa::Vector u_orbit_plane = orsa::externalProduct(u_orbit_pole,u_sun).normalized();
                     // u_orbit_plane is in the general direction of comet velocity, but also orthogonal to orbit pole and sun direction
+
+                    // similar, but velocity is always along velocity (not just orbit plane), but sun is not exact but "sunish"...
+                    const orsa::Vector u_orbit_velocity = (nucleus_v_global-sun_v_global).normalized();
+                    // u_orbit_pole is the same as above
+                    const orsa::Vector u_sunish = orsa::externalProduct(u_orbit_pole,u_orbit_velocity).normalized();
+                    
+                    const orsa::Vector u_earth = (earth_r_global-nucleus_r_global).normalized();
+                    const orsa::Vector u_tmp2  = orsaSolarSystem::equatorialToEcliptic()*orsa::Vector(0,0,1);
+                    const orsa::Vector u_RA    = orsa::externalProduct(u_earth,u_tmp2).normalized();
+                    const orsa::Vector u_Dec   = orsa::externalProduct(u_RA,u_earth).normalized();
                     
                     bg->getInterpolatedPosVel(r,
                                               v,
@@ -580,9 +615,21 @@ int main (int argc, char **argv) {
                     
                     grain_distance = grain_r_relative_global.length();
                     
+                    grain_R_X = grain_r_relative_global*u_X;
+                    grain_R_Y = grain_r_relative_global*u_Y;
+                    grain_R_Z = grain_r_relative_global*u_Z;
+                    
                     grain_R_sun         = grain_r_relative_global*u_sun;
                     grain_R_orbit_pole  = grain_r_relative_global*u_orbit_pole;
                     grain_R_orbit_plane = grain_r_relative_global*u_orbit_plane;
+
+                    grain_R_orbit_velocity = grain_r_relative_global*u_orbit_velocity;
+                    // grain_R_orbit_pole same as above
+                    grain_R_sunish         = grain_r_relative_global*u_sunish;
+
+                    grain_R_earth = grain_r_relative_global*u_earth;
+                    grain_R_RA    = grain_r_relative_global*u_RA;
+                    grain_R_Dec   = grain_r_relative_global*u_Dec;
                     
                     grain_V = grain_v_relative_global.length();
                     
@@ -592,13 +639,11 @@ int main (int argc, char **argv) {
                 // ORSA_DEBUG("rC: %i",grain_ibps.inertial->referenceCount());
                 
 #warning note: some grains are behind the comet nucleus, so should not contribute to the column density...
-
+                
 #warning keep fields in sync with histo.cpp
                 
                 char line[4096];
-                gmp_sprintf(line,"%.6f   %.5f %.5f   %.3e %.3e   %.3e %.3e %.3e   %.3e   %+.3e %+.3e %+.3e   %.3e",
-                            
-                            
+                gmp_sprintf(line,"%.6f   %.5f %.5f   %.3e %.3e   %.3e %.3e %.3e   %.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %.3e",
                             orsa::FromUnits(r_comet_t0,orsa::Unit::AU,-1),
                             //
                             orsaSolarSystem::timeToJulian(t0),
@@ -613,25 +658,29 @@ int main (int argc, char **argv) {
                             //
                             orsa::FromUnits(grain_distance,orsa::Unit::KM,-1),
                             //
+                            orsa::FromUnits(grain_R_X,orsa::Unit::KM,-1),
+                            orsa::FromUnits(grain_R_Y,orsa::Unit::KM,-1),
+                            orsa::FromUnits(grain_R_Z,orsa::Unit::KM,-1),
+                            //
                             orsa::FromUnits(grain_R_sun,orsa::Unit::KM,-1),
                             orsa::FromUnits(grain_R_orbit_pole,orsa::Unit::KM,-1),
                             orsa::FromUnits(grain_R_orbit_plane,orsa::Unit::KM,-1),
-                            
-#warning add: ecliptic coordinates, and earth/ra/dec ones
-                            
-                            
-                            
-                            orsa::FromUnits(orsa::FromUnits(grain_V,orsa::Unit::METER,-1),orsa::Unit::SECOND)
-                            
-                            // dr grain
-                            // dv grain
-                            
-                            
-                            // gas number density
-                            // gas mass density
-                            
-                            
-                    );
+                            //
+                            orsa::FromUnits(grain_R_orbit_velocity,orsa::Unit::KM,-1),
+                            orsa::FromUnits(grain_R_orbit_pole,orsa::Unit::KM,-1),
+                            orsa::FromUnits(grain_R_sunish,orsa::Unit::KM,-1),
+                            //
+                            orsa::FromUnits(grain_R_earth,orsa::Unit::KM,-1),
+                            orsa::FromUnits(grain_R_RA,orsa::Unit::KM,-1),
+                            orsa::FromUnits(grain_R_Dec,orsa::Unit::KM,-1),
+                            //
+                            orsa::FromUnits(orsa::FromUnits(grain_V,orsa::Unit::METER,-1),orsa::Unit::SECOND));
+                
+                // can add:
+                // dr grain
+                // dv grain
+                // gas number density
+                // gas mass density
                 
                 fp = fopen(filename_colden.c_str(),"a");
                 gmp_fprintf(fp,"%s\n",line);

@@ -15,9 +15,23 @@ public:
     orsa::Cache<double> rF; // final grain radius (at t_snapshot)
     orsa::Cache<double> AF; // final area
     orsa::Cache<double> dt; // time between emission and snapshot
+    //
+    orsa::Cache<double> pos_X;
+    orsa::Cache<double> pos_Y;
+    orsa::Cache<double> pos_Z;
+    //
     orsa::Cache<double> pos_sun; 
     orsa::Cache<double> pos_orbit_pole;
     orsa::Cache<double> pos_orbit_plane;
+    //
+    orsa::Cache<double> pos_orbit_velocity;
+    // pos_orbit_pole same as above
+    orsa::Cache<double> pos_sunish;
+    //
+    orsa::Cache<double> pos_earth;
+    orsa::Cache<double> pos_RA;
+    orsa::Cache<double> pos_Dec;
+    
 public:
     // for sorting by time, from small dt to large
     bool operator < (const ColDenData & rhs) const {
