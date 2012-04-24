@@ -80,56 +80,14 @@ public:
         return (*this);
     }
 public:
-    bool update(const orsa::Time & t,
-                InertialBodyProperty * inertial,
-                TranslationalBodyProperty * translational,
-                RotationalBodyProperty * rotational) {
-        
-        // ORSA_DEBUG("called... t: %20.12e",t.get_d());
-
-        // ORSA_DEBUG("set: %i",grain_r_relative_local_initial->var.isSet());
-        
-        orsa::UpdateIBPS::update(t,inertial,translational,rotational);
-        
-        // ORSA_DEBUG("bg: %x",bg.get());
-        
-        orsa::Vector r;
-        bg->getInterpolatedPosition(r,
-                                    nucleus,
-                                    t);
-        const orsa::Vector nucleus_r_global = r;
-        
-        // cannot use getInterpolatedPosition here...
-        const orsa::Vector grain_r_global = translational->position();
-        
-        const orsa::Vector grain_r_relative_global = grain_r_global - nucleus_r_global;
-        
-        const orsa::Matrix g2l = orsa::globalToLocal(nucleus,bg,t);
-        
-        const orsa::Vector grain_r_relative_local = g2l*grain_r_relative_global;
-
-        if (!grain_r_relative_local_initial->var.isSet()) {
-            grain_r_relative_local_initial->var = grain_r_relative_local;
-        } else {
-#warning THIS SHOULD BE SMOOTH, and also DISTANCE should be a PARAMETER!
-            if ((grain_r_relative_local - grain_r_relative_local_initial->var).length() < orsa::FromUnits(100,orsa::Unit::METER)) {
-                grain->beta = 0.0;
-            }
-        }
-        
-        /* ORSA_DEBUG("called... t: %20.12e  distance: %g   beta: %g   now set: %i",
-           t.get_d(),
-           (grain_r_relative_local - grain_r_relative_local_initial->var).length(),
-           (*grain->beta),
-           grain_r_relative_local_initial->var.isSet());
-        */
-        
-        return true;
-    }
-public:
     GrainUpdateIBPS * clone() const {
         return new GrainUpdateIBPS(*this);
     }
+public:
+    bool update(const orsa::Time & t,
+                InertialBodyProperty * inertial,
+                TranslationalBodyProperty * translational,
+                RotationalBodyProperty * rotational);
 public:
     void reset() const {
         grain_r_relative_local_initial->var.reset();
@@ -245,7 +203,7 @@ protected:
     void _init() {
         update(_t0);
     }
-protected:
+public:
     const orsa::Time _t0;
     const double _initialRadius;
     const double _density;
