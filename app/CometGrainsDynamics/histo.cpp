@@ -32,7 +32,7 @@ int main (int argc, char **argv) {
     
     ColDenDataContainer colden;
     
-    for (size_t inputFileID=1; inputFileID<argc; ++inputFileID) {
+    for (int inputFileID=1; inputFileID<argc; ++inputFileID) {
         
         FILE * fp = fopen(argv[inputFileID],"r");
         if (fp) {
@@ -96,7 +96,8 @@ int main (int argc, char **argv) {
     
     {        
         // 2D
-        std::vector< std::vector< std::deque<double> > > histo_2D;
+        typedef std::vector< std::vector< std::list<double> > > histo_2D_type;
+        histo_2D_type histo_2D;
         histo_2D.resize(2*N);
         for (size_t i=0; i<2*N; ++i) {
             histo_2D[i].resize(2*N);
@@ -250,7 +251,7 @@ int main (int argc, char **argv) {
             
             low_dt = high_dt;
         }
-
+        
         size_t populatedPixels=0;
         
         // #warning write zeroes?
@@ -259,8 +260,10 @@ int main (int argc, char **argv) {
             for (size_t j=0; j<2*N; ++j) {
                 if (histo_2D[i][j].size()>=min_grains_per_pixel) {
                     double val = 0.0;
-                    for (size_t k=0; k<histo_2D[i][j].size(); ++k) {
-                        val += histo_2D[i][j][k];
+                    std::list<double>::const_iterator it = histo_2D[i][j].begin();
+                    while (it != histo_2D[i][j].end()) {
+                        val += (*it);
+                        ++it;
                     }
                     if (val>0.0) {
                         ++populatedPixels;
