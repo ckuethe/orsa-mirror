@@ -45,6 +45,173 @@ double GrainRadiusToBeta(const double & grainRadius,
    }
 */
 
+// #error REPLACE  GrainIBPS  with  GrainUpdateIBPS 
+
+// test, but this might be useful elsewhere... should improve and put in ORSA lib (if working like orsa::Cache<T> ...)
+template <typename T> class RefCache : public osg::Referenced {
+public:
+    RefCache() : osg::Referenced() { }
+protected:
+    ~RefCache() { }
+public:
+    orsa::Cache<T> var;
+};
+
+class GrainUpdateIBPS : public orsa::UpdateIBPS {
+public:
+    GrainUpdateIBPS() : orsa::UpdateIBPS() {
+        grain_r_relative_local_initial = new RefCache<orsa::Vector>;
+    }
+public:
+    GrainUpdateIBPS(const GrainUpdateIBPS & grain_ibps) {
+        bg = grain_ibps.bg;
+        nucleus = grain_ibps.nucleus;
+        grain = grain_ibps.grain;
+        grain_r_relative_local_initial = grain_ibps.grain_r_relative_local_initial;
+    }
+protected:
+    virtual ~GrainUpdateIBPS() { }
+public:
+    GrainUpdateIBPS & operator = (const GrainUpdateIBPS & grain_ibps) {
+        bg = grain_ibps.bg;
+        nucleus = grain_ibps.nucleus;
+        grain = grain_ibps.grain;
+        grain_r_relative_local_initial = grain_ibps.grain_r_relative_local_initial;
+        return (*this);
+    }
+public:
+    bool update(const orsa::Time & t,
+                InertialBodyProperty * inertial,
+                TranslationalBodyProperty * translational,
+                RotationalBodyProperty * rotational) {
+        
+        // ORSA_DEBUG("called... t: %20.12e",t.get_d());
+
+        // ORSA_DEBUG("set: %i",grain_r_relative_local_initial->var.isSet());
+        
+        orsa::UpdateIBPS::update(t,inertial,translational,rotational);
+        
+        // ORSA_DEBUG("bg: %x",bg.get());
+        
+        orsa::Vector r;
+        bg->getInterpolatedPosition(r,
+                                    nucleus,
+                                    t);
+        const orsa::Vector nucleus_r_global = r;
+        
+        // cannot use getInterpolatedPosition here...
+        const orsa::Vector grain_r_global = translational->position();
+        
+        const orsa::Vector grain_r_relative_global = grain_r_global - nucleus_r_global;
+        
+        const orsa::Matrix g2l = orsa::globalToLocal(nucleus,bg,t);
+        
+        const orsa::Vector grain_r_relative_local = g2l*grain_r_relative_global;
+
+        if (!grain_r_relative_local_initial->var.isSet()) {
+            grain_r_relative_local_initial->var = grain_r_relative_local;
+        } else {
+#warning THIS SHOULD BE SMOOTH, and also DISTANCE should be a PARAMETER!
+            if ((grain_r_relative_local - grain_r_relative_local_initial->var).length() < orsa::FromUnits(100,orsa::Unit::METER)) {
+                grain->beta = 0.0;
+            }
+        }
+        
+        /* ORSA_DEBUG("called... t: %20.12e  distance: %g   beta: %g   now set: %i",
+           t.get_d(),
+           (grain_r_relative_local - grain_r_relative_local_initial->var).length(),
+           (*grain->beta),
+           grain_r_relative_local_initial->var.isSet());
+        */
+        
+        return true;
+    }
+public:
+    GrainUpdateIBPS * clone() const {
+        return new GrainUpdateIBPS(*this);
+    }
+public:
+    void reset() const {
+        grain_r_relative_local_initial->var.reset();
+    }
+public:
+    osg::ref_ptr<orsa::BodyGroup> bg;
+    osg::ref_ptr<orsa::Body> nucleus;
+    osg::ref_ptr<orsa::Body> grain;
+protected:
+    // mutable orsa::Cache<orsa::Vector> grain_r_relative_local_initial;
+    // osg::RefCache<orsa::Vector> grain_r_relative_local_initial;
+    osg::ref_ptr< RefCache<orsa::Vector> > grain_r_relative_local_initial;
+};
+
+/* 
+   class GrainIBPS : public orsa::IBPS {
+   public:
+   GrainIBPS() : orsa::IBPS() { }
+   public:
+   GrainIBPS(const GrainIBPS & grain_ibps) : orsa::IBPS(IBPS(grain_ibps)) {
+   bg = grain_ibps.bg;
+   nucleus = grain_ibps.nucleus;
+   grain = grain_ibps.grain;
+   grain_r_relative_local_initial = grain_ibps.grain_r_relative_local_initial;
+   }
+   public:
+   virtual ~GrainIBPS() { }
+   public:
+   GrainIBPS & operator = (const GrainIBPS & grain_ibps) {
+   (*this) = GrainIBPS(grain_ibps);
+   bg = grain_ibps.bg;
+   nucleus = grain_ibps.nucleus;
+   grain = grain_ibps.grain;
+   grain_r_relative_local_initial = grain_ibps.grain_r_relative_local_initial;
+   }
+   public:
+   virtual bool update(const orsa::Time & t) {
+   ORSA_DEBUG("called... t: %20.12e",t.get_d());
+   orsa::IBPS::update(t);
+   
+   ORSA_DEBUG("bg: %x",bg.get());
+   
+   orsa::Vector r,v;
+   bg->getInterpolatedPosVel(r,
+   v,
+   nucleus,
+   t);
+   const orsa::Vector nucleus_r_global = r;
+   const orsa::Vector nucleus_v_global = v;
+   bg->getInterpolatedPosVel(r,
+   v,
+   grain,
+   t);
+   const orsa::Vector grain_r_global = r;
+   const orsa::Vector grain_v_global = v;
+   
+   const orsa::Vector grain_r_relative_global = grain_r_global - nucleus_r_global;
+   
+   const orsa::Matrix g2l = orsa::globalToLocal(nucleus,bg,t);
+   
+   const orsa::Vector grain_r_relative_local = g2l*grain_r_relative_global;
+   
+   if (!grain_r_relative_local_initial.isSet()) {
+   grain_r_relative_local_initial = grain_r_relative_local;
+   } else {
+   #warning THIS SHOULD BE SMOOTH, and also DISTANCE should be a PARAMETER!
+   if ((grain_r_relative_local - grain_r_relative_local_initial).length() < orsa::FromUnits(100,orsa::Unit::METER)) {
+   grain->beta = 0.0;
+   }
+   }
+   
+   return true;
+   }
+   public:
+   osg::ref_ptr<orsa::BodyGroup> bg;
+   osg::ref_ptr<orsa::Body> nucleus;
+   osg::ref_ptr<orsa::Body> grain;
+   protected:
+   orsa::Cache<orsa::Vector> grain_r_relative_local_initial;
+   };
+*/
+
 class GrainDynamicInertialBodyProperty : public InertialBodyProperty {
 public:
     GrainDynamicInertialBodyProperty(const orsa::Time & t0,
@@ -134,6 +301,7 @@ public:
     BodyPropertyType type() const { return BP_DYNAMIC; }
 public:
     bool update(const orsa::Time & t) {
+        
         // orsa::print(t);
         const double dt = (t-_t0).get_d();
         
@@ -143,13 +311,16 @@ public:
         
 #warning check this and IMPROVE... (slow sublimation at 10 microns)
 #warning this is not correct for icy grains that have an initial radius BELOW 10 microns
-        if (_radius < orsa::FromUnits(1.0e-5,orsa::Unit::METER)) {
-            _radius = orsa::FromUnits(1.0e-5,orsa::Unit::METER);
-        }
+#warning written as is, is wrong, especially for dust-only grains (not sublimating)
+        /* if (_radius < orsa::FromUnits(1.0e-5,orsa::Unit::METER)) {
+           _radius = orsa::FromUnits(1.0e-5,orsa::Unit::METER);
+           }
+        */
         
         _mass = 4.0/3.0*orsa::pi()*orsa::cube(_radius)*_density;
-        _grain->beta = GrainRadiusToBeta(_radius,_density);
-
+        
+        // _grain->beta is now updated in GrainUpdateIBPS
+        
         return true;
     }
 public:
@@ -287,6 +458,7 @@ public:
         }
 
         orsa::IBPS grain_ibps;
+        // GrainIBPS grain_ibps;
         bg->getIBPS(grain_ibps,grain,t);
         osg::ref_ptr <GrainDynamicInertialBodyProperty> inertial = dynamic_cast <GrainDynamicInertialBodyProperty*> (grain_ibps.inertial.get());
         const double grainRadius = inertial->radius();

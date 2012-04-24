@@ -39,13 +39,13 @@ int main (int argc, char **argv) {
     const orsa::Time comet_orbit_Tp = orsaSolarSystem::gregorTime(2000,1,1.70);
     const orsa::Time comet_orbit_epoch = comet_orbit_Tp; // orsaSolarSystem::gregorTime(2010,1,1);
     //
-    const double nucleus_ax = orsa::FromUnits(3.0,orsa::Unit::KM);
-    const double nucleus_ay = orsa::FromUnits(2.5,orsa::Unit::KM);
-    const double nucleus_az = orsa::FromUnits(2.4,orsa::Unit::KM);
+    const double nucleus_ax = orsa::FromUnits(2.0,orsa::Unit::KM);
+    const double nucleus_ay = orsa::FromUnits(1.5,orsa::Unit::KM);
+    const double nucleus_az = orsa::FromUnits(1.4,orsa::Unit::KM);
     const size_t gravity_degree = 2;
     const double comet_density = orsa::FromUnits(orsa::FromUnits(0.4,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double grain_density = orsa::FromUnits(orsa::FromUnits(0.5,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-    const double rotation_period = orsa::FromUnits(6.0,orsa::Unit::HOUR);
+    const double rotation_period = orsa::FromUnits(10.0,orsa::Unit::HOUR);
     const double pole_phi_Tp = 0.0*orsa::degToRad(); // rotation angle at time Tp
     const double pole_ecliptic_longitude =  0.0*orsa::degToRad();
     const double pole_ecliptic_latitude  = 90.0*orsa::degToRad();
@@ -58,10 +58,10 @@ int main (int argc, char **argv) {
     const double min_grain_radius = orsa::FromUnits(0.000001,orsa::Unit::METER);
     const double max_grain_radius = orsa::FromUnits(0.200000,orsa::Unit::METER);    
 #warning check min_time_second with Nalin
-    const int min_time_seconds =   5; // grains flying less than this time are not included
+    const int min_time_seconds =  60; // grains flying less than this time are not included
     const int max_time_days    = 100; // 100;
     
-    // gas drag coefficients
+    // gas (drag) coefficients
     const double gas_production_rate_at_1AU = orsa::FromUnits(1.0e28,orsa::Unit::SECOND,-1); // molecules/second
     const double gas_velocity_at_1AU = orsa::FromUnits(orsa::FromUnits(0.5,orsa::Unit::KM),orsa::Unit::SECOND,-1);
     const double gas_molar_mass = 18; // 18 for H20
@@ -100,6 +100,8 @@ int main (int argc, char **argv) {
     
     osg::ref_ptr<orsa::Body> grain = new orsa::Body;
     IBPS grain_ibps;
+    osg::ref_ptr<GrainUpdateIBPS> grainUpdateIBPS = new GrainUpdateIBPS;
+    grain_ibps.updateIBPS = grainUpdateIBPS;
     
     size_t iter=0;
     while (iter < 100000) {
@@ -108,8 +110,10 @@ int main (int argc, char **argv) {
         // const orsa::Time t0 = t_snapshot - orsa::Time(max_time_days,0,0,0,0)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
         // const orsa::Time t0 = t_snapshot - orsa::Time((max_time_days*86400)*(1000000*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()));
         // #warning maybe use log scale for interval sampling!?
-#warning have a minimumum here too? as it is, the minimum is 1 mu-sec...
+        // #warning have a minimumum here too? as it is, the minimum is 1 mu-sec...
         const orsa::Time t0 = t_snapshot - orsa::Time(exp(log(min_time_seconds*1e6) + (log(max_time_days*86400.0*1.0e6)-log(min_time_seconds*1e6))*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()));
+        
+        // ORSA_DEBUG("t0: %20.12e",t0.get_d());
         
         // osg::ref_ptr<orsa::BodyGroup> bg = new orsa::BodyGroup;
         bg->clear();
@@ -272,7 +276,13 @@ int main (int argc, char **argv) {
         // IBPS grain_ibps;
         {
             grain->setName("grain");
-            // IBPS ibps;
+            // non-standard fields
+            grainUpdateIBPS->reset();
+            grainUpdateIBPS->bg = bg;
+            grainUpdateIBPS->nucleus = nucleus;
+            grainUpdateIBPS->grain = grain;
+            grain_ibps.updateIBPS = grainUpdateIBPS;
+            //
             grain_ibps.time = t0;
             grain_ibps.inertial = new GrainDynamicInertialBodyProperty(t0,
                                                                        grain_initial_radius,
@@ -291,7 +301,9 @@ int main (int argc, char **argv) {
             grain->beta = grain_initial_beta;
             grain->betaSun = sun.get();
             // gas drag
-            if (gas_drag_coefficient > 0.0) {
+            // if (gas_drag_coefficient > 0.0) {
+            {
+                // this actuall also included sublimation force computation...
                 grain->propulsion = new GasDrag(bg,
                                                 sun,
                                                 nucleus,
@@ -542,7 +554,7 @@ int main (int argc, char **argv) {
                     const double obliquity = acos((orsa::localToGlobal(nucleus,bg,t)*orsa::Vector(0,0,1))*u_orbit_pole);
                     static bool print_obliquity=false;
                     if (!print_obliquity) {
-                        ORSA_DEBUG("nucleus obliquity: %g [deg]",obliquity*orsa::radToDeg());
+                        ORSA_DEBUG("nucleus obliquity: %.3f [deg]",obliquity*orsa::radToDeg());
                         print_obliquity=true;
                     }
                     // orsa::print(orsa::localToGlobal(nucleus,bg,t));
