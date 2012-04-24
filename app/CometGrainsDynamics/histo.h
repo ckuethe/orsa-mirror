@@ -16,6 +16,11 @@ public:
     orsa::Cache<double> pos_sun; 
     orsa::Cache<double> pos_orbit_pole;
     orsa::Cache<double> pos_orbit_plane;
+public:
+    // for sorting by time, from small dt to large
+    bool operator < (const ColDenData & rhs) const {
+        return ((*dt) < (*rhs.dt));
+    }
 };
 
 

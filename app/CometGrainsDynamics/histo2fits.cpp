@@ -51,16 +51,19 @@ int main() {
     char line[4096];
     int i,j;
     double val;
-    double minVal = 1.0e99;
+    // double minVal = 1.0e99;
     while (fgets(line,4096,fp)) {
         sscanf(line,
                "%i %i %lf",
                &i,
                &j,
                &val);
-        array[i][j] = val;
-        if (val<minVal) minVal=val;
-    }
+        if ( (i>=0) && (i<__ORSA_FITS_N__) &&
+             (j>=0) && (j<__ORSA_FITS_N__) ) {
+            array[i][j] = val;
+            // if (val<minVal) minVal=val;
+        }
+    }   
     
     /* 
        for (size_t i=0; i<__ORSA_FITS_N__; ++i) {
