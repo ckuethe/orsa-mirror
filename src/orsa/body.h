@@ -96,7 +96,7 @@ namespace orsa {
             return (*this);
         }
     protected:
-        ~LocalShapeData() { } 
+        virtual ~LocalShapeData() { } 
     public: 
         osg::ref_ptr<const orsa::Shape> localShape;
     public:
@@ -118,7 +118,7 @@ namespace orsa {
             return (*this);
         }
     protected:
-        ~LocalShapeCache() { }
+        virtual ~LocalShapeCache() { }
     public:
         osg::ref_ptr<LocalShapeData> data;
     };
@@ -143,7 +143,7 @@ namespace orsa {
             return (*this);
         }
     protected:
-        ~InertialBodyProperty() {
+        virtual ~InertialBodyProperty() {
             // ORSA_DEBUG("destroying object: %x",this);
         }
     public:
@@ -564,7 +564,36 @@ namespace orsa {
     };
   
     /***/
-  
+    
+    class UpdateIBPS : public osg::Referenced {
+    public:
+        UpdateIBPS() : osg::Referenced(true) { }
+    protected:
+        virtual ~UpdateIBPS() { }
+    public:
+        virtual bool update(const orsa::Time & t,
+                            InertialBodyProperty * inertial,
+                            TranslationalBodyProperty * translational,
+                            RotationalBodyProperty * rotational) {
+            if (inertial) {
+                inertial->update(t);
+            }
+            if (translational) {
+                translational->update(t);
+            }
+            if (rotational) {
+                rotational->update(t);
+            }
+            return true;
+        }
+    public:
+        virtual UpdateIBPS * clone() const {
+            return new UpdateIBPS(*this);
+        }
+    };
+    
+    /***/
+    
     class IBPS {
     public:
         IBPS();
@@ -580,22 +609,14 @@ namespace orsa {
         osg::ref_ptr<TranslationalBodyProperty> translational;
     public:
         osg::ref_ptr<RotationalBodyProperty> rotational;
-    
+    public:
+        osg::ref_ptr<UpdateIBPS> updateIBPS;
     public:
         IBPS & operator = (const IBPS &);
         
     public:
         virtual bool update(const orsa::Time & t) {
-            if (inertial.get()) {
-                inertial->update(t);
-            }
-            if (translational.get()) {
-                translational->update(t);
-            }
-            if (rotational.get()) {
-                rotational->update(t);
-            }
-            return true;
+            return updateIBPS->update(t,inertial,translational,rotational);
         }
         
     public:
@@ -734,6 +755,7 @@ namespace orsa {
             _ibps = ibps;
             return true;
         }
+        
     public:
         const orsa::IBPS & getInitialConditions() const {
             return _ibps;
@@ -741,31 +763,6 @@ namespace orsa {
     protected:
         orsa::Cache<orsa::IBPS> _ibps;
         
-        /* 
-           public:
-           bool setRadius(const double & r) {
-           if (_shape.get()) {
-           ORSA_ERROR("cannot set radius, this body has a predefined shape");
-           return false;
-           } else {
-           _radius = r;
-           return true;
-           }
-           }
-           public:	
-           const double getRadius() const {
-           if (_shape.get()) {
-           return _shape->boundingRadius();
-           } else if (_radius.isSet()) {
-           return _radius;
-           } else {
-           return 0;
-           }
-           }
-           protected:
-           orsa::Cache<double> _radius;
-        */
-    
     public:
         virtual bool setName(const std::string &);
         virtual const std::string & getName() const;

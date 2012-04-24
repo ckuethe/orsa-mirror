@@ -66,6 +66,16 @@ namespace orsa {
             return (*this);
         }
     public:
+        Cache<T> & operator = (const Cache<T> & c) {
+            // ORSA_DEBUG("cache copy of cache");
+            if (canChange()) {
+                _val = c._val;
+                _set = c._set;
+                _locked = c._locked;
+            }
+            return (*this);
+        }
+    public:
         Cache<T> & operator += (const T & val) {
             if (canChange()) {
                 _val += val;

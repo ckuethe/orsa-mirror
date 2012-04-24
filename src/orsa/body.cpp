@@ -94,7 +94,7 @@ const orsa::Shape * InertialBodyProperty::localShape() const {
 IBPS::IBPS() {
   
     // ORSA_DEBUG("creating new IBPS, address: %x",this);
-  
+    updateIBPS = new orsa::UpdateIBPS; // default
     tmp = false;
 }
 
@@ -137,7 +137,9 @@ IBPS::IBPS(const IBPS & ibps) {
     } else {
         rotational = 0;
     }
-  
+    
+    updateIBPS = ibps.updateIBPS; // clone?
+    
     tmp = ibps.tmp;
   
     /* ORSA_DEBUG(" --LEAVING-- %x.translational.get(): %x   %x.translational.get(): %x",
@@ -185,7 +187,9 @@ IBPS & IBPS::operator = (const IBPS & ibps) {
         rotational = 0;
     }
     tmp = ibps.tmp;
-  
+
+    updateIBPS = ibps.updateIBPS; // clone?
+    
     /* ORSA_DEBUG(" --LEAVING-- %x.translational.get(): %x   %x.translational.get(): %x",
        &ibps,ibps.translational.get(),
        this,translational.get());
