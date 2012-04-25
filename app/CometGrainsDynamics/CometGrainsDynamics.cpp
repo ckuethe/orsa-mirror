@@ -3,7 +3,9 @@
 int main (int argc, char **argv) {
     
     orsa::Debug::instance()->initTimer();
-
+    
+    ORSA_DEBUG("PID: %i",getpid());
+    
     if (argc != 2) {
         ORSA_DEBUG("Usage: %s <runID>",argv[0]);
         exit(0);
@@ -72,7 +74,8 @@ int main (int argc, char **argv) {
     const double max_grain_radius = orsa::FromUnits(0.200000,orsa::Unit::METER);    
 #warning check min_time_second with Nalin
     const int min_time_seconds =  60; // grains flying less than this time are not included
-    const int max_time_days    = 100; // 100;
+    const int max_time_days    = 200; // 100;
+    const size_t pow_10_max_distance = 9;
     
     // gas (drag) coefficients
     const double gas_production_rate_at_1AU = orsa::FromUnits(1.0e28,orsa::Unit::SECOND,-1); // molecules/second
@@ -117,8 +120,8 @@ int main (int argc, char **argv) {
     grain_ibps.updateIBPS = grainUpdateIBPS;
     
     size_t iter=0;
-    // while (iter < 100000000) {
-    while (1) {
+    while (iter < 1250000) {
+        // while (1) {
         
         // start integration up to max_time_days before t_snapshot
         // const orsa::Time t0 = t_snapshot - orsa::Time(max_time_days,0,0,0,0)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
@@ -405,7 +408,7 @@ int main (int argc, char **argv) {
             */
         }
         
-        osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),grain_initial_radius,grain_density,nucleus.get(),bound_radius,5,t0);
+        osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),grain_initial_radius,grain_density,nucleus.get(),bound_radius,pow_10_max_distance,t0);
         // call singleStepDone once before starting, to perform initial checks
         orsa::Time dummy_time(0);
         integrator->singleStepDone(bg,t0,dummy_time,dummy_time);

@@ -13,7 +13,7 @@ int main (int argc, char **argv) {
         exit(0);
     }
     
-    const double pixelScale = orsa::FromUnits(20.0,orsa::Unit::KM);
+    const double pixelScale = orsa::FromUnits(50.0,orsa::Unit::KM);
     // every axis has 2*N pixels, from -N to N-1
     const int N = __ORSA_FITS_N__/2;
     
