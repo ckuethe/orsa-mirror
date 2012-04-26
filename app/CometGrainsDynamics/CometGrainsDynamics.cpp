@@ -68,8 +68,8 @@ int main (int argc, char **argv) {
     // const double max_ejection_velocity_constant = 1.5; // in the relation between beta and ejection velocity
     // const double ejection_velocity_beta_exponent = 0.5; // nominal: 0.5
     // const double ejection_velocity_radial_exponent = -0.5; // nominal: -0.5
-    const double min_latitude = -70.0*orsa::degToRad();
-    const double max_latitude = +70.0*orsa::degToRad();
+    const double min_latitude = -90.0*orsa::degToRad();
+    const double max_latitude = +90.0*orsa::degToRad();
     const double min_grain_radius = orsa::FromUnits(0.000001,orsa::Unit::METER);
     const double max_grain_radius = orsa::FromUnits(0.200000,orsa::Unit::METER);    
 #warning check min_time_second with Nalin
