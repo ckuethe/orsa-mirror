@@ -13,7 +13,7 @@ int main (int argc, char **argv) {
         exit(0);
     }
     
-    const double pixelScale = orsa::FromUnits(50.0,orsa::Unit::KM);
+    const double pixelScale = orsa::FromUnits(20.0,orsa::Unit::KM);
     // every axis has 2*N pixels, from -N to N-1
     const int N = __ORSA_FITS_N__/2;
     
@@ -257,7 +257,7 @@ int main (int argc, char **argv) {
                             continue;
                         }
                         //
-                        const double  pos_i = (*it).pos_orbit_pole; // pos_RA; // pos_X; // pos_sun // UPDATE THIS
+                        const double  pos_i = (*it).pos_orbit_velocity; // pos_RA; // pos_X; // pos_sun // UPDATE THIS
                         const int i = N+pos_i/pixelScale;
                         if (i<0) {
                             ++it;
@@ -268,7 +268,7 @@ int main (int argc, char **argv) {
                             continue; 
                         }
                         //
-                        const double  pos_j = (*it).pos_sun; // pos_Dec; // pos_Y; // pos_orbit_plane // UPDATE THIS
+                        const double  pos_j = (*it).pos_sunish; // pos_Dec; // pos_Y; // pos_orbit_plane // UPDATE THIS
                         const int j = N+pos_j/pixelScale;
                         if (j<0) {
                             ++it;
