@@ -6,11 +6,14 @@
 CONFIG += thread release warn_on
 
 # enable this to build static libs, useful to create binaries for BOINC
-#CONFIG += staticlib
+#CONFIG += dll staticlib
 
 macx {
 	CONFIG += staticlib
 }
+
+# less verbose compile
+CONFIG += silent
 
 # not here... qt and gui are kept local on single directory's .pro files
 #CONFIG += qt
@@ -46,6 +49,8 @@ unix:!macx {
 	PLATFORM_NAME = $${KERNEL_NAME}_$${HARDWARE_NAME}
 
 	DIR_SEP = "/"
+
+	QMAKE_CXXFLAGS += -std=c++0x
 
 	QMAKE_CXXFLAGS_RELEASE +=
 	QMAKE_LFLAGS_RELEASE   +=
@@ -105,22 +110,26 @@ unix:!macx {
 		LIBS += /home/tricaric/boinc/api/libboinc_api.a /home/tricaric/boinc/lib/libboinc.a
 	}
 	gmp_include {
-		INCLUDEPATH +=
+		INCLUDEPATH += 
+##		INCLUDEPATH += /usr/local/include
 	}
 	gmp_lib {
 		LIBS += -lgmp -lgmpxx
+##		LIBS += /usr/local/lib/libgmp.a /usr/local/lib/libgmpxx.a
+##		LIBS += -L/usr/local/lib -lgmp -lgmpxx
 	}
 	gsl_include {
-		INCLUDEPATH +=
+		INCLUDEPATH += /home/tricaric/gsl-1.14-installed/include
 	}
 	gsl_lib {
 		LIBS += -lgsl -lgslcblas
+##		LIBS += /home/tricaric/gsl-1.14-installed/lib/libgsl.a /home/tricaric/gsl-1.14-installed/lib/libgslcblas.a
 	}
 	osg_include {
         	INCLUDEPATH += /home/tricaric/OpenSceneGraph/include		
 	}
 	osg_lib {
-		LIBS += -L/home/tricaric/OpenSceneGraph/lib
+		LIBS += -L/home/tricaric/OpenSceneGraph/lib -L/home/tricaric/OpenSceneGraph/lib/osgPlugins-3.0.1
 	}
 	osg_src {
 		OSG_SRC = /home/tricaric/OpenSceneGraph/src/
@@ -129,7 +138,8 @@ unix:!macx {
 		INCLUDEPATH += /home/tricaric/qwt/src
 	}
 	qwt_lib {
-		LIBS += -L/home/tricaric/qwt/lib/ -lqwt
+		LIBS += -L/home/tricaric/qwt-6.0/lib/ -lqwt
+##		LIBS += -L/home/tricaric/qwt/lib/ -lqwt
 	}
 	spice_include {
 		INCLUDEPATH += /home/tricaric/cspice/include

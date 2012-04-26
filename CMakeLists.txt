@@ -33,7 +33,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6.3)
 INCLUDE(FindPackageHandleStandardArgs)
 
 # USER SEARCH PATHS
-SET(USER_INCLUDE_PATH /0/OSG/OpenSceneGraph-3.0.1-rc3/src /0/Qwt/qwt-5.2.2/src /0/Cspice/cspice/include)
+SET(USER_INCLUDE_PATH /home/tricaric/OpenSceneGraph/src /home/tricaric/qwt/src /home/tricaric/cspice/lib)
 SET(USER_LIBRARY_PATH /0/Qwt/qwt-5.2.2/lib/ /0/Cspice/cspice/lib/ /usr/local/lib/osgPlugins-3.0.1/)
 
 # SEARCH DIRECTORIES
@@ -44,7 +44,8 @@ SET(CMAKE_LIBRARY_PATH ${CMAKE_LIBRARY_PATH} /lib/i386-linux-gnu/ /usr/lib/i386-
 #SET(CMAKE_CXX_FLAGS "-std=c++0x -O3")
 #SET(CMAKE_CXX_FLAGS "-std=c++0x -O2")
 #SET(CMAKE_CXX_FLAGS "-std=c++0x")
-SET(CMAKE_CXX_FLAGS "-std=c++0x -O3 -Wall -fopenmp")
+#SET(CMAKE_CXX_FLAGS "-std=c++0x -O3 -W -Wall -fopenmp -g")
+SET(CMAKE_CXX_FLAGS "-std=c++0x -O3 -W -Wall -g")
 # ---------------------------------------------------------------------------- #
 
 
@@ -351,6 +352,8 @@ SET(ORSA_LIBRARY_orsaUtil ${LIBRARY_OUTPUT_PATH}/${ORSA_LIBRARY_PREFIX}${ORSA_NA
 SET(ORSA_NAME_RendezvousWithVesta RendezvousWithVesta)
 SET(ORSA_NAME_RendezvousWithVesta2 RendezvousWithVesta2)
 SET(ORSA_NAME_GuiTest GuiTest)
+SET(ORSA_NAME_CometGrainsDynamics CometGrainsDynamics)
+SET(ORSA_NAME_dawnorbit dawnorbit)
 # ---------------------------------------------------------------------------- #
 
 
