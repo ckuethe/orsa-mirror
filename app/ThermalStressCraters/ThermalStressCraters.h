@@ -154,9 +154,9 @@ bool ComputePeriodicThermalHistory(History & history,
     while (!converged) {
         
         ORSA_DEBUG("deep_T: %g [K]",deep_T);
-    
-        ORSA_DEBUG("dt: %f [s]   dx: %g [m]",dt,dx);
-    
+        
+        ORSA_DEBUG("dt: %f [s]   (with history_skip=%i then saved dt: %f [s])   dx: %g [m]",dt,history_skip,history_skip*dt,dx);
+        
         bool stable=false;
         History old_history;
         unsigned int cycles=0;
@@ -390,6 +390,20 @@ bool CraterShape(double & h, /* elevation, from 0.0 (rim) to -d (center) */
     dhdr = alpha0+(alphaR-alpha0)*pow(r/R,gamma);
     
     return true;
+}
+
+double SolarDiskFraction(const double & heliocentricDistance,
+                         const double & solarCenterElevation /* (signed) angle from sun disk center to horizon */) {
+    const double solarRadius = orsa::FromUnits(6.955e8,orsa::Unit::METER);
+    const double alpha = asin(solarRadius/heliocentricDistance); // solar radius angle
+    if (solarCenterElevation>alpha) {
+        return 1.0;
+    } else if (solarCenterElevation<-alpha) {
+        return 0.0;
+    } else {
+        const double var = solarCenterElevation/alpha;
+        return (0.5 + (var*sqrt(1.0-var*var) + asin(var))/orsa::pi());
+    }
 }
 
 

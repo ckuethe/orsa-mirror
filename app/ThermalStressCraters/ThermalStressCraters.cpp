@@ -4,6 +4,19 @@ int main (int argc, char **argv) {
     
     orsa::Debug::instance()->initTimer();
     
+    /*
+       {
+       // test
+       const double heliocentricDistance = orsa::FromUnits(1.0,orsa::Unit::AU);
+       double solarCenterElevation = -1.0*orsa::degToRad();
+       while (solarCenterElevation<1.0*orsa::degToRad()) {
+       const double solarFraction = SolarDiskFraction( heliocentricDistance, solarCenterElevation);
+       ORSA_DEBUG("solar elevation: %.9g [arcsec]   solar disk fraction: %.9g",solarCenterElevation*orsa::radToArcsec(),solarFraction);
+       solarCenterElevation += 1.0*orsa::arcsecToRad();
+        }
+        }
+    */
+    
     /* if (argc != 9999) {
        ORSA_DEBUG("Usage: %s <D,km> <d,km> <lat,deg> <lon,deg> <R,km> <slope-out,deg> <slope-azimuth,deg> <slope-rim,deg> <shape-par> <pole-R.A.,deg> <pole-Dec.,deg> <pole-phi-J2000,deg> <a,AU> <ecc> <i,deg> <node,deg> <peri,deg> <off-North,km> <off-East,km>",argv[0]);
        // exit(0);
@@ -44,16 +57,16 @@ int main (int argc, char **argv) {
     // body orbit
     orsa::Orbit orbit;
     orbit.mu = orsaSolarSystem::Data::GMSun();
-    orbit.a = orsa::FromUnits(3.54,orsa::Unit::AU);
-    orbit.e = 0.20;
+    orbit.a = orsa::FromUnits(2.54,orsa::Unit::AU);
+    orbit.e = 0.00;
     orbit.i = 5.00*orsa::degToRad();
     orbit.omega_node       = 0.0*orsa::degToRad();
     orbit.omega_pericenter = 0.0*orsa::degToRad(); 
     // all values of orbit.M are sampled, to compute Fs
     const double orbit_period = orbit.period();
     
-    const double craterDiameter = orsa::FromUnits(100.0,orsa::Unit::KM);
-    const double craterDepth    = orsa::FromUnits( 10.0,orsa::Unit::KM);
+    const double craterDiameter = orsa::FromUnits(10.0,orsa::Unit::KM);
+    const double craterDepth    = orsa::FromUnits( 1.0,orsa::Unit::KM);
     const double craterCenterSlope = tan( 0.0*orsa::degToRad());
     const double craterRimSlope    = tan(30.0*orsa::degToRad());
     const double craterLatitude = 55.0*orsa::degToRad();
@@ -63,7 +76,7 @@ int main (int argc, char **argv) {
     const double craterPlaneSlope = tan(15.0*orsa::degToRad());
     const double craterPlaneSlopeAzimuth   = 220.0*orsa::degToRad(); // 0=N, 90=E, 180=S, 270=W, points from high to low
     const double bodyPoleEclipticLatitude  =  60.0*orsa::degToRad();
-    const double bodyPoleEclipticLongitude =   0.0*orsa::degToRad();
+    const double bodyPoleEclipticLongitude =  20.0*orsa::degToRad();
     
     // #warning OFF-North (km) and OFF-East (km) should be arguments!
     
@@ -97,6 +110,10 @@ int main (int argc, char **argv) {
     orsa::print(local_u_horizontal);
     orsa::print(local_u_up);
     orsa::print(local_u_low_to_high);
+
+    orsa::print(local_u_horizontal*local_u_low_to_high);
+    orsa::print(local_u_up*local_u_low_to_high);
+    orsa::print(local_u_horizontal*local_u_up);
     
     // so now the 3 cartesial vectos wich are in crater coordinates are local_u_horizontal, local_u_low_to_high (both at h=0), and local_u_up
     
@@ -116,13 +133,23 @@ int main (int argc, char **argv) {
         ORSA_DEBUG("problems...");
         exit(0);
     }
+    const double crater_h    = h; // negative in crater
+    const double crater_dhdr = dhdr;
     //
     const double crater_point_slope = dhdr;
     const double crater_point_slope_angle = atan(dhdr);
-    const orsa::Vector local_crater_point =
-        local_crater_center_h0 + crater_pX*sin(crater_phi)*local_u_horizontal + crater_pY*cos(crater_phi)*local_u_low_to_high + local_u_up*h;
+    /* const orsa::Vector local_crater_point_h0 =
+       local_crater_center_h0 +
+       crater_pX*( cos(crater_phi)*local_u_horizontal + sin(crater_phi)*local_u_low_to_high) +
+       crater_pY*(-sin(crater_phi)*local_u_horizontal + cos(crater_phi)*local_u_low_to_high);   const orsa::Vector local_crater_point_h0 =
+    */
+    const orsa::Vector local_crater_point_h0 =
+        local_crater_center_h0 +
+        crater_pR*(cos(crater_phi)*local_u_horizontal + sin(crater_phi)*local_u_low_to_high);
+    const orsa::Vector local_crater_point = local_crater_point_h0 + local_u_up*h;
     const orsa::Vector local_crater_point_normal =
-        cos(crater_point_slope_angle)*local_u_radial - sin(crater_point_slope_angle)*(sin(crater_phi)*local_u_horizontal+cos(crater_phi)*local_u_low_to_high);
+        cos(crater_point_slope_angle)*local_u_up - sin(crater_point_slope_angle)*(cos(crater_phi)*local_u_horizontal + sin(crater_phi)*local_u_low_to_high);
+#warning above: u_radial or u_up ?
     
     orsa::print(local_crater_point);
     orsa::print(local_crater_point_normal);
@@ -171,24 +198,63 @@ int main (int argc, char **argv) {
         const orsa::Vector local_u_sun = globalToLocal*(-orbitPosition.normalized());
         if (local_u_sun*local_u_up > 0.0) {
             
-            bool illuminated=true;
-            // if needed for ponts outside crater...
+            //  bool illuminated=true;
+            double solarDiskFraction=1.0;
+            // this 'if' is needed for ponts outside crater...
             if (crater_pR<=0.5*craterDiameter) {
                 // this checks for self-shadowing    
-                const double d = (local_crater_center_h0-local_crater_point)*local_u_up;
+                // const double d = (local_crater_center_h0-local_crater_point)*local_u_up;
+                // ORSA_DEBUG("%g %g",crater_h,d);
                 const double beta = acos(local_u_up*local_u_sun);
-                const double l = d/cos(beta);
-                const orsa::Vector P = local_crater_point+local_u_sun*l;
-                const double dist = (P-local_crater_center_h0).length();
-                if (dist>0.5*craterDiameter) {
-                    illuminated=false;
+                // const double l = d/cos(beta);
+                const double l = fabs(crater_h/cos(beta));
+                const orsa::Vector P = local_crater_point+local_u_sun*l; // intersection at h=0
+                // solve for point on rim (C1 or C2) in the same direction as P,
+                // to estimate solar elevation and possible disk fraction obstructed by crater rim
+                // work on h0 plane
+                const double a = crater_pR;
+                const double b = 0.5*craterDiameter;
+                const double cos_delta =
+                    (local_crater_center_h0-local_crater_point_h0).normalized() *
+                    (P-local_crater_point_h0).normalized();
+                const double root = sqrt(a*a*cos_delta*cos_delta-a*a+b*b);
+                // ORSA_DEBUG("root: %g",root);
+                // here the solution is always the larges one, the only one with x positive
+                // const double x1 = a*cos_delta-root;
+                const double x2 = a*cos_delta+root;
+                // ORSA_DEBUG("x1: %g   x2: %g",x1,x2);
+                // orsa::Vector C1 = local_crater_point_h0 + x1*(P-local_crater_point_h0).normalized();
+                orsa::Vector C2 = local_crater_point_h0 + x2*(P-local_crater_point_h0).normalized();
+                // ORSA_DEBUG("C1: %g",(C1-local_crater_center_h0).length());
+                // ORSA_DEBUG("C2: %g",(C2-local_crater_center_h0).length());
+                //
+                const double solarCenterElevation =
+                    acos(local_u_up*(C2-local_crater_point).normalized()) - acos(local_u_up*local_u_sun);
+                
+                solarDiskFraction = SolarDiskFraction(hdist,solarCenterElevation);
+                
+                if ( (solarDiskFraction < 0.0) || 
+                     (solarDiskFraction > 1.0) ) {
+                    ORSA_DEBUG("problems...");
+                    exit(0);
                 }
+                
+                // ORSA_DEBUG("(P-local_crater_center_h0).length(): %g   solarCenterElevation: %g [deg]",(P-local_crater_center_h0).length(),solarCenterElevation*orsa::radToDeg());
+                
+                /* const double dist = (P-local_crater_center_h0).length();
+                   if (dist>0.5*craterDiameter) {
+                   illuminated=false;
+                   }
+                */
             }
+            
+#warning need to compute solar disk fraction also for points on plane outside crater...
             
             // ORSA_DEBUG("d: %g   beta: %g   l: %g   dist: %g",d,beta,l,dist);
 
-            if (illuminated) {
+            if (solarDiskFraction>0.0) {
                 Fs[p] = solar()/pow(orsa::FromUnits(hdist,orsa::Unit::AU,-1),2) *
+                    solarDiskFraction *
                     std::max(0.0,local_u_sun*local_crater_point_normal);
             } else {
                 Fs[p] = 0.0; // self-shadowing of rim over the crater point
@@ -233,26 +299,24 @@ int main (int argc, char **argv) {
                                   dt,
                                   history_skip);
     
-    
-    FILE * fp = fopen("TSC.out","w");
+    char filename[4096];
+    sprintf(filename,"TSC_history_%.f_%.f.out",orsa::FromUnits(crater_pX,orsa::Unit::KM,-1),orsa::FromUnits(crater_pY,orsa::Unit::KM,-1));
+    FILE * fp = fopen(filename,"w");
     for (unsigned int j=0; j<history.size(); ++j) {
-
-        /* unsigned int jmm = (j==0) ? (history.size()-1) : (j-1);
-           const double dTdt = (history[j][0].T-history[jmm][0].T)/dt;
-        */
         
         unsigned int jpp = (j==(history.size()-1)) ? (0) : (j+1);
-        const double dTdt = (history[jpp][0].T-history[j][0].T)/dt;
+        const double dTdt = (history[jpp][0].T-history[j][0].T)/(history_skip*dt);
         
 #warning for Fs should write the daily duty cycle, and the max. value of Fs daily
         
         gmp_fprintf(fp,
-                    "%g %g %g %g %g\n",
+                    "%g %g %g %g %g %g\n",
                     j*history_skip*dt,
                     Fs[j*history_skip],
                     history[j][0].T,
                     history[j][history[j].size()-2].T, // -2 because -1 is never changed by thermal algo
-                    dTdt);
+                    dTdt,
+                    orsa::FromUnits(dTdt,orsa::Unit::MINUTE));
         
     }
     fclose(fp);
