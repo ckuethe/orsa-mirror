@@ -16,6 +16,9 @@ public:
     orsa::Cache<double> AF; // final area
     orsa::Cache<double> dt; // time between emission and snapshot
     //
+    orsa::Cache<double> lon; // ejection longitude
+    orsa::Cache<double> lat; // ejection latitude
+    //
     orsa::Cache<double> pos_X;
     orsa::Cache<double> pos_Y;
     orsa::Cache<double> pos_Z;

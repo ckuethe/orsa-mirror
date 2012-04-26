@@ -68,8 +68,8 @@ int main (int argc, char **argv) {
     // const double max_ejection_velocity_constant = 1.5; // in the relation between beta and ejection velocity
     // const double ejection_velocity_beta_exponent = 0.5; // nominal: 0.5
     // const double ejection_velocity_radial_exponent = -0.5; // nominal: -0.5
-    const double min_latitude = -90.0*orsa::degToRad();
-    const double max_latitude = +90.0*orsa::degToRad();
+    const double min_latitude = -70.0*orsa::degToRad();
+    const double max_latitude = +70.0*orsa::degToRad();
     const double min_grain_radius = orsa::FromUnits(0.000001,orsa::Unit::METER);
     const double max_grain_radius = orsa::FromUnits(0.200000,orsa::Unit::METER);    
 #warning check min_time_second with Nalin
@@ -464,61 +464,63 @@ int main (int argc, char **argv) {
                 sun_final_angle = acos((sun_r_global-nucleus_r_global).normalized()*grain_r_relative_global.normalized());
             }
             
-            FILE * fp = fopen(filename_CGD.c_str(),"a");
-            gmp_fprintf(fp,"%.6f %g %g %g     %.3e %.3e %.3e %.3e %g     %g %g %g %g %g     %g %g %g %7.3f %+7.3f     %7.3f %7.3f %.3f %.3f %.3f     %.3f %.3e %.3e %10.6f %10.6f     %10.6f %10.6f %10.6f %10.6f %10.6f     %+.3e %+.3e %+.3e %+.3e %+.3e     %+.3e %.3e %.3e %.3e %i     %8.3f %+8.3f %+8.3f %+8.3f %+8.3f     %10.6f %i \n",
-                        orsa::FromUnits(r_comet_t0,orsa::Unit::AU,-1),
-                        orsa::FromUnits(nucleus_ax,orsa::Unit::KM,-1),
-                        orsa::FromUnits(nucleus_ay,orsa::Unit::KM,-1),
-                        orsa::FromUnits(nucleus_az,orsa::Unit::KM,-1),
-                        /* 5 */ orsa::FromUnits(nucleus_mass,orsa::Unit::KG,-1),
-                        orsa::FromUnits(Hill_radius,orsa::Unit::KM,-1),
-                        orsa::FromUnits(exo_radius,orsa::Unit::KM,-1),
-                        orsa::FromUnits(bound_radius,orsa::Unit::KM,-1),
-                        orsa::FromUnits(orsa::FromUnits(comet_density,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
-                        /* 10 */ orsa::FromUnits(orsa::FromUnits(grain_density,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
-                        orsa::FromUnits(rotation_period,orsa::Unit::HOUR,-1),
-                        pole_ecliptic_longitude*orsa::radToDeg(),
-                        pole_ecliptic_latitude*orsa::radToDeg(),
-                        gas_production_rate_at_1AU,
-                        /* 15 */ gas_velocity_at_1AU,
-                        gas_molar_mass,
-                        gas_drag_coefficient,
-                        lon*orsa::radToDeg(),
-                        lat*orsa::radToDeg(),
-                        /* 20 */ 0.0,
-                        0.0,
-                        orsa::FromUnits(orsa::FromUnits(escape_velocity,orsa::Unit::METER,-1),orsa::Unit::SECOND),
-                        0.0, // orsa::FromUnits(orsa::FromUnits(ejection_velocity,orsa::Unit::METER,-1),orsa::Unit::SECOND),
-                        orsa::FromUnits(orsa::FromUnits(v0_rotational_component.length(),orsa::Unit::METER,-1),orsa::Unit::SECOND),
-                        /* 25 */ orsa::FromUnits(orsa::FromUnits(v0.length(),orsa::Unit::METER,-1),orsa::Unit::SECOND),
-                        grain_initial_beta, // (*grain->beta),
-                        orsa::FromUnits(grain_initial_radius,orsa::Unit::METER,-1),
-                        orsa::FromUnits((common_stop_time-t0).get_d(),orsa::Unit::DAY,-1),
-                        orsa::FromUnits((integrator->crossing_time[0]-t0).get_d(),orsa::Unit::DAY,-1),
-                        /* 30 */ orsa::FromUnits((integrator->crossing_time[1]-t0).get_d(),orsa::Unit::DAY,-1),
-                        orsa::FromUnits((integrator->crossing_time[2]-t0).get_d(),orsa::Unit::DAY,-1),
-                        orsa::FromUnits((integrator->crossing_time[3]-t0).get_d(),orsa::Unit::DAY,-1),
-                        0.0, // orsa::FromUnits((integrator->crossing_time[4]-t0).get_d(),orsa::Unit::DAY,-1),
-                        0.0, // orsa::FromUnits((integrator->crossing_time[5]-t0).get_d(),orsa::Unit::DAY,-1),
-                        /* 35 */ orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[0],orsa::Unit::METER,-1),orsa::Unit::SECOND),
-                        orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[1],orsa::Unit::METER,-1),orsa::Unit::SECOND),
-                        orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[2],orsa::Unit::METER,-1),orsa::Unit::SECOND),
-                        orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[3],orsa::Unit::METER,-1),orsa::Unit::SECOND),
-                        0.0, // orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[4],orsa::Unit::METER,-1),orsa::Unit::SECOND),
-                        /* 40 */ 0.0, // orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[5],orsa::Unit::METER,-1),orsa::Unit::SECOND),
-                        orsa::FromUnits(initial_distance,orsa::Unit::KM,-1),
-                        orsa::FromUnits((*integrator->max_distance),orsa::Unit::KM,-1),
-                        orsa::FromUnits(final_distance,orsa::Unit::KM,-1),
-                        integrator->outcome,
-                        /* 45 */ lon_impact*orsa::radToDeg(),
-                        lat_impact*orsa::radToDeg(),
-                        orsa::radToDeg()*sun_initial_angle,
-                        orsa::radToDeg()*sun_initial_angle_360,
-                        orsa::radToDeg()*sun_final_angle,
-                        /* 50 */ orsa::FromUnits((t_snapshot-t0).get_d(),orsa::Unit::DAY,-1),
-                        ((common_stop_time-t0) > (t_snapshot-t0)));
-            fclose (fp);
-            
+            if (0) {
+
+                FILE * fp = fopen(filename_CGD.c_str(),"a");
+                gmp_fprintf(fp,"%.6f %g %g %g     %.3e %.3e %.3e %.3e %g     %g %g %g %g %g     %g %g %g %7.3f %+7.3f     %7.3f %7.3f %.3f %.3f %.3f     %.3f %.3e %.3e %10.6f %10.6f     %10.6f %10.6f %10.6f %10.6f %10.6f     %+.3e %+.3e %+.3e %+.3e %+.3e     %+.3e %.3e %.3e %.3e %i     %8.3f %+8.3f %+8.3f %+8.3f %+8.3f     %10.6f %i \n",
+                            orsa::FromUnits(r_comet_t0,orsa::Unit::AU,-1),
+                            orsa::FromUnits(nucleus_ax,orsa::Unit::KM,-1),
+                            orsa::FromUnits(nucleus_ay,orsa::Unit::KM,-1),
+                            orsa::FromUnits(nucleus_az,orsa::Unit::KM,-1),
+                            /* 5 */ orsa::FromUnits(nucleus_mass,orsa::Unit::KG,-1),
+                            orsa::FromUnits(Hill_radius,orsa::Unit::KM,-1),
+                            orsa::FromUnits(exo_radius,orsa::Unit::KM,-1),
+                            orsa::FromUnits(bound_radius,orsa::Unit::KM,-1),
+                            orsa::FromUnits(orsa::FromUnits(comet_density,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+                            /* 10 */ orsa::FromUnits(orsa::FromUnits(grain_density,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+                            orsa::FromUnits(rotation_period,orsa::Unit::HOUR,-1),
+                            pole_ecliptic_longitude*orsa::radToDeg(),
+                            pole_ecliptic_latitude*orsa::radToDeg(),
+                            gas_production_rate_at_1AU,
+                            /* 15 */ gas_velocity_at_1AU,
+                            gas_molar_mass,
+                            gas_drag_coefficient,
+                            lon*orsa::radToDeg(),
+                            lat*orsa::radToDeg(),
+                            /* 20 */ 0.0,
+                            0.0,
+                            orsa::FromUnits(orsa::FromUnits(escape_velocity,orsa::Unit::METER,-1),orsa::Unit::SECOND),
+                            0.0, // orsa::FromUnits(orsa::FromUnits(ejection_velocity,orsa::Unit::METER,-1),orsa::Unit::SECOND),
+                            orsa::FromUnits(orsa::FromUnits(v0_rotational_component.length(),orsa::Unit::METER,-1),orsa::Unit::SECOND),
+                            /* 25 */ orsa::FromUnits(orsa::FromUnits(v0.length(),orsa::Unit::METER,-1),orsa::Unit::SECOND),
+                            grain_initial_beta, // (*grain->beta),
+                            orsa::FromUnits(grain_initial_radius,orsa::Unit::METER,-1),
+                            orsa::FromUnits((common_stop_time-t0).get_d(),orsa::Unit::DAY,-1),
+                            orsa::FromUnits((integrator->crossing_time[0]-t0).get_d(),orsa::Unit::DAY,-1),
+                            /* 30 */ orsa::FromUnits((integrator->crossing_time[1]-t0).get_d(),orsa::Unit::DAY,-1),
+                            orsa::FromUnits((integrator->crossing_time[2]-t0).get_d(),orsa::Unit::DAY,-1),
+                            orsa::FromUnits((integrator->crossing_time[3]-t0).get_d(),orsa::Unit::DAY,-1),
+                            0.0, // orsa::FromUnits((integrator->crossing_time[4]-t0).get_d(),orsa::Unit::DAY,-1),
+                            0.0, // orsa::FromUnits((integrator->crossing_time[5]-t0).get_d(),orsa::Unit::DAY,-1),
+                            /* 35 */ orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[0],orsa::Unit::METER,-1),orsa::Unit::SECOND),
+                            orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[1],orsa::Unit::METER,-1),orsa::Unit::SECOND),
+                            orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[2],orsa::Unit::METER,-1),orsa::Unit::SECOND),
+                            orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[3],orsa::Unit::METER,-1),orsa::Unit::SECOND),
+                            0.0, // orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[4],orsa::Unit::METER,-1),orsa::Unit::SECOND),
+                            /* 40 */ 0.0, // orsa::FromUnits(orsa::FromUnits(integrator->crossing_velocity[5],orsa::Unit::METER,-1),orsa::Unit::SECOND),
+                            orsa::FromUnits(initial_distance,orsa::Unit::KM,-1),
+                            orsa::FromUnits((*integrator->max_distance),orsa::Unit::KM,-1),
+                            orsa::FromUnits(final_distance,orsa::Unit::KM,-1),
+                            integrator->outcome,
+                            /* 45 */ lon_impact*orsa::radToDeg(),
+                            lat_impact*orsa::radToDeg(),
+                            orsa::radToDeg()*sun_initial_angle,
+                            orsa::radToDeg()*sun_initial_angle_360,
+                            orsa::radToDeg()*sun_final_angle,
+                            /* 50 */ orsa::FromUnits((t_snapshot-t0).get_d(),orsa::Unit::DAY,-1),
+                            ((common_stop_time-t0) > (t_snapshot-t0)));
+                fclose (fp);
+            }
             
             // colden = column density file (including all the particles that do nor reach t_snapshot, to normalize production)
             {
@@ -646,7 +648,7 @@ int main (int argc, char **argv) {
 #warning keep fields in sync with histo.cpp
                 
                 char line[4096];
-                gmp_sprintf(line,"%.6f   %.5f %.5f   %.3e %.3e   %.3e %.3e %.3e   %.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %.3e",
+                gmp_sprintf(line,"%.6f   %.5f %.5f   %.3e %.3e   %7.3f %+7.3f   %.3e %.3e %.3e   %.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %.3e",
                             orsa::FromUnits(r_comet_t0,orsa::Unit::AU,-1),
                             //
                             orsaSolarSystem::timeToJulian(t0),
@@ -654,6 +656,9 @@ int main (int argc, char **argv) {
                             //
                             orsa::FromUnits((t_snapshot-t0).get_d(),orsa::Unit::DAY,-1),
                             orsa::FromUnits((common_stop_time-t0).get_d(),orsa::Unit::DAY,-1),
+                            //
+                            lon*orsa::radToDeg(),
+                            lat*orsa::radToDeg(),
                             //
                             orsa::FromUnits(grain_initial_radius,orsa::Unit::METER,-1),
                             orsa::FromUnits(grainRadius,orsa::Unit::METER,-1),
@@ -685,7 +690,7 @@ int main (int argc, char **argv) {
                 // gas number density
                 // gas mass density
                 
-                fp = fopen(filename_colden.c_str(),"a");
+                FILE * fp = fopen(filename_colden.c_str(),"a");
                 gmp_fprintf(fp,"%s\n",line);
                 fclose(fp);
             }

@@ -366,8 +366,8 @@ public:
         //const double n = Q_h / (4*orsa::pi()*orsa::square(r_c)*v_gas_h);
         // optional: can multiply x cos(theta_sun) to account for gas only from lit side of comet
         const double theta_sun = acos((rSun-rComet).normalized() * R_c.normalized());
-        // const double theta_sun_factor = cos(0.5*theta_sun);
-        const double theta_sun_factor = std::max(0.0,pow(cos(theta_sun),0.25)); // temperature for a low thermal inertia body goes as cos(theta_sun)^(1/4)
+        const double theta_sun_factor = cos(0.5*theta_sun);
+        // const double theta_sun_factor = std::max(0.0,pow(cos(theta_sun),0.25)); // temperature for a low thermal inertia body goes as cos(theta_sun)^(1/4)
         const double n = Q_h * theta_sun_factor / (4*orsa::pi()*orsa::square(r_c)*v_gas_h);
         
         // ORSA_DEBUG("theta_sun_factor: %g",theta_sun_factor);

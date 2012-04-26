@@ -25,7 +25,7 @@ int main (int argc, char **argv) {
     const double max_grainRadius = orsa::FromUnits(1.000000,orsa::Unit::METER);    
     // population scaling law
     const double pop_N0 = 1.0;
-    const double pop_a  = 3.5; // this is positive, the minus sign is already included in code
+    const double pop_a  = 4.5; // this is positive, the minus sign is already included in code
     
     const size_t min_selected = 1; // 2
     const size_t min_grains_per_pixel = 1; // 2
@@ -44,6 +44,7 @@ int main (int argc, char **argv) {
         
         char line[4096];
         double r0,rF,AF,dt;
+        double lon,lat;
         double pos_X,pos_Y,pos_Z;
         double pos_sun,pos_orbit_pole,pos_orbit_plane;
         double pos_orbit_velocity, /* pos_orbit_pole same as above */ pos_sunish;
@@ -51,8 +52,10 @@ int main (int argc, char **argv) {
 #warning keep fields in sync with CometGrainsDynamics.cpp
         while (fgets(line,4096,fp)) {
             gmp_sscanf(line,
-                       "%*s   %*s %*s   %lf %*s   %lf %lf %lf   %*s   %lf %lf %lf   %lf %lf %lf    %lf %*s %lf    %lf %lf %lf   %*s",
+                       "%*s   %*s %*s   %lf %*s   %lf %lf   %lf %lf %lf   %*s   %lf %lf %lf   %lf %lf %lf    %lf %*s %lf    %lf %lf %lf   %*s",
                        &dt,
+                       &lon,
+                       &lat,
                        &r0,
                        &rF,
                        &AF,
@@ -77,6 +80,9 @@ int main (int argc, char **argv) {
             rF = orsa::FromUnits(rF,orsa::Unit::METER);
             AF = orsa::FromUnits(AF,orsa::Unit::METER,2);
             //
+            lon *= orsa::degToRad();
+            lat *= orsa::degToRad();
+            //
             pos_X = orsa::FromUnits(pos_X,orsa::Unit::KM);
             pos_Y = orsa::FromUnits(pos_Y,orsa::Unit::KM);
             pos_Z = orsa::FromUnits(pos_Z,orsa::Unit::KM);
@@ -99,6 +105,9 @@ int main (int argc, char **argv) {
             data.rF = rF;
             data.AF = AF;
             data.dt = dt;
+            //
+            data.lon = lon;
+            data.lat = lat;
             //
             data.pos_X = pos_X;
             data.pos_Y = pos_Y;
@@ -248,7 +257,7 @@ int main (int argc, char **argv) {
                             continue;
                         }
                         //
-                        const double  pos_i = (*it).pos_orbit_velocity; // pos_RA; // pos_X; // pos_sun // UPDATE THIS
+                        const double  pos_i = (*it).pos_orbit_pole; // pos_RA; // pos_X; // pos_sun // UPDATE THIS
                         const int i = N+pos_i/pixelScale;
                         if (i<0) {
                             ++it;
@@ -259,7 +268,7 @@ int main (int argc, char **argv) {
                             continue; 
                         }
                         //
-                        const double  pos_j = (*it).pos_sunish; // pos_Dec; // pos_Y; // pos_orbit_plane // UPDATE THIS
+                        const double  pos_j = (*it).pos_sun; // pos_Dec; // pos_Y; // pos_orbit_plane // UPDATE THIS
                         const int j = N+pos_j/pixelScale;
                         if (j<0) {
                             ++it;
