@@ -28,6 +28,7 @@
 
 # ------------------------------ SUBDIRECTORIES ------------------------------ #
 ADD_SUBDIRECTORY(${ORSA_NAME_RendezvousWithVesta})
+ADD_SUBDIRECTORY(${ORSA_NAME_CometGrainsDynamics})
 #ADD_SUBDIRECTORY(${ORSA_NAME_RendezvousWithVesta2})
 #ADD_SUBDIRECTORY(${ORSA_NAME_GuiTest})
 # ---------------------------------------------------------------------------- #
