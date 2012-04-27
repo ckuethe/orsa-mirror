@@ -63,7 +63,7 @@ public:
         grain_r_relative_local_initial = new RefCache<orsa::Vector>;
     }
 public:
-    GrainUpdateIBPS(const GrainUpdateIBPS & grain_ibps) {
+    GrainUpdateIBPS(const GrainUpdateIBPS & grain_ibps) : orsa::UpdateIBPS() {
         bg = grain_ibps.bg;
         nucleus = grain_ibps.nucleus;
         grain = grain_ibps.grain;
