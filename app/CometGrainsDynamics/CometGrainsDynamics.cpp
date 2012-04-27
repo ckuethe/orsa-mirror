@@ -236,33 +236,74 @@ int main (int argc, char **argv) {
         const double grain_initial_beta   = GrainRadiusToBeta(grain_initial_radius,grain_density);
         
         // position of grain on the nucleus surface
-        const double lon = orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
-        const double lat = min_latitude  + (max_latitude-min_latitude)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+        /* const double lon = orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+           WRONG: UNIFORM! const double lat = min_latitude  + (max_latitude-min_latitude)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+        */
+        //
+        double lon,lat;
+        orsa::Vector r0,n0;
+        size_t local_trials=0;
+        while (1) {
+            ++local_trials;
+            double x,y,z;
+            orsa::GlobalRNG::instance()->rng()->gsl_ran_dir_3d(&x,&y,&z);
+            const orsa::Vector u_ray(x,y,z);
+            
+            /* double s_lon, c_lon;
+               sincos(lon,&s_lon,&c_lon);
+               double s_lat, c_lat;
+               sincos(lat,&s_lat,&c_lat);
+               const orsa::Vector u_ray(c_lat*c_lon,
+               c_lat*s_lon,
+               s_lat);
+            */
+            orsa::Vector intersectionPoint;
+            orsa::Vector normal;
+            nucleus_shape->rayIntersection(intersectionPoint,
+                                           normal,
+                                           orsa::Vector(0,0,0),
+                                           u_ray,
+                                           false);
+            // const orsa::Vector r0 = intersectionPoint;
+            // just above the surface, to avoid roundoff problems
+            r0 = intersectionPoint.normalized()*(intersectionPoint.length()+orsa::FromUnits(1.0,orsa::Unit::METER));
+            n0 = normal;
+
+            // this is needed to normalize for local projected surface area
+            const double min_cos_angle = cos(85.0*orsa::degToRad()); // less than 90 deg, not too close to 90 for efficiency
+            if (min_cos_angle <= 0.0) {
+                ORSA_DEBUG("problems...");
+                exit(0);
+            }
+            const double cos_angle = std::max(min_cos_angle,r0.normalized()*n0.normalized());
+            /* {
+               static double max_angle = 0.0;
+               max_angle = std::max(max_angle,acos(r0.normalized()*n0.normalized()));
+               ORSA_DEBUG("lat: %g [deg]   lon: %g [deg] angle: %g [deg]   max: %g [deg]",
+               lat*orsa::radToDeg(),
+               lon*orsa::radToDeg(),
+               acos(r0.normalized()*n0.normalized())*orsa::radToDeg(),
+               max_angle*orsa::radToDeg());
+               }
+            */
+            const double rdm = (1.0/min_cos_angle)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+            if (rdm<(1.0)/cos_angle) {
+                // found (almost)
+                lon = atan2(u_ray.getY(),u_ray.getX());
+                lat = asin(u_ray.getZ());
+                if ((lat >= min_latitude) && (lat <= max_latitude)) {
+                    // ORSA_DEBUG("local_trials: %i",local_trials);
+                    break; 
+                }
+            }
+        }
         
-        double s_lon, c_lon;
-        sincos(lon,&s_lon,&c_lon);
-        double s_lat, c_lat;
-        sincos(lat,&s_lat,&c_lat);
-        const orsa::Vector u_ray(c_lat*c_lon,
-                                 c_lat*s_lon,
-                                 s_lat);
-        orsa::Vector intersectionPoint;
-        orsa::Vector normal;
-        nucleus_shape->rayIntersection(intersectionPoint,
-                                       normal,
-                                       orsa::Vector(0,0,0),
-                                       u_ray,
-                                       false);
-        // const orsa::Vector r0 = intersectionPoint;
-        // just above the surface, to avoid roundoff problems
-        const orsa::Vector r0 = intersectionPoint*1.001;
-        const orsa::Vector n0 = normal;
-        
-        const orsa::Vector u_rot =
-            orsa::externalProduct(orsa::Vector(0,0,1),n0).normalized();
-        const orsa::Vector u_pol =
-            orsa::externalProduct(n0,u_rot).normalized();
-        
+        /* const orsa::Vector u_rot =
+           orsa::externalProduct(orsa::Vector(0,0,1),n0).normalized();
+           const orsa::Vector u_pol =
+           orsa::externalProduct(n0,u_rot).normalized();
+        */
+
         // not including rotation yet
 #warning escape velocity approximate for points within the bounding sphere of the body
         const double escape_velocity = sqrt(2*orsa::Unit::G()*nucleus_mass/r0.length());
