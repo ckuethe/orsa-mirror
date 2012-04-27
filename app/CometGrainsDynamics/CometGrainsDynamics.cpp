@@ -240,6 +240,12 @@ int main (int argc, char **argv) {
         double lon,lat;
         orsa::Vector r0,n0;
         size_t local_trials=0;
+        const double min_cos_angle = cos(85.0*orsa::degToRad()); // less than 90 deg, not too close to 90 for efficiency
+        if (min_cos_angle <= 0.0) {
+            ORSA_DEBUG("problems...");
+            exit(0);
+        }
+        const double max_r0 = std::max(nucleus_ax,std::max(nucleus_ay,nucleus_az));
         while (1) {
             ++local_trials;
             double x,y,z;
@@ -267,11 +273,13 @@ int main (int argc, char **argv) {
             n0 = normal;
 
             // this is needed to normalize for local projected surface area
-            const double min_cos_angle = cos(85.0*orsa::degToRad()); // less than 90 deg, not too close to 90 for efficiency
-            if (min_cos_angle <= 0.0) {
-                ORSA_DEBUG("problems...");
-                exit(0);
-            }
+            /* const double min_cos_angle = cos(85.0*orsa::degToRad()); // less than 90 deg, not too close to 90 for efficiency
+               if (min_cos_angle <= 0.0) {
+               ORSA_DEBUG("problems...");
+               exit(0);
+               }
+            */
+            // const double max_r0 = std::max(nucleus_ax,std::max(nucleus_ay,nucleus_az));
             const double cos_angle = std::max(min_cos_angle,r0.normalized()*n0.normalized());
             /* {
                static double max_angle = 0.0;
@@ -283,8 +291,9 @@ int main (int argc, char **argv) {
                max_angle*orsa::radToDeg());
                }
             */
-            const double rdm = (1.0/min_cos_angle)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
-            if (rdm<(1.0)/cos_angle) {
+            // const double rdm = (1.0/min_cos_angle)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+            const double rdm = (orsa::square(max_r0)/min_cos_angle)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+            if (rdm < r0.lengthSquared()/cos_angle) {
                 // found (almost)
                 lon = atan2(u_ray.getY(),u_ray.getX());
                 lat = asin(u_ray.getZ());
