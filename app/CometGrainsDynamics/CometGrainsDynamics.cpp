@@ -46,33 +46,30 @@ int main (int argc, char **argv) {
 #warning TODO: 
     
     // input
-    const double comet_orbit_q = orsa::FromUnits(0.9,orsa::Unit::AU);
-    const double comet_orbit_e = 0.00;
-    const double comet_orbit_i = 1.00*orsa::degToRad();
-    const double comet_orbit_node = 0.0;
-    const double comet_orbit_peri = 0.0;
-    const orsa::Time comet_orbit_Tp = orsaSolarSystem::gregorTime(2000,1,1.70);
-    const orsa::Time comet_orbit_epoch = comet_orbit_Tp; // orsaSolarSystem::gregorTime(2010,1,1);
+
+    // 103P/Hartley 2
+    const double comet_orbit_q = orsa::FromUnits(1.058690085281137,orsa::Unit::AU);
+    const double comet_orbit_e = .6951452964967095;
+    const double comet_orbit_i = 13.61716956119923*orsa::degToRad();
+    const double comet_orbit_node = 219.7626609177958*orsa::degToRad();
+    const double comet_orbit_peri = 181.1954811299036*orsa::degToRad();
+    const orsa::Time comet_orbit_Tp = orsaSolarSystem::gregorTime(2010,10,28.25696720); // 2010-Oct-28.25696720
+    const orsa::Time comet_orbit_epoch = orsaSolarSystem::gregorTime(2010,9,17.0); // comet_orbit_Tp; // orsaSolarSystem::gregorTime(2010,1,1);
     //
-    const double nucleus_ax = orsa::FromUnits(2.0,orsa::Unit::KM);
-    const double nucleus_ay = orsa::FromUnits(1.5,orsa::Unit::KM);
-    const double nucleus_az = orsa::FromUnits(1.4,orsa::Unit::KM);
+    const double nucleus_ax = orsa::FromUnits(1.00,orsa::Unit::KM);
+    const double nucleus_ay = orsa::FromUnits(0.45,orsa::Unit::KM);
+    const double nucleus_az = orsa::FromUnits(0.45,orsa::Unit::KM);
     const size_t gravity_degree = 2;
-    const double comet_density = orsa::FromUnits(orsa::FromUnits(0.4,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-    const double grain_density = orsa::FromUnits(orsa::FromUnits(0.5,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-    const double rotation_period = orsa::FromUnits(10.0,orsa::Unit::HOUR);
+    const double comet_density = orsa::FromUnits(orsa::FromUnits(0.22,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+    const double grain_density = orsa::FromUnits(orsa::FromUnits(0.50,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+    const double rotation_period = orsa::FromUnits(18.34,orsa::Unit::HOUR);
     const double pole_phi_Tp = 0.0*orsa::degToRad(); // rotation angle at time Tp
-    const double pole_ecliptic_longitude = 90.0*orsa::degToRad();
-    const double pole_ecliptic_latitude  = 20.0*orsa::degToRad();
-    // const double min_ejection_velocity_constant = 0.5; // in the relation between beta and ejection velocity
-    // const double max_ejection_velocity_constant = 1.5; // in the relation between beta and ejection velocity
-    // const double ejection_velocity_beta_exponent = 0.5; // nominal: 0.5
-    // const double ejection_velocity_radial_exponent = -0.5; // nominal: -0.5
+    const double pole_ecliptic_longitude = +69.0*orsa::degToRad();
+    const double pole_ecliptic_latitude  = +34.0*orsa::degToRad();
     const double min_latitude = -90.0*orsa::degToRad();
     const double max_latitude = +90.0*orsa::degToRad();
     const double min_grain_radius = orsa::FromUnits(0.000001,orsa::Unit::METER);
-    const double max_grain_radius = orsa::FromUnits(0.200000,orsa::Unit::METER);    
-#warning check min_time_second with Nalin
+    const double max_grain_radius = orsa::FromUnits(1.000000,orsa::Unit::METER);    
     const int min_time_seconds =  60; // grains flying less than this time are not included
     const int max_time_days    = 200; // 100;
     const size_t pow_10_max_distance = 9;
@@ -92,7 +89,7 @@ int main (int argc, char **argv) {
 #warning drag coefficient Cd should be close to 2.0 when the grain size is close to the free mean path
     
     // const orsa::Time t_snapshot = comet_orbit_Tp - orsa::Time(60,0,0,0,0);
-    const orsa::Time t_snapshot = comet_orbit_Tp; // + orsa::Time(30,0,0,0,0);
+    const orsa::Time t_snapshot = orsaSolarSystem::gregorTime(2010,11,4.60); // comet_orbit_Tp; // + orsa::Time(30,0,0,0,0);
     
     const double nucleus_volume = 4.0*orsa::pi()*nucleus_ax*nucleus_ay*nucleus_az/3.0;
     const double nucleus_mass = comet_density*nucleus_volume; 
