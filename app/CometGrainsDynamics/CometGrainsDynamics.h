@@ -348,35 +348,9 @@ public:
            orsa::print(uN);
         */
         
-        const orsa::Vector R_h = (rComet-rSun);
-        const double r_h = R_h.length();
-
-        const double r_h_AU = orsa::FromUnits(r_h,orsa::Unit::AU,-1);
-        
-        const orsa::Vector R_c = (rGrain-rComet);
-        const double r_c = R_c.length();
-        
-        // gas velocity at r_h, relative to comet
-        const double v_gas_h = Vgas_1AU * pow(r_h_AU,-0.5);
-        
-        // production rate at r_h
-        const double Q_h = Q_1AU * pow(r_h_AU,-2);
-        
-        // number density at r_c for production rate Q_h
-        //const double n = Q_h / (4*orsa::pi()*orsa::square(r_c)*v_gas_h);
-        // optional: can multiply x cos(theta_sun) to account for gas only from lit side of comet
-        const double theta_sun = acos((rSun-rComet).normalized() * R_c.normalized());
-        const double theta_sun_factor = cos(0.5*theta_sun);
-        // const double theta_sun_factor = std::max(0.0,pow(cos(theta_sun),0.25)); // temperature for a low thermal inertia body goes as cos(theta_sun)^(1/4)
-        const double n = Q_h * theta_sun_factor / (4*orsa::pi()*orsa::square(r_c)*v_gas_h);
-        
-        // ORSA_DEBUG("theta_sun_factor: %g",theta_sun_factor);
-        
-        // rho = mass density = number density x molecular mass
-        const double rho = n * Mgas;
-        
         const orsa::Matrix g2l = orsa::globalToLocal(comet,bg,t);
         const orsa::Matrix l2g = orsa::localToGlobal(comet,bg,t);
+                
         orsa::IBPS ibps;
         if (!bg->getIBPS(ibps,comet,t)) {
             ORSA_DEBUG("problems at t:");
@@ -402,6 +376,7 @@ public:
            u_gas = R_c.normalized();
            } else {
         */
+        orsa::Vector n0;
         {
             // relative to comet
             // const orsa::Vector V_Gas_c   = v_gas_h * (rGrain-rComet).normalized();
@@ -412,10 +387,39 @@ public:
                 nucleus_shape->closestVertex(dr_l);
             const orsa::Vector normal_l =
                 nucleus_shape->normalVector(closest_point);
+            n0 = normal_l.normalized();
             const orsa::Vector normal_g = l2g*normal_l;
             u_gas = normal_g;
         }
+        
+        const orsa::Vector R_h = (rComet-rSun);
+        const double r_h = R_h.length();
 
+        const double r_h_AU = orsa::FromUnits(r_h,orsa::Unit::AU,-1);
+        
+        const orsa::Vector R_c = (rGrain-rComet);
+        const double r_c = R_c.length();
+        
+        // gas velocity at r_h, relative to comet
+        const double v_gas_h = Vgas_1AU * pow(r_h_AU,-0.5);
+        
+        // production rate at r_h
+        const double Q_h = Q_1AU * pow(r_h_AU,-2);
+        
+        // number density at r_c for production rate Q_h
+        //const double n = Q_h / (4*orsa::pi()*orsa::square(r_c)*v_gas_h);
+        // optional: can multiply x cos(theta_sun) to account for gas only from lit side of comet
+        // const double theta_sun = acos((rSun-rComet).normalized() * R_c.normalized());
+        const double theta_sun = acos((rSun-rComet).normalized() * n0);
+        const double theta_sun_factor = cos(0.5*theta_sun);
+        // const double theta_sun_factor = std::max(0.0,pow(cos(theta_sun),0.25)); // temperature for a low thermal inertia body goes as cos(theta_sun)^(1/4)
+        const double n = Q_h * theta_sun_factor / (4*orsa::pi()*orsa::square(r_c)*v_gas_h);
+        
+        // ORSA_DEBUG("theta_sun_factor: %g",theta_sun_factor);
+        
+        // rho = mass density = number density x molecular mass
+        const double rho = n * Mgas;
+        
         orsa::IBPS grain_ibps;
         // GrainIBPS grain_ibps;
         bg->getIBPS(grain_ibps,grain,t);
