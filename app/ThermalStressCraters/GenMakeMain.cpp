@@ -11,6 +11,8 @@ int main(int argc, char ** argv) {
     double step =  2.5;
     
     const double R=0.5*D;
+
+    const bool inside_crater_only = true;
     
     // before all, write this rule
     // with this, all intermediate files are kept instead of deleted automatically
@@ -24,8 +26,11 @@ int main(int argc, char ** argv) {
         while (x<=R) {
             double y=-R;
             while (y<=R) {
-                // printf(" TSC_history_%+.3f_%+.3f.out",x,y);
-                printf(" TSC_resume_%+.3f_%+.3f.out",x,y);
+                
+                if ((inside_crater_only) && (x*x+y*y<=R*R)) {
+                    // printf(" TSC_history_%+.3f_%+.3f.out",x,y);
+                    printf(" TSC_resume_%+.3f_%+.3f.out",x,y);
+                }
                 
                 y += step;
             }
@@ -42,10 +47,13 @@ int main(int argc, char ** argv) {
         while (x<=R) {
             double y=-R;
             while (y<=R) {
-                printf("TSC_resume_%+.3f_%+.3f.out:\n",x,y,x,y);
-                printf("\t./ThermalStressCraters %+.3f %+.3f > $*.log 2>&1\n",x,y);
-                printf("\n");
-
+                
+                if ((inside_crater_only) && (x*x+y*y<=R*R)) {
+                    printf("TSC_resume_%+.3f_%+.3f.out:\n",x,y,x,y);
+                    printf("\t./ThermalStressCraters %+.3f %+.3f > $*.log 2>&1\n",x,y);
+                    printf("\n");
+                }
+                
                 y += step;
             }
             x += step;
