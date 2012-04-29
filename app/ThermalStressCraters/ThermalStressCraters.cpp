@@ -154,6 +154,9 @@ int main (int argc, char **argv) {
     orsa::print(local_crater_point);
     orsa::print(local_crater_point_normal);
     
+    const double local_crater_point_lat = asin(local_crater_point.getZ()/local_crater_point.length());
+    const double local_crater_point_lon = atan2(local_crater_point.getY(),local_crater_point.getX());
+    
     const orsa::Time t0_Time(0);
     const double t0 = t0_Time.get_d();
     
@@ -174,11 +177,11 @@ int main (int argc, char **argv) {
        const double dt = total_simulation_time/NS;
     */
     //
-    const orsa::Time dt_Time(mpz_class(1000000)*1);
+    const orsa::Time dt_Time(mpz_class(1000000)*15);
     orsa::print(dt_Time);
     const double dt = dt_Time.get_d();
     const double solarRotationPeriod = rotationPeriod()/(1.0-rotationPeriod()/orbit_period);
-    const size_t rotations = 10.5; // ceil(orbit_period/solarRotationPeriod); // ceil(orbit_period/rotationPeriod());
+    const size_t rotations = 5; // ceil(orbit_period/solarRotationPeriod); // ceil(orbit_period/rotationPeriod());
     const double total_simulation_time = rotations*solarRotationPeriod;
     const size_t NS = total_simulation_time/dt;
     //
@@ -301,10 +304,10 @@ int main (int argc, char **argv) {
     
     ORSA_DEBUG("ls: %g",skinDepth());
     
-    const size_t numSlices=100;
+    const size_t numSlices=50;
     const double dx = 0.5*skinDepth(); // or a fraction of skinDepth = ls
     // const double dt = days*rotationPeriod()/NS;
-    const unsigned int history_skip = 1;
+    const unsigned int history_skip = 6;
     const double stability_eps   = 1.0e-3;
     const double convergence_eps = 1.0e-6;
     ComputePeriodicThermalHistory(history,
@@ -328,16 +331,24 @@ int main (int argc, char **argv) {
 #warning for Fs should write the daily duty cycle, and the max. value of Fs daily
         
         gmp_fprintf(fp,
-                    "%g %g %g %g %g %g\n",
+                    "%9.f %7.3f %7.3f %.3f %+9.6f %+7.3f %.f %.f %g %g %g %g %g\n",
                     j*history_skip*dt,
                     Fs[j*history_skip],
                     history[j][0].T,
                     history[j][history[j].size()-2].T, // -2 because -1 is never changed by thermal algo
                     dTdt,
-                    orsa::FromUnits(dTdt,orsa::Unit::MINUTE));
+                    orsa::FromUnits(dTdt,orsa::Unit::MINUTE),
+                    orsa::FromUnits(crater_pX,orsa::Unit::KM,-1),
+                    orsa::FromUnits(crater_pY,orsa::Unit::KM,-1),
+                    local_crater_point_lon*orsa::radToDeg(),
+                    local_crater_point_lat*orsa::radToDeg(),
+                    orsa::FromUnits(local_crater_point.length(),orsa::Unit::KM,-1),
+                    orsa::FromUnits(crater_h,orsa::Unit::KM,-1),
+                    crater_point_slope_angle*orsa::radToDeg());
         
     }
     fclose(fp);
     
     return 0;
 }
+
