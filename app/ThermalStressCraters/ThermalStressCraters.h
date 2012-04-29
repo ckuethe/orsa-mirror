@@ -87,6 +87,8 @@ public:
         // const double dX = dx/skinDepth();
         const double dX = dx/ls;
         
+        // ORSA_DEBUG("dX: %g",dX);
+        
         const ThermalData old_data = data;
         
         for (int k=0; k<numSlices; ++k) {
@@ -427,6 +429,7 @@ double SolarDiskFraction(const double & heliocentricDistance,
        return 0.0;
        }
     */
+    
     const double solarRadius = orsa::FromUnits(6.955e8,orsa::Unit::METER);
     const double alpha = asin(solarRadius/heliocentricDistance); // solar radius angle
     if (solarCenterElevation>alpha) {

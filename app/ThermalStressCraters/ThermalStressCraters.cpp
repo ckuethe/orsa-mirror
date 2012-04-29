@@ -65,13 +65,13 @@ int main (int argc, char **argv) {
     // all values of orbit.M are sampled, to compute Fs
     const double orbit_period = orbit.period();
     
-    const double craterDiameter = orsa::FromUnits(10.0,orsa::Unit::KM);
-    const double craterDepth    = orsa::FromUnits( 1.0,orsa::Unit::KM);
+    const double craterDiameter = orsa::FromUnits(20.0,orsa::Unit::KM);
+    const double craterDepth    = orsa::FromUnits( 3.0,orsa::Unit::KM);
     const double craterCenterSlope = tan( 0.0*orsa::degToRad());
     const double craterRimSlope    = tan(30.0*orsa::degToRad());
-    const double craterLatitude = 55.0*orsa::degToRad();
+    const double craterLatitude = 45.0*orsa::degToRad();
     // longitude is not relevant, assuming 0.0;
-    const double bodyRadius     = orsa::FromUnits(500.0,orsa::Unit::KM);
+    const double bodyRadius     = orsa::FromUnits(100.0,orsa::Unit::KM);
 #warning check that body radius >> crater diameter...
     const double craterPlaneSlope = tan(15.0*orsa::degToRad());
     const double craterPlaneSlopeAzimuth   = 220.0*orsa::degToRad(); // 0=N, 90=E, 180=S, 270=W, points from high to low
@@ -177,11 +177,11 @@ int main (int argc, char **argv) {
        const double dt = total_simulation_time/NS;
     */
     //
-    const orsa::Time dt_Time(mpz_class(1000000)*15);
+    const orsa::Time dt_Time(mpz_class(1000000)*3);
     orsa::print(dt_Time);
     const double dt = dt_Time.get_d();
     const double solarRotationPeriod = rotationPeriod()/(1.0-rotationPeriod()/orbit_period);
-    const size_t rotations = 5; // ceil(orbit_period/solarRotationPeriod); // ceil(orbit_period/rotationPeriod());
+    const size_t rotations = 20; // ceil(orbit_period/solarRotationPeriod); // ceil(orbit_period/rotationPeriod());
     const double total_simulation_time = rotations*solarRotationPeriod;
     const size_t NS = total_simulation_time/dt;
     //
@@ -304,10 +304,10 @@ int main (int argc, char **argv) {
     
     ORSA_DEBUG("ls: %g",skinDepth());
     
-    const size_t numSlices=50;
-    const double dx = 0.5*skinDepth(); // or a fraction of skinDepth = ls
+    const size_t numSlices=100;
+    const double dx = 0.05*skinDepth(); // or a fraction of skinDepth = ls
     // const double dt = days*rotationPeriod()/NS;
-    const unsigned int history_skip = 6;
+    const unsigned int history_skip = 1;
     const double stability_eps   = 1.0e-3;
     const double convergence_eps = 1.0e-6;
     ComputePeriodicThermalHistory(history,
@@ -321,7 +321,7 @@ int main (int argc, char **argv) {
                                   convergence_eps);
     
     char filename[4096];
-    sprintf(filename,"TSC_history_%.f_%.f.out",orsa::FromUnits(crater_pX,orsa::Unit::KM,-1),orsa::FromUnits(crater_pY,orsa::Unit::KM,-1));
+    sprintf(filename,"TSC_history_%+.3f_%+.3f.out",orsa::FromUnits(crater_pX,orsa::Unit::KM,-1),orsa::FromUnits(crater_pY,orsa::Unit::KM,-1));
     FILE * fp = fopen(filename,"w");
     for (unsigned int j=0; j<history.size(); ++j) {
         
@@ -331,7 +331,7 @@ int main (int argc, char **argv) {
 #warning for Fs should write the daily duty cycle, and the max. value of Fs daily
         
         gmp_fprintf(fp,
-                    "%9.f %7.3f %7.3f %.3f %+9.6f %+7.3f %.f %.f %g %g %g %g %g\n",
+                    "%9.f %7.3f %7.3f %.3f %+9.6f %+7.3f %+8.3f %+8.3f %+8.3f %+8.3f %8.3f %8.3f %6.3f\n",
                     j*history_skip*dt,
                     Fs[j*history_skip],
                     history[j][0].T,
@@ -347,6 +347,43 @@ int main (int argc, char **argv) {
                     crater_point_slope_angle*orsa::radToDeg());
         
     }
+    fclose(fp);
+    
+    const double threshold_dTdt = orsa::FromUnits(2,orsa::Unit::MINUTE,-1);
+    // orsa::print(threshold_dTdt);
+    
+    double max_dTdt=0.0, min_dTdt=0.0, max_depth_above_threshold_dTdt=0.0;
+    for (unsigned int j=0; j<history.size(); ++j) {
+
+        for (unsigned int k=0; k<history[0].size(); ++k) {
+            
+            unsigned int jpp = (j==(history.size()-1)) ? (0) : (j+1);
+            const double dTdt = (history[jpp][k].T-history[j][k].T)/(history_skip*dt);
+            
+            if (dTdt>max_dTdt) max_dTdt = dTdt;
+            if (dTdt<min_dTdt) min_dTdt = dTdt;
+            
+            if (fabs(dTdt)>threshold_dTdt) {
+                if (dx*k>max_depth_above_threshold_dTdt) {
+                    max_depth_above_threshold_dTdt = dx*k;
+                }
+            }
+        }
+    }
+    //
+    sprintf(filename,"TSC_resume_%+.3f_%+.3f.out",orsa::FromUnits(crater_pX,orsa::Unit::KM,-1),orsa::FromUnits(crater_pY,orsa::Unit::KM,-1));
+    fp = fopen(filename,"w");
+    gmp_fprintf(fp,"%+8.3f %+8.3f %+8.3f %+8.3f %8.3f %8.3f %6.3f  %+7.3f %+7.3f %8.6f\n",
+                orsa::FromUnits(crater_pX,orsa::Unit::KM,-1),
+                orsa::FromUnits(crater_pY,orsa::Unit::KM,-1),
+                local_crater_point_lon*orsa::radToDeg(),
+                local_crater_point_lat*orsa::radToDeg(),
+                orsa::FromUnits(local_crater_point.length(),orsa::Unit::KM,-1),
+                orsa::FromUnits(crater_h,orsa::Unit::KM,-1),
+                crater_point_slope_angle*orsa::radToDeg(),
+                orsa::FromUnits(max_dTdt,orsa::Unit::MINUTE),
+                orsa::FromUnits(min_dTdt,orsa::Unit::MINUTE),
+                orsa::FromUnits(max_depth_above_threshold_dTdt,orsa::Unit::METER,-1));
     fclose(fp);
     
     return 0;
