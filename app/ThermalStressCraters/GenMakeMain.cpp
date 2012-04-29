@@ -43,7 +43,7 @@ int main(int argc, char ** argv) {
             double y=-R;
             while (y<=R) {
                 printf("TSC_resume_%+.3f_%+.3f.out:\n",x,y,x,y);
-                printf("\t./ThermalStressCraters %+.3f %+.3f\n",x,y);
+                printf("\t./ThermalStressCraters %+.3f %+.3f > $*.log 2>&1\n",x,y);
                 printf("\n");
 
                 y += step;
