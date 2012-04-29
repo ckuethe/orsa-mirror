@@ -37,6 +37,7 @@ inline double solar() { return 1370.0; } // W m^-2 at 1 AU
 #warning update rotationPeriod
 inline double rotationPeriod() { return 10.0*3600.0; } // s
 
+#warning for omega, we need the sidereal or solar rotation period?
 inline double omega() { return orsa::twopi()/rotationPeriod(); } // s^-1
 
 // k
@@ -85,8 +86,8 @@ public:
     
         // const double dX = dx/skinDepth();
         const double dX = dx/ls;
-    
-        old_data = data;
+        
+        const ThermalData old_data = data;
         
         for (int k=0; k<numSlices; ++k) {
             if (old_data[k].T < 0.0) {
@@ -119,7 +120,7 @@ public:
 public:
     ThermalData data;
 protected:
-    ThermalData old_data;
+    // ThermalData old_data;
 };
 
 bool ComputePeriodicThermalHistory(History & history,
@@ -184,6 +185,30 @@ bool ComputePeriodicThermalHistory(History & history,
                }
             */
             for (size_t p=0; p<Fs.size(); ++p) {
+                /*
+                   if (p==0) {
+                   // search stable first profile
+                   size_t iter=0;
+                   while (1) {
+                   ++iter;
+                   Profile old_profile = profile;
+                   profile.step(dx,dt,Fs[p]);
+                   stable=true;
+                   for (unsigned int k=0; k<profile.data.size(); ++k) {
+                   if (!stable) break;
+                   if (fabs((profile.data[k].T-old_profile.data[k].T)/old_profile.data[k].T) > stability_eps) {
+                   stable=false;
+                   break;
+                   }
+                   }
+                   if (stable) {
+                   ORSA_DEBUG("first step stable after %i cycles",iter);
+                   break;
+                   }
+                   }
+                   }
+                */
+                
                 profile.step(dx,dt,Fs[p]);
                 if (p%history_skip==0) {
                     history.push_back(profile.data);
@@ -394,6 +419,14 @@ bool CraterShape(double & h, /* elevation, from 0.0 (rim) to -d (center) */
 
 double SolarDiskFraction(const double & heliocentricDistance,
                          const double & solarCenterElevation /* (signed) angle from sun disk center to horizon */) {
+
+    // test: zero solar size
+    /* if (solarCenterElevation>0.0) {
+       return 1.0;
+       } else {
+       return 0.0;
+       }
+    */
     const double solarRadius = orsa::FromUnits(6.955e8,orsa::Unit::METER);
     const double alpha = asin(solarRadius/heliocentricDistance); // solar radius angle
     if (solarCenterElevation>alpha) {

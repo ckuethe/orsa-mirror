@@ -165,18 +165,33 @@ int main (int argc, char **argv) {
                                                                               bodyPoleEclipticLatitude);
     
     History history;
-    const size_t NS=10000000;
-    const size_t days=ceil(orbit_period/rotationPeriod());
-    const double total_simulation_time = days*rotationPeriod(); // slightly larger than orbit_period because of the ceil(...) above (need integer days)
-    const double dt = total_simulation_time/NS;
-    const orsa::Time dt_Time(mpz_class(1000000)*dt);
+    
+#warning should be careful here between sidereal and solar rotation period
+    
+    /* const size_t NS=10000000;
+       const size_t days=ceil(orbit_period/rotationPeriod());
+       const double total_simulation_time = days*rotationPeriod(); // slightly larger than orbit_period because of the ceil(...) above (need integer days)
+       const double dt = total_simulation_time/NS;
+    */
+    //
+    const orsa::Time dt_Time(mpz_class(1000000)*1);
     orsa::print(dt_Time);
+    const double dt = dt_Time.get_d();
+    const double solarRotationPeriod = rotationPeriod()/(1.0-rotationPeriod()/orbit_period);
+    const size_t rotations = 10.5; // ceil(orbit_period/solarRotationPeriod); // ceil(orbit_period/rotationPeriod());
+    const double total_simulation_time = rotations*solarRotationPeriod;
+    const size_t NS = total_simulation_time/dt;
+    //
+    ORSA_DEBUG("sidereal rotation period: %g [h]   solar rotation period: %g [h]   orbital rotation period: %g [year]",
+               orsa::FromUnits(rotationPeriod(),orsa::Unit::HOUR,-1),
+               orsa::FromUnits(solarRotationPeriod,orsa::Unit::HOUR,-1),
+               orsa::FromUnits(orbit_period,orsa::Unit::YEAR,-1));
     // const double hdist = orsa::FromUnits(3.0,orsa::Unit::AU); // heliocentric distance
     // ORSA_DEBUG("big-theta: %g",theta(hdist));
     std::vector<double> Fs;
     Fs.resize(NS);
     orsa::Vector orbitPosition;
-    for (size_t p=0; p<NS; ++p) {
+    for (size_t p=0; p<Fs.size(); ++p) {
         const orsa::Time t_Time = dt_Time*p;
         const double t = t_Time.get_d();
         orbit.M = orsa::twopi()*(t_Time-t0_Time).get_d()/orbit_period;
@@ -289,15 +304,18 @@ int main (int argc, char **argv) {
     const size_t numSlices=100;
     const double dx = 0.5*skinDepth(); // or a fraction of skinDepth = ls
     // const double dt = days*rotationPeriod()/NS;
-    const unsigned int history_skip = 10;
-    
+    const unsigned int history_skip = 1;
+    const double stability_eps   = 1.0e-3;
+    const double convergence_eps = 1.0e-6;
     ComputePeriodicThermalHistory(history,
                                   numSlices,
                                   200.0,
                                   Fs,
                                   dx,
                                   dt,
-                                  history_skip);
+                                  history_skip,
+                                  stability_eps,
+                                  convergence_eps);
     
     char filename[4096];
     sprintf(filename,"TSC_history_%.f_%.f.out",orsa::FromUnits(crater_pX,orsa::Unit::KM,-1),orsa::FromUnits(crater_pY,orsa::Unit::KM,-1));
