@@ -13,7 +13,7 @@ int main (int argc, char **argv) {
         exit(0);
     }
     
-    const double pixelScale = orsa::FromUnits(20.0,orsa::Unit::KM);
+    const double pixelScale = orsa::FromUnits(1.0,orsa::Unit::KM);
     // every axis has 2*N pixels, from -N to N-1
     const int N = __ORSA_FITS_N__/2;
     
@@ -21,11 +21,13 @@ int main (int argc, char **argv) {
     const double min_dt = orsa::FromUnits(  5,orsa::Unit::SECOND); // cannot be zero!
     const double max_dt = orsa::FromUnits(200,orsa::Unit::DAY); // orsa::FromUnits(200,orsa::Unit::DAY);
     //
-    const double min_grainRadius = orsa::FromUnits(0.000001,orsa::Unit::METER);
+    const double min_grainRadius = orsa::FromUnits(0.010000,orsa::Unit::METER);
     const double max_grainRadius = orsa::FromUnits(1.000000,orsa::Unit::METER);    
     // population scaling law
     const double pop_N0 = 1.0;
     const double pop_a  = 4.5; // this is positive, the minus sign is already included in code
+    
+#warning dt and Rg filters could be run already while reading input files!
     
     const size_t min_selected = 1; // 2
     const size_t min_grains_per_pixel = 1; // 2
@@ -98,6 +100,14 @@ int main (int argc, char **argv) {
             pos_earth = orsa::FromUnits(pos_earth,orsa::Unit::KM);
             pos_RA    = orsa::FromUnits(pos_RA,orsa::Unit::KM);
             pos_Dec   = orsa::FromUnits(pos_Dec,orsa::Unit::KM);
+            //
+            if (0) {
+                // test filter
+                if (lat < -10.0*orsa::degToRad()) continue;
+                if (lat > +10.0*orsa::degToRad()) continue;
+                if (lon < -10.0*orsa::degToRad()) continue;
+                if (lon > +10.0*orsa::degToRad()) continue;
+            }
             //
             ColDenData data;
             //
@@ -257,7 +267,7 @@ int main (int argc, char **argv) {
                             continue;
                         }
                         //
-                        const double  pos_i = (*it).pos_orbit_velocity; // pos_RA; // pos_X; // pos_sun // UPDATE THIS
+                        const double  pos_i = (*it).pos_X; // pos_orbit_velocity; // pos_RA; // pos_X; // pos_sun // UPDATE THIS
                         const int i = N+pos_i/pixelScale;
                         if (i<0) {
                             ++it;
@@ -268,7 +278,7 @@ int main (int argc, char **argv) {
                             continue; 
                         }
                         //
-                        const double  pos_j = (*it).pos_sunish; // pos_Dec; // pos_Y; // pos_orbit_plane // UPDATE THIS
+                        const double  pos_j = (*it).pos_Y; // .pos_sunish; // pos_Dec; // pos_Y; // pos_orbit_plane // UPDATE THIS
                         const int j = N+pos_j/pixelScale;
                         if (j<0) {
                             ++it;
@@ -309,7 +319,6 @@ int main (int argc, char **argv) {
         }
         
         size_t populatedPixels=0;
-        
         // #warning write zeroes?
         FILE * fp = fopen("histo_2D.out","w");
         for (size_t i=0; i<2*N; ++i) {
@@ -330,7 +339,7 @@ int main (int argc, char **argv) {
         }
         fclose(fp);
         
-        ORSA_DEBUG("entries: %i   in-field: %i   zero-area: %i   pixels: %i (%.1f\%)",colden_size,inField,zeroArea,populatedPixels,100.0*(double)populatedPixels/(4*N*N));
+        ORSA_DEBUG("entries: %i   zero-area: %i   in-field: %i   pixels: %i (%.1f\%)",colden_size,zeroArea,inField,populatedPixels,100.0*(double)populatedPixels/(4*N*N));
         
     }
     
@@ -537,7 +546,7 @@ int main (int argc, char **argv) {
         }
         fclose(fp);
         
-        ORSA_DEBUG("entries: %i   in-field: %i   zero-area: %i   pixels: %i (%.1f\%)",colden_size,inField,zeroArea,populatedPixels,100.0*(double)populatedPixels/(8.0*N*N*N));
+        ORSA_DEBUG("entries: %i   zero-area: %i   in-field: %i   pixels: %i (%.1f\%)",colden_size,zeroArea,inField,populatedPixels,100.0*(double)populatedPixels/(8.0*N*N*N));
         
     }
     
