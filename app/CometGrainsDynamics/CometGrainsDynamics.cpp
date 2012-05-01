@@ -718,7 +718,7 @@ int main (int argc, char **argv) {
 #warning keep fields in sync with histo.cpp
                 
                 char line[4096];
-                gmp_sprintf(line,"%.6f   %.5f %.5f   %.3e %.3e   %7.3f %+7.3f   %.3e %.3e %.3e   %.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %.3e",
+                gmp_sprintf(line,"%.6f   %.5f %.5f   %.3e %.3e   %+8.3f %+7.3f   %.3e %.3e %.3e   %.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %.3e",
                             orsa::FromUnits(r_comet_t0,orsa::Unit::AU,-1),
                             //
                             orsaSolarSystem::timeToJulian(t0),
