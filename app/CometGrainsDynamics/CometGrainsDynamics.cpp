@@ -597,6 +597,8 @@ int main (int argc, char **argv) {
                 //
                 if ((common_stop_time-t0) >= (t_snapshot-t0)) {
                     
+# warning much of this should be computed only once instead of in a loop...
+                    
                     const orsa::Time t = t_snapshot;
                     orsa::Vector r,v;
                     bg->getInterpolatedPosVel(r,
@@ -641,6 +643,27 @@ int main (int argc, char **argv) {
                     const orsa::Vector u_tmp2  = orsaSolarSystem::equatorialToEcliptic()*orsa::Vector(0,0,1);
                     const orsa::Vector u_RA    = orsa::externalProduct(u_earth,u_tmp2).normalized();
                     const orsa::Vector u_Dec   = orsa::externalProduct(u_RA,u_earth).normalized();
+
+                    static bool print=true;
+                    if (print) {
+                        
+                        const orsa::Matrix nucleus_l2g_t = orsa::localToGlobal(nucleus.get(),
+                                                                               bg.get(),
+                                                                               t);
+                        const orsa::Vector u_pole_global = nucleus_l2g_t*orsa::Vector(0,0,1);
+                        ORSA_DEBUG("u_pole_global*u_X.............: %+.3f = %7.3f [deg]",u_pole_global*u_X,             acos(u_pole_global*u_X)*orsa::radToDeg());
+                        ORSA_DEBUG("u_pole_global*u_Y.............: %+.3f = %7.3f [deg]",u_pole_global*u_Y,             acos(u_pole_global*u_Y)*orsa::radToDeg());
+                        ORSA_DEBUG("u_pole_global*u_Z.............: %+.3f = %7.3f [deg]",u_pole_global*u_Z,             acos(u_pole_global*u_Z)*orsa::radToDeg());
+                        ORSA_DEBUG("u_pole_global*u_sun...........: %+.3f = %7.3f [deg]",u_pole_global*u_sun,           acos(u_pole_global*u_sun)*orsa::radToDeg());
+                        ORSA_DEBUG("u_pole_global*u_orbit_pole....: %+.3f = %7.3f [deg]",u_pole_global*u_orbit_pole,    acos(u_pole_global*u_orbit_pole)*orsa::radToDeg());
+                        ORSA_DEBUG("u_pole_global*u_orbit_plane...: %+.3f = %7.3f [deg]",u_pole_global*u_orbit_plane,   acos(u_pole_global*u_orbit_plane)*orsa::radToDeg());
+                        ORSA_DEBUG("u_pole_global*u_orbit_velocity: %+.3f = %7.3f [deg]",u_pole_global*u_orbit_velocity,acos(u_pole_global*u_orbit_velocity)*orsa::radToDeg());
+                        ORSA_DEBUG("u_pole_global*u_sunish........: %+.3f = %7.3f [deg]",u_pole_global*u_sunish,        acos(u_pole_global*u_sunish)*orsa::radToDeg());
+                        ORSA_DEBUG("u_pole_global*u_earth.........: %+.3f = %7.3f [deg]",u_pole_global*u_earth,         acos(u_pole_global*u_earth)*orsa::radToDeg());
+                        ORSA_DEBUG("u_pole_global*u_RA............: %+.3f = %7.3f [deg]",u_pole_global*u_RA,            acos(u_pole_global*u_RA)*orsa::radToDeg());
+                        ORSA_DEBUG("u_pole_global*u_Dec...........: %+.3f = %7.3f [deg]",u_pole_global*u_Dec,           acos(u_pole_global*u_Dec)*orsa::radToDeg());
+                        print=false;
+                    }
                     
                     bg->getInterpolatedPosVel(r,
                                               v,
