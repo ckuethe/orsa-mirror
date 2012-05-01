@@ -83,7 +83,7 @@ int main (int argc, char **argv) {
     // molecules per unit area per unit time
 #warning EYE ON THIS!!! (zero?)
 #warning FACTOR for NON-pure ICE...
-    const double grain_sublimation_rate = 0.0; // orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1);
+    const double grain_sublimation_rate = orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1);
     const double grain_sublimation_molecule_mass = orsa::FromUnits(gas_molar_mass*1.66e-27,orsa::Unit::KG); // conversion from molar
     
 #warning drag coefficient Cd should be close to 2.0 when the grain size is close to the free mean path

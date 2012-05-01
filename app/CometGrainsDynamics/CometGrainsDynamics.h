@@ -263,7 +263,9 @@ public:
         // orsa::print(t);
         const double dt = (t-_t0).get_d();
         
-        _radius = _initialRadius - _dRadius_dt * dt;
+#warning minimum size here should be a parameter...
+        _radius = std::max(orsa::FromUnits(1.0e-6,orsa::Unit::METER),
+                           _initialRadius -_dRadius_dt*dt);
         
         // ORSA_DEBUG("dt: %g  _radius: %g",dt,_radius);
         
@@ -411,7 +413,11 @@ public:
         // optional: can multiply x cos(theta_sun) to account for gas only from lit side of comet
         // const double theta_sun = acos((rSun-rComet).normalized() * R_c.normalized());
         const double theta_sun = acos((rSun-rComet).normalized() * n0);
+        
+        // #warning restore this one!
         const double theta_sun_factor = cos(0.5*theta_sun);
+        // const double theta_sun_factor = 1.0;
+        
         // const double theta_sun_factor = std::max(0.0,pow(cos(theta_sun),0.25)); // temperature for a low thermal inertia body goes as cos(theta_sun)^(1/4)
         const double n = Q_h * theta_sun_factor / (4*orsa::pi()*orsa::square(r_c)*v_gas_h);
         
@@ -425,6 +431,7 @@ public:
         bg->getIBPS(grain_ibps,grain,t);
         osg::ref_ptr <GrainDynamicInertialBodyProperty> inertial = dynamic_cast <GrainDynamicInertialBodyProperty*> (grain_ibps.inertial.get());
         const double grainRadius = inertial->radius();
+        // if (grainRadius <= 0.0) return orsa::Vector(0,0,0);
         const double grainArea = orsa::pi()*orsa::square(grainRadius);
         
         // NOTE: gas direction is proportional to normal_g, which gets close to radial at large distances
