@@ -41,6 +41,10 @@ int orsaInputOutput::MPC_charToInt(const char c) {
         case 'T': d=29; break;
         case 'U': d=30; break;
         case 'V': d=31; break;
+        case 'W': d=32; break;
+        case 'X': d=33; break;
+        case 'Y': d=34; break;
+        case 'Z': d=35; break;
         default:
             ORSA_DEBUG("case not handled, c: [%c]",c);
             d=0;
