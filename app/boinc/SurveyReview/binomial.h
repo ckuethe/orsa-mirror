@@ -1,6 +1,8 @@
 #ifndef _ORSA_BINOMIAL_H_
 #define _ORSA_BINOMIAL_H_
 
+#warning check the code for cases where the confidence level is very low
+
 double singleProbabilityTerm(const double & p,
                              const unsigned int & N,
                              const unsigned int & R,
