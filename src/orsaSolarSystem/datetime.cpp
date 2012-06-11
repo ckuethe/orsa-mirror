@@ -69,6 +69,7 @@ const TAI_minus_UTC_element TAI_minus_UTC_table[] = {
     {1,1,1999,32},
     {1,1,2006,33},
     {1,1,2009,34},
+    {1,7,2012,35},
     {0,0,0,0} // TAI_minus_UTC_table_final_element
 };
 
