@@ -11,10 +11,10 @@ using namespace orsaSolarSystem;
 
 bool JPLCometFile::goodLine(const char * line) {
   
-    if (strlen(line) < 113) return false;
+    if (strlen(line) < 118) return false;
   
-    if (!isdigit(line[45])) return false;
-    if (!isdigit(line[52])) return false;
+    if (!isdigit(line[50])) return false;
+    if (!isdigit(line[57])) return false;
   
     return true;
 }
