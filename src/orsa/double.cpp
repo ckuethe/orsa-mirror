@@ -103,7 +103,22 @@ template <class T> T orsa::int_pow(const T & x,
     for (int k=1; k<max_k; ++k) {
         _pow *= x;
     }
-    if (p < 0) _pow = 1/_pow;
+    if (p < 0) _pow = T(1)/_pow;
+    return _pow;
+}
+
+template <class T> T orsa::int_pow(const T & x,
+                                   const mpz_class & p) {
+    if (p ==  2) return x*x;
+    if (p ==  1) return x;
+    if (p ==  0) return 1;
+    if (p == -1) return 1/x;
+    T _pow = x;
+    const mpz_class max_k = abs(p);
+    for (mpz_class k=1; k<max_k; ++k) {
+        _pow *= x;
+    }
+    if (p < 0) _pow = T(1)/_pow;
     return _pow;
 }
 
@@ -118,6 +133,15 @@ template mpf_class orsa::int_pow(const mpf_class & x,
 
 template mpz_class orsa::int_pow(const mpz_class & z,
                                  const int & p);
+
+template int orsa::int_pow(const int & x,
+                           const mpz_class & p);
+
+template mpz_class orsa::int_pow(const mpz_class & z,
+                                 const mpz_class & p);
+
+template mpf_class orsa::int_pow(const mpf_class & x,
+                                 const mpz_class & p);
 
 const double & orsa::epsilon() {
     static const double _eps = __DBL_EPSILON__; /* 2.2204460492503131e-16 */
