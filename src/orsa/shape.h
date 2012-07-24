@@ -266,8 +266,18 @@ namespace orsa {
            const double & deltaMax,
            const bool includeShadows = false) const;
         */
+        
+        // geodetic grid
+        // generates the VertexVector and FaceVector to input in a new TriShape object
+        // Nsub is the number of subdivisions
+    public:
+        static void GeodeticGrid(VertexVector & v,
+                                 FaceVector   & f,
+                                 const size_t & Nsub,
+                                 const bool   & verbose=false);
+        
     };
-  
+    
     class LatLonShape : public orsa::Shape {
     public:
         LatLonShape() : Shape() { }

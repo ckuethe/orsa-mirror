@@ -546,6 +546,113 @@ bool TriShape::vertexIlluminationAngles(const orsa::Vector & lightSource,
     return true;
 }
 
+// match vertices to create faces
+static void findNearby(std::vector< std::vector<size_t> > & nearby,
+                       const orsa::TriShape::VertexVector & v,
+                       const bool verbose=false) {
+    nearby.clear();
+    nearby.resize(v.size());
+    double min_d2 = 1e100;
+    for (size_t j=0; j<v.size(); ++j) {
+        bool run_again;
+        do {
+            run_again=false;
+            nearby[j].clear();
+            for (size_t k=0; k<v.size(); ++k) {
+                if (orsa::square(v[j].getX()-v[k].getX()) > 2*min_d2) continue;
+                if (orsa::square(v[j].getY()-v[k].getY()) > 2*min_d2) continue;
+                if (orsa::square(v[j].getZ()-v[k].getZ()) > 2*min_d2) continue;
+                if (j==k) continue;
+                const double d2 = (v[j]-v[k]).lengthSquared();
+                if (d2 < 0.9*min_d2) { // better nearby vector than others so far
+                    min_d2 = d2;
+                    run_again=true;
+                    break;
+                } else if (d2 < 2*min_d2) { // factor 2 necessary to accomodate slightly longer segments...
+                    nearby[j].push_back(k);
+                }
+            }
+        } while (run_again==true);
+        if ( (nearby[j].size() != 5) &&
+             (nearby[j].size() != 6) ) {
+            ORSA_DEBUG("problems...");
+        }
+    }
+    
+    if (verbose) {
+        // debug
+        for (size_t j=0; j<v.size(); ++j) {
+            char line[4096];
+            sprintf(line,"nearby[%06i] =",j);
+            for (size_t k=0; k<nearby[j].size(); ++k) {
+                char tmp[4096];
+                sprintf(tmp," [%06i]",nearby[j][k]);
+                strcat(line,tmp);
+            }
+            // strcat(line,"\n");
+            ORSA_DEBUG("%s",line);
+        }
+    }
+    
+}
+
+// http://en.wikipedia.org/wiki/Geodesic_grid
+// http://en.wikipedia.org/wiki/Icosahedron
+void TriShape::GeodeticGrid(VertexVector & v,
+                            FaceVector   & f,
+                            const size_t & Nsub,
+                            const bool   & verbose) {
+    v.clear();
+    const double phi = 0.5*(1.0+sqrt(5.0)); // golden ratio
+    v.push_back(orsa::Vector(0.0,-1.0,-phi));
+    v.push_back(orsa::Vector(0.0,+1.0,-phi));
+    v.push_back(orsa::Vector(0.0,-1.0,+phi));
+    v.push_back(orsa::Vector(0.0,+1.0,+phi));
+    v.push_back(orsa::Vector(-1.0,-phi,0.0));
+    v.push_back(orsa::Vector(+1.0,-phi,0.0));
+    v.push_back(orsa::Vector(-1.0,+phi,0.0));
+    v.push_back(orsa::Vector(+1.0,+phi,0.0));
+    v.push_back(orsa::Vector(-phi,0.0,-1.0));
+    v.push_back(orsa::Vector(+phi,0.0,-1.0));
+    v.push_back(orsa::Vector(-phi,0.0,+1.0));
+    v.push_back(orsa::Vector(+phi,0.0,+1.0));
+    
+    // normalize
+    for (size_t j=0; j<v.size(); ++j) {
+        v[j] = v[j].normalized();
+    }
+    
+    std::vector< std::vector<size_t> > nearby;
+    findNearby(nearby, v);
+    
+    for (size_t sub=0; sub<Nsub; ++sub) {
+
+        const VertexVector old_v = v;
+        const std::vector< std::vector<size_t> > old_nearby = nearby;
+        
+        for (size_t j=0; j<old_v.size(); ++j) {
+            for (size_t k=0; k<old_nearby[j].size(); ++k) {
+                if (old_nearby[j][k]<j) {
+                    // avoid using twice the same nearby couple: j--k and then k--j
+                    const orsa::Vector new_vertex((old_v[j]+old_v[old_nearby[j][k]]).normalized());
+                    v.push_back(new_vertex);
+                }
+            }
+        }
+        
+        const bool print = verbose && (sub==Nsub-1);
+        findNearby(nearby, v, print);
+    }
+    
+    if (v.size() != (2+10*orsa::int_pow(2,2*Nsub))) {
+        ORSA_DEBUG("problems...");
+    }
+    
+#warning must finish with f vector
+    ORSA_DEBUG("must update f vector!!");
+    
+}
+
 // each face with every vertex with delta > deltaMax is not computed
 /* 
    bool TriShape::faceIlluminationAngles(const orsa::Vector & lightSource,
