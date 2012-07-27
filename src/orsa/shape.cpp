@@ -80,7 +80,9 @@ const Vector & TriShape::_getFaceNormal(const unsigned int face_index) const {
                                                _vertex[_t.i()]-_vertex[_t.j()]).normalized();
             // test: pointing "out" ? (extreme shapes can fail this test, that's OK
             if (_face_normal[_f]*(_vertex[_t.i()]+_vertex[_t.j()]+_vertex[_t.k()]) < 0) {
-                ORSA_DEBUG("warning: basic face-normal test not passed...");
+                // ORSA_DEBUG("warning: basic face-normal test not passed...");
+                // invert the normal...
+                _face_normal[_f] *= -1;
             }
         }
     }
