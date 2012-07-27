@@ -598,7 +598,7 @@ static void findNearby(std::vector< std::vector<size_t> > & nearby,
 
 // http://en.wikipedia.org/wiki/Geodesic_grid
 // http://en.wikipedia.org/wiki/Icosahedron
-void TriShape::GeodeticGrid(VertexVector & v,
+void TriShape::GeodesicGrid(VertexVector & v,
                             FaceVector   & f,
                             const size_t & Nsub,
                             const bool   & verbose) {
@@ -623,7 +623,8 @@ void TriShape::GeodeticGrid(VertexVector & v,
     }
     
     std::vector< std::vector<size_t> > nearby;
-    findNearby(nearby, v);
+    bool print = verbose && (Nsub==0);
+    findNearby(nearby, v, print);
     
     for (size_t sub=0; sub<Nsub; ++sub) {
 
@@ -640,7 +641,7 @@ void TriShape::GeodeticGrid(VertexVector & v,
             }
         }
         
-        const bool print = verbose && (sub==Nsub-1);
+        print = verbose && (sub==Nsub-1);
         findNearby(nearby, v, print);
     }
     
@@ -648,9 +649,49 @@ void TriShape::GeodeticGrid(VertexVector & v,
         ORSA_DEBUG("problems...");
     }
     
-#warning must finish with f vector
-    ORSA_DEBUG("must update f vector!!");
-    
+    // update f vector
+    f.clear();
+    for (size_t i=0; i<v.size(); ++i) {
+        for (size_t j=0; j<i; ++j) {
+            
+            bool ij=false;
+            for (size_t ni=0; ni<nearby[i].size(); ++ni) {
+                if (nearby[i][ni]==j) {
+                    ij=true;
+                    break;
+                }
+            }
+            if (!ij) continue;
+            
+            for (size_t k=0; k<j; ++k) {
+                
+                bool jk=false;
+                for (size_t nj=0; nj<nearby[j].size(); ++nj) {
+                    if (nearby[j][nj]==k) {
+                        jk=true;
+                        break;
+                    }
+                }
+                if (!jk) continue;
+
+                bool ki=false;
+                for (size_t nk=0; nk<nearby[k].size(); ++nk) {
+                    if (nearby[k][nk]==i) {
+                        ki=true;
+                    }
+                }
+                if (!ki) continue;
+                    
+                if (ij&&jk&&ki) {
+                    // ORSA_DEBUG("adding face [%06i] [%06i] [%06i]",i,j,k);
+                    f.push_back(TriIndex(i,j,k));
+                }
+            }
+        }
+    }
+    if (f.size() != (20*orsa::int_pow(4,Nsub))) {
+        ORSA_DEBUG("problems...");
+    }
 }
 
 // each face with every vertex with delta > deltaMax is not computed

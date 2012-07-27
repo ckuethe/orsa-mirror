@@ -267,11 +267,11 @@ namespace orsa {
            const bool includeShadows = false) const;
         */
         
-        // geodetic grid
+        // geodesic grid
         // generates the VertexVector and FaceVector to input in a new TriShape object
         // Nsub is the number of subdivisions
     public:
-        static void GeodeticGrid(VertexVector & v,
+        static void GeodesicGrid(VertexVector & v,
                                  FaceVector   & f,
                                  const size_t & Nsub,
                                  const bool   & verbose=false);
