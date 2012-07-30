@@ -18,6 +18,31 @@
 // SQLite3
 #include "sqlite3.h"
 
+#include <gsl/gsl_sf_gamma.h>
+
+inline double integral_csk_util(const size_t & c, const size_t & s) {
+    return gsl_sf_gamma(0.5*(c+1))*gsl_sf_gamma(0.5*(s+1))/gsl_sf_gamma(0.5*(c+s+2));
+}
+// integral between 0 and k*pi of cos^c(x) sin^s(x) dx
+inline double integral_csk(const size_t & c, const size_t & s, const size_t & k) {
+    const bool c_even = (c%2==0);
+    if (c_even) {
+        const bool s_even = (s%2==0);
+        if (s_even) {
+            return k*integral_csk_util(c,s);
+        } else {
+            const bool k_even = (k%2==0);
+            if (k_even) {
+                return 0.0;
+            } else {
+                return integral_csk_util(c,s);
+            }
+        }
+    } else {
+        return 0.0;
+    }
+}
+
 #warning should change the _simplex_ part of the name to _ijk_ or something like that
 inline std::string getSqliteDBFileName(const std::string & inputFile,
                                        const double & R0) {
@@ -28,15 +53,15 @@ inline std::string getSqliteDBFileName(const std::string & inputFile,
 
 typedef std::vector< std::vector<double> > SHcoeff;
 
-void writeSH(const SHcoeff & norm_A,
-             const SHcoeff & norm_B,
-             const std::string & inputFile) {
+inline void writeSH(const SHcoeff & norm_A,
+                    const SHcoeff & norm_B,
+                    const std::string & inputFile) {
     ORSA_DEBUG("need code here!");
 }
 
-void readSH(SHcoeff & norm_A,
-            SHcoeff & norm_B,
-            const std::string & inputFile) {
+inline void readSH(SHcoeff & norm_A,
+                   SHcoeff & norm_B,
+                   const std::string & inputFile) {
     ORSA_DEBUG("need code here!");
 }
 
@@ -260,6 +285,10 @@ public:
             
             if (needToCompute) {
                 ORSA_DEBUG("value for [%i][%i][%i] not available, computing it...",nx,ny,nz);
+
+                
+                // COMPUTE HERE, then set val[index] below...
+                
                 
                 // val[index] = aux_02(retVal,orsa::pochhammer(mpz_class(N+1),degree));
                 
