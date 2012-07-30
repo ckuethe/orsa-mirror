@@ -277,8 +277,21 @@ protected:
     
     class FiveVars {
     public:
-        size_t tau, l, m, u, nu;
+        int tau, l, m, u, nu;
+        mpz_class Q;
     };
+    
+#warning NEED TO TEST THE Q value...
+    
+    inline static mpz_class Q(const FiveVars & fv) {
+        return
+            orsa::power_sign(fv.u+fv.nu) *
+            orsa::binomial(fv.m,2*fv.nu+fv.tau) *
+            orsa::binomial(fv.l,fv.u) *
+            orsa::binomial(2*fv.l-2*fv.u,fv.l) *
+            orsa::pochhammer(mpz_class(fv.l-fv.m-2*fv.u+1),fv.m) 
+            / orsa::int_pow(2,fv.l);
+    }
     
 public:
     double getIntegral(const size_t & nx, const size_t & ny, const size_t & nz) const {
@@ -334,30 +347,59 @@ public:
                 
                 std::vector<FiveVars> fvv;
                 
-                const size_t l_max = std::max(norm_A.size()+1,norm_B.size()+1);
+                const size_t l_max = std::max(norm_A.size()-1,norm_B.size()-1);
                 for (size_t tau=0; tau<=1; ++tau) {
                     for (size_t l=0; l<=l_max; ++l) {
                         for (size_t m=0; m<=l; ++m) {
                             for (size_t u=0; u<=(l/2); ++u) {
-                                for (size_t nu=0; nu<=((m-tau)/2); ++nu) {
-
-                                    ORSA_DEBUG("tau: %i   l: %i   m: %i   u: %i   nu: %i",
-                                               tau,l,m,u,nu);
-
-                                    FiveVars fv;
-                                    fv.tau=tau;
-                                    fv.l=l;
-                                    fv.m=m;
-                                    fv.u=u;
-                                    fv.nu=nu;
-                                    fvv.push_back(fv);
-                                    
+                                if (m>=tau) {
+                                    for (size_t nu=0; nu<=((m-tau)/2); ++nu) {
+                                        
+                                        FiveVars fv;
+                                        fv.tau=tau;
+                                        fv.l=l;
+                                        fv.m=m;
+                                        fv.u=u;
+                                        fv.nu=nu;
+                                        fv.Q = Q(fv);
+                                        fvv.push_back(fv);
+                                        
+                                        ORSA_DEBUG("tau: %i   l: %i   m: %i   u: %i   nu: %i    Q: %Zi",
+                                                   tau,l,m,u,nu,
+                                                   fv.Q.get_mpz_t());
+                                        
+                                    }
                                 }
                             }
                         }
                     }
                 }
                 ORSA_DEBUG("fvv.size: %i",fvv.size());
+                
+                const size_t Nr = nx+ny+nz+3;
+                
+                double big_sum = 0.0;
+                
+                std::vector<size_t> pos;
+                pos.resize(Nr);
+                
+                double factor = 1.0;
+                
+                while (1) {
+
+                    std::vector<size_t> count;
+                    count.resize(fvv.size());
+                    for (size_t p=0; p<pos.size(); ++p) {
+                        ++count[pos[p]];
+                    }
+                    mpz_class binomial_factor = orsa::factorial(Nr);
+                    for (size_t c=0; c<count.size(); ++c) {
+                        binomial_factor /= orsa::factorial(count[c]);
+                    }
+                    
+                    
+                    
+                }
                 
                 // val[index] = aux_02(retVal,orsa::pochhammer(mpz_class(N+1),degree));
                 
