@@ -383,25 +383,134 @@ public:
                 std::vector<size_t> pos;
                 pos.resize(Nr);
                 
-                double factor = 1.0;
+                // double factor = 1.0;
                 
                 while (1) {
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    {
+                        {
+                            size_t p=pos.size();
+                            while(p!=0) {
+                                --p;
+                                const FiveVars & fv = fvv[pos[p]];
+                                char line[4096];
+                                gmp_sprintf(line," [%i,%i,%i,%i,%i|%Zi]",fv.tau,fv.l,fv.m,fv.u,fv.nu,fv.Q.get_mpz_t());
+                                std::cout << line; // << " ";
+                                // if (p=!0) cout << " ";
+                            }
+                        }
+                        std::vector<size_t> count;
+                        count.resize(fvv.size());
+                        for (size_t p=0; p<pos.size(); ++p) {
+                            ++count[pos[p]];
+                        }
+                        mpz_class factor = orsa::factorial(Nr);
+                        for (size_t c=0; c<count.size(); ++c) {
+                            factor /= orsa::factorial(count[c]);
+                        }
+                        // total += factor;
+                        // cout << "x " << factor.get_mpz_t() << endl;
+                        char cn[1024];
+                        gmp_sprintf(cn," %Zi",factor.get_mpz_t());
+                        std::cout << cn;
+                        std::cout << std::endl;
+                    }
+                    
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                    
                     std::vector<size_t> count;
                     count.resize(fvv.size());
-                    for (size_t p=0; p<pos.size(); ++p) {
-                        ++count[pos[p]];
+                    for (size_t s=0; s<Nr; ++s) {
+                        ++count[pos[s]];
                     }
                     mpz_class binomial_factor = orsa::factorial(Nr);
                     for (size_t c=0; c<count.size(); ++c) {
                         binomial_factor /= orsa::factorial(count[c]);
                     }
                     
+                    // factor = binomial_factor.get_d();
+
+                    double coefficients_factor = 1.0;
+                    for (size_t c=0; c<fvv.size(); ++c) {
+                        const FiveVars & fv = fvv[c];
+                        coefficients_factor *=
+                            int_pow(int_pow(norm_A[fv.l][fv.m],1-fv.tau)*
+                                    int_pow(norm_B[fv.l][fv.m],fv.tau)*
+                                    fv.Q.get_d(),count[c]);
+                    }
                     
+                    // initial values...
+                    int pow_cos_phi=nx;
+                    int pow_sin_phi=ny;
+                    int pow_cos_theta=nz;
+                    int pow_sin_theta=nx+ny+1;
+                    for (size_t c=0; c<fvv.size(); ++c) {
+                        const FiveVars & fv = fvv[c];
+                        pow_cos_phi   += count[c]*(fv.m-2*fv.nu-fv.tau);
+                        pow_sin_phi   += count[c]*(2*fv.nu-fv.tau);
+                        pow_cos_theta += count[c]*(fv.l-fv.m-2*fv.u);
+                        pow_sin_theta += count[c]*(fv.m);
+                    }
+                    const double   factor_phi_integral = integral_csk(pow_cos_phi,pow_sin_phi,2);
+                    const double factor_theta_integral = integral_csk(pow_cos_theta,pow_sin_theta,1);
+                    
+                    big_sum +=
+                        binomial_factor.get_d() *
+                        coefficients_factor *
+                        factor_phi_integral *
+                        factor_theta_integral;
+                    
+                    ORSA_DEBUG("%g %g %g %g",
+                               binomial_factor.get_d(),
+                               coefficients_factor,
+                               factor_phi_integral,
+                               factor_theta_integral);
+                    
+                    ORSA_DEBUG("big_sum: %g",big_sum);
+                    
+                    // now, increment while avoiding repetitions
+                    bool changed=false;
+                    for (size_t p=0; p<pos.size(); ++p) {
+                        if (pos[p]<fvv.size()-1) {
+                            ++pos[p];
+                            changed=true;
+                            for (size_t s=0; s<p; ++s) {
+                                if (pos[s]>pos[p]) {
+                                    pos[s]=pos[p];
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    if (!changed) break; // done
                     
                 }
+                big_sum /= Nr;
                 
                 // val[index] = aux_02(retVal,orsa::pochhammer(mpz_class(N+1),degree));
+                val[index] = big_sum;
                 
                 char * zErr;
                 char sql_line[1024];
