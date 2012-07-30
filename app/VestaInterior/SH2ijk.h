@@ -56,7 +56,7 @@ inline void readSH(SHcoeff & norm_A,
         int num_good = sscanf(line,
                               "%s %s %s %s",
                               s_l, s_m, s_C, s_S);
-        ORSA_DEBUG("[%s] [%s] [%s] [%s] (num_good=%i)",s_l, s_m, s_C, s_S, num_good);
+        // ORSA_DEBUG("[%s] [%s] [%s] [%s] (num_good=%i)",s_l, s_m, s_C, s_S, num_good);
         if ( (num_good == 3) ||
              (num_good == 4) ) {
             // test for good lines
@@ -269,14 +269,14 @@ protected:
 
     // Gamma(n/2)
     dd_real aux_gamma_half_n(const mpz_class & n) const {
-        ORSA_DEBUG("n: %Zi",n.get_mpz_t());
+        // ORSA_DEBUG("n: %Zi",n.get_mpz_t());
         if (n%2==0) return aux_gamma_n(n/2);
         else return aux_gamma_n_plus_half(n/2);
     }
 
     // Gamma((c+1)/2)*Gamma((s+1)/2)/Gamma((c+s+2)/2)
     dd_real triple_factorial(const mpz_class & c, const mpz_class & s) const {
-        ORSA_DEBUG("c: %i  s: %i",c.get_mpz_t(),s.get_mpz_t());
+        // ORSA_DEBUG("c: %i  s: %i",c.get_mpz_t(),s.get_mpz_t());
         return (aux_gamma_half_n(c+1)*aux_gamma_half_n(s+1)/aux_gamma_half_n(c+s+2));
     }
     
@@ -393,10 +393,10 @@ public:
                                         fv.Q = Q(fv);
                                         fvv.push_back(fv);
                                         
-                                        ORSA_DEBUG("tau: %i   l: %i   m: %i   u: %i   nu: %i    Q: %Zi",
-                                                   tau,l,m,u,nu,
-                                                   fv.Q.get_mpz_t());
-                                        
+                                        /* ORSA_DEBUG("tau: %i   l: %i   m: %i   u: %i   nu: %i    Q: %Zi",
+                                           tau,l,m,u,nu,
+                                           fv.Q.get_mpz_t());
+                                        */
                                     }
                                 }
                             }
@@ -479,7 +479,7 @@ public:
                         binomial_factor /= orsa::factorial(count[c]);
                     }
                     
-                    ORSA_DEBUG("binomial_factor: %Zi",binomial_factor.get_mpz_t());
+                    // ORSA_DEBUG("binomial_factor: %Zi",binomial_factor.get_mpz_t());
                     
                     dd_real coefficients_factor = 1.0;
                     for (size_t c=0; c<fvv.size(); ++c) {
@@ -490,7 +490,7 @@ public:
                                     fv.Q.get_d(),count[c]);
                     }
 
-                    ORSA_DEBUG("coefficients_factor: %g",::to_double(coefficients_factor));
+                    // ORSA_DEBUG("coefficients_factor: %g",::to_double(coefficients_factor));
 
                     if (coefficients_factor != 0.0) {
                         
@@ -515,13 +515,14 @@ public:
                             factor_phi_integral *
                             factor_theta_integral;
                         
-                        ORSA_DEBUG("%g %g %g %g",
-                                   binomial_factor.get_d(),
-                                   ::to_double(coefficients_factor),
-                                   ::to_double(factor_phi_integral),
-                                   ::to_double(factor_theta_integral));
+                        /* ORSA_DEBUG("%g %g %g %g",
+                           binomial_factor.get_d(),
+                           ::to_double(coefficients_factor),
+                           ::to_double(factor_phi_integral),
+                           ::to_double(factor_theta_integral));
+                        */
                         
-                        ORSA_DEBUG("big_sum: %g",::to_double(big_sum));
+                        // ORSA_DEBUG("big_sum: %g",::to_double(big_sum));
                     }
                     
                     // now, increment while avoiding repetitions
