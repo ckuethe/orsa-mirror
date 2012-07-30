@@ -55,14 +55,56 @@ typedef std::vector< std::vector<double> > SHcoeff;
 
 inline void writeSH(const SHcoeff & norm_A,
                     const SHcoeff & norm_B,
-                    const std::string & inputFile) {
+                    const std::string & outputFile,
+                    const orsa::Unit::LengthUnit & outputFileLengthScale = orsa::Unit::METER) {
     ORSA_DEBUG("need code here!");
 }
 
 inline void readSH(SHcoeff & norm_A,
                    SHcoeff & norm_B,
-                   const std::string & inputFile) {
-    ORSA_DEBUG("need code here!");
+                   const std::string & inputFile,
+                   const orsa::Unit::LengthUnit & inputFileLengthScale = orsa::Unit::METER) {
+    FILE * fp = fopen(inputFile.c_str(),"r");
+    if (!fp) {
+        ORSA_DEBUG("cannot open file [%s]",inputFile.c_str());
+        return;
+    }
+    
+    norm_A.clear();
+    norm_B.clear();
+
+    char line[4096];
+    char s_l[4096], s_m[4096], s_C[4096], s_S[4096];
+    while (fgets(line,4096,fp)) {
+        int num_good = sscanf(line,
+                              "%s %s %s %s",
+                              s_l, s_m, s_C, s_S);
+        ORSA_DEBUG("[%s] [%s] [%s] [%s] (num_good=%i)",s_l, s_m, s_C, s_S, num_good);
+        if ( (num_good == 3) ||
+             (num_good == 4) ) {
+            // test for good lines
+            if (!isdigit(s_l[0])) continue;
+
+            const int l=atoi(s_l);
+            const int m=atoi(s_m);
+            
+            if (norm_A.size()<=l) {
+                norm_A.resize(l+1);
+                norm_B.resize(l+1);
+                for (size_t j=0; j<=l; ++j) {
+                    norm_A[j].resize(j+1);
+                    norm_B[j].resize(j+1);
+                }
+            }
+            
+            norm_A[l][m] = orsa::FromUnits(atof(s_C),inputFileLengthScale);
+            if ( (num_good==4) && (m>0) ) {
+                norm_B[l][m] = orsa::FromUnits(atof(s_S),inputFileLengthScale);
+            }   
+        }
+    }
+    
+    fclose(fp);
 }
 
 template <typename T> class SHIntegration : public osg::Referenced {
@@ -78,7 +120,6 @@ public:
         // triShape(s),
         R0(R0_),
         oneOverR0(1.0/R0) {
-        
         
         int rc = sqlite3_open(SQLiteDBFileName.c_str(),&db);
         //
@@ -234,6 +275,11 @@ protected:
         return ::to_double(y);
     }
     
+    class FiveVars {
+    public:
+        size_t tau, l, m, u, nu;
+    };
+    
 public:
     double getIntegral(const size_t & nx, const size_t & ny, const size_t & nz) const {
         const size_t degree = nx+ny+nz;
@@ -285,10 +331,33 @@ public:
             
             if (needToCompute) {
                 ORSA_DEBUG("value for [%i][%i][%i] not available, computing it...",nx,ny,nz);
+                
+                std::vector<FiveVars> fvv;
+                
+                const size_t l_max = std::max(norm_A.size()+1,norm_B.size()+1);
+                for (size_t tau=0; tau<=1; ++tau) {
+                    for (size_t l=0; l<=l_max; ++l) {
+                        for (size_t m=0; m<=l; ++m) {
+                            for (size_t u=0; u<=(l/2); ++u) {
+                                for (size_t nu=0; nu<=((m-tau)/2); ++nu) {
 
-                
-                // COMPUTE HERE, then set val[index] below...
-                
+                                    ORSA_DEBUG("tau: %i   l: %i   m: %i   u: %i   nu: %i",
+                                               tau,l,m,u,nu);
+
+                                    FiveVars fv;
+                                    fv.tau=tau;
+                                    fv.l=l;
+                                    fv.m=m;
+                                    fv.u=u;
+                                    fv.nu=nu;
+                                    fvv.push_back(fv);
+                                    
+                                }
+                            }
+                        }
+                    }
+                }
+                ORSA_DEBUG("fvv.size: %i",fvv.size());
                 
                 // val[index] = aux_02(retVal,orsa::pochhammer(mpz_class(N+1),degree));
                 
