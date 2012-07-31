@@ -537,7 +537,7 @@ public:
                                pow_sin_theta); */
                             const FiveVars & fv = fvv[c];
                             pow_cos_phi   += count[c]*(fv.m-2*fv.nu-fv.tau);
-                            pow_sin_phi   += count[c]*(2*fv.nu-fv.tau);
+                            pow_sin_phi   += count[c]*(2*fv.nu+fv.tau);
                             pow_cos_theta += count[c]*(fv.l-fv.m-2*fv.u);
                             pow_sin_theta += count[c]*(fv.m);
                         }
