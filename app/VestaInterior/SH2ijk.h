@@ -341,7 +341,8 @@ protected:
         return sqrt(mpzToDD(orsa::factorial(l+m)) /
                     mpzToDD((2-orsa::kronecker(0,m))*(2*l+1)*orsa::factorial(l-m)));
     }
-    
+
+public:
     class FiveVars {
     public:
         int tau, l, m, u, nu;
