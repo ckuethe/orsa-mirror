@@ -7,6 +7,7 @@
 #include <orsa/double.h>
 #include <orsa/shape.h>
 #include <orsa/unit.h>
+#include <orsa/util.h>
 
 #include <qd/dd_real.h>
 #include <qd/qd_real.h>
@@ -99,6 +100,14 @@ inline void readSH(SHcoeff & norm_A,
             }   
         }
     }
+    
+    /* for (size_t l=0; l<norm_A.size(); ++l) {
+       for (size_t m=0; m<=l; ++m) {
+       ORSA_DEBUG("norm_A[%i][%i] = %g",l,m,norm_A[l][m]);
+       ORSA_DEBUG("norm_B[%i][%i] = %g",l,m,norm_B[l][m]);
+       }
+       }
+    */
     
     fclose(fp);
 }
@@ -324,6 +333,15 @@ protected:
         }
     }
     
+    // norm_coeff = normalization_factor * coeff
+    static dd_real normalization_factor(const int & l,
+                                        const int & m) {
+        // return mpfToDD(orsa::normalization_sphericalHarmonicsToNormalizedSphericalHarmonics(l,m));
+        // write it explicitely to avoid losing digits...
+        return sqrt(mpzToDD(orsa::factorial(l+m)) /
+                    mpzToDD((2-orsa::kronecker(0,m))*(2*l+1)*orsa::factorial(l-m)));
+    }
+    
     class FiveVars {
     public:
         int tau, l, m, u, nu;
@@ -411,10 +429,10 @@ public:
                                         fv.Q = Q(fv);
                                         fvv.push_back(fv);
                                         
-                                        ORSA_DEBUG("tau: %i   l: %i   m: %i   u: %i   nu: %i    Q: %g",
-                                                   tau,l,m,u,nu,
-                                                   ::to_double(fv.Q));
-                                        
+                                        /* ORSA_DEBUG("tau: %i   l: %i   m: %i   u: %i   nu: %i    Q: %g",
+                                           tau,l,m,u,nu,
+                                           ::to_double(fv.Q));
+                                        */
                                     }
                                 }
                             }
@@ -430,17 +448,18 @@ public:
                 std::vector<size_t> pos;
                 pos.resize(Nr);
                 
-                // double factor = 1.0;
-                
                 while (1) {
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
+
+                    if (0) {
+                        // debug only...
+                        std::cout << "pos:";
+                        size_t p=pos.size();
+                        while(p!=0) {
+                            --p;
+                            std::cout << " " << pos[p];
+                        }
+                        std::cout << std::endl;
+                    }
                     
                     if (0) {
                         // debug only...
@@ -472,22 +491,6 @@ public:
                         std::cout << std::endl;
                     }
                     
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    
                     std::vector<int> count;
                     count.resize(fvv.size());
                     for (size_t c=0; c<count.size(); ++c) {
@@ -502,7 +505,8 @@ public:
                     }
                     
                     // ORSA_DEBUG("binomial_factor: %Zi",binomial_factor.get_mpz_t());
-                    
+
+                    dd_real just_norm_factors = 1.0;
                     dd_real coefficients_factor = 1.0;
                     for (size_t c=0; c<fvv.size(); ++c) {
                         const FiveVars & fv = fvv[c];
@@ -510,7 +514,10 @@ public:
                             int_pow(int_pow(norm_A[fv.l][fv.m],1-fv.tau)*
                                     int_pow(norm_B[fv.l][fv.m],fv.tau),
                                     count[c]) *
-                            int_pow(fv.Q,count[c]);
+                            int_pow(fv.Q,count[c])
+                            / int_pow(normalization_factor(fv.l,fv.m),count[c]); // dealing with normalized coefficients...
+                        just_norm_factors *= int_pow(normalization_factor(fv.l,fv.m),count[c]);
+                        // if (coefficients_factor != 0) ORSA_DEBUG("nf[%i][%i] = %g    cf: %g",fv.l,fv.m,::to_double(normalization_factor(fv.l,fv.m)),::to_double(coefficients_factor));
                     }
                     
                     // ORSA_DEBUG("coefficients_factor: %g",::to_double(coefficients_factor));
@@ -539,7 +546,8 @@ public:
                         
                         // ORSA_DEBUG("csk: %i %i %i  itg: %g",pow_cos_phi,pow_sin_phi,2,::to_double(factor_phi_integral));
                         // ORSA_DEBUG("csk: %i %i %i  itg: %g",pow_cos_theta,pow_sin_theta,1,::to_double(factor_theta_integral));
-                        
+
+                        const T old_big_sum = big_sum;
                         big_sum +=
                             mpzToDD(binomial_factor) *
                             coefficients_factor *
@@ -554,6 +562,51 @@ public:
                         */
                         
                         // ORSA_DEBUG("big_sum: %g",::to_double(big_sum));
+                        
+                        if (big_sum != old_big_sum) {
+                            // debug only...
+                            {
+                                size_t p=pos.size();
+                                while(p!=0) {
+                                    --p;
+                                    const FiveVars & fv = fvv[pos[p]];
+                                    char line[4096];
+                                    gmp_sprintf(line," [%i,%i,%i,%i,%i|%g]",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.Q));
+                                    std::cout << line; // << " ";
+                                    // if (p=!0) cout << " ";
+                                }
+                            }
+                            /* std::vector<size_t> count;
+                               count.resize(fvv.size());
+                               for (size_t p=0; p<pos.size(); ++p) {
+                               ++count[pos[p]];
+                               }
+                               mpz_class factor = orsa::factorial(Nr);
+                               for (size_t c=0; c<count.size(); ++c) {
+                               factor /= orsa::factorial(count[c]);
+                               }
+                               // total += factor;
+                               // cout << "x " << factor.get_mpz_t() << endl;
+                               char cn[1024];
+                               gmp_sprintf(cn," %Zi",factor.get_mpz_t());
+                               std::cout << cn;
+                               std::cout << " " << mpzToDD(binomial_factor) 
+                               << " " << coefficients_factor
+                               << " " << factor_phi_integral
+                               << " " << factor_theta_integral;
+                            */
+                            char line[4096];
+                            gmp_sprintf(line," s: %g   ds: %g   bin: %g   coeff: %g   phi: %g   theta: %g   jnf: %g",
+                                        ::to_double(big_sum),
+                                        ::to_double(big_sum-old_big_sum),                                       
+                                        binomial_factor.get_d(),
+                                        ::to_double(coefficients_factor),
+                                        ::to_double(factor_phi_integral),
+                                        ::to_double(factor_theta_integral),
+                                        ::to_double(just_norm_factors));
+                            std::cout << line << std::endl;
+                        }
+                        
                     }
                     
                     // now, increment while avoiding repetitions
