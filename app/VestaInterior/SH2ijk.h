@@ -405,6 +405,8 @@ public:
                 ORSA_DEBUG("value for [%i][%i][%i] not available, computing it...",nx,ny,nz);
                 
                 std::vector<FiveVars> fvv;
+
+                // size_t num_skipped=0;
                 
                 const size_t l_max = std::max(norm_A.size()-1,norm_B.size()-1);
                 for (size_t tau=0; tau<=1; ++tau) {
@@ -424,6 +426,7 @@ public:
                                         if (orsa::int_pow(norm_A[l][m],1-tau)*orsa::int_pow(norm_B[l][m],tau)*fv.Q != 0.0) {
                                             fvv.push_back(fv);
                                         } else {
+                                            // ++num_skipped;
                                             // ORSA_DEBUG("skipped!");
                                         }
                                         
@@ -437,7 +440,7 @@ public:
                         }
                     }
                 }
-                // ORSA_DEBUG("fvv.size: %i",fvv.size());
+                // ORSA_DEBUG("fvv.size: %i   skipped: %i",fvv.size(),num_skipped);
                 
                 const size_t Nr = nx+ny+nz+3;
                 
@@ -503,7 +506,7 @@ public:
                     }
                     
                     // ORSA_DEBUG("binomial_factor: %Zi",binomial_factor.get_mpz_t());
-
+                    
                     dd_real just_norm_factors = 1.0;
                     dd_real coefficients_factor = 1.0;
                     for (size_t c=0; c<fvv.size(); ++c) {
