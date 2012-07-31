@@ -12,10 +12,6 @@
 #include <qd/dd_real.h>
 #include <qd/qd_real.h>
 
-#warning if shape is strongly concave and a simplex covers volume outside the body shape, then the results are incorrect (including volume computations...)
-
-#warning default origin for 4th simplex vertex, should be a parameter of the class??                
-
 // SQLite3
 #include "sqlite3.h"
 
@@ -282,6 +278,7 @@ protected:
     
     // return Gamma(n) = (n-1)!
     dd_real aux_gamma_n(const mpz_class & n) const {
+        // ORSA_DEBUG("%g",::to_double(mpzToDD(orsa::factorial(n-1))));
         return mpzToDD(orsa::factorial(n-1));
     }
     
@@ -289,11 +286,11 @@ protected:
     dd_real aux_gamma_n_plus_half(const mpz_class & n) const {
         dd_real result=1;
         result *= mpzToDD(orsa::factorial(2*n));
-        result /= mpzToDD(orsa::int_pow(4,n)*orsa::factorial(n));
+        result /= mpzToDD(orsa::int_pow((mpz_class)4,n)*orsa::factorial(n));
         result *= sqrt(dd_real::_pi);
         return result;
     }
-
+    
     // Gamma(n/2)
     dd_real aux_gamma_half_n(const mpz_class & n) const {
         // ORSA_DEBUG("n: %Zi",n.get_mpz_t());
@@ -307,10 +304,6 @@ protected:
         return (aux_gamma_half_n(c+1)*aux_gamma_half_n(s+1)/aux_gamma_half_n(c+s+2));
     }
     
-    /* template <class U> T integral_csk_util(const size_t & c, const size_t & s) {
-       return gsl_sf_gamma(0.5*(c+1))*gsl_sf_gamma(0.5*(s+1))/gsl_sf_gamma(0.5*(c+s+2));
-       }
-    */
     // integral between 0 and k*pi of cos^c(x) sin^s(x) dx
     dd_real integral_csk(const int & c, const int & s, const int & k) const {
         // ORSA_DEBUG("csk: %i %i %i",c,s,k);
@@ -428,7 +421,11 @@ public:
                                         fv.u=u;
                                         fv.nu=nu;
                                         fv.Q = Q(fv);
-                                        fvv.push_back(fv);
+                                        if (orsa::int_pow(norm_A[l][m],1-tau)*orsa::int_pow(norm_B[l][m],tau)*fv.Q != 0.0) {
+                                            fvv.push_back(fv);
+                                        } else {
+                                            // ORSA_DEBUG("skipped!");
+                                        }
                                         
                                         /* ORSA_DEBUG("tau: %i   l: %i   m: %i   u: %i   nu: %i    Q: %g",
                                            tau,l,m,u,nu,
@@ -564,7 +561,7 @@ public:
                         
                         // ORSA_DEBUG("big_sum: %g",::to_double(big_sum));
                         
-                        if (big_sum != old_big_sum) {
+                        if (0) if (big_sum != old_big_sum) {
                             // debug only...
                             {
                                 size_t p=pos.size();
