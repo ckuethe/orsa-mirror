@@ -28,6 +28,25 @@ inline std::string getSqliteDBFileName(const std::string & inputFile,
     return line;
 }
 
+// from src/orsa/double.cpp
+template <class T> T orsa::int_pow(const T & x,
+                                   const int & p) {
+    if (p ==  2) return x*x;
+    if (p ==  1) return x;
+    if (p ==  0) return 1;
+    if (p == -1) return 1/x;
+    T _pow = x;
+    const int max_k = abs(p);
+    for (int k=1; k<max_k; ++k) {
+        _pow *= x;
+    }
+    if (p < 0) _pow = T(1)/_pow;
+    return _pow;
+}
+
+template dd_real orsa::int_pow(const dd_real & z,
+                               const int & p);
+
 typedef std::vector< std::vector<double> > SHcoeff;
 
 inline void writeSH(const SHcoeff & norm_A,
@@ -203,7 +222,7 @@ protected:
        dd_real mpzToQD(const mpz_class & z) const;
        qd_real mpzToQD(const mpz_class & z) const;
     */
-    dd_real mpzToDD(const mpz_class & z) const {
+    static dd_real mpzToDD(const mpz_class & z) {
         char * str = (char *)malloc(mpz_sizeinbase(z.get_mpz_t(),10)+2);
         mpz_get_str(str,10,z.get_mpz_t());
         // ORSA_DEBUG("z: [%Zi]  STR: [%s]",z.get_mpz_t(),str);
@@ -211,7 +230,7 @@ protected:
         free(str);
         return x;
     }
-    qd_real mpzToQD(const mpz_class & z) const {
+    static qd_real mpzToQD(const mpz_class & z) {
         char * str = (char *)malloc(mpz_sizeinbase(z.get_mpz_t(),10)+2);
         mpz_get_str(str,10,z.get_mpz_t());
         // ORSA_DEBUG("z: [%Zi]  STR: [%s]",z.get_mpz_t(),str);
@@ -308,19 +327,17 @@ protected:
     class FiveVars {
     public:
         int tau, l, m, u, nu;
-        mpz_class Q;
+        T Q;
     };
     
-#warning NEED TO TEST THE Q value...
-    
-    inline static mpz_class Q(const FiveVars & fv) {
+    inline static dd_real Q(const FiveVars & fv) {
         return
-            orsa::power_sign(fv.u+fv.nu) *
-            orsa::binomial(fv.m,2*fv.nu+fv.tau) *
-            orsa::binomial(fv.l,fv.u) *
-            orsa::binomial(2*fv.l-2*fv.u,fv.l) *
-            orsa::pochhammer(mpz_class(fv.l-fv.m-2*fv.u+1),fv.m) 
-            / orsa::int_pow(2,fv.l);
+            mpzToDD(orsa::power_sign(fv.u+fv.nu) *
+                    orsa::binomial(fv.m,2*fv.nu+fv.tau) *
+                    orsa::binomial(fv.l,fv.u) *
+                    orsa::binomial(2*fv.l-2*fv.u,fv.l) *
+                    orsa::pochhammer(mpz_class(fv.l-fv.m-2*fv.u+1),fv.m)) 
+            / mpzToDD(orsa::int_pow((mpz_class)2,fv.l));
     }
     
 public:
@@ -394,10 +411,10 @@ public:
                                         fv.Q = Q(fv);
                                         fvv.push_back(fv);
                                         
-                                        /* ORSA_DEBUG("tau: %i   l: %i   m: %i   u: %i   nu: %i    Q: %Zi",
-                                           tau,l,m,u,nu,
-                                           fv.Q.get_mpz_t());
-                                        */
+                                        ORSA_DEBUG("tau: %i   l: %i   m: %i   u: %i   nu: %i    Q: %g",
+                                                   tau,l,m,u,nu,
+                                                   ::to_double(fv.Q));
+                                        
                                     }
                                 }
                             }
@@ -433,7 +450,7 @@ public:
                                 --p;
                                 const FiveVars & fv = fvv[pos[p]];
                                 char line[4096];
-                                gmp_sprintf(line," [%i,%i,%i,%i,%i|%Zi]",fv.tau,fv.l,fv.m,fv.u,fv.nu,fv.Q.get_mpz_t());
+                                gmp_sprintf(line," [%i,%i,%i,%i,%i|%g]",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.Q));
                                 std::cout << line; // << " ";
                                 // if (p=!0) cout << " ";
                             }
@@ -491,8 +508,9 @@ public:
                         const FiveVars & fv = fvv[c];
                         coefficients_factor *=
                             int_pow(int_pow(norm_A[fv.l][fv.m],1-fv.tau)*
-                                    int_pow(norm_B[fv.l][fv.m],fv.tau)*
-                                    fv.Q.get_d(),count[c]);
+                                    int_pow(norm_B[fv.l][fv.m],fv.tau),
+                                    count[c]) *
+                            int_pow(fv.Q,count[c]);
                     }
                     
                     // ORSA_DEBUG("coefficients_factor: %g",::to_double(coefficients_factor));
@@ -518,6 +536,9 @@ public:
                         }
                         const dd_real   factor_phi_integral = integral_csk(pow_cos_phi,pow_sin_phi,2);
                         const dd_real factor_theta_integral = integral_csk(pow_cos_theta,pow_sin_theta,1);
+                        
+                        // ORSA_DEBUG("csk: %i %i %i  itg: %g",pow_cos_phi,pow_sin_phi,2,::to_double(factor_phi_integral));
+                        // ORSA_DEBUG("csk: %i %i %i  itg: %g",pow_cos_theta,pow_sin_theta,1,::to_double(factor_theta_integral));
                         
                         big_sum +=
                             mpzToDD(binomial_factor) *
