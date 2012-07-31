@@ -76,7 +76,8 @@ int main(int argc, char **argv) {
     SHcoeff norm_B;
     readSH(norm_A,
            norm_B,
-           inputFile);
+           inputFile,
+           orsa::Unit::KM);
     
 #warning include the analog for the generation of the .xyz file
     /* 

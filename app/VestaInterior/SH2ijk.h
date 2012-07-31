@@ -18,7 +18,7 @@
 // SQLite3
 #include "sqlite3.h"
 
-#include <gsl/gsl_sf_gamma.h>
+// #include <gsl/gsl_sf_gamma.h>
 
 #warning should change the _simplex_ part of the name to _ijk_ or something like that
 inline std::string getSqliteDBFileName(const std::string & inputFile,
@@ -258,7 +258,6 @@ protected:
     }
     
     // return Gamma(n+1/2)
-    // T aux_gamma_n_plus_half(const mpz_class & n) const;
     dd_real aux_gamma_n_plus_half(const mpz_class & n) const {
         dd_real result=1;
         result *= mpzToDD(orsa::factorial(2*n));
@@ -273,10 +272,10 @@ protected:
         if (n%2==0) return aux_gamma_n(n/2);
         else return aux_gamma_n_plus_half(n/2);
     }
-
+    
     // Gamma((c+1)/2)*Gamma((s+1)/2)/Gamma((c+s+2)/2)
     dd_real triple_factorial(const mpz_class & c, const mpz_class & s) const {
-        // ORSA_DEBUG("c: %i  s: %i",c.get_mpz_t(),s.get_mpz_t());
+        // ORSA_DEBUG("c: %Zi  s: %Zi",c.get_mpz_t(),s.get_mpz_t());
         return (aux_gamma_half_n(c+1)*aux_gamma_half_n(s+1)/aux_gamma_half_n(c+s+2));
     }
     
@@ -285,7 +284,9 @@ protected:
        }
     */
     // integral between 0 and k*pi of cos^c(x) sin^s(x) dx
-    dd_real integral_csk(const size_t & c, const size_t & s, const size_t & k) const {
+    dd_real integral_csk(const int & c, const int & s, const int & k) const {
+        // ORSA_DEBUG("csk: %i %i %i",c,s,k);
+        if ((c<0) || (s<0) || (k<0)) return 0; // tested only for natural numbers values
         const bool c_even = (c%2==0);
         if (c_even) {
             const bool s_even = (s%2==0);
@@ -323,7 +324,7 @@ protected:
     }
     
 public:
-    double getIntegral(const size_t & nx, const size_t & ny, const size_t & nz) const {
+    double getIntegral(const int & nx, const int & ny, const int & nz) const {
         const size_t degree = nx+ny+nz;
         const size_t index = getIndex(nx,ny,nz);
         if (val.size() <= index) {
@@ -403,7 +404,7 @@ public:
                         }
                     }
                 }
-                ORSA_DEBUG("fvv.size: %i",fvv.size());
+                // ORSA_DEBUG("fvv.size: %i",fvv.size());
                 
                 const size_t Nr = nx+ny+nz+3;
                 
@@ -424,7 +425,8 @@ public:
                     
                     
                     
-                    {
+                    if (0) {
+                        // debug only...
                         {
                             size_t p=pos.size();
                             while(p!=0) {
@@ -469,8 +471,11 @@ public:
 
 
                     
-                    std::vector<size_t> count;
+                    std::vector<int> count;
                     count.resize(fvv.size());
+                    for (size_t c=0; c<count.size(); ++c) {
+                        count[c] = 0;
+                    }
                     for (size_t s=0; s<Nr; ++s) {
                         ++count[pos[s]];
                     }
@@ -489,9 +494,9 @@ public:
                                     int_pow(norm_B[fv.l][fv.m],fv.tau)*
                                     fv.Q.get_d(),count[c]);
                     }
-
+                    
                     // ORSA_DEBUG("coefficients_factor: %g",::to_double(coefficients_factor));
-
+                    
                     if (coefficients_factor != 0.0) {
                         
                         // initial values...
@@ -499,7 +504,12 @@ public:
                         int pow_sin_phi=ny;
                         int pow_cos_theta=nz;
                         int pow_sin_theta=nx+ny+1;
-                        for (size_t c=0; c<fvv.size(); ++c) {
+                        for (int c=0; c<fvv.size(); ++c) {
+                            /* ORSA_DEBUG("%i %i %i %i",
+                               pow_cos_phi,
+                               pow_sin_phi,
+                               pow_cos_theta,
+                               pow_sin_theta); */
                             const FiveVars & fv = fvv[c];
                             pow_cos_phi   += count[c]*(fv.m-2*fv.nu-fv.tau);
                             pow_sin_phi   += count[c]*(2*fv.nu-fv.tau);
@@ -515,7 +525,7 @@ public:
                             factor_phi_integral *
                             factor_theta_integral;
                         
-                        /* ORSA_DEBUG("%g %g %g %g",
+                        /* ORSA_DEBUG("/ff/ %g %g %g %g",
                            binomial_factor.get_d(),
                            ::to_double(coefficients_factor),
                            ::to_double(factor_phi_integral),
@@ -543,6 +553,7 @@ public:
                     
                 }
                 big_sum /= Nr;
+                big_sum /= orsa::int_pow(R0,Nr);
                 
                 // val[index] = aux_02(retVal,orsa::pochhammer(mpz_class(N+1),degree));
                 val[index] = ::to_double(big_sum);
