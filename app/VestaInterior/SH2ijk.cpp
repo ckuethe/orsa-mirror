@@ -115,16 +115,18 @@ int main(int argc, char **argv) {
     shi->reserve(maxDegree);
     // si_unit_R0->reserve(maxDegree);
     for (size_t degree=minDegree; degree<=(size_t)maxDegree; ++degree) {
-        for (size_t i=0; i<=degree; ++i) {
-            for (size_t j=0; j<=degree; ++j) {
-                for (size_t k=0; k<=degree; ++k) {
-                    if (i+j+k==degree) {
-                        const size_t index = SHIntegration<T>::getIndex(i,j,k);
-                        if ((index%mod_N)==(size_t)mod_i) {
+        if ((degree%mod_N)==(size_t)mod_i) {
+            for (size_t i=0; i<=degree; ++i) {
+                for (size_t j=0; j<=degree; ++j) {
+                    for (size_t k=0; k<=degree; ++k) {
+                        if (i+j+k==degree) {
+                            const size_t index = SHIntegration<T>::getIndex(i,j,k);
+                            // if ((index%mod_N)==(size_t)mod_i) {
                             
                             const double integral_ijk = shi->getIntegral(i,j,k);
                             ORSA_DEBUG("integral [%02i,%02i,%02i]: %+20.12f",i,j,k,integral_ijk);
                             // ORSA_DEBUG("scaled: %+16.6e",integral_ijk*orsa::int_pow(R0,3+degree)); // 3=jacobian, degree=transformation
+                            // }
                         }
                     }
                 }
