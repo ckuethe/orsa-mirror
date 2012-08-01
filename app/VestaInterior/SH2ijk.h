@@ -329,17 +329,36 @@ protected:
     // norm_coeff = normalization_factor * coeff
     static dd_real normalization_factor(const int & l,
                                         const int & m) {
+        /* static std::vector< std::vector< orsa::Cache<dd_real> > > stored;
+           if (stored.size() > l) {
+           // if (stored[l].size() > m) {
+           if (stored[l][m].isSet()) {
+           return stored[l][m];
+           }
+           // }
+           } else {
+           stored.resize(l+1);
+           for (int j=0; j<=l; ++j) {
+           stored[j].resize(j+1);
+           }
+           }
+        */
+        
         // return mpfToDD(orsa::normalization_sphericalHarmonicsToNormalizedSphericalHarmonics(l,m));
         // write it explicitely to avoid losing digits...
-        return sqrt(mpzToDD(orsa::factorial(l+m)) /
-                    mpzToDD((2-orsa::kronecker(0,m))*(2*l+1)*orsa::factorial(l-m)));
+        const dd_real val =
+            sqrt(mpzToDD(orsa::factorial(l+m)) /
+                 mpzToDD((2-orsa::kronecker(0,m))*(2*l+1)*orsa::factorial(l-m)));
+        // stored[l][m] = val;
+        return val;
     }
-
+    
 public:
     class FiveVars {
     public:
         int tau, l, m, u, nu;
-        T Q;
+        // T Q;
+        T ALQ;
     };
     
     inline static dd_real Q(const FiveVars & fv) {
@@ -422,8 +441,10 @@ public:
                                         fv.m=m;
                                         fv.u=u;
                                         fv.nu=nu;
-                                        fv.Q = Q(fv);
-                                        if (orsa::int_pow(norm_A[l][m],1-tau)*orsa::int_pow(norm_B[l][m],tau)*fv.Q != 0.0) {
+                                        // fv.Q = Q(fv);
+                                        // NOTE the normalization factor included here...
+                                        fv.ALQ = orsa::int_pow(norm_A[l][m],1-tau)*orsa::int_pow(norm_B[l][m],tau)*Q(fv)/normalization_factor(l,m);
+                                        if (fv.ALQ != 0.0) {
                                             fvv.push_back(fv);
                                         } else {
                                             // ++num_skipped;
@@ -470,7 +491,7 @@ public:
                                 --p;
                                 const FiveVars & fv = fvv[pos[p]];
                                 char line[4096];
-                                gmp_sprintf(line," [%i,%i,%i,%i,%i|%g]",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.Q));
+                                gmp_sprintf(line," [%i,%i,%i,%i,%i|%g]",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.ALQ));
                                 std::cout << line; // << " ";
                                 // if (p=!0) cout << " ";
                             }
@@ -507,17 +528,19 @@ public:
                     
                     // ORSA_DEBUG("binomial_factor: %Zi",binomial_factor.get_mpz_t());
                     
-                    dd_real just_norm_factors = 1.0;
+                    // dd_real just_norm_factors = 1.0;
                     dd_real coefficients_factor = 1.0;
                     for (size_t c=0; c<fvv.size(); ++c) {
                         const FiveVars & fv = fvv[c];
-                        coefficients_factor *=
-                            int_pow(int_pow(norm_A[fv.l][fv.m],1-fv.tau)*
-                                    int_pow(norm_B[fv.l][fv.m],fv.tau),
-                                    count[c]) *
-                            int_pow(fv.Q,count[c])
-                            / int_pow(normalization_factor(fv.l,fv.m),count[c]); // dealing with normalized coefficients...
-                        just_norm_factors *= int_pow(normalization_factor(fv.l,fv.m),count[c]);
+                        /* coefficients_factor *=
+                           int_pow(int_pow(norm_A[fv.l][fv.m],1-fv.tau)*
+                           int_pow(norm_B[fv.l][fv.m],fv.tau),
+                           count[c]) *
+                           int_pow(fv.Q,count[c])
+                           / int_pow(normalization_factor(fv.l,fv.m),count[c]); // dealing with normalized coefficients...
+                        */
+                        coefficients_factor *= int_pow(fv.ALQ,count[c]);
+                        // just_norm_factors *= int_pow(normalization_factor(fv.l,fv.m),count[c]);
                         // if (coefficients_factor != 0) ORSA_DEBUG("nf[%i][%i] = %g    cf: %g",fv.l,fv.m,::to_double(normalization_factor(fv.l,fv.m)),::to_double(coefficients_factor));
                     }
                     
@@ -572,7 +595,7 @@ public:
                                     --p;
                                     const FiveVars & fv = fvv[pos[p]];
                                     char line[4096];
-                                    gmp_sprintf(line," [%i,%i,%i,%i,%i|%g]",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.Q));
+                                    gmp_sprintf(line," [%i,%i,%i,%i,%i|%g]",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.ALQ));
                                     std::cout << line; // << " ";
                                     // if (p=!0) cout << " ";
                                 }
@@ -597,14 +620,15 @@ public:
                                << " " << factor_theta_integral;
                             */
                             char line[4096];
-                            gmp_sprintf(line," s: %g   ds: %g   bin: %g   coeff: %g   phi: %g   theta: %g   jnf: %g",
-                                        ::to_double(big_sum),
-                                        ::to_double(big_sum-old_big_sum),                                       
-                                        binomial_factor.get_d(),
-                                        ::to_double(coefficients_factor),
-                                        ::to_double(factor_phi_integral),
-                                        ::to_double(factor_theta_integral),
-                                        ::to_double(just_norm_factors));
+                            /* gmp_sprintf(line," s: %g   ds: %g   bin: %g   coeff: %g   phi: %g   theta: %g   jnf: %g",
+                               ::to_double(big_sum),
+                               ::to_double(big_sum-old_big_sum),                                       
+                               binomial_factor.get_d(),
+                               ::to_double(coefficients_factor),
+                               ::to_double(factor_phi_integral),
+                               ::to_double(factor_theta_integral),
+                               ::to_double(just_norm_factors));
+                            */
                             std::cout << line << std::endl;
                         }
                         
