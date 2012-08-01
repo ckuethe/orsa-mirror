@@ -216,44 +216,24 @@ protected:
     sqlite3 * db;
 protected:
     // utility functions to allow the use of templates
-    /* template <class QD> QD mpzToQD(const mpz_class & z) const {
-       char * str = (char *)malloc(mpz_sizeinbase(z.get_mpz_t(),10)+2);
-       mpz_get_str(str,10,z.get_mpz_t());
-       // ORSA_DEBUG("z: [%Zi]  STR: [%s]",z.get_mpz_t(),str);
-       QD x(str);
-       free(str);
-       return x;
-       }
-       dd_real mpzToQD(const mpz_class & z) const;
-       qd_real mpzToQD(const mpz_class & z) const;
-    */
     static dd_real mpzToDD(const mpz_class & z) {
+        // return dd_real(z.get_d());
         char * str = (char *)malloc(mpz_sizeinbase(z.get_mpz_t(),10)+2);
         mpz_get_str(str,10,z.get_mpz_t());
-        // ORSA_DEBUG("z: [%Zi]  STR: [%s]",z.get_mpz_t(),str);
         dd_real x(str);
+        // ORSA_DEBUG("z: [%Zi]  STR: [%s]   dd: %g",z.get_mpz_t(),str,::to_double(x));
         free(str);
         return x;
     }
     static qd_real mpzToQD(const mpz_class & z) {
         char * str = (char *)malloc(mpz_sizeinbase(z.get_mpz_t(),10)+2);
         mpz_get_str(str,10,z.get_mpz_t());
-        // ORSA_DEBUG("z: [%Zi]  STR: [%s]",z.get_mpz_t(),str);
         qd_real x(str);
+        // ORSA_DEBUG("z: [%Zi]  STR: [%s]   qd: %g",z.get_mpz_t(),str,::to_double(x));
         free(str);
         return x;
     }
-    //
-    /* template <class U> T to_T(const U & x) const;
-       double to_T(const double & x) const { return x; }
-       double to_T(const mpf_class & x) const { return x.get_d(); }
-       double to_T(const mpz_class & n) const { return n.get_d(); }
-    */
-    //
-    /* double to_double(const double & x) const { return x; }
-       double to_double(const mpf_class & x) const { return x.get_d(); }
-    */
-    //
+    
     template <class U> T aux_01(const int & sign, const mpz_class & binomial, const U & val) const;
     double aux_01(const int & sign, const mpz_class & binomial, const double & val) const { return sign*binomial.get_d()*val; }   
     mpf_class aux_01(const int & sign, const mpz_class & binomial, const mpf_class & val) const { return sign*binomial*val; }   
@@ -648,6 +628,8 @@ public:
                                 coefficients_factor *
                                 factor_phi_integral *
                                 factor_theta_integral;
+
+                            ORSA_DEBUG("big_sum[%i] = %g",jj,::to_double(big_sum[jj]));
                         }
                         
                         /* ORSA_DEBUG("/ff/ %g %g %g %g",
