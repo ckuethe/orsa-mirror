@@ -370,6 +370,59 @@ public:
                     orsa::pochhammer(mpz_class(fv.l-fv.m-2*fv.u+1),fv.m)) 
             / mpzToDD(orsa::int_pow((mpz_class)2,fv.l));
     }
+
+public:
+    class Trii {
+    public:
+        int nx, ny, nz;
+        size_t index;
+    };
+    
+protected:
+    // check if it is in the SQLite db
+    bool inDB(double & val,
+              const size_t & index) const {
+        char **result;
+        int nrows, ncols;
+        char * zErr;
+        char sql_line[1024];
+        sprintf(sql_line,
+                "SELECT * FROM simplex WHERE id=%zi",
+                index);
+        int rc = sqlite3_get_table(db,sql_line,&result,&nrows,&ncols,&zErr);
+        //
+        if (rc != SQLITE_OK) {
+            if (zErr != NULL) {
+                fprintf(stderr,"SQL error: %s\n",zErr);
+                sqlite3_free(zErr);
+            }
+        }
+        // ORSA_DEBUG("nrows: %i  ncols: %i",nrows, ncols);
+        //
+        /* for (int i=0; i<nrows; ++i) {
+           for (int j=0; j<ncols; ++j) {
+           // i=0 is the header
+           const int index = (i+1)*ncols+j;
+           ORSA_DEBUG("result[%i] = %s",index, result[index]);
+           }
+           }
+        */
+        //
+        bool haveit=false;
+        if (nrows==0) {
+            // nothing, but must keep this case!
+        } else if (nrows==1) {
+            // val[index] = atof(result[9]);
+            // needToCompute = false;
+            val=atof(result[9]);
+            haveit=true;
+        } else { // if (nrows>size_H) {
+            ORSA_ERROR("database corrupted, only 1 entry per index is admitted");
+        }
+        //
+        sqlite3_free_table(result);
+        return haveit;
+    }
     
 public:
     double getIntegral(const int & nx, const int & ny, const int & nz) const {
@@ -379,52 +432,16 @@ public:
             val.resize(index+1);
         }
         if (!val[index].isSet()) {
-            bool needToCompute=true;
-            {
-                // first check if it is in the SQLite db
-                char **result;
-                int nrows, ncols;
-                char * zErr;
-                char sql_line[1024];
-                sprintf(sql_line,
-                        "SELECT * FROM simplex WHERE id=%zi",
-                        index);
-                int rc = sqlite3_get_table(db,sql_line,&result,&nrows,&ncols,&zErr);
-                //
-                if (rc != SQLITE_OK) {
-                    if (zErr != NULL) {
-                        fprintf(stderr,"SQL error: %s\n",zErr);
-                        sqlite3_free(zErr);
-                    }
-                }
-                // ORSA_DEBUG("nrows: %i  ncols: %i",nrows, ncols);
-                //
-                /* for (int i=0; i<nrows; ++i) {
-                   for (int j=0; j<ncols; ++j) {
-                   // i=0 is the header
-                   const int index = (i+1)*ncols+j;
-                   ORSA_DEBUG("result[%i] = %s",index, result[index]);
-                   }
-                   }
-                */
-                //
-                if (nrows==0) {
-                    // nothing, but must keep this case!
-                } else if (nrows==1) {
-                    val[index] = atof(result[9]);
-                    needToCompute = false;
-                } else { // if (nrows>size_H) {
-                    ORSA_ERROR("database corrupted, only 1 entry per index is admitted");
-                }
-                //
-                sqlite3_free_table(result);
-            }
-            
-            if (needToCompute) {
+
+            double DBval;
+            const bool needToCompute = !inDB(DBval,index);
+            if (!needToCompute) {
+                val[index] = DBval;
+            } else {
                 ORSA_DEBUG("value for [%i][%i][%i] not available, computing it...",nx,ny,nz);
                 
                 std::vector<FiveVars> fvv;
-
+                
                 // size_t num_skipped=0;
                 
                 const size_t l_max = std::max(norm_A.size()-1,norm_B.size()-1);
@@ -457,6 +474,8 @@ public:
                                            ::to_double(fv.Q));
                                         */
                                     }
+
+                                    
                                 }
                             }
                         }
@@ -466,7 +485,41 @@ public:
                 
                 const size_t Nr = nx+ny+nz+3;
                 
-                dd_real big_sum = 0;
+                // include those integrals needed at same Nr
+                std::vector<Trii> ii; // includedIntegrals;
+                Trii trii;
+                trii.nx=nx; trii.ny=ny; trii.nz=nz; trii.index=getIndex(nx,ny,nz);
+                ii.push_back(trii);
+                for (int gx=0; gx<=degree; ++gx) {
+                    for (int gy=0; gy<=degree-gx; ++gy) {
+                        // for (int gz=0; gz<=degree-gx-gy; ++gz) {
+                        int gz = degree-gx-gy;
+                        if (gx==nx && gy==ny && gz==nz) continue; // already included this one...
+                        // ORSA_DEBUG("testing: %i %i %i   deg: %i",gx,gy,gz,degree);
+                        if ((gx+gy+gz)==degree) {
+                            trii.nx=gx;
+                            trii.ny=gy;
+                            trii.nz=gz;
+                            trii.index=getIndex(gx,gy,gz);
+                            if (val.size() <= trii.index) {
+                                val.resize(trii.index+1);
+                            }
+                            if ( (!val[trii.index].isSet()) &&
+                                 (!inDB(DBval,trii.index)) ) {
+                                ii.push_back(trii);
+                                ORSA_DEBUG("also including computation for [%i][%i][%i]...",gx,gy,gz);
+                            }
+                        }
+                        // }
+                    }
+                }
+                
+                // dd_real big_sum = 0;
+                std::vector<dd_real> big_sum;
+                big_sum.resize(ii.size());
+                for (size_t jj=0; jj<ii.size(); ++jj) {
+                    big_sum[jj] = 0.0;
+                }
                 
                 std::vector<size_t> pos;
                 pos.resize(Nr);
@@ -550,10 +603,15 @@ public:
                     if (coefficients_factor != 0.0) {
                         
                         // initial values...
-                        int pow_cos_phi=nx;
-                        int pow_sin_phi=ny;
-                        int pow_cos_theta=nz;
-                        int pow_sin_theta=nx+ny+1;
+                        /* int pow_cos_phi=nx;
+                           int pow_sin_phi=ny;
+                           int pow_cos_theta=nz;
+                           int pow_sin_theta=nx+ny+1;
+                        */
+                        int pow_cos_phi=0;
+                        int pow_sin_phi=0;
+                        int pow_cos_theta=0;
+                        int pow_sin_theta=0;
                         for (int c=0; c<fvv.size(); ++c) {
                             /* ORSA_DEBUG("%i %i %i %i",
                                pow_cos_phi,
@@ -566,18 +624,31 @@ public:
                             pow_cos_theta += count[c]*(fv.l-fv.m-2*fv.u);
                             pow_sin_theta += count[c]*(fv.m);
                         }
-                        const dd_real   factor_phi_integral = integral_csk(pow_cos_phi,pow_sin_phi,2);
-                        const dd_real factor_theta_integral = integral_csk(pow_cos_theta,pow_sin_theta,1);
-                        
-                        // ORSA_DEBUG("csk: %i %i %i  itg: %g",pow_cos_phi,pow_sin_phi,2,::to_double(factor_phi_integral));
-                        // ORSA_DEBUG("csk: %i %i %i  itg: %g",pow_cos_theta,pow_sin_theta,1,::to_double(factor_theta_integral));
 
-                        const T old_big_sum = big_sum;
-                        big_sum +=
-                            mpzToDD(binomial_factor) *
-                            coefficients_factor *
-                            factor_phi_integral *
-                            factor_theta_integral;
+                        for (size_t jj=0; jj<ii.size(); ++jj) {
+                        
+                            /* const dd_real   factor_phi_integral = integral_csk(pow_cos_phi,pow_sin_phi,2);
+                               const dd_real factor_theta_integral = integral_csk(pow_cos_theta,pow_sin_theta,1);
+                            */
+                            
+                            const dd_real   factor_phi_integral = integral_csk(pow_cos_phi+ii[jj].nx,
+                                                                               pow_sin_phi+ii[jj].ny,
+                                                                               2);
+                            
+                            const dd_real factor_theta_integral = integral_csk(pow_cos_theta+ii[jj].nz,
+                                                                               pow_sin_theta+ii[jj].nx+ii[jj].ny+1,
+                                                                               1);
+                            
+                            // ORSA_DEBUG("csk: %i %i %i  itg: %g",pow_cos_phi,pow_sin_phi,2,::to_double(factor_phi_integral));
+                            // ORSA_DEBUG("csk: %i %i %i  itg: %g",pow_cos_theta,pow_sin_theta,1,::to_double(factor_theta_integral));
+                            
+                            // const T old_big_sum = big_sum;
+                            big_sum[jj] +=
+                                mpzToDD(binomial_factor) *
+                                coefficients_factor *
+                                factor_phi_integral *
+                                factor_theta_integral;
+                        }
                         
                         /* ORSA_DEBUG("/ff/ %g %g %g %g",
                            binomial_factor.get_d(),
@@ -588,50 +659,32 @@ public:
                         
                         // ORSA_DEBUG("big_sum: %g",::to_double(big_sum));
                         
-                        if (0) if (big_sum != old_big_sum) {
-                            // debug only...
-                            {
-                                size_t p=pos.size();
-                                while(p!=0) {
-                                    --p;
-                                    const FiveVars & fv = fvv[pos[p]];
-                                    char line[4096];
-                                    gmp_sprintf(line," [%i,%i,%i,%i,%i|%g]",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.ALQ));
-                                    std::cout << line; // << " ";
-                                    // if (p=!0) cout << " ";
-                                }
-                            }
-                            /* std::vector<size_t> count;
-                               count.resize(fvv.size());
-                               for (size_t p=0; p<pos.size(); ++p) {
-                               ++count[pos[p]];
-                               }
-                               mpz_class factor = orsa::factorial(Nr);
-                               for (size_t c=0; c<count.size(); ++c) {
-                               factor /= orsa::factorial(count[c]);
-                               }
-                               // total += factor;
-                               // cout << "x " << factor.get_mpz_t() << endl;
-                               char cn[1024];
-                               gmp_sprintf(cn," %Zi",factor.get_mpz_t());
-                               std::cout << cn;
-                               std::cout << " " << mpzToDD(binomial_factor) 
-                               << " " << coefficients_factor
-                               << " " << factor_phi_integral
-                               << " " << factor_theta_integral;
-                            */
-                            char line[4096];
-                            /* gmp_sprintf(line," s: %g   ds: %g   bin: %g   coeff: %g   phi: %g   theta: %g   jnf: %g",
-                               ::to_double(big_sum),
-                               ::to_double(big_sum-old_big_sum),                                       
-                               binomial_factor.get_d(),
-                               ::to_double(coefficients_factor),
-                               ::to_double(factor_phi_integral),
-                               ::to_double(factor_theta_integral),
-                               ::to_double(just_norm_factors));
-                            */
-                            std::cout << line << std::endl;
-                        }
+                        /* 
+                           if (0) if (big_sum != old_big_sum) {
+                           // debug only...
+                           {
+                           size_t p=pos.size();
+                           while(p!=0) {
+                           --p;
+                           const FiveVars & fv = fvv[pos[p]];
+                           char line[4096];
+                           gmp_sprintf(line," [%i,%i,%i,%i,%i|%g]",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.ALQ));
+                           std::cout << line; // << " ";
+                           // if (p=!0) cout << " ";
+                           }
+                           }
+                           char line[4096];
+                           gmp_sprintf(line," s: %g   ds: %g   bin: %g   coeff: %g   phi: %g   theta: %g   jnf: %g",
+                           ::to_double(big_sum),
+                           ::to_double(big_sum-old_big_sum),                                       
+                           binomial_factor.get_d(),
+                           ::to_double(coefficients_factor),
+                           ::to_double(factor_phi_integral),
+                           ::to_double(factor_theta_integral),
+                           ::to_double(just_norm_factors));
+                           std::cout << line << std::endl;
+                           }
+                        */
                         
                     }
                     
@@ -652,32 +705,47 @@ public:
                     if (!changed) break; // done
                     
                 }
-                big_sum /= Nr;
-                big_sum /= pow(R0,Nr);
+                for (size_t jj=0; jj<ii.size(); ++jj) {
+                    big_sum[jj] /= Nr;
+                    big_sum[jj] /= pow(R0,Nr);
+                }
                 
                 // val[index] = aux_02(retVal,orsa::pochhammer(mpz_class(N+1),degree));
-                val[index] = ::to_double(big_sum);
+                for (size_t jj=0; jj<ii.size(); ++jj) {
+                    // val[index] = ::to_double(big_sum);
+                    val[ii[jj].index] = ::to_double(big_sum[jj]);
+                }
                 
-                char * zErr;
-                char sql_line[1024];
-                sprintf(sql_line,
-                        "INSERT INTO simplex VALUES(%zi,%zi,%zi,%zi,%.12e)",
-                        index,nx,ny,nz,
-                        (*val[index]));
-                int rc;
-                do {
-                    rc = sqlite3_exec(db,sql_line,NULL,NULL,&zErr);
-                    if (rc==SQLITE_BUSY) {
-                        ORSA_DEBUG("database busy, retrying...");
-                        usleep(100000);
-                    }
-                } while (rc==SQLITE_BUSY);
-                if (rc != SQLITE_OK) {
-                    if (zErr != NULL) {
-                        fprintf(stderr,"SQL error: %s\n",zErr);
-                        sqlite3_free(zErr);
+                for (size_t jj=0; jj<ii.size(); ++jj) {
+                    
+                    /* ORSA_DEBUG("saving on DB element [%i][%i][%i] = %g   index: %i",
+                       ii[jj].nx,ii[jj].ny,ii[jj].nz,
+                       (*val[ii[jj].index]),
+                       ii[jj].index);
+                    */
+                    
+                    char * zErr;
+                    char sql_line[1024];
+                    sprintf(sql_line,
+                            "INSERT INTO simplex VALUES(%zi,%zi,%zi,%zi,%.12e)",
+                            ii[jj].index,ii[jj].nx,ii[jj].ny,ii[jj].nz,
+                            (*val[ii[jj].index]));
+                    int rc;
+                    do {
+                        rc = sqlite3_exec(db,sql_line,NULL,NULL,&zErr);
+                        if (rc==SQLITE_BUSY) {
+                            ORSA_DEBUG("database busy, retrying...");
+                            usleep(100000);
+                        }
+                    } while (rc==SQLITE_BUSY);
+                    if (rc != SQLITE_OK) {
+                        if (zErr != NULL) {
+                            fprintf(stderr,"SQL error: %s\n",zErr);
+                            sqlite3_free(zErr);
+                        }
                     }
                 }
+                
             }
         }
         return val[index];
