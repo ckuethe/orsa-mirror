@@ -112,15 +112,15 @@ template <typename T> class SHIntegration : public osg::Referenced {
 public:
     SHIntegration(const SHcoeff & nA,
                   const SHcoeff & nB,
-                  const double & R0_,
+                  const T & R0_,
                   const std::string & SQLiteDBFileName) :
         osg::Referenced(),
         // N(3),
         norm_A(nA),
         norm_B(nB),
         // triShape(s),
-        R0(R0_),
-        oneOverR0(1.0/R0) {
+        // R0(R0_),
+        oneOverR0(1.0/R0_) {
         
         int rc = sqlite3_open(SQLiteDBFileName.c_str(),&db);
         //
@@ -204,8 +204,8 @@ protected:
     // osg::ref_ptr<const orsa::TriShape> triShape;
     const SHcoeff & norm_A;
     const SHcoeff & norm_B;
-    const double R0;
-    const double oneOverR0;
+    // const double R0;
+    const T oneOverR0;
     mutable std::vector< orsa::Cache<double> > val; // integral value
     // mutable std::vector< SHInternals > aux;
     // val_vol_sum_fun is the sum over all simplexes of the funciton of given q times the volume of each simplex
@@ -338,7 +338,7 @@ public:
     public:
         int tau, l, m, u, nu;
         // T Q;
-        T ALQ;
+        T ABQ_R0;
     };
     
     inline static dd_real Q(const FiveVars & fv) {
@@ -440,9 +440,11 @@ public:
                                         fv.nu=nu;
                                         // fv.Q = Q(fv);
                                         // NOTE the normalization factor included here...
-                                        // fv.ALQ = orsa::int_pow(norm_A[l][m],1-tau)*orsa::int_pow(norm_B[l][m],tau)*Q(fv)/normalization_factor(l,m);
-                                        fv.ALQ = pow(norm_A[l][m],1-tau)*pow(norm_B[l][m],tau)*Q(fv)/normalization_factor(l,m);
-                                        if (fv.ALQ != 0.0) {
+                                        // fv.ABQ_R0 = orsa::int_pow(norm_A[l][m],1-tau)*orsa::int_pow(norm_B[l][m],tau)*Q(fv)/normalization_factor(l,m);
+                                        // fv.ABQ_R0 = pow(norm_A[l][m],1-tau)*pow(norm_B[l][m],tau)*Q(fv)/normalization_factor(l,m);
+                                        // dividing here by R0 to obtain a global 1/R0^Nr
+                                        fv.ABQ_R0 = oneOverR0*pow(norm_A[l][m],1-tau)*pow(norm_B[l][m],tau)*Q(fv)/normalization_factor(l,m);
+                                        if (fv.ABQ_R0 != 0.0) {
                                             fvv.push_back(fv);
                                         } else {
                                             // ++num_skipped;
@@ -525,7 +527,7 @@ public:
                                 --p;
                                 const FiveVars & fv = fvv[pos[p]];
                                 char line[4096];
-                                gmp_sprintf(line," [%i,%i,%i,%i,%i|%g]",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.ALQ));
+                                gmp_sprintf(line," [%i,%i,%i,%i,%i|%g]",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.ABQ_R0));
                                 std::cout << line; // << " ";
                                 // if (p=!0) cout << " ";
                             }
@@ -564,6 +566,8 @@ public:
                     
                     // dd_real just_norm_factors = 1.0;
                     dd_real coefficients_factor = 1.0;
+                    //  dividing here already...
+                    // dd_real coefficients_factor = pow(oneOverR0,Nr)/Nr; // 1/(Nr*R0^Nr)
                     for (size_t c=0; c<fvv.size(); ++c) {
                         const FiveVars & fv = fvv[c];
                         /* coefficients_factor *=
@@ -573,7 +577,7 @@ public:
                            int_pow(fv.Q,count[c])
                            / int_pow(normalization_factor(fv.l,fv.m),count[c]); // dealing with normalized coefficients...
                         */
-                        coefficients_factor *= pow(fv.ALQ,count[c]);
+                        coefficients_factor *= pow(fv.ABQ_R0,count[c]);
                         // just_norm_factors *= int_pow(normalization_factor(fv.l,fv.m),count[c]);
                         // if (coefficients_factor != 0) ORSA_DEBUG("nf[%i][%i] = %g    cf: %g",fv.l,fv.m,::to_double(normalization_factor(fv.l,fv.m)),::to_double(coefficients_factor));
                     }
@@ -628,16 +632,17 @@ public:
                                 coefficients_factor *
                                 factor_phi_integral *
                                 factor_theta_integral;
-
-                            ORSA_DEBUG("big_sum[%i] = %g",jj,::to_double(big_sum[jj]));
+                            
+                            // ORSA_DEBUG("big_sum[%i] = %g",jj,::to_double(big_sum[jj]));
+                            
+                            /* ORSA_DEBUG("/ff/ %g %g %g %g",
+                               binomial_factor.get_d(),
+                               ::to_double(coefficients_factor),
+                               ::to_double(factor_phi_integral),
+                               ::to_double(factor_theta_integral));
+                            */
+                            
                         }
-                        
-                        /* ORSA_DEBUG("/ff/ %g %g %g %g",
-                           binomial_factor.get_d(),
-                           ::to_double(coefficients_factor),
-                           ::to_double(factor_phi_integral),
-                           ::to_double(factor_theta_integral));
-                        */
                         
                         // ORSA_DEBUG("big_sum: %g",::to_double(big_sum));
                         
@@ -650,7 +655,7 @@ public:
                            --p;
                            const FiveVars & fv = fvv[pos[p]];
                            char line[4096];
-                           gmp_sprintf(line," [%i,%i,%i,%i,%i|%g]",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.ALQ));
+                           gmp_sprintf(line," [%i,%i,%i,%i,%i|%g]",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.ABQ_R0));
                            std::cout << line; // << " ";
                            // if (p=!0) cout << " ";
                            }
@@ -689,7 +694,7 @@ public:
                 }
                 for (size_t jj=0; jj<ii.size(); ++jj) {
                     big_sum[jj] /= Nr;
-                    big_sum[jj] /= pow(R0,Nr);
+                    // big_sum[jj] /= pow(R0,Nr); // dividing earlier, in fv.ABQ_R0
                 }
                 
                 // val[index] = aux_02(retVal,orsa::pochhammer(mpz_class(N+1),degree));
