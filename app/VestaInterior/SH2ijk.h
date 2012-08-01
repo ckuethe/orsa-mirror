@@ -443,7 +443,8 @@ public:
                                         fv.nu=nu;
                                         // fv.Q = Q(fv);
                                         // NOTE the normalization factor included here...
-                                        fv.ALQ = orsa::int_pow(norm_A[l][m],1-tau)*orsa::int_pow(norm_B[l][m],tau)*Q(fv)/normalization_factor(l,m);
+                                        // fv.ALQ = orsa::int_pow(norm_A[l][m],1-tau)*orsa::int_pow(norm_B[l][m],tau)*Q(fv)/normalization_factor(l,m);
+                                        fv.ALQ = pow(norm_A[l][m],1-tau)*pow(norm_B[l][m],tau)*Q(fv)/normalization_factor(l,m);
                                         if (fv.ALQ != 0.0) {
                                             fvv.push_back(fv);
                                         } else {
@@ -539,7 +540,7 @@ public:
                            int_pow(fv.Q,count[c])
                            / int_pow(normalization_factor(fv.l,fv.m),count[c]); // dealing with normalized coefficients...
                         */
-                        coefficients_factor *= int_pow(fv.ALQ,count[c]);
+                        coefficients_factor *= pow(fv.ALQ,count[c]);
                         // just_norm_factors *= int_pow(normalization_factor(fv.l,fv.m),count[c]);
                         // if (coefficients_factor != 0) ORSA_DEBUG("nf[%i][%i] = %g    cf: %g",fv.l,fv.m,::to_double(normalization_factor(fv.l,fv.m)),::to_double(coefficients_factor));
                     }
@@ -652,7 +653,7 @@ public:
                     
                 }
                 big_sum /= Nr;
-                big_sum /= orsa::int_pow(R0,Nr);
+                big_sum /= pow(R0,Nr);
                 
                 // val[index] = aux_02(retVal,orsa::pochhammer(mpz_class(N+1),degree));
                 val[index] = ::to_double(big_sum);
