@@ -359,9 +359,13 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
             }
         }
     }
+    LayerData::SHLayerVectorType shLayerVector;
+#warning READ SH LAYER HERE!!!
+    ORSA_DEBUG("read SH layer HERE!!!");
+    
     if (haveLayerData) {
         // data.layerData = new LayerData(baseDensity,ellipsoidLayerVector);
-        data.layerData = new LayerData(ellipsoidLayerVector);
+        data.layerData = new LayerData(ellipsoidLayerVector,shLayerVector);
     }
     
     // skip remainder of this line, including \n character
@@ -407,6 +411,10 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
                             orsa::FromUnits(lv[k]->v0.getZ(),orsa::Unit::KM,-1));
             }
         }
+        
+#warning WRITE SH LAYER HERE!!!
+        ORSA_DEBUG("write SH layer HERE!!!");
+        
     }
     gmp_fprintf(fp,"\n");
     return true;

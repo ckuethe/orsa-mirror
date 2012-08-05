@@ -3,6 +3,7 @@
 
 #include <orsa/chebyshev.h>
 #include <orsa/massDistribution.h>
+// #include "SH2ijk.h"
 
 // "wedding cake" layers, with a base density, and excess densities on smaller and smaller volumes contaning each other
 class LayerData : public osg::Referenced {
@@ -42,6 +43,7 @@ public:
                     orsa::square(dp.getY())*bm2 +
                     orsa::square(dp.getZ())*cm2 <= 1.0);
         }
+    public:
         bool containsLayer(const EllipsoidLayer * layer) const {
 #warning write better method...
             // simple one; a better one should consided difference in v0 and actual a,b,c values (tricky in particular cases...)
@@ -50,22 +52,60 @@ public:
 #warning errors should be generated in the code using the Layers if layer A is not inside layer B, and layer B is not inside layer A (i.e., they are crossing each other)
     };
 public:
-    // const double baseDensity;
-public:
     typedef std::vector< osg::ref_ptr<EllipsoidLayer> > EllipsoidLayerVectorType;
     const EllipsoidLayerVectorType ellipsoidLayerVector;
+    
+public:
+    // spherical harmonics layers
+    class SHLayer : public osg::Referenced {
+    public:  
+        typedef std::vector< std::vector<double> > SHcoeff;
+    public:
+        SHLayer(const double & excessDensity_,
+                const SHcoeff & norm_A_,
+                const SHcoeff & norm_B_,
+                const orsa::Vector & v0_) :
+            osg::Referenced(true),
+            excessDensity(excessDensity_),
+            norm_A(norm_A_),
+            norm_B(norm_B_),
+            v0(v0_)
+            { }
+    protected:
+        virtual ~SHLayer() { }
+    public: /* input */
+        const double excessDensity;
+        const SHcoeff norm_A, norm_B;
+        const orsa::Vector v0; // center of ellipsoid
+    public:
+        bool containsPoint(const orsa::Vector & p) const {
+#warning Write This!
+            ORSA_DEBUG("write this!!!!");
+        }
+    public:
+        /* bool containsLayer(const EllipsoidLayer * layer) const {
+           #warning write better method...
+           } */
+    };
+public:
+    typedef std::vector< osg::ref_ptr<SHLayer> > SHLayerVectorType;
+    const SHLayerVectorType shLayerVector;
+    
 public:
     // check if layers are not crossing
     bool valid() {
-        const EllipsoidLayerVectorType & lv = ellipsoidLayerVector;
-        for (unsigned int j=1; j<lv.size(); ++j) {
-            for (unsigned int k=0; k<j; ++k) {
-                if ( (!lv[k]->containsLayer(lv[j])) &&
-                     (!lv[j]->containsLayer(lv[k])) ) {
-                    return false;
-                }
-            }
-        }
+        /* 
+           const EllipsoidLayerVectorType & lv = ellipsoidLayerVector;
+           for (unsigned int j=1; j<lv.size(); ++j) {
+           for (unsigned int k=0; k<j; ++k) {
+           if ( (!lv[k]->containsLayer(lv[j])) &&
+           (!lv[j]->containsLayer(lv[k])) ) {
+           return false;
+           }
+           }
+           }
+           #warning add check on SHLayer members...
+        */
         return true;
     }
 public:
@@ -76,9 +116,11 @@ public:
        ellipsoidLayerVector(ellipsoidLayerVector_) { }
     */
 public:
-    LayerData(const EllipsoidLayerVectorType & ellipsoidLayerVector_) :
+    LayerData(const EllipsoidLayerVectorType & ellipsoidLayerVector_,
+              const SHLayerVectorType & shLayerVector_) :
         osg::Referenced(true),
-        ellipsoidLayerVector(ellipsoidLayerVector_) { }
+        ellipsoidLayerVector(ellipsoidLayerVector_),
+        shLayerVector(shLayerVector_) { }
 protected:
     virtual ~LayerData() { }
 public:
@@ -87,19 +129,22 @@ public:
     double density(const orsa::Vector & p) const {
         // double density = baseDensity;
         double density = 0.0;
-        const EllipsoidLayerVectorType & lv = ellipsoidLayerVector;
-        for (unsigned int k=0; k<lv.size(); ++k) {
-            if (lv[k]->containsPoint(p)) {
-                density += lv[k]->excessDensity;
+        for (unsigned int k=0; k<ellipsoidLayerVector.size(); ++k) {
+            if (ellipsoidLayerVector[k]->containsPoint(p)) {
+                density += ellipsoidLayerVector[k]->excessDensity;
+            }
+        }
+        for (unsigned int k=0; k<shLayerVector.size(); ++k) {
+            if (shLayerVector[k]->containsPoint(p)) {
+                density += shLayerVector[k]->excessDensity;
             }
         }
         return density;
     }
     double totalExcessMass() const {
         double M = 0.0;
-        const EllipsoidLayerVectorType & lv = ellipsoidLayerVector;
-        for (unsigned int k=0; k<lv.size(); ++k) {
-            M += lv[k]->excessMass;
+        for (unsigned int k=0; k<ellipsoidLayerVector.size(); ++k) {
+            M += ellipsoidLayerVector[k]->excessMass;
         }
         return M;
     }
