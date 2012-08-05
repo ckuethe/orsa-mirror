@@ -320,12 +320,6 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
         }
     }
     bool haveLayerData=false;
-    /* double baseDensity;
-       if (1 == gmp_fscanf(fp,"%lf",&baseDensity)) {
-       haveLayerData=true;
-       baseDensity = orsa::FromUnits(orsa::FromUnits(baseDensity,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-       }
-    */
     LayerData::EllipsoidLayerVectorType ellipsoidLayerVector;
     size_t ellipsoidLayerVectorSize;
     if (1 == gmp_fscanf(fp,"%zi",&ellipsoidLayerVectorSize)) {
@@ -395,9 +389,9 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
         }
     }
     if (data.layerData.get() != 0) {
-        // gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.layerData->baseDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
-        const LayerData::EllipsoidLayerVectorType & lv = data.layerData->ellipsoidLayerVector;
-        if (lv.size() > 0) {
+        {
+            const LayerData::EllipsoidLayerVectorType & lv = data.layerData->ellipsoidLayerVector;
+            // if (lv.size() > 0) {
             gmp_fprintf(fp,"%i ",lv.size());
             for (unsigned int k=0; k<lv.size(); ++k) {
                 gmp_fprintf(fp,"%.3f %g %g %g %g %g %g ",
@@ -409,11 +403,34 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
                             orsa::FromUnits(lv[k]->v0.getY(),orsa::Unit::KM,-1),
                             orsa::FromUnits(lv[k]->v0.getZ(),orsa::Unit::KM,-1));
             }
+            // }
         }
-        
-#warning WRITE SH LAYER HERE!!!
-        ORSA_DEBUG("write SH layer HERE!!!");
-        
+        {
+            const LayerData::SHLayerVectorType & sv = data.layerData->shLayerVector;
+            // if (sv.size() > 0) {
+            gmp_fprintf(fp,"%i ",sv.size());
+            for (unsigned int k=0; k<sv.size(); ++k) {
+                gmp_fprintf(fp,"%.3f ",
+                            orsa::FromUnits(orsa::FromUnits(sv[k]->excessDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+                const int degree = sv[k]->norm_A.size()-1;
+                if (degree < 0) ORSA_DEBUG("problems: negative degree...");
+                gmp_fprintf(fp,"%i ",degree);
+                for (int l=0; l<=degree; ++l) {
+                    for (int m=0; m<=l; ++m) {
+                        gmp_fprintf(fp,"%g ",orsa::FromUnits(sv[k]->norm_A[l][m],orsa::Unit::KM,-1));
+                        if (m>0) gmp_fprintf(fp,"%g ",orsa::FromUnits(sv[k]->norm_B[l][m],orsa::Unit::KM,-1));
+                    }
+                }
+                gmp_fprintf(fp,"%g %g %g ",
+                            orsa::FromUnits(sv[k]->v0.getX(),orsa::Unit::KM,-1),
+                            orsa::FromUnits(sv[k]->v0.getY(),orsa::Unit::KM,-1),
+                            orsa::FromUnits(sv[k]->v0.getZ(),orsa::Unit::KM,-1));
+            }
+            // }
+        }
+    } else {
+        // a zero for each vector in LayerData
+        gmp_fprintf(fp,"0 0 ");
     }
     gmp_fprintf(fp,"\n");
     return true;

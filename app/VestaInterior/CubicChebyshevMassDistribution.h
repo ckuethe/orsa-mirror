@@ -118,13 +118,6 @@ public:
         return true;
     }
 public:
-    /* LayerData(const double & baseDensity_,
-       const EllipsoidLayerVectorType & ellipsoidLayerVector_) :
-       osg::Referenced(true),
-       baseDensity(baseDensity_),
-       ellipsoidLayerVector(ellipsoidLayerVector_) { }
-    */
-public:
     LayerData(const EllipsoidLayerVectorType & ellipsoidLayerVector_,
               const SHLayerVectorType & shLayerVector_) :
         osg::Referenced(true),
@@ -133,10 +126,7 @@ public:
 protected:
     virtual ~LayerData() { }
 public:
-    // the density at a given point is baseDensity plus
-    // the sum of all the excessDensities of all layers contining the point
     double density(const orsa::Vector & p) const {
-        // double density = baseDensity;
         double density = 0.0;
         for (unsigned int k=0; k<ellipsoidLayerVector.size(); ++k) {
             if (ellipsoidLayerVector[k]->containsPoint(p)) {
