@@ -354,8 +354,39 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
         }
     }
     LayerData::SHLayerVectorType shLayerVector;
-#warning READ SH LAYER HERE!!!
-    ORSA_DEBUG("read SH layer HERE!!!");
+    size_t shLayerVectorSize;
+    if (1 == gmp_fscanf(fp,"%zi",&shLayerVectorSize)) {
+        if (shLayerVectorSize > 0) {
+            haveLayerData=true;
+            double excessDensity;
+            size_t degree;
+            gmp_fscanf(fp,"%lf %zi",
+                       &excessDensity,
+                       &degree);
+            excessDensity = orsa::FromUnits(orsa::FromUnits(excessDensity,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+            LayerData::SHLayer::SHcoeff norm_A, norm_B;
+            for (int l=0; l<=degree; ++l) {
+                for (int m=0; m<=l; ++m) {
+                    gmp_fscanf(fp,"%lf ",&norm_A[l][m]);
+                    norm_A[l][m] = orsa::FromUnits(norm_A[l][m],orsa::Unit::KM);
+                    if (m>0) {
+                        gmp_fscanf(fp,"%lf ",&norm_B[l][m]);
+                        norm_B[l][m] = orsa::FromUnits(norm_B[l][m],orsa::Unit::KM);
+                    }
+                }
+            }
+            double v0x,v0y,v0z;
+            gmp_fscanf(fp,"%lf %lf %lf ",
+                       &v0x,
+                       &v0y,
+                       &v0z);
+            v0x = orsa::FromUnits(v0x,orsa::Unit::KM);
+            v0y = orsa::FromUnits(v0y,orsa::Unit::KM);
+            v0z = orsa::FromUnits(v0z,orsa::Unit::KM);
+            
+            shLayerVector.push_back(new LayerData::SHLayer(excessDensity,norm_A,norm_B,orsa::Vector(v0x,v0y,v0z)));
+        }
+    }
     
     if (haveLayerData) {
         data.layerData = new LayerData(ellipsoidLayerVector,shLayerVector);
