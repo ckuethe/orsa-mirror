@@ -364,7 +364,6 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
     ORSA_DEBUG("read SH layer HERE!!!");
     
     if (haveLayerData) {
-        // data.layerData = new LayerData(baseDensity,ellipsoidLayerVector);
         data.layerData = new LayerData(ellipsoidLayerVector,shLayerVector);
     }
     

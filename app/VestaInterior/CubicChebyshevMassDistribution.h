@@ -25,7 +25,7 @@ public:
             bm2(1.0/(b*b)),
             cm2(1.0/(c*c)),
             volume(4.0/3.0*orsa::pi()*a*b*c),
-            excessMass(volume*excessDensity) { }
+            _excessMass(volume*excessDensity) { }
     protected:
         virtual ~EllipsoidLayer() { }
     public: /* input */
@@ -35,7 +35,9 @@ public:
     public: /* derived */
         const double am2,bm2,cm2;
         const double volume;
-        const double excessMass;
+        const double _excessMass;
+    public:
+        const double excessMass() { return _excessMass; }
     public:
         bool containsPoint(const orsa::Vector & p) const {
             const orsa::Vector dp = p-v0;
@@ -77,6 +79,13 @@ public:
         const double excessDensity;
         const SHcoeff norm_A, norm_B;
         const orsa::Vector v0; // center of ellipsoid
+    public:
+        const double excessMass() {
+#warning NEED CODE HERE!
+            ORSA_DEBUG("need code here!!");
+            // return volume*excessDensity
+            return 0.0;
+        }
     public:
         bool containsPoint(const orsa::Vector & p) const {
 #warning Write This!
@@ -144,7 +153,10 @@ public:
     double totalExcessMass() const {
         double M = 0.0;
         for (unsigned int k=0; k<ellipsoidLayerVector.size(); ++k) {
-            M += ellipsoidLayerVector[k]->excessMass;
+            M += ellipsoidLayerVector[k]->excessMass();
+        }
+        for (unsigned int k=0; k<shLayerVector.size(); ++k) {
+            M += shLayerVector[k]->excessMass();
         }
         return M;
     }
