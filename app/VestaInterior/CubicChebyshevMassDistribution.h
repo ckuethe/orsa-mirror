@@ -4,6 +4,8 @@
 #include <orsa/chebyshev.h>
 #include <orsa/massDistribution.h>
 // #include "SH2ijk.h"
+#include <orsa/legendre.h>
+#include <orsa/util.h>
 
 // "wedding cake" layers, with a base density, and excess densities on smaller and smaller volumes contaning each other
 class LayerData : public osg::Referenced {
@@ -21,35 +23,39 @@ public:
             b(b_),
             c(c_),
             v0(v0_),
-            am2(1.0/(a*a)),
-            bm2(1.0/(b*b)),
-            cm2(1.0/(c*c)),
-            volume(4.0/3.0*orsa::pi()*a*b*c),
-            _excessMass(volume*excessDensity) { }
+            _am2(1.0/(a*a)),
+            _bm2(1.0/(b*b)),
+            _cm2(1.0/(c*c)),
+            _volume(4.0/3.0*orsa::pi()*a*b*c),
+            _excessMass(_volume*excessDensity) { }
     protected:
         virtual ~EllipsoidLayer() { }
     public: /* input */
         const double excessDensity;
         const double a,b,c; // semi-axes along x,y,z
         const orsa::Vector v0; // center of ellipsoid
-    public: /* derived */
-        const double am2,bm2,cm2;
-        const double volume;
+    protected: /* derived */
+        const double _am2,_bm2,_cm2;
+        const double _volume;
         const double _excessMass;
     public:
-        const double excessMass() { return _excessMass; }
+        const double am2() const { return _am2; }
+        const double bm2() const { return _bm2; }
+        const double cm2() const { return _cm2; }
+        const double volume() const { return _volume; }
+        const double excessMass() const { return _excessMass; }
     public:
         bool containsPoint(const orsa::Vector & p) const {
             const orsa::Vector dp = p-v0;
-            return (orsa::square(dp.getX())*am2 +
-                    orsa::square(dp.getY())*bm2 +
-                    orsa::square(dp.getZ())*cm2 <= 1.0);
+            return (orsa::square(dp.getX())*am2() +
+                    orsa::square(dp.getY())*bm2() +
+                    orsa::square(dp.getZ())*cm2() <= 1.0);
         }
     public:
         bool containsLayer(const EllipsoidLayer * layer) const {
 #warning write better method...
             // simple one; a better one should consided difference in v0 and actual a,b,c values (tricky in particular cases...)
-            return (volume > layer->volume);
+            return (volume() > layer->volume());
         }
 #warning errors should be generated in the code using the Layers if layer A is not inside layer B, and layer B is not inside layer A (i.e., they are crossing each other)
     };
@@ -84,12 +90,51 @@ public:
 #warning NEED CODE HERE!
             ORSA_DEBUG("need code here!!");
             // return volume*excessDensity
-            return 0.0;
+            // return 0.0;
         }
+    protected:
+        // norm_coeff = normalization_factor * coeff
+        static double normalization_factor(const size_t & l,
+                                           const size_t & m) {
+            return orsa::normalization_sphericalHarmonicsToNormalizedSphericalHarmonics(l,m).get_d();
+        }
+    protected:
+        // utility function, pure SH, v0 NOT included
+        double radius(const double & theta,
+                      const double & phi) const {
+            const double c_theta = cos(theta);
+            double r=0;
+            if (norm_A.size() != norm_B.size()) {
+                ORSA_DEBUG("problems...");
+            }
+            for (size_t l=0; l<norm_A.size(); ++l) {
+                if (norm_A[l].size() != norm_B[l].size()) {
+                    ORSA_DEBUG("problems...");
+                }
+                for (size_t m=0; m<norm_A[l].size(); ++m) {
+                    if ( (norm_A[l][m] != 0.0) ||
+                         (norm_B[l][m] != 0.0) ) {
+                        const double Nf = normalization_factor(l,m);
+                        const double Plm = orsa::LegendreP(l,m,c_theta).get_d()/Nf;
+                        // ORSA_DEBUG("LegendreP[%i][%i](%g) = %g",l,m,c_theta,Plm);
+                        r += Plm*(norm_A[l][m]*cos(m*phi));
+                        if (m!=0) {
+                            r += Plm*(norm_B[l][m]*sin(m*phi));
+                        }   
+                    }
+                }
+            }
+            return r;
+        }
+        
     public:
         bool containsPoint(const orsa::Vector & p) const {
-#warning Write This!
-            ORSA_DEBUG("write this!!!!");
+            const orsa::Vector dp = p-v0;
+            const orsa::Vector  u = dp.normalized();
+            const double theta = acos(u.getZ());
+            const double phi   = atan2(u.getY(),u.getX());
+            const double r     = radius(theta,phi);
+            return (dp.lengthSquared() < r*r);
         }
     public:
         /* bool containsLayer(const EllipsoidLayer * layer) const {

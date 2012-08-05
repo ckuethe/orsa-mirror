@@ -84,7 +84,7 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
             const LayerData::EllipsoidLayerVectorType & elv = CCMD->layerData->ellipsoidLayerVector;
             ORSA_DEBUG("elv.size(): %i",elv.size());
             for (size_t k=0; k<elv.size(); ++k) {
-                const double elv_excessMass = elv[k]->volume*elv[k]->excessDensity;
+                const double elv_excessMass = elv[k]->volume()*elv[k]->excessDensity;
                 CM_sum_vector += elv_excessMass * elv[k]->v0;
                 CM_sum_mass   += elv_excessMass;
             }
@@ -104,11 +104,11 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
         // mass_layer += volume*CCMD->layerData->baseDensity;
         const LayerData::EllipsoidLayerVectorType & elv = CCMD->layerData->ellipsoidLayerVector;
         for (size_t k=0; k<elv.size(); ++k) {
-            mass_layer += elv[k]->excessDensity*elv[k]->volume;
+            mass_layer += elv[k]->excessDensity*elv[k]->volume();
             
             ORSA_DEBUG("elv[%i]->excessDensity: %g   elv[%i]->volume: %g",
                        k,elv[k]->excessDensity,
-                       k,elv[k]->volume);
+                       k,elv[k]->volume());
         }
     }
     const double totalMass = mass_cT + mass_layer;
@@ -308,7 +308,7 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
                           elv_translated_pm.get(),
                           gravityDataR0);
             
-            const double elv_excessMass = elv[k]->volume*elv[k]->excessDensity;
+            const double elv_excessMass = elv[k]->volume()*elv[k]->excessDensity;
             ORSA_DEBUG("elv_excessMass[%i]: %g",k,elv_excessMass);
             const double elv_massFactor = elv_excessMass / totalMass;
             ORSA_DEBUG("elv_massFactor[%i]: %g",k,elv_massFactor);
