@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
     // safer over NFS
     sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
     
-    const std::string SQLiteDBFileName = getSqliteDBFileName(inputFile,R0);
+    const std::string SQLiteDBFileName = getSqliteDBFileName_simplex(inputFile,R0);
     
     // QD
     unsigned int oldcw;

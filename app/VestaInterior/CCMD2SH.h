@@ -310,13 +310,11 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
             const double dummy_R0 = orsa::FromUnits(100.0,orsa::Unit::KM);
             const LayerData::SHLayerVectorType & shlv = CCMD->layerData->shLayerVector;
             for (size_t k=0; k<shlv.size(); ++k) {
-                const std::string SQLiteDBFileName = getSqliteDBFileName(shlv[k]->ID,dummy_R0);
-                /* osg::ref_ptr< SHIntegration<U> > shi;
-                   shi = new SHIntegration<U>(shlv[k]->norm_A,
-                   shlv[k]->norm_B,
-                   dummy_R0,
-                   SQLiteDBFileName);
-                */
+                const std::string SQLiteDBFileName = getSqliteDBFileName_SH(shlv[k]->ID,dummy_R0);
+                osg::ref_ptr< SHIntegration<T> > shi = new SHIntegration<T>(shlv[k]->norm_A,
+                                                                            shlv[k]->norm_B,
+                                                                            dummy_R0,
+                                                                            SQLiteDBFileName);
                 
                 ORSA_DEBUG("MORE CODE NEEDED HERE!!!");
             }

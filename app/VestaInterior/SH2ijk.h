@@ -1,5 +1,5 @@
-#ifndef _SIMPLEX_H_
-#define _SIMPLEX_H_
+#ifndef _SH2IJK_H_
+#define _SH2IJK_H_
 
 #include <osg/Referenced>
 #include <osg/ref_ptr>
@@ -18,8 +18,8 @@
 // #include <gsl/gsl_sf_gamma.h>
 
 #warning should change the _simplex_ part of the name to _ijk_ or something like that
-inline std::string getSqliteDBFileName(const std::string & inputFile,
-                                       const double & R0) {
+inline std::string getSqliteDBFileName_SH(const std::string & inputFile,
+                                          const double & R0) {
     char line[1024];
     sprintf(line,"%s_simplex_%gkm.sqlite",inputFile.c_str(),orsa::FromUnits(R0,orsa::Unit::KM,-1));
     return line;
@@ -818,4 +818,4 @@ public:
     }
 };
 
-#endif // _SIMPLEX_H_
+#endif // _SH2IJK_H_

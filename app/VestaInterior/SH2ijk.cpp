@@ -9,7 +9,7 @@
 /*** CHOOSE ONE ***/
 // typedef double T;
 // typedef mpf_class T;
-typedef dd_real T;
+typedef dd_real SH_T;
 // typedef qd_real T;
 
 #warning how to write this using the typedef inside the class?
@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
     // safer over NFS
     sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
     
-    const std::string SQLiteDBFileName = getSqliteDBFileName(inputFile,R0);
+    const std::string SQLiteDBFileName = getSqliteDBFileName_SH(inputFile,R0);
     
     // QD
     unsigned int oldcw;
@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
        }
     */
     
-    osg::ref_ptr<SHIntegration<T> > shi = new SHIntegration<T>(norm_A, norm_B, R0, SQLiteDBFileName);
+    osg::ref_ptr<SHIntegration<SH_T> > shi = new SHIntegration<SH_T>(norm_A, norm_B, R0, SQLiteDBFileName);
     
     shi->reserve(maxDegree);
     // si_unit_R0->reserve(maxDegree);
@@ -120,7 +120,7 @@ int main(int argc, char **argv) {
                 for (size_t j=0; j<=degree; ++j) {
                     for (size_t k=0; k<=degree; ++k) {
                         if (i+j+k==degree) {
-                            const size_t index = SHIntegration<T>::getIndex(i,j,k);
+                            const size_t index = SHIntegration<SH_T>::getIndex(i,j,k);
                             // if ((index%mod_N)==(size_t)mod_i) {
                             
                             const double integral_ijk = shi->getIntegral(i,j,k);

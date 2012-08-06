@@ -189,7 +189,7 @@ int main(int argc, char **argv) {
     // safer over NFS
     sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
     
-    const std::string SQLiteDBFileName = getSqliteDBFileName(plateModelFile,plateModelR0);
+    const std::string SQLiteDBFileName = getSqliteDBFileName_simplex(plateModelFile,plateModelR0);
     
     /* // test
        {

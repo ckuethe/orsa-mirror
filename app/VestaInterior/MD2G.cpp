@@ -10,6 +10,7 @@
 #include "CubicChebyshevMassDistribution.h"
 #include "CCMD2SH.h"
 #include "simplex.h"
+#include "SH2ijk.h"
 #include "penalty.h"
 #include "vesta.h"
 #include "gaskell.h"
@@ -31,6 +32,16 @@ typedef dd_real simplex_T;
 #warning how to write this using the typedef inside the class?
 template <typename T> std::vector< std::vector< std::vector<size_t> > > SimplexIntegration<T>::indexTable;
 template <typename T> std::vector< std::vector< std::vector< std::vector<size_t> > > > SimplexIntegration<T>::index4Table;
+
+/*** CHOOSE ONE ***/
+// typedef double T;
+// typedef mpf_class T;
+typedef dd_real SH_T;
+// typedef qd_real T;
+
+#warning how to write this using the typedef inside the class?
+template <typename T> std::vector< std::vector< std::vector<size_t> > > SHIntegration<T>::indexTable;
+template <typename T> std::vector< std::vector< std::vector< std::vector<size_t> > > > SHIntegration<T>::index4Table;
 
 //// custom mass distibutions
 
@@ -373,7 +384,7 @@ void P1(void *) {
 int main(int argc, char **argv) {
     
     orsa::Debug::instance()->initTimer();
-
+    
     ORSA_DEBUG("PID: %i",getpid());
     
     // QD
@@ -422,7 +433,7 @@ int main(int argc, char **argv) {
     // safer over NFS
     sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
     
-    const std::string SQLiteDBFileName = getSqliteDBFileName(plateModelFile,plateModelR0);
+    const std::string SQLiteDBFileName = getSqliteDBFileName_simplex(plateModelFile,plateModelR0);
     
     osg::ref_ptr<GaskellPlateModel> shapeModel = new GaskellPlateModel;
     if (!shapeModel->read(plateModelFile)) {
@@ -508,7 +519,7 @@ int main(int argc, char **argv) {
             
             // NOTE: model densities are adjusted automatically later in order to conserve total mass
             
-#warning \"force\" layers by using layerData?            
+#warning "force" layers by using layerData?            
             // use and set layerData ??
             
             // Test
