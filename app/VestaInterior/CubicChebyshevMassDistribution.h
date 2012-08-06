@@ -3,9 +3,10 @@
 
 #include <orsa/chebyshev.h>
 #include <orsa/massDistribution.h>
-// #include "SH2ijk.h"
 #include <orsa/legendre.h>
 #include <orsa/util.h>
+
+// note: most SH code is from SH2ijk.h, should merge into a single new header file
 
 // "wedding cake" layers, with a base density, and excess densities on smaller and smaller volumes contaning each other
 class LayerData : public osg::Referenced {
@@ -72,12 +73,14 @@ public:
         SHLayer(const double & excessDensity_,
                 const SHcoeff & norm_A_,
                 const SHcoeff & norm_B_,
-                const orsa::Vector & v0_) :
+                const orsa::Vector & v0_,
+                const std::string & ID_) :
             osg::Referenced(true),
             excessDensity(excessDensity_),
             norm_A(norm_A_),
             norm_B(norm_B_),
-            v0(v0_)
+            v0(v0_),
+            ID(ID_)
             { }
     protected:
         virtual ~SHLayer() { }
@@ -85,6 +88,7 @@ public:
         const double excessDensity;
         const SHcoeff norm_A, norm_B;
         const orsa::Vector v0; // center of ellipsoid
+        const std::string & ID; // unique id, to save SQLite DB x GMoI integrals
     public:
         const double excessMass() {
 #warning NEED CODE HERE!

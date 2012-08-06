@@ -383,8 +383,10 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
             v0x = orsa::FromUnits(v0x,orsa::Unit::KM);
             v0y = orsa::FromUnits(v0y,orsa::Unit::KM);
             v0z = orsa::FromUnits(v0z,orsa::Unit::KM);
+            char ID[4096];
+            gmp_fscanf(fp,"%s ",&ID);
             
-            shLayerVector.push_back(new LayerData::SHLayer(excessDensity,norm_A,norm_B,orsa::Vector(v0x,v0y,v0z)));
+            shLayerVector.push_back(new LayerData::SHLayer(excessDensity,norm_A,norm_B,orsa::Vector(v0x,v0y,v0z),ID));
         }
     }
     
@@ -456,6 +458,7 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
                             orsa::FromUnits(sv[k]->v0.getX(),orsa::Unit::KM,-1),
                             orsa::FromUnits(sv[k]->v0.getY(),orsa::Unit::KM,-1),
                             orsa::FromUnits(sv[k]->v0.getZ(),orsa::Unit::KM,-1));
+                gmp_fprintf(fp,"%s ",sv[k]->ID.c_str());
             }
             // }
         }
