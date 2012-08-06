@@ -90,12 +90,10 @@ public:
         const orsa::Vector v0; // center of ellipsoid
         const std::string & ID; // unique id, to save SQLite DB x GMoI integrals
     public:
-        const double excessMass() {
-#warning NEED CODE HERE!
-            ORSA_DEBUG("need code here!!");
-            // return volume*excessDensity
-            // return 0.0;
-        }
+        // derived
+        mutable orsa::Cache<double> volume_, excessMass_;
+        const double volume() const;
+        const double excessMass() const;
     protected:
         // norm_coeff = normalization_factor * coeff
         static double normalization_factor(const size_t & l,

@@ -2,6 +2,8 @@
 
 #include <orsa/unit.h>
 
+#include "SH2ijk.h"
+
 std::vector< std::vector< std::vector<size_t> > > CubicChebyshevMassDistribution::indexTable;
 
 size_t CubicChebyshevMassDistribution::totalSize(const size_t & degree) {
@@ -468,4 +470,40 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
     }
     gmp_fprintf(fp,"\n");
     return true;
+}
+
+/*******/
+
+/*** CHOOSE ONE ***/
+// typedef double T;
+// typedef mpf_class T;
+typedef dd_real T;
+// typedef qd_real T;
+
+#warning how to write this using the typedef inside the class?
+template <typename T> std::vector< std::vector< std::vector<size_t> > > SHIntegration<T>::indexTable;
+template <typename T> std::vector< std::vector< std::vector< std::vector<size_t> > > > SHIntegration<T>::index4Table;
+
+const double LayerData::SHLayer::volume() const {
+
+    if (volume_.isSet()) return volume_;
+    
+    const double dummy_R0 = orsa::FromUnits(100.0,orsa::Unit::KM);
+    
+    const std::string SQLiteDBFileName = getSqliteDBFileName(ID,dummy_R0);
+    
+    osg::ref_ptr<SHIntegration<T> > shi = new SHIntegration<T>(norm_A, norm_B, dummy_R0, SQLiteDBFileName);
+    
+    volume_ = shi->getIntegral(0,0,0)*orsa::cube(dummy_R0);
+    
+    return volume_;
+}
+
+const double LayerData::SHLayer::excessMass() const {
+    
+    if (excessMass_.isSet()) return excessMass_;
+    
+    excessMass_ = volume()*excessDensity;
+    
+    return excessMass_;
 }
