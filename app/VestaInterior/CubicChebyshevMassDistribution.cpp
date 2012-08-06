@@ -484,8 +484,8 @@ typedef dd_real T;
 template <typename T> std::vector< std::vector< std::vector<size_t> > > SHIntegration<T>::indexTable;
 template <typename T> std::vector< std::vector< std::vector< std::vector<size_t> > > > SHIntegration<T>::index4Table;
 
-const double LayerData::SHLayer::volume() const {
-
+double LayerData::SHLayer::volume() const {
+    
     if (volume_.isSet()) return volume_;
     
     const double dummy_R0 = orsa::FromUnits(100.0,orsa::Unit::KM);
@@ -499,7 +499,7 @@ const double LayerData::SHLayer::volume() const {
     return volume_;
 }
 
-const double LayerData::SHLayer::excessMass() const {
+double LayerData::SHLayer::excessMass() const {
     
     if (excessMass_.isSet()) return excessMass_;
     

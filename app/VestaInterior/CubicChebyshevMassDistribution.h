@@ -40,11 +40,11 @@ public:
         const double _volume;
         const double _excessMass;
     public:
-        const double am2() const { return _am2; }
-        const double bm2() const { return _bm2; }
-        const double cm2() const { return _cm2; }
-        const double volume() const { return _volume; }
-        const double excessMass() const { return _excessMass; }
+        double am2() const { return _am2; }
+        double bm2() const { return _bm2; }
+        double cm2() const { return _cm2; }
+        double volume() const { return _volume; }
+        double excessMass() const { return _excessMass; }
     public:
         bool containsPoint(const orsa::Vector & p) const {
             const orsa::Vector dp = p-v0;
@@ -92,8 +92,8 @@ public:
     public:
         // derived
         mutable orsa::Cache<double> volume_, excessMass_;
-        const double volume() const;
-        const double excessMass() const;
+        double volume() const;
+        double excessMass() const;
     protected:
         // norm_coeff = normalization_factor * coeff
         static double normalization_factor(const size_t & l,
