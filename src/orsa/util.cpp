@@ -941,3 +941,21 @@ void orsa::bodyInertialComputations(double & volume,
                                             centerOfMass,
                                             randomPointsInShape);
 }
+
+std::string orsa::randomString(const int len) {
+    static const char alphanum[] =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+    if (len>=4096) {
+        ORSA_DEBUG("problems...");
+        orsa::crash();
+    }
+    char str[4096];
+    for (int i=0; i<len; ++i) {
+        str[i] = alphanum[GlobalRNG::instance()->rng()->gsl_rng_uniform_int(sizeof(alphanum)-1)];
+    }
+    str[len] = 0;
+    // ORSA_DEBUG("rs(%i) = [%s]",len,str);
+    return str;
+}

@@ -358,6 +358,8 @@ namespace orsa {
                                   const orsa::MassDistribution * massDistribution,
                                   const unsigned int N,
                                   const bool & localStoreVector=true);
+
+    std::string randomString(const int len);
     
 } // namespace orsa
 
