@@ -306,17 +306,197 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
         }
 
         {
-            
             const double dummy_R0 = orsa::FromUnits(100.0,orsa::Unit::KM);
             const LayerData::SHLayerVectorType & shlv = CCMD->layerData->shLayerVector;
             for (size_t k=0; k<shlv.size(); ++k) {
                 const std::string SQLiteDBFileName = getSqliteDBFileName_SH(shlv[k]->ID,dummy_R0);
+                // ORSA_DEBUG("ID: [%s]   SQLiteDBFileName: [%s]",shlv[k]->ID.c_str(),SQLiteDBFileName.c_str());
                 osg::ref_ptr< SHIntegration<T> > shi = new SHIntegration<T>(shlv[k]->norm_A,
                                                                             shlv[k]->norm_B,
                                                                             dummy_R0,
                                                                             SQLiteDBFileName);
                 
-                ORSA_DEBUG("MORE CODE NEEDED HERE!!!");
+                /* osg::ref_ptr<orsa::PaulMoment> shlv_pm = new orsa::PaulMoment(SH_degree);
+                   osg::ref_ptr<orsa::PaulMoment> shlv_translated_pm = new orsa::PaulMoment(SH_degree);
+                   std::vector< std::vector<mpf_class> > shlv_C;
+                   std::vector< std::vector<mpf_class> > shlv_S;
+                   std::vector< std::vector<mpf_class> > shlv_norm_C;
+                   std::vector< std::vector<mpf_class> > shlv_norm_S;
+                   std::vector<mpf_class> shlv_J;
+                */
+                
+                const size_t degree = shlv[k]->norm_A.size()-1;
+                
+                std::vector< std::vector<mpf_class> > shlv_norm_C;
+                std::vector< std::vector<mpf_class> > shlv_norm_S;
+                shlv_norm_C.resize(degree+1);
+                shlv_norm_S.resize(degree+1);
+                for (size_t l=0; l<=degree; ++l) {
+                    shlv_norm_C[l].resize(l+1);
+                    shlv_norm_S[l].resize(l+1);
+                     for (size_t m=0; m<=l; ++m) {
+                         shlv_norm_C[l][m] = 0.0;
+                         shlv_norm_S[l][m] = 0.0;
+                     }
+                }
+                
+                const double CMx_over_plateModelR0 = shlv[k]->v0.getX()/plateModelR0;
+                const double CMy_over_plateModelR0 = shlv[k]->v0.getY()/plateModelR0;
+                const double CMz_over_plateModelR0 = shlv[k]->v0.getZ()/plateModelR0;
+                
+                for (size_t l=0; l<=degree; ++l) {
+                    for (size_t m=0; m<=l; ++m) {
+                        
+                        ORSA_DEBUG("l=%i   m=%i",l,m);
+                        
+                        const orsa::triIndex_mpq C_tri_integral = orsa::conversionCoefficients_C_integral(l,m);
+                        const orsa::triIndex_d   C_tri_norm     = orsa::conversionCoefficients_C_norm(l,m);
+                        
+                        const orsa::triIndex_mpq S_tri_integral = orsa::conversionCoefficients_S_integral(l,m);
+                        const orsa::triIndex_d   S_tri_norm     = orsa::conversionCoefficients_S_norm(l,m);
+                        
+                        /* const size_t z_C = (l==0) ?
+                           mod_gravityData_index(gravityData.get(),"GM") :
+                           mod_gravityData_index(gravityData.get(),orsaPDS::RadioScienceGravityData::keyC(l,m));
+                           const size_t z_S = (m==0) ? 0 : mod_gravityData_index(gravityData.get(),orsaPDS::RadioScienceGravityData::keyS(l,m));
+                        */
+                        
+                        // ni,nj,nk are the expansion of C_lm,S_lm in terms of N_ijk
+                        for (size_t ni=0; ni<=l; ++ni) {
+                            for (size_t nj=0; nj<=l-ni; ++nj) {
+                                for (size_t nk=0; nk<=l-ni-nj; ++nk) {
+                                    if ( (C_tri_integral[ni][nj][nk] == 0) && (S_tri_integral[ni][nj][nk] == 0) ) continue;
+                                    // ti,tj,tk are the expansion of the density in terms of the cubic Chebyshev
+                                    /* for (size_t running_T_degree=0; running_T_degree<=T_degree; ++running_T_degree) {
+                                       for (size_t ti=0; ti<=T_degree; ++ti) {
+                                       for (size_t tj=0; tj<=T_degree-ti; ++tj) {
+                                       for (size_t tk=0; tk<=T_degree-ti-tj; ++tk) {
+                                       if (ti+tj+tk != running_T_degree) continue;
+                                       const std::vector<mpz_class> & cTi = orsa::ChebyshevTcoeff(ti);
+                                       const std::vector<mpz_class> & cTj = orsa::ChebyshevTcoeff(tj);
+                                       const std::vector<mpz_class> & cTk = orsa::ChebyshevTcoeff(tk);
+                                       
+                                       const size_t z_cT = CubicChebyshevMassDistribution::index(ti,tj,tk);
+                                       
+                                       double C2cT = 0.0;
+                                       double S2cT = 0.0;
+                                       
+                                       // ci,cj,ck are the expansion of each Chebyshev polynomial in terms of powers of x,y,z
+                                       for (size_t ci=0; ci<=ti; ++ci) {
+                                       if (cTi[ci] == 0) continue;
+                                       for (size_t cj=0; cj<=tj; ++cj) {
+                                       if (cTj[cj] == 0) continue;
+                                       for (size_t ck=0; ck<=tk; ++ck) {
+                                       if (cTk[ck] == 0) continue;
+                                    */
+                                    // bi,bj,bk are the binomial expansion about the center of mass
+                                    // this also introduces a power_sign
+                                    for (size_t bi=0; bi<=ni; ++bi) {
+                                        for (size_t bj=0; bj<=nj; ++bj) {
+                                            for (size_t bk=0; bk<=nk; ++bk) {
+
+                                                shlv_norm_C[l][m] +=
+                                                    orsa::power_sign(bi+bj+bk) *
+                                                    C_tri_norm[ni][nj][nk] *
+                                                    mpz_class(orsa::binomial(ni,bi) *
+                                                              orsa::binomial(nj,bj) *
+                                                              orsa::binomial(nk,bk)).get_d() *
+                                                    orsa::int_pow(CMx_over_plateModelR0,bi) *
+                                                    orsa::int_pow(CMy_over_plateModelR0,bj) *
+                                                    orsa::int_pow(CMz_over_plateModelR0,bk) *
+                                                    shi->getIntegral(ni-bi,nj-bj,nk-bk);
+
+                                                shlv_norm_S[l][m] += 
+                                                 orsa::power_sign(bi+bj+bk) *
+                                                    S_tri_norm[ni][nj][nk] *
+                                                    mpz_class(orsa::binomial(ni,bi) *
+                                                              orsa::binomial(nj,bj) *
+                                                              orsa::binomial(nk,bk)).get_d() *
+                                                    orsa::int_pow(CMx_over_plateModelR0,bi) *
+                                                    orsa::int_pow(CMy_over_plateModelR0,bj) *
+                                                    orsa::int_pow(CMz_over_plateModelR0,bk) *
+                                                    shi->getIntegral(ni-bi,nj-bj,nk-bk);
+                                                
+                                                /* 
+                                                   if (C_tri_integral[ni][nj][nk] != 0) {
+                                                   C2cT +=
+                                                   orsa::power_sign(bi+bj+bk) *
+                                                   radiusCorrectionFactor *
+                                                   C_tri_norm[ni][nj][nk] *
+                                                   mpz_class(orsa::binomial(ni,bi) *
+                                                   orsa::binomial(nj,bj) *
+                                                   orsa::binomial(nk,bk) *
+                                                   cTi[ci] * cTj[cj] * cTk[ck]).get_d() *
+                                                   orsa::int_pow(CMx_over_plateModelR0,bi) *
+                                                   orsa::int_pow(CMy_over_plateModelR0,bj) *
+                                                   orsa::int_pow(CMz_over_plateModelR0,bk) *
+                                                   si->getIntegral(ni-bi+ci,nj-bj+cj,nk-bk+ck);
+                                                   }
+                                                   
+                                                   if (S_tri_integral[ni][nj][nk] != 0) {
+                                                   S2cT +=
+                                                   orsa::power_sign(bi+bj+bk) *
+                                                   radiusCorrectionFactor *
+                                                   S_tri_norm[ni][nj][nk] *
+                                                   mpz_class(orsa::binomial(ni,bi) *
+                                                   orsa::binomial(nj,bj) *
+                                                   orsa::binomial(nk,bk) *
+                                                   cTi[ci] * cTj[cj] * cTk[ck]).get_d() *
+                                                   orsa::int_pow(CMx_over_plateModelR0,bi) *
+                                                   orsa::int_pow(CMy_over_plateModelR0,bj) *
+                                                   orsa::int_pow(CMz_over_plateModelR0,bk) *
+                                                   si->getIntegral(ni-bi+ci,nj-bj+cj,nk-bk+ck);
+                                                   }
+                                                */
+                                                
+                                            }
+                                        }
+                                    }
+                                    /* }
+                                       }                                        
+                                       }
+                                       
+                                       C2cT /= si->getIntegral(0,0,0);
+                                       if (m!=0) S2cT /= si->getIntegral(0,0,0);
+                                       
+                                       if (l==0) {
+                                       C2cT *= GM;
+                                       }
+                                       
+                                       // saving, NOTE how we are adding terms here
+                                       gsl_matrix_set(cT2sh,z_C,z_cT,gsl_matrix_get(cT2sh,z_C,z_cT)+C2cT);
+                                       if (m!=0) gsl_matrix_set(cT2sh,z_S,z_cT,gsl_matrix_get(cT2sh,z_S,z_cT)+S2cT);
+                                       }
+                                       }
+                                       }
+                                       }
+                                    */
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                const double shlv_excessMass = shlv[k]->volume()*shlv[k]->excessDensity;
+                ORSA_DEBUG("shlv_excessMass[%i]: %g",k,shlv_excessMass);
+                const double shlv_massFactor = shlv_excessMass / totalMass;
+                ORSA_DEBUG("shlv_massFactor[%i]: %g",k,shlv_massFactor);
+                
+                for (size_t l=0; l<=degree; ++l) {
+                    for (size_t m=0; m<=l; ++m) {
+                        shlv_norm_C[l][m] *= shlv_massFactor;
+                        shlv_norm_S[l][m] *= shlv_massFactor;
+                        
+                        shlv_norm_C[l][m] /= shi->getIntegral(0,0,0);
+                        shlv_norm_S[l][m] /= shi->getIntegral(0,0,0);
+                        
+                        norm_C[l][m] += shlv_norm_C[l][m];
+                        norm_S[l][m] += shlv_norm_S[l][m];
+                        
+                        ORSA_DEBUG("shlv_norm_C[%i][%i] = %Fg",l,m,shlv_norm_C[l][m].get_mpf_t());
+                        if (m != 0) ORSA_DEBUG("shlv_norm_S[%i][%i] = %Fg",l,m,shlv_norm_S[l][m].get_mpf_t());
+                    }
+                }
             }
         }
     }

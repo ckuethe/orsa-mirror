@@ -367,6 +367,12 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
                        &degree);
             excessDensity = orsa::FromUnits(orsa::FromUnits(excessDensity,orsa::Unit::GRAM),orsa::Unit::CM,-3);
             LayerData::SHLayer::SHcoeff norm_A, norm_B;
+            norm_A.resize(degree+1);
+            norm_B.resize(degree+1);
+            for (size_t l=0; l<=degree; ++l) {
+                norm_A[l].resize(l+1);
+                norm_B[l].resize(l+1);
+            }
             for (int l=0; l<=degree; ++l) {
                 for (int m=0; m<=l; ++m) {
                     gmp_fscanf(fp,"%lf ",&norm_A[l][m]);
@@ -387,7 +393,6 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
             v0z = orsa::FromUnits(v0z,orsa::Unit::KM);
             char ID[4096];
             gmp_fscanf(fp,"%s ",&ID);
-            
             shLayerVector.push_back(new LayerData::SHLayer(excessDensity,norm_A,norm_B,orsa::Vector(v0x,v0y,v0z),ID));
         }
     }
@@ -490,7 +495,7 @@ double LayerData::SHLayer::volume() const {
     
     const double dummy_R0 = orsa::FromUnits(100.0,orsa::Unit::KM);
     
-    const std::string SQLiteDBFileName = getSqliteDBFileName(ID,dummy_R0);
+    const std::string SQLiteDBFileName = getSqliteDBFileName_SH(ID,dummy_R0);
     
     osg::ref_ptr<SHIntegration<T> > shi = new SHIntegration<T>(norm_A, norm_B, dummy_R0, SQLiteDBFileName);
     

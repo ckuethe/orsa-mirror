@@ -88,7 +88,7 @@ public:
         const double excessDensity;
         const SHcoeff norm_A, norm_B;
         const orsa::Vector v0; // center of ellipsoid
-        const std::string & ID; // unique id, to save SQLite DB x GMoI integrals
+        const std::string ID; // unique id, to save SQLite DB x GMoI integrals
     public:
         // derived
         mutable orsa::Cache<double> volume_, excessMass_;
