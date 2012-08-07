@@ -298,6 +298,7 @@ bool CubicChebyshevMassDistributionFile::append(const CubicChebyshevMassDistribu
 }
 
 bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile::DataType & data, FILE * fp) {
+    data.clear();
     if (1 != gmp_fscanf(fp,"%lf",&data.minDensity)) return false;                                
     data.minDensity = orsa::FromUnits(orsa::FromUnits(data.minDensity,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     if (1 != gmp_fscanf(fp,"%lf",&data.maxDensity)) return false;                                

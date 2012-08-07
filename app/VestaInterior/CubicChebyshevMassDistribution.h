@@ -257,6 +257,16 @@ public:
         osg::ref_ptr<const LayerData> layerData;
     public:
         void print() const;
+    public:
+        void clear() {
+            minDensity = maxDensity = deltaDensity = 0.0;
+            penalty = 0.0;
+            densityScale = 1.0;
+            R0 = 1.0;
+            SH_degree = 0;
+            coeff.clear();
+            layerData = 0;
+        }
     };
 public:
     typedef CCMDF_data DataType;
