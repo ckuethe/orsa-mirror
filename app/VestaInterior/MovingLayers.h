@@ -1,5 +1,5 @@
-#ifndef _VESTA_INTERIOR_ANALYTIC_H_
-#define _VESTA_INTERIOR_ANALYTIC_H_
+#ifndef _MOVING_LAYERS_H_
+#define _MOVING_LAYERS_H_
 
 #include <orsa/util.h>
 #include <orsa/statistic.h>
@@ -292,4 +292,4 @@ void P1(void *) {
 
 
 
-#endif // _VESTA_INTERIOR_ANALYTIC_H_
+#endif // _MOVING_LAYERS_H_
