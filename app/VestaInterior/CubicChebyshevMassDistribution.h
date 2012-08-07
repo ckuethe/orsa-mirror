@@ -73,14 +73,12 @@ public:
         SHLayer(const double & excessDensity_,
                 const SHcoeff & norm_A_,
                 const SHcoeff & norm_B_,
-                const orsa::Vector & v0_,
-                const std::string & ID_) :
+                const orsa::Vector & v0_) :
             osg::Referenced(true),
             excessDensity(excessDensity_),
             norm_A(norm_A_),
             norm_B(norm_B_),
-            v0(v0_),
-            ID(ID_)
+            v0(v0_)
             { }
     protected:
         virtual ~SHLayer() { }
@@ -88,12 +86,13 @@ public:
         const double excessDensity;
         const SHcoeff norm_A, norm_B;
         const orsa::Vector v0; // center of ellipsoid
-        const std::string ID; // unique id, to save SQLite DB x GMoI integrals
     public:
         // derived
         mutable orsa::Cache<double> volume_, excessMass_;
         double volume() const;
         double excessMass() const;
+    public:
+        std::string MD5() const;
     protected:
         // norm_coeff = normalization_factor * coeff
         static double normalization_factor(const size_t & l,

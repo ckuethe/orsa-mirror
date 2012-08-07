@@ -4,6 +4,9 @@
 
 #include "SH2ijk.h"
 
+#include <sys/types.h>
+#include <bsd/md5.h>
+
 std::vector< std::vector< std::vector<size_t> > > CubicChebyshevMassDistribution::indexTable;
 
 size_t CubicChebyshevMassDistribution::totalSize(const size_t & degree) {
@@ -391,9 +394,7 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
             v0x = orsa::FromUnits(v0x,orsa::Unit::KM);
             v0y = orsa::FromUnits(v0y,orsa::Unit::KM);
             v0z = orsa::FromUnits(v0z,orsa::Unit::KM);
-            char ID[4096];
-            gmp_fscanf(fp,"%s ",&ID);
-            shLayerVector.push_back(new LayerData::SHLayer(excessDensity,norm_A,norm_B,orsa::Vector(v0x,v0y,v0z),ID));
+            shLayerVector.push_back(new LayerData::SHLayer(excessDensity,norm_A,norm_B,orsa::Vector(v0x,v0y,v0z)));
         }
     }
     
@@ -465,7 +466,6 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
                             orsa::FromUnits(sv[k]->v0.getX(),orsa::Unit::KM,-1),
                             orsa::FromUnits(sv[k]->v0.getY(),orsa::Unit::KM,-1),
                             orsa::FromUnits(sv[k]->v0.getZ(),orsa::Unit::KM,-1));
-                gmp_fprintf(fp,"%s ",sv[k]->ID.c_str());
             }
             // }
         }
@@ -495,7 +495,7 @@ double LayerData::SHLayer::volume() const {
     
     const double dummy_R0 = orsa::FromUnits(100.0,orsa::Unit::KM);
     
-    const std::string SQLiteDBFileName = getSqliteDBFileName_SH(ID,dummy_R0);
+    const std::string SQLiteDBFileName = getSqliteDBFileName_SH(MD5(),dummy_R0);
     
     osg::ref_ptr<SHIntegration<T> > shi = new SHIntegration<T>(norm_A, norm_B, dummy_R0, SQLiteDBFileName);
     
@@ -511,4 +511,33 @@ double LayerData::SHLayer::excessMass() const {
     excessMass_ = volume()*excessDensity;
     
     return excessMass_;
+}
+
+std::string LayerData::SHLayer::MD5() const {
+    // create an unique MD5 hash using the SHlayer data, to use as SQLite DB name
+    std::string str;
+    {
+        char item[4096];
+        sprintf(item,"%.15g ",excessDensity);
+        str.append(item);
+        const int degree = norm_A.size()-1;
+        for (size_t l=0; l<=degree; ++l) {
+            for (size_t m=0; m<=l; ++m) {
+                sprintf(item,"%.15g ",norm_A[l][m]);
+                str.append(item);
+                if (m>0) {
+                    sprintf(item,"%.15g ",norm_B[l][m]);
+                    str.append(item);
+                }
+            }
+        }
+        sprintf(item,"%.15g %.15g %.15g ",v0.getX(),v0.getY(),v0.getZ());
+        str.append(item);
+    }
+    
+    char * md5str = MD5Data((const u_int8_t *)str.c_str(),strlen(str.c_str()),0);
+    // ORSA_DEBUG("MD5(\"%s\") = [%s]",str.c_str(),md5str);
+    std::string md5 = md5str;
+    free(md5str);
+    return md5;
 }

@@ -18,7 +18,7 @@ OBJECTS_DIR = .obj/$${PLATFORM_NAME}
 DESTDIR     = ../../bin/$${PLATFORM_NAME}
 
 unix:!macx {
-	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaSolarSystem -lorsaEssentialOSG -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads -lqd -L/home/tricaric/sqlite -lsqlite3
+	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaSolarSystem -lorsaEssentialOSG -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads -lqd -L/home/tricaric/sqlite -lsqlite3 -lbsd
 }
 
 HEADERS += VestaInteriorAnalytic.h   CCMD2SH.h   vesta.h  CubicChebyshevMassDistribution.h gaskell.h penalty.h

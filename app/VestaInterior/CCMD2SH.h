@@ -6,7 +6,6 @@
 #include "SH2ijk.h"
 #include <orsa/paulMoment.h>
 
-
 // note on CM: it is used as input if set, or it is computed using CCMD if unset
 template <typename T>
 void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
@@ -309,21 +308,12 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
             const double dummy_R0 = orsa::FromUnits(100.0,orsa::Unit::KM);
             const LayerData::SHLayerVectorType & shlv = CCMD->layerData->shLayerVector;
             for (size_t k=0; k<shlv.size(); ++k) {
-                const std::string SQLiteDBFileName = getSqliteDBFileName_SH(shlv[k]->ID,dummy_R0);
-                // ORSA_DEBUG("ID: [%s]   SQLiteDBFileName: [%s]",shlv[k]->ID.c_str(),SQLiteDBFileName.c_str());
+                
+                const std::string SQLiteDBFileName = getSqliteDBFileName_SH(shlv[k]->MD5(),dummy_R0);
                 osg::ref_ptr< SHIntegration<T> > shi = new SHIntegration<T>(shlv[k]->norm_A,
                                                                             shlv[k]->norm_B,
                                                                             dummy_R0,
                                                                             SQLiteDBFileName);
-                
-                /* osg::ref_ptr<orsa::PaulMoment> shlv_pm = new orsa::PaulMoment(SH_degree);
-                   osg::ref_ptr<orsa::PaulMoment> shlv_translated_pm = new orsa::PaulMoment(SH_degree);
-                   std::vector< std::vector<mpf_class> > shlv_C;
-                   std::vector< std::vector<mpf_class> > shlv_S;
-                   std::vector< std::vector<mpf_class> > shlv_norm_C;
-                   std::vector< std::vector<mpf_class> > shlv_norm_S;
-                   std::vector<mpf_class> shlv_J;
-                */
                 
                 const size_t degree = shlv[k]->norm_A.size()-1;
                 
@@ -347,7 +337,7 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
                 for (size_t l=0; l<=degree; ++l) {
                     for (size_t m=0; m<=l; ++m) {
                         
-                        ORSA_DEBUG("l=%i   m=%i",l,m);
+                        // ORSA_DEBUG("l=%i   m=%i",l,m);
                         
                         const orsa::triIndex_mpq C_tri_integral = orsa::conversionCoefficients_C_integral(l,m);
                         const orsa::triIndex_d   C_tri_norm     = orsa::conversionCoefficients_C_norm(l,m);
