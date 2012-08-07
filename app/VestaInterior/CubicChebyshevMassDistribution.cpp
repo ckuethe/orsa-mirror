@@ -364,13 +364,14 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
     if (1 == gmp_fscanf(fp,"%zi",&shLayerVectorSize)) {
         if (shLayerVectorSize > 0) {
             haveLayerData=true;
-            double excessDensity;
-            size_t degree;
             for (unsigned int k=0; k<shLayerVectorSize; ++k) {
-                gmp_fscanf(fp,"%lf %zi",
-                           &excessDensity,
-                           &degree);
-                ORSA_DEBUG("eD: %g  d: %i",excessDensity,degree);
+                double excessDensity;
+                size_t degree;
+                if (2 != gmp_fscanf(fp,"%lf %zi",
+                                    &excessDensity,
+                                    &degree)) {
+                    return false;
+                }
                 excessDensity = orsa::FromUnits(orsa::FromUnits(excessDensity,orsa::Unit::GRAM),orsa::Unit::CM,-3);
                 LayerData::SHLayer::SHcoeff norm_A, norm_B;
                 norm_A.resize(degree+1);
@@ -381,19 +382,25 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
                 }
                 for (int l=0; l<=degree; ++l) {
                     for (int m=0; m<=l; ++m) {
-                        gmp_fscanf(fp,"%lf ",&norm_A[l][m]);
+                        if (1 != gmp_fscanf(fp,"%lf ",&norm_A[l][m])) {
+                            return false;
+                        }
                         norm_A[l][m] = orsa::FromUnits(norm_A[l][m],orsa::Unit::KM);
                         if (m>0) {
-                            gmp_fscanf(fp,"%lf ",&norm_B[l][m]);
+                            if (1 != gmp_fscanf(fp,"%lf ",&norm_B[l][m])) {
+                                return false;
+                            }
                             norm_B[l][m] = orsa::FromUnits(norm_B[l][m],orsa::Unit::KM);
                         }
                     }
                 }
                 double v0x,v0y,v0z;
-                gmp_fscanf(fp,"%lf %lf %lf ",
-                           &v0x,
-                           &v0y,
-                           &v0z);
+                if (3 != gmp_fscanf(fp,"%lf %lf %lf ",
+                                    &v0x,
+                                    &v0y,
+                                    &v0z)) {
+                    return false;
+                }
                 v0x = orsa::FromUnits(v0x,orsa::Unit::KM);
                 v0y = orsa::FromUnits(v0y,orsa::Unit::KM);
                 v0z = orsa::FromUnits(v0z,orsa::Unit::KM);

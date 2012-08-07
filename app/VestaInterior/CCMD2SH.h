@@ -315,13 +315,13 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
                                                                             dummy_R0,
                                                                             SQLiteDBFileName);
                 
-                const size_t degree = shlv[k]->norm_A.size()-1;
+                // const size_t layer_degree = shlv[k]->norm_A.size()-1;
                 
                 std::vector< std::vector<mpf_class> > shlv_norm_C;
                 std::vector< std::vector<mpf_class> > shlv_norm_S;
-                shlv_norm_C.resize(degree+1);
-                shlv_norm_S.resize(degree+1);
-                for (size_t l=0; l<=degree; ++l) {
+                shlv_norm_C.resize(SH_degree+1);
+                shlv_norm_S.resize(SH_degree+1);
+                for (size_t l=0; l<=SH_degree; ++l) {
                     shlv_norm_C[l].resize(l+1);
                     shlv_norm_S[l].resize(l+1);
                      for (size_t m=0; m<=l; ++m) {
@@ -334,7 +334,7 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
                 const double CMy_over_plateModelR0 = shlv[k]->v0.getY()/plateModelR0;
                 const double CMz_over_plateModelR0 = shlv[k]->v0.getZ()/plateModelR0;
                 
-                for (size_t l=0; l<=degree; ++l) {
+                for (size_t l=0; l<=SH_degree; ++l) {
                     for (size_t m=0; m<=l; ++m) {
                         
                         // ORSA_DEBUG("l=%i   m=%i",l,m);
@@ -472,7 +472,7 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
                 const double shlv_massFactor = shlv_excessMass / totalMass;
                 ORSA_DEBUG("shlv_massFactor[%i]: %g",k,shlv_massFactor);
                 
-                for (size_t l=0; l<=degree; ++l) {
+                for (size_t l=0; l<=SH_degree; ++l) {
                     for (size_t m=0; m<=l; ++m) {
                         shlv_norm_C[l][m] *= shlv_massFactor;
                         shlv_norm_S[l][m] *= shlv_massFactor;
