@@ -365,36 +365,39 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
             haveLayerData=true;
             double excessDensity;
             size_t degree;
-            gmp_fscanf(fp,"%lf %zi",
-                       &excessDensity,
-                       &degree);
-            excessDensity = orsa::FromUnits(orsa::FromUnits(excessDensity,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-            LayerData::SHLayer::SHcoeff norm_A, norm_B;
-            norm_A.resize(degree+1);
-            norm_B.resize(degree+1);
-            for (size_t l=0; l<=degree; ++l) {
-                norm_A[l].resize(l+1);
-                norm_B[l].resize(l+1);
-            }
-            for (int l=0; l<=degree; ++l) {
-                for (int m=0; m<=l; ++m) {
-                    gmp_fscanf(fp,"%lf ",&norm_A[l][m]);
-                    norm_A[l][m] = orsa::FromUnits(norm_A[l][m],orsa::Unit::KM);
-                    if (m>0) {
-                        gmp_fscanf(fp,"%lf ",&norm_B[l][m]);
-                        norm_B[l][m] = orsa::FromUnits(norm_B[l][m],orsa::Unit::KM);
+            for (unsigned int k=0; k<shLayerVectorSize; ++k) {
+                gmp_fscanf(fp,"%lf %zi",
+                           &excessDensity,
+                           &degree);
+                ORSA_DEBUG("eD: %g  d: %i",excessDensity,degree);
+                excessDensity = orsa::FromUnits(orsa::FromUnits(excessDensity,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+                LayerData::SHLayer::SHcoeff norm_A, norm_B;
+                norm_A.resize(degree+1);
+                norm_B.resize(degree+1);
+                for (size_t l=0; l<=degree; ++l) {
+                    norm_A[l].resize(l+1);
+                    norm_B[l].resize(l+1);
+                }
+                for (int l=0; l<=degree; ++l) {
+                    for (int m=0; m<=l; ++m) {
+                        gmp_fscanf(fp,"%lf ",&norm_A[l][m]);
+                        norm_A[l][m] = orsa::FromUnits(norm_A[l][m],orsa::Unit::KM);
+                        if (m>0) {
+                            gmp_fscanf(fp,"%lf ",&norm_B[l][m]);
+                            norm_B[l][m] = orsa::FromUnits(norm_B[l][m],orsa::Unit::KM);
+                        }
                     }
                 }
+                double v0x,v0y,v0z;
+                gmp_fscanf(fp,"%lf %lf %lf ",
+                           &v0x,
+                           &v0y,
+                           &v0z);
+                v0x = orsa::FromUnits(v0x,orsa::Unit::KM);
+                v0y = orsa::FromUnits(v0y,orsa::Unit::KM);
+                v0z = orsa::FromUnits(v0z,orsa::Unit::KM);
+                shLayerVector.push_back(new LayerData::SHLayer(excessDensity,norm_A,norm_B,orsa::Vector(v0x,v0y,v0z)));
             }
-            double v0x,v0y,v0z;
-            gmp_fscanf(fp,"%lf %lf %lf ",
-                       &v0x,
-                       &v0y,
-                       &v0z);
-            v0x = orsa::FromUnits(v0x,orsa::Unit::KM);
-            v0y = orsa::FromUnits(v0y,orsa::Unit::KM);
-            v0z = orsa::FromUnits(v0z,orsa::Unit::KM);
-            shLayerVector.push_back(new LayerData::SHLayer(excessDensity,norm_A,norm_B,orsa::Vector(v0x,v0y,v0z)));
         }
     }
     
