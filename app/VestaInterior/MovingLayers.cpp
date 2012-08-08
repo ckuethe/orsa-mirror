@@ -524,6 +524,53 @@ int main(int argc, char **argv) {
         gsl_vector * sampleCoeff_x  = gsl_vector_alloc(M);
         gsl_vector * sampleCoeff_y  = gsl_vector_alloc(M); 
         
+        std::vector< std::vector<mpf_class> > uniformShape_norm_C;
+        std::vector< std::vector<mpf_class> > uniformShape_norm_S;
+        {
+            uniformShape_norm_C.resize(SH_degree+1);
+            uniformShape_norm_S.resize(SH_degree+1);
+            for (size_t l=0; l<=SH_degree; ++l) {
+                uniformShape_norm_C[l].resize(l+1);
+                uniformShape_norm_S[l].resize(l+1);
+                for (size_t m=0; m<=l; ++m) {
+                    uniformShape_norm_C[l][m] = 0.0;
+                    uniformShape_norm_S[l][m] = 0.0;
+                }
+            }
+            
+            if (massDistribution.get() != 0) {
+                CubicChebyshevMassDistribution::CoefficientType md_uS_coeff;
+                CubicChebyshevMassDistribution::resize(md_uS_coeff,0);
+                md_uS_coeff[0][0][0] = 1.0;
+                osg::ref_ptr<CubicChebyshevMassDistribution> md_uS =
+                    new CubicChebyshevMassDistribution(md_uS_coeff,
+                                                       1.0, // densityScale = bulk density
+                                                       plateModelR0,
+                                                       0); // massDistribution->layerData.get());
+                orsa::Cache<orsa::Vector> CM = sampled_CM;
+                CM.lock();
+                CCMD2SH(CM,
+                        uniformShape_norm_C,
+                        uniformShape_norm_S,
+                        SH_degree, // gravityData->degree,
+                        si.get(),
+                        md_uS,
+                        plateModelR0,
+                        gravityData->R0);
+                
+                // const double layerMassFraction = massDistribution->layerData->totalExcessMass() / (GM/orsa::Unit::G());
+                /* for (size_t l=0; l<=SH_degree; ++l) {
+                   for (size_t m=0; m<=l; ++m) {
+                   uniformShape_norm_C[l][m] *= layerMassFraction;
+                   uniformShape_norm_S[l][m] *= layerMassFraction;
+                   }
+                   }
+                */
+                
+            }
+        }
+        
+        
         {
             
             std::vector< std::vector<mpf_class> > layerData_norm_C;
