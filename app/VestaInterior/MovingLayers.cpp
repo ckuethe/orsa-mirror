@@ -504,6 +504,11 @@ int main(int argc, char **argv) {
         gsl_vector * sh = gsl_vector_calloc(M); // b  of A x = b
         gsl_vector * cT = gsl_vector_calloc(N); // x  of A x = b
         
+        // alt_sh is the same as sh, but:
+        // * removing the gravity of a uniform shape
+        // * removing gravity from all other fixed interor components, i.e. fixed layers
+        gsl_vector * alt_sh = gsl_vector_calloc(M);
+        
         // sample from SH covariance matrix
         gsl_eigen_symmv_workspace * w = gsl_eigen_symmv_alloc(M); // workspace for eigenvectors/values
         gsl_vector * eval = gsl_vector_alloc(M);   // eigenvalues
@@ -610,15 +615,16 @@ int main(int argc, char **argv) {
                             md_lD,
                             plateModelR0,
                             gravityData->R0);
-                    
-                    const double layerMassFraction = massDistribution->layerData->totalExcessMass() / (GM/orsa::Unit::G());
-                    for (size_t l=0; l<=SH_degree; ++l) {
-                        for (size_t m=0; m<=l; ++m) {
-                            layerData_norm_C[l][m] *= layerMassFraction;
-                            layerData_norm_S[l][m] *= layerMassFraction;
-                        }
-                    }
-                    
+
+                    // scale later...
+                    /* const double layerMassFraction = massDistribution->layerData->totalExcessMass() / (GM/orsa::Unit::G());
+                       for (size_t l=0; l<=SH_degree; ++l) {
+                       for (size_t m=0; m<=l; ++m) {
+                       layerData_norm_C[l][m] *= layerMassFraction;
+                       layerData_norm_S[l][m] *= layerMassFraction;
+                       }
+                       }
+                    */                    
                 }
             }
         }
@@ -629,28 +635,36 @@ int main(int argc, char **argv) {
         //
         gsl_blas_dgemv(CblasNoTrans,1.0,evec,sampleCoeff_x,0.0,sampleCoeff_y);
         //
+        const double layersTotalMassFraction = massDistribution->layerData->totalExcessMass() / (GM/orsa::Unit::G());
+        const double uniformShapeMassFraction = 1.0 - massDistribution->layerData->totalExcessMass()*orsa::Unit::G()/GM;
         for (size_t i=0; i<M; ++i) {
             
             // correction due to layers
             orsa::Cache<double> layer_coeff;
+            orsa::Cache<double> uniformShape_coeff;
             if (massDistribution.get() == 0) {
                 layer_coeff = 0.0;
+                uniformShape_coeff = 0.0;
             } else if (massDistribution->layerData.get() == 0) {
                 layer_coeff = 0.0;
+                uniformShape_coeff = 0.0;
             } else {
                 const QString ref_key = mod_gravityData_key(gravityData.get(),i);
                 if (ref_key == "GM") {
                     // ORSA_DEBUG("found: [%s]",ref_key.toStdString().c_str());
-                    layer_coeff = massDistribution->layerData->totalExcessMass()*orsa::Unit::G();
+                    layer_coeff        = layersTotalMassFraction*GM;
+                    uniformShape_coeff = uniformShapeMassFraction*GM;
                 } else {
                     for (size_t l=1; l<=SH_degree; ++l) {
                         for (size_t m=0; m<=l; ++m) {
                             if (orsaPDS::RadioScienceGravityData::keyC(l,m) == ref_key) {
                                 // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
-                                layer_coeff = layerData_norm_C[l][m].get_d();
+                                layer_coeff        = layersTotalMassFraction*layerData_norm_C[l][m].get_d();
+                                uniformShape_coeff = uniformShapeMassFraction*uniformShape_norm_C[l][m].get_d();
                             } else if (orsaPDS::RadioScienceGravityData::keyS(l,m) == ref_key) {
                                 // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
-                                layer_coeff = layerData_norm_S[l][m].get_d();
+                                layer_coeff        = layersTotalMassFraction*layerData_norm_S[l][m].get_d();
+                                uniformShape_coeff = uniformShapeMassFraction*uniformShape_norm_S[l][m].get_d();
                             }                       
                         }
                     }
@@ -660,26 +674,35 @@ int main(int argc, char **argv) {
                 ORSA_DEBUG("problems...");
                 exit(0);
             }
+            if (!uniformShape_coeff.isSet()) {
+                ORSA_DEBUG("problems...");
+                exit(0);
+            }
             // choose here if sampling or using nominal value
             // nominal (no covariance sampling)
             const double sampled_coeff = gsl_vector_get(pds_coeff,i) - layer_coeff;
             // use covariance sampling
             // const double sampled_coeff = gsl_vector_get(pds_coeff,i) - layer_coeff + gsl_vector_get(sampleCoeff_y,i);
-            
+            //
+            const double sampled_alt_coeff = gsl_vector_get(pds_coeff,i) - uniformShape_coeff;
             
             // gsl_vector_set(sampleCoeff_y,i,sampled_coeff);
             // gsl_vector_set(sh,z_sh,gsl_vector_get(sampleCoeff_y,z_sh));
             //
             gsl_vector_set(sh,i,sampled_coeff);
+            //
+            gsl_vector_set(alt_sh,i,sampled_alt_coeff);    
             
             // get again pds_covm because old one has been destroyed by the call to gsl_eigen_symmv
             gsl_matrix * pds_covm  = mod_gravityData_getCovarianceMatrix(gravityData.get());
             
-            ORSA_DEBUG("%7s = %12.6g [sampled] = %12.6g [layers] + %12.6g   nominal: %+12.6g   delta: %+12.6g   sigma: %12.6g",
+            ORSA_DEBUG("%7s = %12.6g [sampled] = %12.6g [layers] + %12.6g = %12.6g [uniformShape] + %12.6g  ///  nominal: %+12.6g   delta: %+12.6g   sigma: %12.6g",
                        mod_gravityData_key(gravityData.get(),i).toStdString().c_str(),
                        gsl_vector_get(sh,i)+(*layer_coeff),
                        (*layer_coeff),
                        gsl_vector_get(sh,i),
+                       (*uniformShape_coeff),
+                       gsl_vector_get(alt_sh,i),
                        mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),i)),
                        gsl_vector_get(sh,i)+(*layer_coeff)-mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),i)),
                        sqrt(gsl_matrix_get(pds_covm,i,i)));
@@ -689,6 +712,8 @@ int main(int argc, char **argv) {
         
         // solving here!
         gsl_blas_dgemv(CblasNoTrans,1.0,pseudoInvA,sh,0.0,cT);
+
+        // not solving for alt_sh, that's not its purpose
         
         gsl_vector * cT0 = gsl_vector_calloc(N);
         gsl_vector_memcpy(cT0,cT);
