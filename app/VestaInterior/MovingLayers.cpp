@@ -569,13 +569,16 @@ int main(int argc, char **argv) {
                 
             }
         }
+        for (size_t l=0; l<=SH_degree; ++l) {
+            for (size_t m=0; m<=l; ++m) {
+                ORSA_DEBUG("uniformShape_norm_C[%i][%i] = %Fg",l,m,uniformShape_norm_C[l][m].get_mpf_t());
+                if (m != 0) ORSA_DEBUG("uniformShape_norm_S[%i][%i] = %Fg",l,m,uniformShape_norm_S[l][m].get_mpf_t());
+            }
+        }
         
-        
+        std::vector< std::vector<mpf_class> > layerData_norm_C;
+        std::vector< std::vector<mpf_class> > layerData_norm_S;
         {
-            
-            std::vector< std::vector<mpf_class> > layerData_norm_C;
-            std::vector< std::vector<mpf_class> > layerData_norm_S;
-            //
             layerData_norm_C.resize(SH_degree+1);
             layerData_norm_S.resize(SH_degree+1);
             for (size_t l=0; l<=SH_degree; ++l) {
@@ -618,309 +621,309 @@ int main(int argc, char **argv) {
                     
                 }
             }
-            
-            for (size_t i=0; i<M; ++i) {
-                gsl_vector_set(sampleCoeff_x,i,orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(sigma[i]));
-            }
-            //
-            gsl_blas_dgemv(CblasNoTrans,1.0,evec,sampleCoeff_x,0.0,sampleCoeff_y);
-            //
-            for (size_t i=0; i<M; ++i) {
-                
-                // correction due to layers
-                orsa::Cache<double> layer_coeff;
-                if (massDistribution.get() == 0) {
-                    layer_coeff = 0.0;
-                } else if (massDistribution->layerData.get() == 0) {
-                    layer_coeff = 0.0;
-                } else {
-                    const QString ref_key = mod_gravityData_key(gravityData.get(),i);
-                    if (ref_key == "GM") {
-                        // ORSA_DEBUG("found: [%s]",ref_key.toStdString().c_str());
-                        layer_coeff = massDistribution->layerData->totalExcessMass()*orsa::Unit::G();
-                    } else {
-                        for (size_t l=1; l<=SH_degree; ++l) {
-                            for (size_t m=0; m<=l; ++m) {
-                                if (orsaPDS::RadioScienceGravityData::keyC(l,m) == ref_key) {
-                                    // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
-                                    layer_coeff = layerData_norm_C[l][m].get_d();
-                                } else if (orsaPDS::RadioScienceGravityData::keyS(l,m) == ref_key) {
-                                    // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
-                                    layer_coeff = layerData_norm_S[l][m].get_d();
-                                }                       
-                            }
-                        }
-                    }
-                }
-                if (!layer_coeff.isSet()) {
-                    ORSA_DEBUG("problems...");
-                    exit(0);
-                }
-                // choose here if sampling or using nominal value
-                // nominal (no covariance sampling)
-                const double sampled_coeff = gsl_vector_get(pds_coeff,i) - layer_coeff;
-                // use covariance sampling
-                // const double sampled_coeff = gsl_vector_get(pds_coeff,i) - layer_coeff + gsl_vector_get(sampleCoeff_y,i);
-                
-                
-                // gsl_vector_set(sampleCoeff_y,i,sampled_coeff);
-                // gsl_vector_set(sh,z_sh,gsl_vector_get(sampleCoeff_y,z_sh));
-                //
-                gsl_vector_set(sh,i,sampled_coeff);
+        }
 
-                // get again pds_covm because old one has been destroyed by the call to gsl_eigen_symmv
-                gsl_matrix * pds_covm  = mod_gravityData_getCovarianceMatrix(gravityData.get());
-                
-                ORSA_DEBUG("%7s = %12.6g [sampled] = %12.6g [layers] + %12.6g   nominal: %+12.6g   delta: %+12.6g   sigma: %12.6g",
-                           mod_gravityData_key(gravityData.get(),i).toStdString().c_str(),
-                           gsl_vector_get(sh,i)+(*layer_coeff),
-                           (*layer_coeff),
-                           gsl_vector_get(sh,i),
-                           mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),i)),
-                           gsl_vector_get(sh,i)+(*layer_coeff)-mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),i)),
-                           sqrt(gsl_matrix_get(pds_covm,i,i)));
-                
-                gsl_matrix_free(pds_covm);
+        for (size_t i=0; i<M; ++i) {
+            gsl_vector_set(sampleCoeff_x,i,orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(sigma[i]));
+        }
+        //
+        gsl_blas_dgemv(CblasNoTrans,1.0,evec,sampleCoeff_x,0.0,sampleCoeff_y);
+        //
+        for (size_t i=0; i<M; ++i) {
+            
+            // correction due to layers
+            orsa::Cache<double> layer_coeff;
+            if (massDistribution.get() == 0) {
+                layer_coeff = 0.0;
+            } else if (massDistribution->layerData.get() == 0) {
+                layer_coeff = 0.0;
+            } else {
+                const QString ref_key = mod_gravityData_key(gravityData.get(),i);
+                if (ref_key == "GM") {
+                    // ORSA_DEBUG("found: [%s]",ref_key.toStdString().c_str());
+                    layer_coeff = massDistribution->layerData->totalExcessMass()*orsa::Unit::G();
+                } else {
+                    for (size_t l=1; l<=SH_degree; ++l) {
+                        for (size_t m=0; m<=l; ++m) {
+                            if (orsaPDS::RadioScienceGravityData::keyC(l,m) == ref_key) {
+                                // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
+                                layer_coeff = layerData_norm_C[l][m].get_d();
+                            } else if (orsaPDS::RadioScienceGravityData::keyS(l,m) == ref_key) {
+                                // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
+                                layer_coeff = layerData_norm_S[l][m].get_d();
+                            }                       
+                        }
+                    }
+                }
+            }
+            if (!layer_coeff.isSet()) {
+                ORSA_DEBUG("problems...");
+                exit(0);
+            }
+            // choose here if sampling or using nominal value
+            // nominal (no covariance sampling)
+            const double sampled_coeff = gsl_vector_get(pds_coeff,i) - layer_coeff;
+            // use covariance sampling
+            // const double sampled_coeff = gsl_vector_get(pds_coeff,i) - layer_coeff + gsl_vector_get(sampleCoeff_y,i);
+            
+            
+            // gsl_vector_set(sampleCoeff_y,i,sampled_coeff);
+            // gsl_vector_set(sh,z_sh,gsl_vector_get(sampleCoeff_y,z_sh));
+            //
+            gsl_vector_set(sh,i,sampled_coeff);
+            
+            // get again pds_covm because old one has been destroyed by the call to gsl_eigen_symmv
+            gsl_matrix * pds_covm  = mod_gravityData_getCovarianceMatrix(gravityData.get());
+            
+            ORSA_DEBUG("%7s = %12.6g [sampled] = %12.6g [layers] + %12.6g   nominal: %+12.6g   delta: %+12.6g   sigma: %12.6g",
+                       mod_gravityData_key(gravityData.get(),i).toStdString().c_str(),
+                       gsl_vector_get(sh,i)+(*layer_coeff),
+                       (*layer_coeff),
+                       gsl_vector_get(sh,i),
+                       mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),i)),
+                       gsl_vector_get(sh,i)+(*layer_coeff)-mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),i)),
+                       sqrt(gsl_matrix_get(pds_covm,i,i)));
+            
+            gsl_matrix_free(pds_covm);
+        }
+        
+        // solving here!
+        gsl_blas_dgemv(CblasNoTrans,1.0,pseudoInvA,sh,0.0,cT);
+        
+        gsl_vector * cT0 = gsl_vector_calloc(N);
+        gsl_vector_memcpy(cT0,cT);
+        
+        if (0) {
+            
+            // trying simulated annealing approach
+            
+            gsl_rng * rng = ::gsl_rng_alloc(gsl_rng_gfsr4);
+            const int randomSeed = time(NULL)*getpid();
+            ::gsl_rng_set(rng,randomSeed);
+            ORSA_DEBUG("simulated annealing random seed: %d",randomSeed);
+            
+            std::vector<orsa::Vector> rv;
+            //
+            {
+                const bool storeSamplePoints = false; // saving the points in rv
+                osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
+                    new orsa::RandomPointsInShape(shapeModel,
+                                                  0,
+                                                  numSamplePoints,
+                                                  storeSamplePoints);
+                orsa::Vector v;
+                randomPointsInShape->reset();
+                while (randomPointsInShape->get(v)) {
+                    rv.push_back(v);
+                }
             }
             
-            // solving here!
-            gsl_blas_dgemv(CblasNoTrans,1.0,pseudoInvA,sh,0.0,cT);
+            SIMAN_xp x0;
+            x0.R0_plate   = plateModelR0;
+            x0.R0_gravity = gravityData->R0;
+            x0.bulkDensity = bulkDensity;
+            x0.rv = rv;
+            x0.SH_degree = SH_degree;
+            x0.T_degree = T_degree;
+            x0.T_size = T_size;
+            x0.cT0 = cT0;
+            x0.uK = &uK[0];
+            x0.uK_size = N-M;
+            x0.factor.resize(x0.uK_size);
+            x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(2.50,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+            x0.maximumDensity = orsa::FromUnits(orsa::FromUnits(8.00,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+            x0.penaltyThreshold = 1.00;
             
-            gsl_vector * cT0 = gsl_vector_calloc(N);
-            gsl_vector_memcpy(cT0,cT);
-            
-            if (0) {
-                
-                // trying simulated annealing approach
-                
-                gsl_rng * rng = ::gsl_rng_alloc(gsl_rng_gfsr4);
-                const int randomSeed = time(NULL)*getpid();
-                ::gsl_rng_set(rng,randomSeed);
-                ORSA_DEBUG("simulated annealing random seed: %d",randomSeed);
-                
-                std::vector<orsa::Vector> rv;
-                //
-                {
-                    const bool storeSamplePoints = false; // saving the points in rv
-                    osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
-                        new orsa::RandomPointsInShape(shapeModel,
-                                                      0,
-                                                      numSamplePoints,
-                                                      storeSamplePoints);
-                    orsa::Vector v;
-                    randomPointsInShape->reset();
-                    while (randomPointsInShape->get(v)) {
-                        rv.push_back(v);
-                    }
-                }
-                
-                SIMAN_xp x0;
-                x0.R0_plate   = plateModelR0;
-                x0.R0_gravity = gravityData->R0;
-                x0.bulkDensity = bulkDensity;
-                x0.rv = rv;
-                x0.SH_degree = SH_degree;
-                x0.T_degree = T_degree;
-                x0.T_size = T_size;
-                x0.cT0 = cT0;
-                x0.uK = &uK[0];
-                x0.uK_size = N-M;
-                x0.factor.resize(x0.uK_size);
-                x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(2.50,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-                x0.maximumDensity = orsa::FromUnits(orsa::FromUnits(8.00,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-                x0.penaltyThreshold = 1.00;
-                
-                if (massDistribution.get() != 0) {
-                    x0.layerData = massDistribution->layerData;
-                } else {
-                    x0.layerData = 0;
-                }
-                
-                // fix value of x0.factor[]  
-                
-                if (have_CCMDF_file) {
-                    
-                    // using the input CCMDF
-                    const size_t cT_CCMDF_degree = massDistribution->coeff.size()-1;
-                    const size_t cT_CCMDF_size   = CubicChebyshevMassDistribution::totalSize(cT_CCMDF_degree);
-                    size_t Tx,Ty,Tz;
-                    for (size_t b=0; b<x0.uK_size; ++b) {
-                        x0.factor[b] = 0.0;
-                        for (size_t s=0; s<N; ++s) {
-                            double cT_CCMDF = 0.0; // default value
-                            if (s < cT_CCMDF_size) {
-                                CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,s);
-                                cT_CCMDF = massDistribution->coeff[Tx][Ty][Tz];
-                            }
-                            x0.factor[b] += (cT_CCMDF-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
-                        }
-                        ORSA_DEBUG("factor[%03i] = %g",b,x0.factor[b]);
-                    }
-                    
-                } else {
-                    // get as close as possible to cT = {1,0,0,0,0...} = constant density
-                    // project (1,0,0,0..) - cT0 along uK_b
-                    for (size_t b=0; b<x0.uK_size; ++b) {
-                        x0.factor[b] = 0.0;
-                        for (size_t s=0; s<N; ++s) {
-                            if (s==0) {
-                                // first element of target cT = 1
-                                x0.factor[b] += (1.0-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
-                            } else {
-                                // all other elements of target cT = 0
-                                x0.factor[b] += (0.0-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
-                            }
-                        }
-                        ORSA_DEBUG("factor[%03i] = %g",b,x0.factor[b]);
-                    }
-                }
-                
-                gsl_siman_solve(rng, &x0, E1, S1, M1, P1,
-                                SIMAN_copy, SIMAN_copy_construct, SIMAN_destroy,
-                                0, params);
-                
+            if (massDistribution.get() != 0) {
+                x0.layerData = massDistribution->layerData;
+            } else {
+                x0.layerData = 0;
             }
             
-            if (1) {
+            // fix value of x0.factor[]  
+            
+            if (have_CCMDF_file) {
                 
-                // moving layers...
-                
-                const size_t uK_size = N-M;
-                std::vector<double> factor;
-                factor.resize(uK_size);
-                const double minimumDensity = orsa::FromUnits(orsa::FromUnits(2.50,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-                const double maximumDensity = orsa::FromUnits(orsa::FromUnits(8.00,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-                const double penaltyThreshold = 1.00;
-              
-                std::vector<orsa::Vector> rv;
-                //
-                {
-                    const bool storeSamplePoints = false; // saving the points in rv
-                    osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
-                        new orsa::RandomPointsInShape(shapeModel,
-                                                      0,
-                                                      numSamplePoints,
-                                                      storeSamplePoints);
-                    orsa::Vector v;
-                    randomPointsInShape->reset();
-                    while (randomPointsInShape->get(v)) {
-                        rv.push_back(v);
-                    }
-                }
-                
-                // fix value of x0.factor[]  
-                
-                /* 
-                   if (have_CCMDF_file) {
-                   // using the input CCMDF
-                   const size_t cT_CCMDF_degree = massDistribution->coeff.size()-1;
-                   const size_t cT_CCMDF_size   = CubicChebyshevMassDistribution::totalSize(cT_CCMDF_degree);
-                   size_t Tx,Ty,Tz;
-                   for (size_t b=0; b<uK_size; ++b) {
-                   factor[b] = 0.0;
-                   for (size_t s=0; s<N; ++s) {
-                   double cT_CCMDF = 0.0; // default value
-                   if (s < cT_CCMDF_size) {
-                   CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,s);
-                   cT_CCMDF = massDistribution->coeff[Tx][Ty][Tz];
-                   }
-                   factor[b] += (cT_CCMDF-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
-                   }
-                   ORSA_DEBUG("factor[%03i] = %g",b,factor[b]);
-                   }
-                   } else 
-                */
-                {
-                    //
-                    // get as close as possible to cT = {1,0,0,0,0...} = constant density
-                    // project (1,0,0,0..) - cT0 along uK_b
-                    for (size_t b=0; b<uK_size; ++b) {
-                        factor[b] = 0.0;
-                        for (size_t s=0; s<N; ++s) {
-                            if (s==0) {
-                                // first element of target cT = 1
-                                factor[b] += (1.0-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
-                            } else {
-                                // all other elements of target cT = 0
-                                factor[b] += (0.0-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
-                            }
+                // using the input CCMDF
+                const size_t cT_CCMDF_degree = massDistribution->coeff.size()-1;
+                const size_t cT_CCMDF_size   = CubicChebyshevMassDistribution::totalSize(cT_CCMDF_degree);
+                size_t Tx,Ty,Tz;
+                for (size_t b=0; b<x0.uK_size; ++b) {
+                    x0.factor[b] = 0.0;
+                    for (size_t s=0; s<N; ++s) {
+                        double cT_CCMDF = 0.0; // default value
+                        if (s < cT_CCMDF_size) {
+                            CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,s);
+                            cT_CCMDF = massDistribution->coeff[Tx][Ty][Tz];
                         }
-                        ORSA_DEBUG("factor[%03i] = %g",b,factor[b]);
+                        x0.factor[b] += (cT_CCMDF-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
                     }
+                    ORSA_DEBUG("factor[%03i] = %g",b,x0.factor[b]);
                 }
                 
-                gsl_vector * cT = gsl_vector_alloc(T_size);
-                gsl_vector_memcpy(cT,cT0);
+            } else {
+                // get as close as possible to cT = {1,0,0,0,0...} = constant density
+                // project (1,0,0,0..) - cT0 along uK_b
+                for (size_t b=0; b<x0.uK_size; ++b) {
+                    x0.factor[b] = 0.0;
+                    for (size_t s=0; s<N; ++s) {
+                        if (s==0) {
+                            // first element of target cT = 1
+                            x0.factor[b] += (1.0-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
+                        } else {
+                            // all other elements of target cT = 0
+                            x0.factor[b] += (0.0-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
+                        }
+                    }
+                    ORSA_DEBUG("factor[%03i] = %g",b,x0.factor[b]);
+                }
+            }
+            
+            gsl_siman_solve(rng, &x0, E1, S1, M1, P1,
+                            SIMAN_copy, SIMAN_copy_construct, SIMAN_destroy,
+                            0, params);
+            
+        }
+        
+        if (1) {
+            
+            // moving layers...
+            
+            const size_t uK_size = N-M;
+            std::vector<double> factor;
+            factor.resize(uK_size);
+            const double minimumDensity = orsa::FromUnits(orsa::FromUnits(2.50,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+            const double maximumDensity = orsa::FromUnits(orsa::FromUnits(8.00,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+            const double penaltyThreshold = 1.00;
+            
+            std::vector<orsa::Vector> rv;
+            //
+            {
+                const bool storeSamplePoints = false; // saving the points in rv
+                osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
+                    new orsa::RandomPointsInShape(shapeModel,
+                                                  0,
+                                                  numSamplePoints,
+                                                  storeSamplePoints);
+                orsa::Vector v;
+                randomPointsInShape->reset();
+                while (randomPointsInShape->get(v)) {
+                    rv.push_back(v);
+                }
+            }
+            
+            // fix value of x0.factor[]  
+            
+            /* 
+               if (have_CCMDF_file) {
+               // using the input CCMDF
+               const size_t cT_CCMDF_degree = massDistribution->coeff.size()-1;
+               const size_t cT_CCMDF_size   = CubicChebyshevMassDistribution::totalSize(cT_CCMDF_degree);
+               size_t Tx,Ty,Tz;
+               for (size_t b=0; b<uK_size; ++b) {
+               factor[b] = 0.0;
+               for (size_t s=0; s<N; ++s) {
+               double cT_CCMDF = 0.0; // default value
+               if (s < cT_CCMDF_size) {
+               CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,s);
+               cT_CCMDF = massDistribution->coeff[Tx][Ty][Tz];
+               }
+               factor[b] += (cT_CCMDF-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
+               }
+               ORSA_DEBUG("factor[%03i] = %g",b,factor[b]);
+               }
+               } else 
+            */
+            {
+                //
+                // get as close as possible to cT = {1,0,0,0,0...} = constant density
+                // project (1,0,0,0..) - cT0 along uK_b
                 for (size_t b=0; b<uK_size; ++b) {
-                    for (size_t j=0; j<T_size; ++j) {
-                        gsl_vector_set(cT,j,gsl_vector_get(cT,j)+factor[b]*gsl_vector_get(uK[b],j));
+                    factor[b] = 0.0;
+                    for (size_t s=0; s<N; ++s) {
+                        if (s==0) {
+                            // first element of target cT = 1
+                            factor[b] += (1.0-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
+                        } else {
+                            // all other elements of target cT = 0
+                            factor[b] += (0.0-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
+                        }
                     }
+                    ORSA_DEBUG("factor[%03i] = %g",b,factor[b]);
                 }
-                
-                CubicChebyshevMassDistribution::CoefficientType coeff;
-                CubicChebyshevMassDistribution::resize(coeff,T_degree); 
-                
-                for (unsigned int i=0; i<=T_degree; ++i) {
-                    for (unsigned int j=0; j<=T_degree-i; ++j) {
-                        for (unsigned int k=0; k<=T_degree-i-j; ++k) {
-                            if (i+j+k<=T_degree) {
-                                const size_t index = CubicChebyshevMassDistribution::index(i,j,k);
-                                coeff[i][j][k] = gsl_vector_get(cT,index);
-                            }
-                        }            
-                    }
+            }
+            
+            gsl_vector * cT = gsl_vector_alloc(T_size);
+            gsl_vector_memcpy(cT,cT0);
+            for (size_t b=0; b<uK_size; ++b) {
+                for (size_t j=0; j<T_size; ++j) {
+                    gsl_vector_set(cT,j,gsl_vector_get(cT,j)+factor[b]*gsl_vector_get(uK[b],j));
                 }
-                
-                osg::ref_ptr<CubicChebyshevMassDistribution> newMassDistribution =
-                    new CubicChebyshevMassDistribution(coeff,bulkDensity,plateModelR0,massDistribution->layerData);
-                
-                osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
-                orsa::Cache<double> minDensity, maxDensity;
-                std::vector<double> dv;
-                dv.resize(rv.size());
-                for (size_t k=0; k<rv.size(); ++k) {
-                    dv[k] = newMassDistribution->density(rv[k]);
-                    stat->insert(dv[k]);
-                    minDensity.setIfSmaller(dv[k]);
-                    maxDensity.setIfLarger(dv[k]);
+            }
+            
+            CubicChebyshevMassDistribution::CoefficientType coeff;
+            CubicChebyshevMassDistribution::resize(coeff,T_degree); 
+            
+            for (unsigned int i=0; i<=T_degree; ++i) {
+                for (unsigned int j=0; j<=T_degree-i; ++j) {
+                    for (unsigned int k=0; k<=T_degree-i-j; ++k) {
+                        if (i+j+k<=T_degree) {
+                            const size_t index = CubicChebyshevMassDistribution::index(i,j,k);
+                            coeff[i][j][k] = gsl_vector_get(cT,index);
+                        }
+                    }            
                 }
-                
-                const double averageDensity = stat->average();
-
-                const double penalty =
-                    MassDistributionPenalty(rv,
+            }
+            
+            osg::ref_ptr<CubicChebyshevMassDistribution> newMassDistribution =
+                new CubicChebyshevMassDistribution(coeff,bulkDensity,plateModelR0,massDistribution->layerData);
+            
+            osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
+            orsa::Cache<double> minDensity, maxDensity;
+            std::vector<double> dv;
+            dv.resize(rv.size());
+            for (size_t k=0; k<rv.size(); ++k) {
+                dv[k] = newMassDistribution->density(rv[k]);
+                stat->insert(dv[k]);
+                minDensity.setIfSmaller(dv[k]);
+                maxDensity.setIfLarger(dv[k]);
+            }
+            
+            const double averageDensity = stat->average();
+            
+            const double penalty =
+                MassDistributionPenalty(rv,
                                             dv,
-                                            newMassDistribution.get());
-                
+                                        newMassDistribution.get());
+            
 #warning find a better way to compute average density? (based on simplexIntegral and not on randomPointsInShape)
-                
-                ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]   penalty: %g",
-                           orsa::FromUnits(orsa::FromUnits(minDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
-                           orsa::FromUnits(orsa::FromUnits(maxDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
-                           orsa::FromUnits(orsa::FromUnits(averageDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
-                           penalty);
-                
-                if ( (minDensity >= minimumDensity) &&
-                     (maxDensity <= maximumDensity) &&
-                     (penalty <= penaltyThreshold) ) {
-                    // another quick output...
+            
+            ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]   penalty: %g",
+                       orsa::FromUnits(orsa::FromUnits(minDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+                       orsa::FromUnits(orsa::FromUnits(maxDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+                       orsa::FromUnits(orsa::FromUnits(averageDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+                       penalty);
+            
+            if ( (minDensity >= minimumDensity) &&
+                 (maxDensity <= maximumDensity) &&
+                 (penalty <= penaltyThreshold) ) {
+                // another quick output...
 #warning pass filename as parameter...
-                    CubicChebyshevMassDistributionFile::CCMDF_data data;
-                    data.minDensity = minDensity;
-                    data.maxDensity = maxDensity;
-                    data.deltaDensity = maxDensity-minDensity;
-                    data.penalty = penalty;
-                    data.densityScale = bulkDensity;
-                    data.R0 = plateModelR0;
-                    data.SH_degree = SH_degree;
-                    data.coeff = coeff;
-                    data.layerData = newMassDistribution->layerData;
-                    CubicChebyshevMassDistributionFile::append(data,"CCMDF.out");
-                }
-                
+                CubicChebyshevMassDistributionFile::CCMDF_data data;
+                data.minDensity = minDensity;
+                data.maxDensity = maxDensity;
+                data.deltaDensity = maxDensity-minDensity;
+                data.penalty = penalty;
+                data.densityScale = bulkDensity;
+                data.R0 = plateModelR0;
+                data.SH_degree = SH_degree;
+                data.coeff = coeff;
+                data.layerData = newMassDistribution->layerData;
+                CubicChebyshevMassDistributionFile::append(data,"CCMDF.out");
             }
             
         }
+        
     }
     
     // free GSL stuff
