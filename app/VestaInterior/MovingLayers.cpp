@@ -763,42 +763,28 @@ int main(int argc, char **argv) {
                 
                 // fix value of x0.factor[]  
                 
-                if (have_CCMDF_file) {
-                    
-                    std::vector<orsa::Vector> rv;
+                /* 
+                   if (have_CCMDF_file) {
+                   // using the input CCMDF
+                   const size_t cT_CCMDF_degree = massDistribution->coeff.size()-1;
+                   const size_t cT_CCMDF_size   = CubicChebyshevMassDistribution::totalSize(cT_CCMDF_degree);
+                   size_t Tx,Ty,Tz;
+                   for (size_t b=0; b<uK_size; ++b) {
+                   factor[b] = 0.0;
+                   for (size_t s=0; s<N; ++s) {
+                   double cT_CCMDF = 0.0; // default value
+                   if (s < cT_CCMDF_size) {
+                   CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,s);
+                   cT_CCMDF = massDistribution->coeff[Tx][Ty][Tz];
+                   }
+                   factor[b] += (cT_CCMDF-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
+                   }
+                   ORSA_DEBUG("factor[%03i] = %g",b,factor[b]);
+                   }
+                   } else 
+                */
+                {
                     //
-                    {
-                        const bool storeSamplePoints = false; // saving the points in rv
-                        osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
-                            new orsa::RandomPointsInShape(shapeModel,
-                                                          0,
-                                                          numSamplePoints,
-                                                          storeSamplePoints);
-                        orsa::Vector v;
-                        randomPointsInShape->reset();
-                        while (randomPointsInShape->get(v)) {
-                            rv.push_back(v);
-                        }
-                    }
-                    
-                    // using the input CCMDF
-                    const size_t cT_CCMDF_degree = massDistribution->coeff.size()-1;
-                    const size_t cT_CCMDF_size   = CubicChebyshevMassDistribution::totalSize(cT_CCMDF_degree);
-                    size_t Tx,Ty,Tz;
-                    for (size_t b=0; b<uK_size; ++b) {
-                        factor[b] = 0.0;
-                        for (size_t s=0; s<N; ++s) {
-                            double cT_CCMDF = 0.0; // default value
-                            if (s < cT_CCMDF_size) {
-                                CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,s);
-                                cT_CCMDF = massDistribution->coeff[Tx][Ty][Tz];
-                            }
-                            factor[b] += (cT_CCMDF-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
-                        }
-                        ORSA_DEBUG("factor[%03i] = %g",b,factor[b]);
-                    }
-                    
-                } else {
                     // get as close as possible to cT = {1,0,0,0,0...} = constant density
                     // project (1,0,0,0..) - cT0 along uK_b
                     for (size_t b=0; b<uK_size; ++b) {
