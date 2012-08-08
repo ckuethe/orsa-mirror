@@ -637,6 +637,8 @@ int main(int argc, char **argv) {
         //
         const double layersTotalMassFraction = massDistribution->layerData->totalExcessMass() / (GM/orsa::Unit::G());
         const double uniformShapeMassFraction = 1.0 - massDistribution->layerData->totalExcessMass()*orsa::Unit::G()/GM;
+        ORSA_DEBUG("layers total mass fraction: %g   uniform shape total mass fraction: %g",layersTotalMassFraction,uniformShapeMassFraction);
+        //
         for (size_t i=0; i<M; ++i) {
             
             // correction due to layers
