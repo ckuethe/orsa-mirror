@@ -112,7 +112,7 @@ public:
                 if (norm_A[l].size() != norm_B[l].size()) {
                     ORSA_DEBUG("problems...");
                 }
-                for (size_t m=0; m<norm_A[l].size(); ++m) {
+                for (size_t m=0; m<=l; ++m) {
                     if ( (norm_A[l][m] != 0.0) ||
                          (norm_B[l][m] != 0.0) ) {
                         const double Nf = normalization_factor(l,m);

@@ -405,7 +405,7 @@ protected:
     }
     
 public:
-    double getIntegral(const int & nx, const int & ny, const int & nz) const {
+    double getIntegral(const int & nx, const int & ny, const int & nz, const bool verbose=true) const {
         const size_t degree = nx+ny+nz;
         const size_t index = getIndex(nx,ny,nz);
         if (val.size() <= index) {
@@ -418,7 +418,7 @@ public:
             if (!needToCompute) {
                 val[index] = DBval;
             } else {
-                ORSA_DEBUG("value for [%i][%i][%i] not available, computing it...",nx,ny,nz);
+                if (verbose) ORSA_DEBUG("value for [%i][%i][%i] not available, computing it...",nx,ny,nz);
                 
                 std::vector<FiveVars> fvv;
                 
@@ -489,7 +489,7 @@ public:
                             if ( (!val[trii.index].isSet()) &&
                                  (!inDB(DBval,trii.index)) ) {
                                 ii.push_back(trii);
-                                ORSA_DEBUG("also including computation for [%i][%i][%i]...",gx,gy,gz);
+                                if (verbose) ORSA_DEBUG("also including computation for [%i][%i][%i]...",gx,gy,gz);
                             }
                         }
                         // }

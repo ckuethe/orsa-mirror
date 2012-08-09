@@ -504,7 +504,7 @@ double LayerData::SHLayer::volume() const {
     
     if (volume_.isSet()) return volume_;
     
-    const double dummy_R0 = orsa::FromUnits(100.0,orsa::Unit::KM);
+    const double dummy_R0 = orsa::FromUnits(300.0,orsa::Unit::KM);
     
     const std::string SQLiteDBFileName = getSqliteDBFileName_SH(MD5(),dummy_R0);
     

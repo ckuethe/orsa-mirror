@@ -68,6 +68,8 @@ public:
     size_t N;
     osg::ref_ptr<orsaPDS::RadioScienceGravityData> gravityData;
     gsl_vector * pds_coeff;
+    std::vector< std::vector<mpf_class> > uniformShape_norm_C;
+    std::vector< std::vector<mpf_class> > uniformShape_norm_S;
     // keep field entries in sync with copy function below!
 };
 
@@ -96,6 +98,8 @@ void SIMAN_copy (void * source, void * dest) {
     d->N                   = s->N;
     d->gravityData         = s->gravityData;
     d->pds_coeff           = s->pds_coeff;
+    d->uniformShape_norm_C = s->uniformShape_norm_C;
+    d->uniformShape_norm_S = s->uniformShape_norm_S;
 }
 
 void * SIMAN_copy_construct (void * xp) {
@@ -136,6 +140,8 @@ double M1(void * xp, void * yp) {
 }
 
 void S1(const gsl_rng * r, void * xp, double step_size) {
+    
+    ORSA_DEBUG("step size: %g",step_size);
     
     SIMAN_xp * x = (SIMAN_xp *) xp;
     

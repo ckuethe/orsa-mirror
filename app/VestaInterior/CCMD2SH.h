@@ -22,6 +22,8 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
     const double volume = si->getIntegral(0,0,0)*orsa::cube(plateModelR0);
     
     ORSA_DEBUG("volume: %g",volume);
+
+    const bool verbose=false;
     
     double mass_cT = 0.0;
     double i1d = 0.0;
@@ -305,14 +307,13 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
         }
 
         {
-            const double dummy_R0 = orsa::FromUnits(100.0,orsa::Unit::KM);
             const LayerData::SHLayerVectorType & shlv = CCMD->layerData->shLayerVector;
             for (size_t k=0; k<shlv.size(); ++k) {
                 
-                const std::string SQLiteDBFileName = getSqliteDBFileName_SH(shlv[k]->MD5(),dummy_R0);
+                const std::string SQLiteDBFileName = getSqliteDBFileName_SH(shlv[k]->MD5(),plateModelR0);
                 osg::ref_ptr< SHIntegration<T> > shi = new SHIntegration<T>(shlv[k]->norm_A,
                                                                             shlv[k]->norm_B,
-                                                                            dummy_R0,
+                                                                            plateModelR0,
                                                                             SQLiteDBFileName);
                 
                 // const size_t layer_degree = shlv[k]->norm_A.size()-1;
@@ -335,6 +336,7 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
                 const double CMz_over_plateModelR0 = shlv[k]->v0.getZ()/plateModelR0;
                 
                 for (size_t l=0; l<=SH_degree; ++l) {
+                    const double radiusCorrectionFactor = orsa::int_pow(radiusCorrectionRatio,l);
                     for (size_t m=0; m<=l; ++m) {
                         
                         // ORSA_DEBUG("l=%i   m=%i",l,m);
@@ -387,6 +389,7 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
 
                                                 shlv_norm_C[l][m] +=
                                                     orsa::power_sign(bi+bj+bk) *
+                                                    radiusCorrectionFactor *
                                                     C_tri_norm[ni][nj][nk] *
                                                     mpz_class(orsa::binomial(ni,bi) *
                                                               orsa::binomial(nj,bj) *
@@ -394,10 +397,11 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
                                                     orsa::int_pow(CMx_over_plateModelR0,bi) *
                                                     orsa::int_pow(CMy_over_plateModelR0,bj) *
                                                     orsa::int_pow(CMz_over_plateModelR0,bk) *
-                                                    shi->getIntegral(ni-bi,nj-bj,nk-bk);
-
+                                                    shi->getIntegral(ni-bi,nj-bj,nk-bk,verbose);
+                                                
                                                 shlv_norm_S[l][m] += 
-                                                 orsa::power_sign(bi+bj+bk) *
+                                                    orsa::power_sign(bi+bj+bk) *
+                                                    radiusCorrectionFactor *
                                                     S_tri_norm[ni][nj][nk] *
                                                     mpz_class(orsa::binomial(ni,bi) *
                                                               orsa::binomial(nj,bj) *
@@ -405,7 +409,7 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
                                                     orsa::int_pow(CMx_over_plateModelR0,bi) *
                                                     orsa::int_pow(CMy_over_plateModelR0,bj) *
                                                     orsa::int_pow(CMz_over_plateModelR0,bk) *
-                                                    shi->getIntegral(ni-bi,nj-bj,nk-bk);
+                                                    shi->getIntegral(ni-bi,nj-bj,nk-bk,verbose);
                                                 
                                                 /* 
                                                    if (C_tri_integral[ni][nj][nk] != 0) {
