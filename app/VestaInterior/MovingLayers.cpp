@@ -117,6 +117,7 @@ gsl_matrix * mod_gravityData_getCovarianceMatrix(const orsaPDS::RadioScienceGrav
             }
         }
     }
+    gsl_matrix_free(covm);
     return mod_covm;   
 }
 

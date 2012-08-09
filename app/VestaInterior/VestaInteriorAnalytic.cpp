@@ -26,8 +26,6 @@ typedef dd_real simplex_T;
 template <typename T> std::vector< std::vector< std::vector<size_t> > > SimplexIntegration<T>::indexTable;
 template <typename T> std::vector< std::vector< std::vector< std::vector<size_t> > > > SimplexIntegration<T>::index4Table;
 
-
-
 /*******/
 
 // modified versions of RadioScienceGravityData calls, to include C10,C11,S11
@@ -119,6 +117,7 @@ gsl_matrix * mod_gravityData_getCovarianceMatrix(const orsaPDS::RadioScienceGrav
             }
         }
     }
+    gsl_matrix_free(covm);
     return mod_covm;   
 }
 
@@ -723,8 +722,7 @@ int main(int argc, char **argv) {
                             md_lD,
                             plateModelR0,
                             gravityData->R0);
-
-                    // scale coefficients 
+                    
                     const double layerMassFraction = massDistribution->layerData->totalExcessMass() / (GM/orsa::Unit::G());
                     for (size_t l=0; l<=SH_degree; ++l) {
                         for (size_t m=0; m<=l; ++m) {
