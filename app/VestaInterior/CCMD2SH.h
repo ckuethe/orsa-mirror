@@ -103,7 +103,7 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
         }
         // CM is also an output variable
         if (!CM.isSet()) CM = CM_sum_vector / CM_sum_mass;
-        print(CM);
+        // print(CM);
     }
     
     const double CMx_over_plateModelR0 = (*CM).getX()/plateModelR0;

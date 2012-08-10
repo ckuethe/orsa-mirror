@@ -1094,6 +1094,7 @@ double E1(void * xp) {
     const double uniformShapeMassFraction = 1.0 - x->layerData->totalExcessMass()*orsa::Unit::G()/x->gravityData->GM;
     ORSA_DEBUG("layers total mass fraction: %g   uniform shape total mass fraction: %g",layersTotalMassFraction,uniformShapeMassFraction);
     //
+    double alt_penalty = 0.0;
     for (size_t i=0; i<x->M; ++i) {
         
         // correction due to layers
@@ -1145,13 +1146,16 @@ double E1(void * xp) {
         // get again pds_covm because old one has been destroyed by the call to gsl_eigen_symmv
         gsl_matrix * pds_covm  = mod_gravityData_getCovarianceMatrix(x->gravityData.get());
         
-        ORSA_DEBUG("%7s = %12.6g [sampled] = %12.6g [layers] + %12.6g = %12.6g [uniformShape] + %12.6g  ///  nominal: %+12.6g   delta: %+12.6g   sigma: %12.6g",
+        const double alt_penalty_term = fabs((gsl_vector_get(x->pds_coeff,i) - uniformShape_coeff - layer_coeff)/(gsl_vector_get(x->pds_coeff,i)+orsa::epsilon()));
+        
+        ORSA_DEBUG("%7s = %12.6g [sampled] = %12.6g [layers] + %12.6g = %12.6g [uniformShape] + %12.6g   [alt_penalty: %12.6g]   nominal: %+12.6g   delta: %+12.6g   sigma: %12.6g",
                    mod_gravityData_key(x->gravityData.get(),i).toStdString().c_str(),
                    gsl_vector_get(sh,i)+(*layer_coeff),
                    (*layer_coeff),
                    gsl_vector_get(sh,i),
                    (*uniformShape_coeff),
                    gsl_vector_get(alt_sh,i),
+                   alt_penalty_term,
                    mod_gravityData_getCoeff(x->gravityData.get(),mod_gravityData_key(x->gravityData.get(),i)),
                    gsl_vector_get(sh,i)+(*layer_coeff)-mod_gravityData_getCoeff(x->gravityData.get(),mod_gravityData_key(x->gravityData.get(),i)),
                    sqrt(gsl_matrix_get(pds_covm,i,i)));
@@ -1166,8 +1170,12 @@ double E1(void * xp) {
            sqrt(gsl_matrix_get(pds_covm,i,i)));
         */
         
+        alt_penalty += alt_penalty_term*alt_penalty_term;
+        
         gsl_matrix_free(pds_covm);
     }
+    alt_penalty = sqrt(alt_penalty);
+    ORSA_DEBUG("alt_penalty: %g",alt_penalty);
     
     // solving here!
     gsl_blas_dgemv(CblasNoTrans,1.0,x->pseudoInvA,sh,0.0,cT);
@@ -1222,16 +1230,24 @@ double E1(void * xp) {
     // const double maxDensity = stat->max();
     const double averageDensity = stat->average();
     
-    const double penalty =
-        MassDistributionPenalty(x->rv,
-                                dv,
-                                massDistribution.get());
+    /* const double penalty =
+       MassDistributionPenalty(x->rv,
+       dv,
+       massDistribution.get());
+    */
     
-    ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]   penalty: %g",
+    /* ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]   penalty: %g",
+       orsa::FromUnits(orsa::FromUnits(minDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+       orsa::FromUnits(orsa::FromUnits(maxDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+       orsa::FromUnits(orsa::FromUnits(averageDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+       penalty);
+    */
+    
+    ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]   alt_penalty: %g",
                orsa::FromUnits(orsa::FromUnits(minDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
                orsa::FromUnits(orsa::FromUnits(maxDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
                orsa::FromUnits(orsa::FromUnits(averageDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
-               penalty);
+               alt_penalty);
     
     /* if ( (minDensity >= x->minimumDensity) &&
        (maxDensity <= x->maximumDensity) &&
@@ -1244,7 +1260,7 @@ double E1(void * xp) {
         data.minDensity = minDensity;
         data.maxDensity = maxDensity;
         data.deltaDensity = maxDensity-minDensity;
-        data.penalty = penalty;
+        data.penalty = alt_penalty; // data.penalty = penalty;
         data.densityScale = x->bulkDensity;
         data.R0 = x->R0_plate;
         data.SH_degree = x->SH_degree;
@@ -1259,5 +1275,6 @@ double E1(void * xp) {
     gsl_vector_free(cT);
     
     // generic
-    return 10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
+    // return 10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
+    return alt_penalty;
 }
