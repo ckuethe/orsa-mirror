@@ -35,10 +35,6 @@ public:
     osg::ref_ptr<orsaPDS::RadioScienceGravityData> gravityData;
     
 protected:
-    void singleIterationDone(const orsa::MultifitParameters *) const {
-        ORSA_DEBUG("--MARK--");
-    }
-protected:
     void computeAllFunctionCalls(const orsa::MultifitParameters *, 
                                  const orsa::MultifitData       *,
                                  const computeAllCallsMode) const;
@@ -48,6 +44,10 @@ public:
                const unsigned int p, 
                const int          d,
                const unsigned int row) const;
+protected:
+    void singleIterationDone(const orsa::MultifitParameters *) const;
+    void success(const orsa::MultifitParameters *) const;
+    void runCompleted(const bool /* success */, const orsa::MultifitParameters *) const;
 protected:
     int f_gsl(const gsl_vector * parameters, 
               void             * dataPoints, 

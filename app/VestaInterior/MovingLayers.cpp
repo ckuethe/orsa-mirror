@@ -1050,10 +1050,23 @@ int main(int argc, char **argv) {
             
             osg::ref_ptr<orsa::MultifitData> data = 
                 new orsa::MultifitData;
-            // alt_sh = residual gravity term = gravity - uniform shape
-            for (size_t row=0; row<M; ++row) {
-                data->insertF(row,gsl_vector_get(alt_sh,row));
-                data->insertSigma(row,1.0);
+            {
+                // alt_sh = residual gravity term = gravity - uniform shape
+                gsl_matrix * pds_covm  = mod_gravityData_getCovarianceMatrix(gravityData.get());
+                for (size_t row=0; row<M; ++row) {
+                    data->insertF(row,gsl_vector_get(alt_sh,row));
+                    // double sigma = sqrt(gsl_matrix_get(pds_covm,row,row));
+                    // if (sigma == 0.0) sigma = 1.0e-3*data->getF(row); // for degree 1 terms, which have zero covariance
+                    // this sigma is not the one from data, but it's arbitrarily chosen to make the algorithm converge
+                    const double sigma = 1.0e-6 + 0.01*fabs(data->getF(row));
+                    data->insertSigma(row,sigma);
+                    ORSA_DEBUG("F for index %03i = [%7s] = %12.6g +/- %12.6g",
+                               row,
+                               mod_gravityData_key(gravityData.get(),row).toStdString().c_str(),
+                               data->getF(row),
+                               data->getSigma(row));
+                }
+                gsl_matrix_free(pds_covm);
             }
             
             std::vector<MovingLayersMultifit::SHLayerData> shLayerData;
@@ -1403,7 +1416,7 @@ double MovingLayersMultifit::fun(const orsa::MultifitParameters * par,
         
         LayerData::SHLayer::SHcoeff norm_A;
         LayerData::SHLayer::SHcoeff norm_B;
-
+        
         norm_A.resize(shLayerData[k].degree+1);
         norm_B.resize(shLayerData[k].degree+1);
         for (size_t l=0; l<=shLayerData[k].degree; ++l) {
@@ -1457,6 +1470,11 @@ double MovingLayersMultifit::fun(const orsa::MultifitParameters * par,
     
     osg::ref_ptr<LayerData> layerData = new LayerData(ellipsoidLayerVector,
                                                       newSHLayerVector);
+    
+    /* if (p==d==0) {
+       latestLayerData = layerData;
+       }
+    */
     
     std::vector< std::vector<mpf_class> > layerData_norm_C;
     std::vector< std::vector<mpf_class> > layerData_norm_S;
@@ -1573,4 +1591,16 @@ double MovingLayersMultifit::fun(const orsa::MultifitParameters * par,
     */
     
     return retVal;
+}
+
+void MovingLayersMultifit::singleIterationDone(const orsa::MultifitParameters *) const {
+    
+}
+
+void MovingLayersMultifit::success(const orsa::MultifitParameters *) const {
+    
+}
+
+void MovingLayersMultifit::runCompleted(const bool /* success */, const orsa::MultifitParameters *) const {
+    
 }
