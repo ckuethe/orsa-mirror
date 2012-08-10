@@ -1,4 +1,5 @@
 #include "MovingLayers.h"
+#include "MovingLayers_multifit.h"
 
 #include <orsa/chebyshev.h>
 #include <orsa/statistic.h>
@@ -969,9 +970,9 @@ int main(int argc, char **argv) {
 #endif // 0
             
         }
-
-        if (1) {
-            // moving layers v2
+        
+        if (0) {
+            // moving layers v2, simulate annealing
             
             std::vector<orsa::Vector> rv;
             //
@@ -1023,6 +1024,79 @@ int main(int argc, char **argv) {
             gsl_siman_solve(rng, &x0, E1, S1, M1, P1,
                             SIMAN_copy, SIMAN_copy_construct, SIMAN_destroy,
                             0, params);
+        }
+
+        if (1) {
+            
+            // moving layers via multifit
+
+            const double delta = orsa::FromUnits(10.0,orsa::Unit::METER);
+            osg::ref_ptr<orsa::MultifitParameters> par = 
+                new orsa::MultifitParameters;
+            char varName[4096];
+            for (size_t k=0; k<massDistribution->layerData->shLayerVector.size(); ++k) {
+                const osg::ref_ptr<LayerData::SHLayer> shL = massDistribution->layerData->shLayerVector[k];
+                for (size_t l=0; l<shL->norm_A.size(); ++l) {
+                    for (size_t m=0; m<=l; ++m) {
+                        sprintf(varName,"sh%03i_A%03i%03i",k,l,m);
+                        par->insert(varName,shL->norm_A[l][m],delta);
+                        if (m!=0) {
+                            sprintf(varName,"sh%03i_B%03i%03i",k,l,m);
+                            par->insert(varName,shL->norm_B[l][m],delta);
+                        }
+                    }
+                }
+            }
+            
+            osg::ref_ptr<orsa::MultifitData> data = 
+                new orsa::MultifitData;
+            // alt_sh = residual gravity term = gravity - uniform shape
+            for (size_t row=0; row<M; ++row) {
+                data->insertF(row,gsl_vector_get(alt_sh,row));
+                data->insertSigma(row,1.0);
+            }
+            
+            osg::ref_ptr<MovingLayersMultifit> m3 = new MovingLayersMultifit;
+            //
+            m3->setMultifitParameters(par.get());
+            m3->setMultifitData(data.get());
+            //
+            m3->setLogFile("MovingLayersMultifit.log");
+            //
+            m3->run();
+            
+            for (size_t row=0; row<M; ++row) {
+                const double f = data->getF(row);
+                const double T = m3->fun(par.get(),
+                                         data.get(),
+                                         0,
+                                         0,
+                                         row);
+                const double err = T-f;
+                ORSA_DEBUG("FINAL: %+.3f %+.3f %+.3f",
+                           f,T,err);
+            }
+            
+            for (size_t s=0; s<par->totalSize(); ++s) {
+                ORSA_DEBUG("par[%03i] = [%s] = %+12.6f",s,par->name(s).c_str(),par->get(s));
+            }
+            
+#warning save final values here
+            ORSA_DEBUG("Save final values here!!! see sample code below in source code file...");
+            /* for (size_t s=0; s<=T_degree; ++s) {
+               for (size_t i=0; i<=T_degree; ++i) {
+               for (size_t j=0; j<=T_degree-i; ++j) {
+               for (size_t k=0; k<=T_degree-i-j; ++k) {
+               if (i+j+k==s) {
+               sprintf(varName,"c%03i%03i%03i",i,j,k);
+               densityCCC[i][j][k] = par->get(varName);
+               }
+               }
+               }
+               }
+               }
+            */
+            
         }
         
         
