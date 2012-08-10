@@ -30,6 +30,9 @@ public:
     std::vector< std::vector<mpf_class> > uniformShape_norm_S;
     double R0_plate;
     double R0_gravity;
+    double bulkDensity;
+    double layersTotalMassFraction;
+    double uniformShapeMassFraction;
     orsa::Vector sampled_CM;
     osg::ref_ptr<SimplexIntegration<simplex_T> > si;
     osg::ref_ptr<orsaPDS::RadioScienceGravityData> gravityData;
@@ -45,6 +48,7 @@ public:
                const int          d,
                const unsigned int row) const;
 protected:
+    void save_CCMDF(const orsa::MultifitParameters *) const;
     void singleIterationDone(const orsa::MultifitParameters *) const;
     void success(const orsa::MultifitParameters *) const;
     void runCompleted(const bool /* success */, const orsa::MultifitParameters *) const;

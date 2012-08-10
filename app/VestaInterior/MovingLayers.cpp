@@ -74,11 +74,10 @@ double mod_gravityData_getCoeff(const orsaPDS::RadioScienceGravityData * gravity
     return coeff;
 }
 //
-/* double mod_gravityData_getCovar(const QString & key1, const QString & key2) {
-   double covar;
-   ORSA_DEBUG("complete here...");
-   }
-*/
+double mod_gravityData_getCoeff(const orsaPDS::RadioScienceGravityData * gravityData,
+                                const unsigned int & index) {
+    return mod_gravityData_getCoeff(gravityData,mod_gravityData_key(gravityData,index));
+}
 //
 unsigned int mod_gravityData_numberOfCoefficients(const orsaPDS::RadioScienceGravityData * gravityData) {
     return gravityData->numberOfCoefficients+3;
@@ -96,6 +95,7 @@ gsl_vector * mod_gravityData_getCoefficientVector(const orsaPDS::RadioScienceGra
             gsl_vector_set(mod_mu,k,gsl_vector_get(mu,k-3));
         }
     }
+    gsl_vector_free(mu);
     return mod_mu;
 }
 
@@ -1088,7 +1088,10 @@ int main(int argc, char **argv) {
             m3->uniformShape_norm_C = uniformShape_norm_C;
             m3->uniformShape_norm_S = uniformShape_norm_S;
             m3->R0_plate = plateModelR0;
-            m3-> R0_gravity = gravityData->R0;
+            m3->R0_gravity = gravityData->R0;
+            m3->bulkDensity = bulkDensity;
+            m3->layersTotalMassFraction = layersTotalMassFraction;
+            m3->uniformShapeMassFraction = uniformShapeMassFraction;
             m3->sampled_CM = sampled_CM;
             m3->si = si;
             m3->gravityData = gravityData;
@@ -1471,10 +1474,176 @@ double MovingLayersMultifit::fun(const orsa::MultifitParameters * par,
     osg::ref_ptr<LayerData> layerData = new LayerData(ellipsoidLayerVector,
                                                       newSHLayerVector);
     
-    /* if (p==d==0) {
-       latestLayerData = layerData;
-       }
-    */
+    std::vector< std::vector<mpf_class> > layerData_norm_C;
+    std::vector< std::vector<mpf_class> > layerData_norm_S;
+    {
+        layerData_norm_C.resize(SH_degree+1);
+        layerData_norm_S.resize(SH_degree+1);
+        for (size_t l=0; l<=SH_degree; ++l) {
+            layerData_norm_C[l].resize(l+1);
+            layerData_norm_S[l].resize(l+1);
+            for (size_t m=0; m<=l; ++m) {
+                layerData_norm_C[l][m] = 0.0;
+                layerData_norm_S[l][m] = 0.0;
+            }
+        }
+        
+        if (layerData.get() != 0) {
+            CubicChebyshevMassDistribution::CoefficientType md_lD_coeff;
+            CubicChebyshevMassDistribution::resize(md_lD_coeff,0);
+            md_lD_coeff[0][0][0] = 0;
+            osg::ref_ptr<CubicChebyshevMassDistribution> md_lD =
+                new CubicChebyshevMassDistribution(md_lD_coeff,
+                                                   0.0,    
+                                                   R0_plate,
+                                                   layerData.get());
+            orsa::Cache<orsa::Vector> CM = sampled_CM;
+            CM.lock();
+            CCMD2SH(CM,
+                    layerData_norm_C,
+                    layerData_norm_S,
+                    SH_degree, // gravityData->degree,
+                    si.get(),
+                    md_lD,
+                    R0_plate,
+                    R0_gravity);
+            
+            // scale for mass fraction later...
+            
+        }
+    }
+    
+    orsa::Cache<double> retVal;
+    
+    // double alt_penalty = 0.0;
+    // for (size_t i=0; i<SH_size; ++i) {
+    {
+        const size_t i = row;
+        
+        // correction due to layers
+        orsa::Cache<double> layer_coeff;
+        // orsa::Cache<double> uniformShape_coeff;
+        const QString ref_key = mod_gravityData_key(gravityData.get(),i);
+        if (ref_key == "GM") {
+            // ORSA_DEBUG("found: [%s]",ref_key.toStdString().c_str());
+            layer_coeff        =  layersTotalMassFraction*gravityData->GM;
+            // uniformShape_coeff = uniformShapeMassFraction*gravityData->GM;
+        } else {
+            for (size_t l=1; l<=SH_degree; ++l) {
+                for (size_t m=0; m<=l; ++m) {
+                    if (orsaPDS::RadioScienceGravityData::keyC(l,m) == ref_key) {
+                        // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
+                        layer_coeff        =     layersTotalMassFraction*layerData_norm_C[l][m].get_d();
+                        // uniformShape_coeff = uniformShapeMassFraction*uniformShape_norm_C[l][m].get_d();
+                    } else if (orsaPDS::RadioScienceGravityData::keyS(l,m) == ref_key) {
+                        // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
+                        layer_coeff        =     layersTotalMassFraction*layerData_norm_S[l][m].get_d();
+                        // uniformShape_coeff = uniformShapeMassFraction*uniformShape_norm_S[l][m].get_d();
+                    }                       
+                }
+            }
+        }
+        if (!layer_coeff.isSet()) {
+            ORSA_DEBUG("problems...");
+            exit(0);
+        }
+        
+        // only for i == row
+        retVal = layer_coeff;        
+    }
+    
+    if (!retVal.isSet()) {
+        ORSA_DEBUG("problems...");
+        exit(0);
+    }
+    
+    return retVal;
+}
+
+void MovingLayersMultifit::save_CCMDF(const orsa::MultifitParameters * par) const {
+    
+    char varName[4096];
+    
+    LayerData::SHLayerVectorType newSHLayerVector;
+    
+    // modify norm_A and normB coefficients for each SH layer
+    
+    for (size_t k=0; k<shLayerData.size(); ++k) {
+        
+        LayerData::SHLayer::SHcoeff norm_A;
+        LayerData::SHLayer::SHcoeff norm_B;
+        
+        norm_A.resize(shLayerData[k].degree+1);
+        norm_B.resize(shLayerData[k].degree+1);
+        for (size_t l=0; l<=shLayerData[k].degree; ++l) {
+            norm_A[l].resize(l+1);
+            norm_B[l].resize(l+1);
+            for (size_t m=0; m<=l; ++m) {
+                sprintf(varName,"sh%03i_A%03i%03i",k,l,m);
+                norm_A[l][m] = par->get(varName);
+                /* if (p == par->index(varName)) {
+                   norm_A[l][m] += d*par->getDelta(varName);
+                   } */
+                if (m!=0) {
+                    sprintf(varName,"sh%03i_B%03i%03i",k,l,m);
+                    norm_B[l][m] = par->get(varName);
+                    /* if (p == par->index(varName)) {
+                       norm_B[l][m] += d*par->getDelta(varName);
+                       } */
+                }
+            }
+        }
+        
+        // make sure the mass fractions are unchanged, by scaling all norm_A and norm_B coefficients by a volume correction factor^(1/3)
+        
+        osg::ref_ptr<LayerData::SHLayer> tmpSHLayer = new LayerData::SHLayer(shLayerData[k].excessDensity,
+                                                                             norm_A,
+                                                                             norm_B,
+                                                                             shLayerData[k].v0);
+        const double tmpVolume = tmpSHLayer->volume();
+        
+        const double volumeCorrectionFactor = cbrt(shLayerData[k].volume/tmpVolume);
+        
+        for (size_t l=0; l<norm_A.size(); ++l) {
+            for (size_t m=0; m<=l; ++m) {
+                norm_A[l][m] *= volumeCorrectionFactor;
+                if (m!=0) norm_B[l][m] *= volumeCorrectionFactor;
+            }
+        }
+        
+        for (size_t l=0; l<norm_A.size(); ++l) {
+            for (size_t m=0; m<=l; ++m) {
+                ORSA_DEBUG("SH: %i   norm_A[%i][%i] = %g",k,l,m,norm_A[l][m]);
+                if (m!=0) ORSA_DEBUG("SH: %i   norm_B[%i][%i] = %g",k,l,m,norm_B[l][m]);
+            }
+        }
+        
+        newSHLayerVector.push_back(new LayerData::SHLayer(shLayerData[k].excessDensity,
+                                                          norm_A,
+                                                          norm_B,
+                                                          shLayerData[k].v0));
+    }
+    
+    osg::ref_ptr<LayerData> layerData = new LayerData(ellipsoidLayerVector,
+                                                      newSHLayerVector);
+    
+    CubicChebyshevMassDistribution::CoefficientType coeff;
+    CubicChebyshevMassDistribution::resize(coeff,0);
+    coeff[0][0][0] = uniformShapeMassFraction;
+    
+    CubicChebyshevMassDistributionFile::CCMDF_data data;
+    data.minDensity   = 0.0;
+    data.maxDensity   = 0.0;
+    data.deltaDensity = 0.0;
+    data.penalty      = 0.0;
+    data.densityScale = bulkDensity;
+    data.R0           = R0_plate;
+    data.SH_degree    = SH_degree;
+    data.coeff        = coeff;
+    data.layerData    = layerData;
+    CubicChebyshevMassDistributionFile::append(data,"CCMDF.ML_multifit.out");
+    
+    // optional part below, just for display...
     
     std::vector< std::vector<mpf_class> > layerData_norm_C;
     std::vector< std::vector<mpf_class> > layerData_norm_S;
@@ -1515,37 +1684,30 @@ double MovingLayersMultifit::fun(const orsa::MultifitParameters * par,
         }
     }
     
-    const double layersTotalMassFraction  =       layerData->totalExcessMass()*orsa::Unit::G()/gravityData->GM;
-    const double uniformShapeMassFraction = 1.0 - layerData->totalExcessMass()*orsa::Unit::G()/gravityData->GM;
-    ORSA_DEBUG("layers total mass fraction: %g   uniform shape total mass fraction: %g",layersTotalMassFraction,uniformShapeMassFraction);
-    //
-
-    orsa::Cache<double> retVal;
+    gsl_vector * sh = gsl_vector_calloc(SH_size); // b  of A x = b
+    gsl_vector * alt_sh = gsl_vector_calloc(SH_size);
     
-    // double alt_penalty = 0.0;
-    // for (size_t i=0; i<SH_size; ++i) {
-    {
-        const size_t i = row;
+    for (size_t i=0; i<SH_size; ++i) {
         
         // correction due to layers
         orsa::Cache<double> layer_coeff;
-        // orsa::Cache<double> uniformShape_coeff;
+        orsa::Cache<double> uniformShape_coeff;
         const QString ref_key = mod_gravityData_key(gravityData.get(),i);
         if (ref_key == "GM") {
             // ORSA_DEBUG("found: [%s]",ref_key.toStdString().c_str());
             layer_coeff        =  layersTotalMassFraction*gravityData->GM;
-            // uniformShape_coeff = uniformShapeMassFraction*gravityData->GM;
+            uniformShape_coeff = uniformShapeMassFraction*gravityData->GM;
         } else {
             for (size_t l=1; l<=SH_degree; ++l) {
                 for (size_t m=0; m<=l; ++m) {
                     if (orsaPDS::RadioScienceGravityData::keyC(l,m) == ref_key) {
                         // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
                         layer_coeff        =     layersTotalMassFraction*layerData_norm_C[l][m].get_d();
-                        // uniformShape_coeff = uniformShapeMassFraction*uniformShape_norm_C[l][m].get_d();
+                        uniformShape_coeff = uniformShapeMassFraction*uniformShape_norm_C[l][m].get_d();
                     } else if (orsaPDS::RadioScienceGravityData::keyS(l,m) == ref_key) {
                         // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
                         layer_coeff        =     layersTotalMassFraction*layerData_norm_S[l][m].get_d();
-                        // uniformShape_coeff = uniformShapeMassFraction*uniformShape_norm_S[l][m].get_d();
+                        uniformShape_coeff = uniformShapeMassFraction*uniformShape_norm_S[l][m].get_d();
                     }                       
                 }
             }
@@ -1554,47 +1716,48 @@ double MovingLayersMultifit::fun(const orsa::MultifitParameters * par,
             ORSA_DEBUG("problems...");
             exit(0);
         }
-        /* if (!uniformShape_coeff.isSet()) {
-           ORSA_DEBUG("problems...");
-           exit(0);
-           }
-        */
+        if (!uniformShape_coeff.isSet()) {
+            ORSA_DEBUG("problems...");
+            exit(0);
+        }
+         // choose here if sampling or using nominal value
+        // nominal (no covariance sampling)
+        const double sampled_coeff = mod_gravityData_getCoeff(gravityData.get(),i) - layer_coeff;
+        // use covariance sampling
+        // const double sampled_coeff = gsl_vector_get(pds_coeff,i) - layer_coeff + gsl_vector_get(sampleCoeff_y,i);
+        //
+        const double sampled_alt_coeff = mod_gravityData_getCoeff(gravityData.get(),i) - uniformShape_coeff;
         
-        // for i == row
-        retVal = layer_coeff;        
+        gsl_vector_set(sh,i,sampled_coeff);
+        //
+        gsl_vector_set(alt_sh,i,sampled_alt_coeff);
+        
+        gsl_matrix * pds_covm  = mod_gravityData_getCovarianceMatrix(gravityData.get());
+        
+        const double alt_penalty_term = fabs(mod_gravityData_getCoeff(gravityData.get(),i) - uniformShape_coeff - layer_coeff);
+        
+        ORSA_DEBUG("%7s = %12.6g [sampled] = %12.6g [layers] + %12.6g = %12.6g [uniformShape] + %12.6g   [alt: %12.6g]   nominal: %+12.6g   delta: %+12.6g   sigma: %12.6g",
+                   mod_gravityData_key(gravityData.get(),i).toStdString().c_str(),
+                   gsl_vector_get(sh,i)+(*layer_coeff),
+                   (*layer_coeff),
+                   gsl_vector_get(sh,i),
+                   (*uniformShape_coeff),
+                   gsl_vector_get(alt_sh,i),
+                   alt_penalty_term,
+                   mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),i)),
+                   gsl_vector_get(sh,i)+(*layer_coeff)-mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),i)),
+                   sqrt(gsl_matrix_get(pds_covm,i,i)));
+        
+        gsl_matrix_free(pds_covm);
     }
-    // alt_penalty = sqrt(alt_penalty);
-    // ORSA_DEBUG("alt_penalty: %g",alt_penalty);
     
-    //  const double retVal = 
-
-    if (!retVal.isSet()) {
-        ORSA_DEBUG("problems...");
-        exit(0);
-    }
+    gsl_vector_free(sh);
+    gsl_vector_free(alt_sh);
     
-    /* {
-    // another quick output...
-    #warning pass filename as parameter...
-    CubicChebyshevMassDistributionFile::CCMDF_data data;
-    data.minDensity = minDensity;
-    data.maxDensity = maxDensity;
-    data.deltaDensity = maxDensity-minDensity;
-    data.penalty = alt_penalty; // data.penalty = penalty;
-    data.densityScale = bulkDensity;
-    data.R0 = R0_plate;
-    data.SH_degree = SH_degree;
-    data.coeff = coeff;
-    data.layerData = layerData;
-    CubicChebyshevMassDistributionFile::append(data,"CCMDF.ML.out");
-    }
-    */
-    
-    return retVal;
 }
 
-void MovingLayersMultifit::singleIterationDone(const orsa::MultifitParameters *) const {
-    
+void MovingLayersMultifit::singleIterationDone(const orsa::MultifitParameters * par) const {
+    save_CCMDF(par);
 }
 
 void MovingLayersMultifit::success(const orsa::MultifitParameters *) const {
