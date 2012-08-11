@@ -113,6 +113,7 @@ public:
     SHIntegration(const SHcoeff & nA,
                   const SHcoeff & nB,
                   const T & R0_,
+                  const T & epsrel_,
                   const std::string & SQLiteDBFileName) :
         osg::Referenced(),
         // N(3),
@@ -120,7 +121,8 @@ public:
         norm_B(nB),
         // triShape(s),
         // R0(R0_),
-        oneOverR0(1.0/R0_) {
+        oneOverR0(1.0/R0_),
+        epsrel(epsrel_) {
         
         int rc = sqlite3_open(SQLiteDBFileName.c_str(),&db);
         //
@@ -206,6 +208,7 @@ protected:
     const SHcoeff & norm_B;
     // const double R0;
     const T oneOverR0;
+    const T epsrel;
     mutable std::vector< orsa::Cache<double> > val; // integral value
     // mutable std::vector< SHInternals > aux;
     // val_vol_sum_fun is the sum over all simplexes of the funciton of given q times the volume of each simplex
@@ -531,9 +534,13 @@ public:
                 std::vector<size_t> pos;
                 pos.resize(Nr);
                 
+                const dd_real Nr_factorial_dd = mpzToDD(orsa::factorial(Nr));
+                dd_real min_abs_big_sum = 0.0;
+                dd_real coefficients_factor_threshold = 0.0;
+                
                 while (1) {
 
-                    if (1) {
+                    if (0) {
                         // debug only...
                         std::cout << "pos:";
                         size_t p=pos.size();
@@ -574,6 +581,14 @@ public:
                         std::cout << std::endl;
                     }
                     
+                    /* min_abs_big_sum=fabs(big_sum[0]);
+                       for (size_t jj=1; jj<ii.size(); ++jj) {
+                       if (fabs(big_sum[jj]) < min_abs_big_sum) min_abs_big_sum = fabs(big_sum[jj]);
+                       }
+                       // the 10 factor comes from the two integrals which are up to pi^2
+                       coefficients_factor_threshold = epsrel*min_abs_big_sum/(10*Nr_factorial_dd);
+                    */
+                    
                     std::vector<int> count;
                     count.resize(fvv.size());
                     for (size_t c=0; c<count.size(); ++c) {
@@ -582,12 +597,8 @@ public:
                     for (size_t s=0; s<Nr; ++s) {
                         ++count[pos[s]];
                     }
-                    mpz_class binomial_factor = orsa::factorial(Nr);
-                    for (size_t c=0; c<count.size(); ++c) {
-                        binomial_factor /= orsa::factorial(count[c]);
-                    }
-                    
-                    // ORSA_DEBUG("binomial_factor: %Zi",binomial_factor.get_mpz_t());
+
+                    bool skip_term=false;
                     
                     // dd_real just_norm_factors = 1.0;
                     dd_real coefficients_factor = 1.0;
@@ -606,11 +617,41 @@ public:
                         coefficients_factor *= pow(fvv[c].ABQ_R0,count[c]);
                         // just_norm_factors *= int_pow(normalization_factor(fv.l,fv.m),count[c]);
                         // if (coefficients_factor != 0) ORSA_DEBUG("nf[%i][%i] = %g    cf: %g",fv.l,fv.m,::to_double(normalization_factor(fv.l,fv.m)),::to_double(coefficients_factor));
+
+                        // can skip this term?
+                        if ( (fabs(coefficients_factor) < coefficients_factor_threshold) &&
+                             (fabs(fvv[c].ABQ_R0) < 1.0) &&
+                             (min_abs_big_sum != 0.0) ) {
+
+                            if (verbose) {
+                                std::cout << "pos:";
+                                size_t p=pos.size();
+                                while(p!=0) {
+                                    --p;
+                                    std::cout << " " << pos[p];
+                                }
+                                std::cout << std::endl;
+                                
+                                ORSA_DEBUG("skipping term, min_abs_big_sum = %g   coefficients_factor: %g",::to_double(min_abs_big_sum),::to_double(coefficients_factor));
+                            }
+                            
+                            skip_term=true;
+                            break;
+                        }
+                        
                     }
                     
                     // ORSA_DEBUG("coefficients_factor: %g",::to_double(coefficients_factor));
                     
-                    if (coefficients_factor != 0.0) {
+                    if ( (!skip_term) &&
+                         (coefficients_factor != 0.0) ) {
+                        
+                        mpz_class binomial_factor = orsa::factorial(Nr);
+                        for (size_t c=0; c<count.size(); ++c) {
+                            binomial_factor /= orsa::factorial(count[c]);
+                        }
+                        const dd_real binomial_factor_dd = mpzToDD(binomial_factor); 
+                        // ORSA_DEBUG("binomial_factor: %Zi",binomial_factor.get_mpz_t());
                         
                         // initial values...
                         /* int pow_cos_phi=nx;
@@ -654,20 +695,21 @@ public:
                             
                             // const T old_big_sum = big_sum;
                             big_sum[jj] +=
-                                mpzToDD(binomial_factor) *
+                                binomial_factor_dd * // mpzToDD(binomial_factor) *
                                 coefficients_factor *
                                 factor_phi_integral *
                                 factor_theta_integral;
                             
                             // ORSA_DEBUG("big_sum[%i] = %g",jj,::to_double(big_sum[jj]));
-                            
-                            if (verbose) ORSA_DEBUG("/ff/ %6g %+16.6f %6.3f %6.3f    big_sum[%i] = %+12.9g",
-                                                    binomial_factor.get_d(),
-                                                    ::to_double(coefficients_factor),
-                                                    ::to_double(factor_phi_integral),
-                                                    ::to_double(factor_theta_integral),
-                                                    jj,::to_double(big_sum[jj]));
-                            
+
+                            /* 
+                               if (verbose) ORSA_DEBUG("/ff/ %6g %+16.6f %6.3f %6.3f    big_sum[%i] = %+12.9g",
+                               binomial_factor.get_d(),
+                               ::to_double(coefficients_factor),
+                               ::to_double(factor_phi_integral),
+                               ::to_double(factor_theta_integral),
+                               jj,::to_double(big_sum[jj]));
+                            */
                             
                         }
                         
@@ -699,24 +741,48 @@ public:
                            std::cout << line << std::endl;
                            }
                         */
+
+                        // important update
+                        min_abs_big_sum=fabs(big_sum[0]);
+                        for (size_t jj=1; jj<ii.size(); ++jj) {
+                            if (fabs(big_sum[jj]) < min_abs_big_sum) min_abs_big_sum = fabs(big_sum[jj]);
+                        }
+                        // the 10 factor comes from the two integrals which are up to pi^2
+                        coefficients_factor_threshold = epsrel*min_abs_big_sum/(10*Nr_factorial_dd);
                         
                     }
                     
                     // now, increment while avoiding repetitions
-                    bool changed=false;
-                    for (size_t p=0; p<pos.size(); ++p) {
-                        if (pos[p]<fvv.size()-1) {
-                            ++pos[p];
-                            changed=true;
-                            for (size_t s=0; s<p; ++s) {
-                                if (pos[s]>pos[p]) {
-                                    pos[s]=pos[p];
+                    if (skip_term) {
+                        bool changed=false;
+                        for (size_t p=0; p<pos.size()-1; ++p) {
+                            if ( (pos[p]<fvv.size()-1) &&
+                                 (pos[p]!=pos[p+1]) ) {
+                                ++pos[p+1];
+                                changed=true;
+                                for (size_t s=0; s<=p; ++s) {
+                                    pos[s]=pos[p+1];
                                 }
+                                break;
                             }
-                            break;
                         }
+                        if (!changed) break; // done
+                    } else {
+                        bool changed=false;
+                        for (size_t p=0; p<pos.size(); ++p) {
+                            if (pos[p]<fvv.size()-1) {
+                                ++pos[p];
+                                changed=true;
+                                for (size_t s=0; s<p; ++s) {
+                                    if (pos[s]>pos[p]) {
+                                        pos[s]=pos[p];
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                        if (!changed) break; // done
                     }
-                    if (!changed) break; // done
                     
                 }
                 for (size_t jj=0; jj<ii.size(); ++jj) {
