@@ -540,7 +540,7 @@ public:
                 
                 while (1) {
 
-                    if (1) {
+                    if (0) {
                         // debug only...
                         std::cout << "pos:";
                         size_t p=pos.size();
@@ -633,7 +633,7 @@ public:
                                     }
                                     std::cout << std::endl;
                                 }
-                                ORSA_DEBUG("skipping term, min_abs_big_sum = %g   coefficients_factor: %g",::to_double(min_abs_big_sum),::to_double(coefficients_factor));
+                                // ORSA_DEBUG("skipping term, min_abs_big_sum = %g   coefficients_factor: %g",::to_double(min_abs_big_sum),::to_double(coefficients_factor));
                             }
                             
                             skip_term=true;
