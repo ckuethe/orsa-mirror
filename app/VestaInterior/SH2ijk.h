@@ -124,6 +124,8 @@ public:
         oneOverR0(1.0/R0_),
         epsrel(epsrel_) {
         
+        if (epsrel != 0.0) ORSA_DEBUG("NOTE: using non-zero relative accuracy coefficient = %g",::to_double(epsrel));
+        
         int rc = sqlite3_open(SQLiteDBFileName.c_str(),&db);
         //
         if (rc) {
