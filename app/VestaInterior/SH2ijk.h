@@ -540,7 +540,7 @@ public:
                 
                 while (1) {
 
-                    if (0) {
+                    if (1) {
                         // debug only...
                         std::cout << "pos:";
                         size_t p=pos.size();
@@ -624,14 +624,15 @@ public:
                              (min_abs_big_sum != 0.0) ) {
 
                             if (verbose) {
-                                std::cout << "pos:";
-                                size_t p=pos.size();
-                                while(p!=0) {
-                                    --p;
-                                    std::cout << " " << pos[p];
+                                if (0) {
+                                    std::cout << "pos:";
+                                    size_t p=pos.size();
+                                    while(p!=0) {
+                                        --p;
+                                        std::cout << " " << pos[p];
+                                    }
+                                    std::cout << std::endl;
                                 }
-                                std::cout << std::endl;
-                                
                                 ORSA_DEBUG("skipping term, min_abs_big_sum = %g   coefficients_factor: %g",::to_double(min_abs_big_sum),::to_double(coefficients_factor));
                             }
                             
@@ -755,15 +756,28 @@ public:
                     // now, increment while avoiding repetitions
                     if (skip_term) {
                         bool changed=false;
-                        for (size_t p=0; p<pos.size()-1; ++p) {
-                            if ( (pos[p]<fvv.size()-1) &&
-                                 (pos[p]!=pos[p+1]) ) {
-                                ++pos[p+1];
-                                changed=true;
-                                for (size_t s=0; s<=p; ++s) {
-                                    pos[s]=pos[p+1];
+                        for (size_t p=0; p<pos.size(); ++p) {
+                            if (pos[p]<fvv.size()-1) {
+                                if (p>0) {
+                                    if (pos[p]!=pos[p-1]) {
+                                        ++pos[p];
+                                        changed=true;
+                                        for (size_t s=0; s<p; ++s) {
+                                            pos[s]=pos[p];
+                                        }
+                                        break;
+                                    }
                                 }
-                                break;
+                                if (p<pos.size()-1) {
+                                    if (pos[p]!=pos[p+1]) {
+                                        ++pos[p+1];
+                                        changed=true;
+                                        for (size_t s=0; s<=p; ++s) {
+                                            pos[s]=pos[p+1];
+                                        }
+                                        break;
+                                    }
+                                }
                             }
                         }
                         if (!changed) break; // done
