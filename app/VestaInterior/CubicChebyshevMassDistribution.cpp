@@ -3,6 +3,7 @@
 #include <orsa/unit.h>
 
 #include "SH2ijk.h"
+#include "global_SH_epsrel.h"
 
 #include <sys/types.h>
 #include <bsd/md5.h>
@@ -508,7 +509,7 @@ double LayerData::SHLayer::volume() const {
     
     const std::string SQLiteDBFileName = getSqliteDBFileName_SH(MD5(),dummy_R0);
     
-    osg::ref_ptr<SHIntegration<T> > shi = new SHIntegration<T>(norm_A, norm_B, dummy_R0, SQLiteDBFileName);
+    osg::ref_ptr<SHIntegration<T> > shi = new SHIntegration<T>(norm_A, norm_B, dummy_R0, global_SH_epsrel, SQLiteDBFileName);
     
     volume_ = shi->getIntegral(0,0,0)*orsa::cube(dummy_R0);
     

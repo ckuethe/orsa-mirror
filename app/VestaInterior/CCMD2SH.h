@@ -4,6 +4,8 @@
 #include "CubicChebyshevMassDistribution.h"
 #include "simplex.h"
 #include "SH2ijk.h"
+#include "global_SH_epsrel.h"
+
 #include <orsa/paulMoment.h>
 
 // note on CM: it is used as input if set, or it is computed using CCMD if unset
@@ -23,7 +25,7 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
     
     ORSA_DEBUG("volume: %g",volume);
 
-    const bool verbose=false;
+    const bool verbose=true;
     
     double mass_cT = 0.0;
     double i1d = 0.0;
@@ -314,6 +316,7 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
                 osg::ref_ptr< SHIntegration<T> > shi = new SHIntegration<T>(shlv[k]->norm_A,
                                                                             shlv[k]->norm_B,
                                                                             plateModelR0,
+                                                                            global_SH_epsrel,
                                                                             SQLiteDBFileName);
                 
                 // const size_t layer_degree = shlv[k]->norm_A.size()-1;
