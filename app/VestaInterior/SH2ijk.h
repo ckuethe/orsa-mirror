@@ -279,9 +279,23 @@ protected:
     }
     
     // Gamma((c+1)/2)*Gamma((s+1)/2)/Gamma((c+s+2)/2)
-    dd_real triple_factorial(const mpz_class & c, const mpz_class & s) const {
+    dd_real triple_factorial(const int & c, const int & s) const {        
         // ORSA_DEBUG("c: %Zi  s: %Zi",c.get_mpz_t(),s.get_mpz_t());
-        return (aux_gamma_half_n(c+1)*aux_gamma_half_n(s+1)/aux_gamma_half_n(c+s+2));
+        static std::vector< std::vector< orsa::Cache<dd_real> > > stored;
+        if (stored.size()>c) {
+            if (stored[c].size()>s) {
+                if (stored[c][s].isSet()) {
+                    return stored[c][s];
+                }
+            } else {
+                stored[c].resize(s+1);
+            }
+        } else {
+            stored.resize(c+1);
+            stored[c].resize(s+1);
+        }
+        stored[c][s] = (aux_gamma_half_n(c+1)*aux_gamma_half_n(s+1)/aux_gamma_half_n(c+s+2));
+        return stored[c][s];
     }
     
     // integral between 0 and k*pi of cos^c(x) sin^s(x) dx
@@ -339,6 +353,11 @@ public:
         int tau, l, m, u, nu;
         // T Q;
         T ABQ_R0;
+    public:
+        // note: sorting by absolute value!
+        static bool sort_by_absolute_larger_to_smaller(const FiveVars & x, const FiveVars & y) {
+            return fabs(x.ABQ_R0) > fabs(y.ABQ_R0);
+        }
     };
     
     inline static dd_real Q(const FiveVars & fv) {
@@ -446,6 +465,7 @@ public:
                                         fv.ABQ_R0 = oneOverR0*pow(norm_A[l][m],1-tau)*pow(norm_B[l][m],tau)*Q(fv)/normalization_factor(l,m);
                                         if (fv.ABQ_R0 != 0.0) {
                                             fvv.push_back(fv);
+                                            // if (verbose) ORSA_DEBUG("[%i,%i,%i,%i,%i] = %+12.9f",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.ABQ_R0));
                                         } else {
                                             // ++num_skipped;
                                             // ORSA_DEBUG("skipped!");
@@ -462,6 +482,11 @@ public:
                             }
                         }
                     }
+                }
+                std::sort(fvv.begin(),fvv.end(),FiveVars::sort_by_absolute_larger_to_smaller);
+                if (verbose) for (size_t c=0; c<fvv.size(); ++c) {
+                    const FiveVars & fv = fvv[c];
+                    ORSA_DEBUG("[%i,%i,%i,%i,%i] = %+12.9f",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.ABQ_R0));
                 }
                 // ORSA_DEBUG("fvv.size: %i   skipped: %i",fvv.size(),num_skipped);
                 
@@ -508,7 +533,7 @@ public:
                 
                 while (1) {
 
-                    if (0) {
+                    if (1) {
                         // debug only...
                         std::cout << "pos:";
                         size_t p=pos.size();
@@ -569,7 +594,7 @@ public:
                     //  dividing here already...
                     // dd_real coefficients_factor = pow(oneOverR0,Nr)/Nr; // 1/(Nr*R0^Nr)
                     for (size_t c=0; c<fvv.size(); ++c) {
-                        const FiveVars & fv = fvv[c];
+                        // const FiveVars & fv = fvv[c];
                         /* coefficients_factor *=
                            int_pow(int_pow(norm_A[fv.l][fv.m],1-fv.tau)*
                            int_pow(norm_B[fv.l][fv.m],fv.tau),
@@ -577,7 +602,8 @@ public:
                            int_pow(fv.Q,count[c])
                            / int_pow(normalization_factor(fv.l,fv.m),count[c]); // dealing with normalized coefficients...
                         */
-                        coefficients_factor *= pow(fv.ABQ_R0,count[c]);
+                        // coefficients_factor *= pow(fv.ABQ_R0,count[c]);
+                        coefficients_factor *= pow(fvv[c].ABQ_R0,count[c]);
                         // just_norm_factors *= int_pow(normalization_factor(fv.l,fv.m),count[c]);
                         // if (coefficients_factor != 0) ORSA_DEBUG("nf[%i][%i] = %g    cf: %g",fv.l,fv.m,::to_double(normalization_factor(fv.l,fv.m)),::to_double(coefficients_factor));
                     }
@@ -635,12 +661,13 @@ public:
                             
                             // ORSA_DEBUG("big_sum[%i] = %g",jj,::to_double(big_sum[jj]));
                             
-                            /* ORSA_DEBUG("/ff/ %g %g %g %g",
-                               binomial_factor.get_d(),
-                               ::to_double(coefficients_factor),
-                               ::to_double(factor_phi_integral),
-                               ::to_double(factor_theta_integral));
-                            */
+                            if (verbose) ORSA_DEBUG("/ff/ %6g %+16.6f %6.3f %6.3f    big_sum[%i] = %+12.9g",
+                                                    binomial_factor.get_d(),
+                                                    ::to_double(coefficients_factor),
+                                                    ::to_double(factor_phi_integral),
+                                                    ::to_double(factor_theta_integral),
+                                                    jj,::to_double(big_sum[jj]));
+                            
                             
                         }
                         
