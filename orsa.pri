@@ -50,7 +50,7 @@ unix:!macx {
 
 	DIR_SEP = "/"
 
-	QMAKE_CXXFLAGS += -std=c++0x
+#	QMAKE_CXXFLAGS += -std=c++0x
 
 	QMAKE_CXXFLAGS_RELEASE +=
 	QMAKE_LFLAGS_RELEASE   +=
