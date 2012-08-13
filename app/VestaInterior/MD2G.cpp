@@ -790,11 +790,11 @@ int main(int argc, char **argv) {
     const double CMz_over_plateModelR0 = iZd / i1d;
     // inertia moments, barycentric
     const double inertiaMomentXX_over_plateModelR0squared =
-        ((iYYd+iZZd) - (orsa::square(CMy_over_plateModelR0)+orsa::square(CMz_over_plateModelR0))) / i1d;
+        ((iYYd+iZZd) - iYd*iYd - iZd*iZd) / i1d;
     const double inertiaMomentYY_over_plateModelR0squared =
-        ((iXXd+iZZd) - (orsa::square(CMx_over_plateModelR0)+orsa::square(CMz_over_plateModelR0))) / i1d;
+        ((iXXd+iZZd) - iXd*iXd - iZd*iZd) / i1d;
     const double inertiaMomentZZ_over_plateModelR0squared =
-        ((iXXd+iYYd) - (orsa::square(CMx_over_plateModelR0)+orsa::square(CMy_over_plateModelR0))) / i1d;
+        ((iXXd+iYYd) - iXd*iXd - iYd*iYd) / i1d;
     
     ORSA_DEBUG("si->getIntegral(0,0,0): %g",si->getIntegral(0,0,0));
     ORSA_DEBUG("i1d:  %g",i1d);
