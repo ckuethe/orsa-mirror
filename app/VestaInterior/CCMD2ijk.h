@@ -25,9 +25,9 @@ void CCMD2ijk(std::vector< std::vector< std::vector<double> > > & N,
     
     N.resize(degree+1);
     for (size_t ni=0; ni<=degree; ++ni) {
-        N[ni].resize(degree-ni);
+        N[ni].resize(degree+1-ni);
         for (size_t nj=0; nj<=degree-ni; ++nj) {
-            N[ni][nj].resize(degree-ni-nj);
+            N[ni][nj].resize(degree+1-ni-nj);
             for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
                 N[ni][nj][nk] = 0.0;
             }
@@ -63,6 +63,13 @@ void CCMD2ijk(std::vector< std::vector< std::vector<double> > > & N,
                                 for (size_t nj=0; nj<=degree-ni; ++nj) {
                                     for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
                                         N[ni][nj][nk] += baseFactor * si->getIntegral(ci+ni,cj+nj,ck+nk);
+                                        
+                                        ORSA_DEBUG("N[%i][%i][%i] += %12.6g x %12.6g     t: %i %i %i   c: %i %i %i",
+                                                   ni,nj,nk,
+                                                   baseFactor,
+                                                   si->getIntegral(ci+ni,cj+nj,ck+nk),
+                                                   ti,tj,tk,
+                                                   ci,cj,ck);
                                     }
                                 }
                             }
@@ -102,9 +109,6 @@ void CCMD2ijk(std::vector< std::vector< std::vector<double> > > & N,
                                         //
                                         mpq_class factor(3*(factor_i*factor_j*factor_k),factor_ijk);
                                         factor.canonicalize();
-                                        //
-                                        // const double M_ijk = factor.get_d()*orsa::int_pow(elv[k]->a,i)*orsa::int_pow(elv[k]->b,j)*orsa::int_pow(elv[k]->c,k);
-                                        // pm->setM(M_ijk,i,j,k);
                                         
                                         N[ni][nj][nk] +=
                                             elv[k]->excessDensity *
@@ -116,9 +120,9 @@ void CCMD2ijk(std::vector< std::vector< std::vector<double> > > & N,
                                             orsa::int_pow(elv[k]->v0.getY(),bj) *
                                             orsa::int_pow(elv[k]->v0.getZ(),bk) *
                                             factor.get_d() *
-                                            orsa::int_pow(elv[k]->a,ni-bi) *
-                                            orsa::int_pow(elv[k]->b,nj-bj) *
-                                            orsa::int_pow(elv[k]->c,nk-bk);
+                                            orsa::int_pow(elv[k]->a/plateModelR0,ni-bi) *
+                                            orsa::int_pow(elv[k]->b/plateModelR0,nj-bj) *
+                                            orsa::int_pow(elv[k]->c/plateModelR0,nk-bk);
                                         
                                     }
                                 }

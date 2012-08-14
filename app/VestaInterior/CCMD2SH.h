@@ -274,6 +274,7 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
                 if (!translate(elv_translated_pm.get(),
                                elv_pm.get(),
                                elv[k]->v0)) {
+#warning SHOULD use difference between v0 and CM here!
                     ORSA_DEBUG("problems...");
                     exit(0);
                 }
@@ -334,6 +335,7 @@ void CCMD2SH(orsa::Cache<orsa::Vector> & CM,
                      }
                 }
                 
+#warning SHOULD use difference between CM and v0 here!
                 const double CMx_over_plateModelR0 = shlv[k]->v0.getX()/plateModelR0;
                 const double CMy_over_plateModelR0 = shlv[k]->v0.getY()/plateModelR0;
                 const double CMz_over_plateModelR0 = shlv[k]->v0.getZ()/plateModelR0;

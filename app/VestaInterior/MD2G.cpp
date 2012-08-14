@@ -9,6 +9,7 @@
 #include <orsaPDS/RadioScienceGravity.h>
 #include "CubicChebyshevMassDistribution.h"
 #include "CCMD2SH.h"
+#include "CCMD2ijk.h"
 #include "simplex.h"
 #include "SH2ijk.h"
 #include "penalty.h"
@@ -447,9 +448,10 @@ int main(int argc, char **argv) {
     osg::ref_ptr<orsaPDS::RadioScienceGravityData> gravityData = new orsaPDS::RadioScienceGravityData;
     orsaPDS::RadioScienceGravityFile::read(gravityData.get(),radioScienceGravityTemplateFile,512,1518);
     
-    const double GM = gravityData->GM; 
+    // const double GM = gravityData->GM; 
     const double volume = si->getIntegral(0,0,0)*orsa::cube(plateModelR0);
-    const double densityScale = GM/orsa::Unit::G()/volume;
+    // const double densityScale = GM/orsa::Unit::G()/volume;
+    double densityScale = 1000.0;
     
     CubicChebyshevMassDistribution::CoefficientType densityCCC; // CCC=CubicChebyshevCoefficient
     CubicChebyshevMassDistribution::resize(densityCCC,T_degree_input);
@@ -480,8 +482,9 @@ int main(int argc, char **argv) {
                }
             */
         }
-        densityCCC = CCMDF[CCMDF.size()-1].coeff;
-        layerData  = CCMDF[CCMDF.size()-1].layerData;
+        densityCCC   = CCMDF[CCMDF.size()-1].coeff;
+        layerData    = CCMDF[CCMDF.size()-1].layerData;
+        densityScale = CCMDF[CCMDF.size()-1].densityScale;
         
     } else {
         
@@ -739,98 +742,78 @@ int main(int argc, char **argv) {
                                            layerData);
     randomPointsInShape->updateMassDistribution(massDistribution.get());
     
-    // const double radiusCorrectionRatio = plateModelR0/gravityData->R0;
-
-#warning not using layerData...
+    std::vector< std::vector< std::vector<double> > > N;
+    CCMD2ijk(N,
+             gravityData->degree,
+             si.get(),
+             massDistribution,
+             plateModelR0);
+    const double totalMass = N[0][0][0]*orsa::cube(plateModelR0);
+    ORSA_DEBUG("total mass: %g [kg]",orsa::FromUnits(totalMass,orsa::Unit::KG,-1));
+    // update GM
+    gravityData->GM = totalMass*orsa::Unit::G();
     
-    double i1d =0.0;
-    double iXd =0.0;
-    double iYd =0.0;
-    double iZd =0.0;
-    double iXXd=0.0;
-    double iXYd=0.0;
-    double iXZd=0.0;
-    double iYYd=0.0;
-    double iYZd=0.0;
-    double iZZd=0.0;
-    // ti,tj,tk are the expansion of the density in terms of the cubic Chebyshev 
-    for (size_t ti=0; ti<=T_degree; ++ti) {
-        for (size_t tj=0; tj<=T_degree-ti; ++tj) {
-            for (size_t tk=0; tk<=T_degree-ti-tj; ++tk) {
-                const std::vector<mpz_class> & cTi = orsa::ChebyshevTcoeff(ti);
-                const std::vector<mpz_class> & cTj = orsa::ChebyshevTcoeff(tj);
-                const std::vector<mpz_class> & cTk = orsa::ChebyshevTcoeff(tk);
-                // ci,cj,ck are the expansion of each Chebyshev polynomial in terms of powers of x,y,z
-                for (size_t ci=0; ci<=ti; ++ci) {
-                    if (cTi[ci] == 0) continue;
-                    for (size_t cj=0; cj<=tj; ++cj) {
-                        if (cTj[cj] == 0) continue;
-                        for (size_t ck=0; ck<=tk; ++ck) {
-                            if (cTk[ck] == 0) continue;
-                            const double baseFactor = densityCCC[ti][tj][tk] *
-                                mpz_class(cTi[ci] * cTj[cj] * cTk[ck]).get_d();
-                            i1d  += baseFactor * si->getIntegral(ci,cj,ck);
-                            iXd  += baseFactor * si->getIntegral(ci+1,cj,ck);
-                            iYd  += baseFactor * si->getIntegral(ci,cj+1,ck);
-                            iZd  += baseFactor * si->getIntegral(ci,cj,ck+1);
-                            iXXd += baseFactor * si->getIntegral(ci+2,cj,ck);
-                            iXYd += baseFactor * si->getIntegral(ci+1,cj+1,ck);
-                            iXZd += baseFactor * si->getIntegral(ci+1,cj,ck+1);
-                            iYYd += baseFactor * si->getIntegral(ci,cj+2,ck);
-                            iYZd += baseFactor * si->getIntegral(ci,cj+1,ck+1);
-                            iZZd += baseFactor * si->getIntegral(ci,cj,ck+2);
+    {
+        for (size_t degree=0; degree<=gravityData->degree; ++degree) {
+            for (size_t ni=0; ni<=degree; ++ni) {
+                for (size_t nj=0; nj<=degree-ni; ++nj) {
+                    for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
+                        if (ni+nj+nk==degree) {
+                            ORSA_DEBUG("global N[%i][%i][%i] = %g",ni,nj,nk,N[ni][nj][nk]);
                         }
                     }
                 }
             }
         }
     }
-    const double CMx_over_plateModelR0 = iXd / i1d;
-    const double CMy_over_plateModelR0 = iYd / i1d;
-    const double CMz_over_plateModelR0 = iZd / i1d;
+    
+    /* const double i1d = N[0][0][0];
+       const double iXd = N[1][0][0];
+       const double iYd = N[0][1][0];
+       const double iZd = N[0][0][1];
+       const double iXXd= N[2][0][0];
+       const double iXYd= N[1][1][0];
+       const double iXZd= N[1][0][1];
+       const double iYYd= N[0][2][0];
+       const double iYZd= N[0][1][1];
+       const double iZZd= N[0][0][2];
+    */
+    
+    const double CMx_over_plateModelR0 = N[1][0][0] / N[0][0][0]; // = iXd / i1d
+    const double CMy_over_plateModelR0 = N[0][1][0] / N[0][0][0];
+    const double CMz_over_plateModelR0 = N[0][0][1] / N[0][0][0];
     // inertia moments, barycentric
+#warning A ROTATION WOULD BE NEEDED TOO!
     const double inertiaMomentXX_over_plateModelR0squared =
-        ((iYYd+iZZd) - iYd*iYd - iZd*iZd) / i1d;
+        N[0][2][0]/N[0][0][0] + N[0][0][2]/N[0][0][0] - N[0][1][0]/N[0][0][0] * N[0][1][0]/N[0][0][0] - N[0][0][1]/N[0][0][0]*N[0][0][1]/N[0][0][0];
     const double inertiaMomentYY_over_plateModelR0squared =
-        ((iXXd+iZZd) - iXd*iXd - iZd*iZd) / i1d;
+        N[2][0][0]/N[0][0][0] + N[0][0][2]/N[0][0][0] - N[1][0][0]/N[0][0][0] * N[1][0][0]/N[0][0][0] - N[0][0][1]/N[0][0][0]*N[0][0][1]/N[0][0][0];
     const double inertiaMomentZZ_over_plateModelR0squared =
-        ((iXXd+iYYd) - iXd*iXd - iYd*iYd) / i1d;
+        N[2][0][0]/N[0][0][0] + N[0][2][0]/N[0][0][0] - N[1][0][0]/N[0][0][0] * N[1][0][0]/N[0][0][0] - N[0][1][0]/N[0][0][0]*N[0][1][0]/N[0][0][0];
     
-    ORSA_DEBUG("si->getIntegral(0,0,0): %g",si->getIntegral(0,0,0));
-    ORSA_DEBUG("i1d:  %g",i1d);
-    ORSA_DEBUG("iXd:  %g",iXd);
-    ORSA_DEBUG("iYd:  %g",iYd);
-    ORSA_DEBUG("iZd:  %g",iZd);
-    ORSA_DEBUG("iXXd: %g",iXXd);
-    ORSA_DEBUG("iXYd: %g",iXYd);
-    ORSA_DEBUG("iXZd: %g",iXZd);
-    ORSA_DEBUG("iYYd: %g",iYYd);
-    ORSA_DEBUG("iYZd: %g",iYZd);
-    ORSA_DEBUG("iZZd: %g",iZZd);
-    ORSA_DEBUG("inertiaMomentXX_over_plateModelR0squared: %g",inertiaMomentXX_over_plateModelR0squared);
-    ORSA_DEBUG("inertiaMomentYY_over_plateModelR0squared: %g",inertiaMomentYY_over_plateModelR0squared);
-    ORSA_DEBUG("inertiaMomentZZ_over_plateModelR0squared: %g",inertiaMomentZZ_over_plateModelR0squared);
-    
-    
-#warning USE THIS OR NOT??
-    if (0) {
-        // adjust coefficients in order to conserve total mass
-        // NOTE: this changes the input densities a little (or a lot)
-        //       depending on how far the generated total mass is from the nominal total mass
-        
-#warning not using layerData...
-        
-        const double correctionFactor = si->getIntegral(0,0,0)/i1d;
-        for (size_t ti=0; ti<=T_degree; ++ti) {
-            for (size_t tj=0; tj<=T_degree-ti; ++tj) {
-                for (size_t tk=0; tk<=T_degree-ti-tj; ++tk) {
-                    densityCCC[ti][tj][tk] *= correctionFactor;
-                    
-                    ORSA_DEBUG("coeff[%02i][%02i][%02i] = %20.12f",
-                               ti,tj,tk,densityCCC[ti][tj][tk]);
-                }
-            }
-        }
+    /* ORSA_DEBUG("si->getIntegral(0,0,0): %g",si->getIntegral(0,0,0));
+       ORSA_DEBUG("i1d:  %g",i1d);
+       ORSA_DEBUG("iXd:  %g",iXd);
+       ORSA_DEBUG("iYd:  %g",iYd);
+       ORSA_DEBUG("iZd:  %g",iZd);
+       ORSA_DEBUG("iXXd: %g",iXXd);
+       ORSA_DEBUG("iXYd: %g",iXYd);
+       ORSA_DEBUG("iXZd: %g",iXZd);
+       ORSA_DEBUG("iYYd: %g",iYYd);
+       ORSA_DEBUG("iYZd: %g",iYZd);
+       ORSA_DEBUG("iZZd: %g",iZZd);
+    */
+    {
+        const double CMx = CMx_over_plateModelR0*plateModelR0;
+        const double CMy = CMy_over_plateModelR0*plateModelR0;
+        const double CMz = CMz_over_plateModelR0*plateModelR0;
+        ORSA_DEBUG("CM: %+9.3f %+9.3f %+9.3f [km]",
+                   orsa::FromUnits(CMx,orsa::Unit::KM,-1),
+                   orsa::FromUnits(CMy,orsa::Unit::KM,-1),
+                   orsa::FromUnits(CMz,orsa::Unit::KM,-1));
+        ORSA_DEBUG("Ixx / (M*R0^2) = %g",inertiaMomentXX_over_plateModelR0squared);
+        ORSA_DEBUG("Iyy / (M*R0^2) = %g",inertiaMomentYY_over_plateModelR0squared);
+        ORSA_DEBUG("Izz / (M*R0^2) = %g",inertiaMomentZZ_over_plateModelR0squared);
     }
     
     orsa::Cache<double> penalty;
@@ -895,8 +878,6 @@ int main(int argc, char **argv) {
     }
     
     {
-#warning THIS DOES NOT take into account the layerData, update!!
-        
         // write barycenter file
         char filename[1024];
         sprintf(filename,"%s.inertial.dat",outputGravityFile.c_str());
@@ -917,6 +898,8 @@ int main(int argc, char **argv) {
     }
     
 #warning track precision of operations
+    
+#warning REWRITE CCMD2SH call, so that it translates/rotates to CM and principal axes the N from CCMD2ijk, and then computes SH
     
     orsa::Cache<orsa::Vector> CM;
     std::vector< std::vector<mpf_class> > norm_C;
