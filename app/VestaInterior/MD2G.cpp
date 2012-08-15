@@ -934,10 +934,12 @@ int main(int argc, char **argv) {
     std::vector< std::vector<mpf_class> > norm_C;
     std::vector< std::vector<mpf_class> > norm_S;
     {
+        const double radiusCorrectionRatio = plateModelR0/gravityData->R0;
         const size_t SH_degree = gravityData->degree;
         norm_C.resize(SH_degree+1);
         norm_S.resize(SH_degree+1);
         for (size_t l=0; l<=SH_degree; ++l) {
+            const double radiusCorrectionFactor = orsa::int_pow(radiusCorrectionRatio,l);
             norm_C[l].resize(l+1);
             norm_S[l].resize(l+1);
             for (size_t m=0; m<=l; ++m) {
@@ -947,10 +949,12 @@ int main(int argc, char **argv) {
                     for (size_t nj=0; nj<=l-ni; ++nj) {
                         for (size_t nk=0; nk<=l-ni-nj; ++nk) {
                             norm_C[l][m] +=
+                                radiusCorrectionFactor *
                                 C_tri_norm[ni][nj][nk] *
                                 translated_N[ni][nj][nk] / translated_N[0][0][0];  
                             if (m != 0) {
                                 norm_S[l][m] +=
+                                    radiusCorrectionFactor *
                                     S_tri_norm[ni][nj][nk] *
                                     translated_N[ni][nj][nk] / translated_N[0][0][0];  
                             } else {
@@ -962,6 +966,7 @@ int main(int argc, char **argv) {
             }
         }
         // debug output
+        ORSA_DEBUG("reference R0: %g [km]",orsa::FromUnits(gravityData->R0,orsa::Unit::KM,-1));
         for (size_t l=0; l<=SH_degree; ++l) {
             for (size_t m=0; m<=l; ++m) {
                 ORSA_DEBUG("norm_C[%i][%i] = %Fg",l,m,norm_C[l][m].get_mpf_t());
@@ -969,6 +974,8 @@ int main(int argc, char **argv) {
             }
         }
     }
+    
+#warning must update gravity R0 somewhere too!
     
     // update GM and degree>=2 coefficients
     gravityData->GM = totalMass*orsa::Unit::G();
