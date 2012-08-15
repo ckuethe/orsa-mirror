@@ -7,8 +7,9 @@
 #include "global_SH_epsrel.h"
 #include "CCMD2ijk.h"
 
+// note on CM: it is used as input if set, or it is computed using CCMD if unset
 template <typename T>
-void CCMD2SH(orsa::Vector                          & CM,
+void CCMD2SH(orsa::Cache<orsa::Vector>             & CM,
              std::vector< std::vector<mpf_class> > & norm_C,
              std::vector< std::vector<mpf_class> > & norm_S,
              // std::vector< std::vector< std::vector<double> > > & global_N,
@@ -27,12 +28,14 @@ void CCMD2SH(orsa::Vector                          & CM,
              CCMD,
              plateModelR0);
     
-    const double CMx_over_plateModelR0 = N[1][0][0] / N[0][0][0]; // = iXd / i1d
-    const double CMy_over_plateModelR0 = N[0][1][0] / N[0][0][0];
-    const double CMz_over_plateModelR0 = N[0][0][1] / N[0][0][0];
-    const orsa::Vector CM_over_plateModelR0(CMx_over_plateModelR0,
-                                            CMy_over_plateModelR0,
-                                            CMz_over_plateModelR0);
+    const orsa::Vector CM_over_plateModelR0 =
+        (CM.isSet()) ? (CM/plateModelR0) : orsa::Vector(N[1][0][0]/N[0][0][0],
+                                                        N[0][1][0]/N[0][0][0],
+                                                        N[0][0][1]/N[0][0][0]);
+    if (!CM.isSet()) {
+        CM = CM_over_plateModelR0*plateModelR0;
+    }
+    
     // std::vector< std::vector< std::vector<double> > > & translated_N = translated_global_N;
     std::vector< std::vector< std::vector<double> > > translated_N;
     translate(translated_N,N,-CM_over_plateModelR0);

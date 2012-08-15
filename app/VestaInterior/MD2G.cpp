@@ -900,82 +900,19 @@ int main(int argc, char **argv) {
     
 #warning track precision of operations
     
-#warning REWRITE CCMD2SH call, so that it translates/rotates to CM and principal axes the N from CCMD2ijk, and then computes SH
-    
-    /* std::vector< std::vector<mpf_class> > norm_C;
-       std::vector< std::vector<mpf_class> > norm_S;
-       CCMD2SH(CM,
-       norm_C,
-       norm_S,
-       gravityData->degree,
-       si.get(),
-       massDistribution,
-       plateModelR0,
-       gravityData->R0);
-    */
-    const orsa::Vector CM_over_plateModelR0(CMx_over_plateModelR0,
-                                            CMy_over_plateModelR0,
-                                            CMz_over_plateModelR0);
-    std::vector< std::vector< std::vector<double> > > translated_N;
-    translate(translated_N,N,-CM_over_plateModelR0);
-    if (1) {
-        for (size_t degree=0; degree<=gravityData->degree; ++degree) {
-            for (size_t ni=0; ni<=degree; ++ni) {
-                for (size_t nj=0; nj<=degree-ni; ++nj) {
-                    for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
-                        if (ni+nj+nk==degree) {
-                            ORSA_DEBUG("global translated N[%i][%i][%i] = %g",ni,nj,nk,translated_N[ni][nj][nk]);
-                        }
-                    }
-                }
-            }
-        }
-    }
+    orsa::Cache<orsa::Vector> CM;
     std::vector< std::vector<mpf_class> > norm_C;
     std::vector< std::vector<mpf_class> > norm_S;
-    {
-        const double radiusCorrectionRatio = plateModelR0/gravityData->R0;
-        const size_t SH_degree = gravityData->degree;
-        norm_C.resize(SH_degree+1);
-        norm_S.resize(SH_degree+1);
-        for (size_t l=0; l<=SH_degree; ++l) {
-            const double radiusCorrectionFactor = orsa::int_pow(radiusCorrectionRatio,l);
-            norm_C[l].resize(l+1);
-            norm_S[l].resize(l+1);
-            for (size_t m=0; m<=l; ++m) {
-                const orsa::triIndex_d C_tri_norm = orsa::conversionCoefficients_C_norm(l,m);
-                const orsa::triIndex_d S_tri_norm = orsa::conversionCoefficients_S_norm(l,m);
-                for (size_t ni=0; ni<=l; ++ni) {
-                    for (size_t nj=0; nj<=l-ni; ++nj) {
-                        for (size_t nk=0; nk<=l-ni-nj; ++nk) {
-                            norm_C[l][m] +=
-                                radiusCorrectionFactor *
-                                C_tri_norm[ni][nj][nk] *
-                                translated_N[ni][nj][nk] / translated_N[0][0][0];  
-                            if (m != 0) {
-                                norm_S[l][m] +=
-                                    radiusCorrectionFactor *
-                                    S_tri_norm[ni][nj][nk] *
-                                    translated_N[ni][nj][nk] / translated_N[0][0][0];  
-                            } else {
-                                norm_S[l][m] = 0.0;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        // debug output
-        ORSA_DEBUG("reference R0: %g [km]",orsa::FromUnits(gravityData->R0,orsa::Unit::KM,-1));
-        for (size_t l=0; l<=SH_degree; ++l) {
-            for (size_t m=0; m<=l; ++m) {
-                ORSA_DEBUG("norm_C[%i][%i] = %Fg",l,m,norm_C[l][m].get_mpf_t());
-                if (m != 0) ORSA_DEBUG("norm_S[%i][%i] = %Fg",l,m,norm_S[l][m].get_mpf_t());
-            }
-        }
-    }
+    CCMD2SH(CM,
+            norm_C,
+            norm_S,
+            gravityData->degree,
+            si.get(),
+            massDistribution,
+            plateModelR0,
+            gravityData->R0);
     
-#warning must update gravity R0 somewhere too!
+#warning must update gravity R0 somewhere too early in the program!
     
     // update GM and degree>=2 coefficients
     gravityData->GM = totalMass*orsa::Unit::G();
