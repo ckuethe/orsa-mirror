@@ -481,7 +481,7 @@ public:
                                            ::to_double(fv.Q));
                                         */
                                     }
-
+                                    
                                     
                                 }
                             }
@@ -621,12 +621,13 @@ public:
                         // if (coefficients_factor != 0) ORSA_DEBUG("nf[%i][%i] = %g    cf: %g",fv.l,fv.m,::to_double(normalization_factor(fv.l,fv.m)),::to_double(coefficients_factor));
 
                         // can skip this term?
-                        if ( (fabs(coefficients_factor) < coefficients_factor_threshold) &&
-                             (fabs(fvv[c].ABQ_R0) < 1.0) &&
-                             (min_abs_big_sum != 0.0) ) {
-
+                        if ((nx==0) && (ny==0) && (nz==0)) {
+                            // cannot skip for 0,0,0 term, it would introduce a larger error
+                        } else if ( (fabs(coefficients_factor) < coefficients_factor_threshold) &&
+                                    (fabs(fvv[c].ABQ_R0) < 1.0) &&
+                                    (min_abs_big_sum != 0.0) ) {
                             if (verbose) {
-                                if (0) {
+                                if (1) {
                                     std::cout << "pos:";
                                     size_t p=pos.size();
                                     while(p!=0) {
@@ -635,7 +636,7 @@ public:
                                     }
                                     std::cout << std::endl;
                                 }
-                                // ORSA_DEBUG("skipping term, min_abs_big_sum = %g   coefficients_factor: %g",::to_double(min_abs_big_sum),::to_double(coefficients_factor));
+                                ORSA_DEBUG("skipping term, min_abs_big_sum = %g   coefficients_factor: %g",::to_double(min_abs_big_sum),::to_double(coefficients_factor));
                             }
                             
                             skip_term=true;

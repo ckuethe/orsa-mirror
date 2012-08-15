@@ -119,7 +119,7 @@ void CCMD2ijk(std::vector< std::vector< std::vector<double> > > & N,
                     }
                 }
                 std::vector< std::vector< std::vector<double> > > translated_N_ell;
-                translate(translated_N_ell,N_ell,elv[k]->v0);
+                translate(translated_N_ell,N_ell,elv[k]->v0/plateModelR0);
                 for (size_t ni=0; ni<=degree; ++ni) {
                     for (size_t nj=0; nj<=degree-ni; ++nj) {
                         for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
@@ -154,7 +154,7 @@ void CCMD2ijk(std::vector< std::vector< std::vector<double> > > & N,
                     }
                 }
                 std::vector< std::vector< std::vector<double> > > translated_N_SH;
-                translate(translated_N_SH,N_SH,shlv[k]->v0);
+                translate(translated_N_SH,N_SH,shlv[k]->v0/plateModelR0);
                 for (size_t ni=0; ni<=degree; ++ni) {
                     for (size_t nj=0; nj<=degree-ni; ++nj) {
                         for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
