@@ -5,6 +5,7 @@
 #include "simplex.h"
 #include "SH2ijk.h"
 #include "global_SH_epsrel.h"
+#include "translate_ijk.h"
 
 static mpz_class EllipsoidExpansion_product_utility(const unsigned int n) {
     mpz_class product = 1;
@@ -63,13 +64,13 @@ void CCMD2ijk(std::vector< std::vector< std::vector<double> > > & N,
                                 for (size_t nj=0; nj<=degree-ni; ++nj) {
                                     for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
                                         N[ni][nj][nk] += baseFactor * si->getIntegral(ci+ni,cj+nj,ck+nk);
-                                        
-                                        ORSA_DEBUG("N[%i][%i][%i] += %12.6g x %12.6g     t: %i %i %i   c: %i %i %i",
-                                                   ni,nj,nk,
-                                                   baseFactor,
-                                                   si->getIntegral(ci+ni,cj+nj,ck+nk),
-                                                   ti,tj,tk,
-                                                   ci,cj,ck);
+                                        /* ORSA_DEBUG("N[%i][%i][%i] += %12.6g x %12.6g     t: %i %i %i   c: %i %i %i",
+                                           ni,nj,nk,
+                                           baseFactor,
+                                           si->getIntegral(ci+ni,cj+nj,ck+nk),
+                                           ti,tj,tk,
+                                           ci,cj,ck);
+                                        */
                                     }
                                 }
                             }
@@ -88,84 +89,77 @@ void CCMD2ijk(std::vector< std::vector< std::vector<double> > > & N,
         {
             const LayerData::EllipsoidLayerVectorType & elv = CCMD->layerData->ellipsoidLayerVector;
             for (size_t k=0; k<elv.size(); ++k) {
+
+                std::vector< std::vector< std::vector<double> > > N_ell;
+                N_ell.resize(degree+1);
+                for (size_t ni=0; ni<=degree; ++ni) {
+                    N_ell[ni].resize(degree+1-ni);
+                    for (size_t nj=0; nj<=degree-ni; ++nj) {
+                        N_ell[ni][nj].resize(degree+1-ni-nj);
+                        for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
+                            if (ni%2==1) continue;
+                            if (nj%2==1) continue;
+                            if (nk%2==1) continue;
+                            const mpz_class factor_i   = EllipsoidExpansion_product_utility(ni/2);
+                            const mpz_class factor_j   = EllipsoidExpansion_product_utility(nj/2);
+                            const mpz_class factor_k   = EllipsoidExpansion_product_utility(nk/2);
+                            const mpz_class factor_ijk = EllipsoidExpansion_product_utility((ni+nj+nk)/2+2);
+                            //
+                            mpq_class triple_factor(factor_i*factor_j*factor_k,factor_ijk);
+                            triple_factor.canonicalize();
+                            //
+                            N_ell[ni][nj][nk] +=
+                                4*orsa::pi() *
+                                elv[k]->excessDensity *
+                                triple_factor.get_d() *
+                                orsa::int_pow(elv[k]->a/plateModelR0,ni+1) *
+                                orsa::int_pow(elv[k]->b/plateModelR0,nj+1) *
+                                orsa::int_pow(elv[k]->c/plateModelR0,nk+1);
+                        }
+                    }
+                }
+                std::vector< std::vector< std::vector<double> > > translated_N_ell;
+                translate(translated_N_ell,N_ell,elv[k]->v0);
                 for (size_t ni=0; ni<=degree; ++ni) {
                     for (size_t nj=0; nj<=degree-ni; ++nj) {
                         for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
-                            // bi,bj,bk are the binomial expansion of the v0 translation
-                            // this also introduces a power_sign
-                            for (size_t bi=0; bi<=ni; ++bi) {
-                                for (size_t bj=0; bj<=nj; ++bj) {
-                                    for (size_t bk=0; bk<=nk; ++bk) {
-                                        
-                                        /* if ((ni-bi)%2==1) continue;
-                                           if ((nj-bj)%2==1) continue;
-                                           if ((nk-bk)%2==1) continue;
-                                        */
-                                        
-                                        const mpz_class factor_i   = EllipsoidExpansion_product_utility((ni-bi)/2);
-                                        const mpz_class factor_j   = EllipsoidExpansion_product_utility((nj-bj)/2);
-                                        const mpz_class factor_k   = EllipsoidExpansion_product_utility((nk-bk)/2);
-                                        const mpz_class factor_ijk = EllipsoidExpansion_product_utility((ni+nj+nk-bi-bj-bk)/2+2);
-                                        //
-                                        mpq_class factor(3*(factor_i*factor_j*factor_k),factor_ijk);
-                                        factor.canonicalize();
-                                        
-                                        N[ni][nj][nk] +=
-                                            elv[k]->excessDensity *
-                                            orsa::power_sign(bi+bj+bk) *
-                                            mpz_class(orsa::binomial(ni,bi) *
-                                                      orsa::binomial(nj,bj) *
-                                                      orsa::binomial(nk,bk)).get_d() *
-                                            orsa::int_pow(elv[k]->v0.getX(),bi) *
-                                            orsa::int_pow(elv[k]->v0.getY(),bj) *
-                                            orsa::int_pow(elv[k]->v0.getZ(),bk) *
-                                            factor.get_d() *
-                                            orsa::int_pow(elv[k]->a/plateModelR0,ni-bi) *
-                                            orsa::int_pow(elv[k]->b/plateModelR0,nj-bj) *
-                                            orsa::int_pow(elv[k]->c/plateModelR0,nk-bk);
-                                        
-                                    }
-                                }
-                            }
+                            N[ni][nj][nk] +=
+                                translated_N_ell[ni][nj][nk];
                         }
                     }
-                }                
+                }
             }
         }
         
         {
             const LayerData::SHLayerVectorType & shlv = CCMD->layerData->shLayerVector;
             for (size_t k=0; k<shlv.size(); ++k) {
-                
                 const std::string SQLiteDBFileName = getSqliteDBFileName_SH(shlv[k]->MD5(),plateModelR0);
                 osg::ref_ptr< SHIntegration<T> > shi = new SHIntegration<T>(shlv[k]->norm_A,
                                                                             shlv[k]->norm_B,
                                                                             plateModelR0,
                                                                             global_SH_epsrel,
                                                                             SQLiteDBFileName);
-                
+                std::vector< std::vector< std::vector<double> > > N_SH;
+                N_SH.resize(degree+1);
+                for (size_t ni=0; ni<=degree; ++ni) {
+                    N_SH[ni].resize(degree+1-ni);
+                    for (size_t nj=0; nj<=degree-ni; ++nj) {
+                        N_SH[ni][nj].resize(degree+1-ni-nj);
+                        for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
+                            N_SH[ni][nj][nk] =
+                                shlv[k]->excessDensity *
+                                shi->getIntegral(ni,nj,nk,verbose);
+                        }
+                    }
+                }
+                std::vector< std::vector< std::vector<double> > > translated_N_SH;
+                translate(translated_N_SH,N_SH,shlv[k]->v0);
                 for (size_t ni=0; ni<=degree; ++ni) {
                     for (size_t nj=0; nj<=degree-ni; ++nj) {
                         for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
-                            // bi,bj,bk are the binomial expansion of the v0 translation
-                            // this also introduces a power_sign
-                            for (size_t bi=0; bi<=ni; ++bi) {
-                                for (size_t bj=0; bj<=nj; ++bj) {
-                                    for (size_t bk=0; bk<=nk; ++bk) {
-                                        
-                                        N[ni][nj][nk] +=
-                                           shlv[k]->excessDensity *
-                                            orsa::power_sign(bi+bj+bk) *
-                                            mpz_class(orsa::binomial(ni,bi) *
-                                                      orsa::binomial(nj,bj) *
-                                                      orsa::binomial(nk,bk)).get_d() *
-                                            orsa::int_pow(shlv[k]->v0.getX(),bi) *
-                                            orsa::int_pow(shlv[k]->v0.getY(),bj) *
-                                            orsa::int_pow(shlv[k]->v0.getZ(),bk) *
-                                            shi->getIntegral(ni-bi,nj-bj,nk-bk,verbose);
-                                    }
-                                }
-                            }
+                            N[ni][nj][nk] +=
+                                translated_N_SH[ni][nj][nk];
                         }
                     }
                 }
