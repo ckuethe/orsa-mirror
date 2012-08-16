@@ -406,7 +406,7 @@ int main(int argc, char **argv) {
     if ( (argc != 7) &&
          (argc != 8) ) {
         // passing CCMDF-input-file to use it as input mass distribution
-        printf("Usage: %s <plate-model-file> <R0_km> <gravity-file-gravity-template-file> <output-gravity-file> <fitting-function-degree> <num-sample-points> [CCMDF-input-file]\n",argv[0]);
+        printf("Usage: %s <plate-model-file> <R0_km> <gravity-template-file> <output-gravity-file> <fitting-function-degree> <num-sample-points> [CCMDF-input-file]\n",argv[0]);
         exit(0);
     }
     

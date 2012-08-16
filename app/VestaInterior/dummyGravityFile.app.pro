@@ -7,7 +7,7 @@ CONFIG += gmp_include gmp_lib gsl_include gsl_lib osg_include osg_lib spice_incl
 
 include(../../orsa.pri)
 
-TARGET   = MovingLayers
+TARGET   = dummyGravityFile
 
 INCLUDEPATH += ../../src/
 DEPENDPATH  += ../../src/
@@ -21,7 +21,7 @@ unix:!macx {
 	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaSolarSystem -lorsaEssentialOSG -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads -lqd -L/home/tricaric/sqlite -lsqlite3 -lbsd
 }
 
-HEADERS += MovingLayers.h   MovingLayers_multifit.h   CCMD2SH.h   vesta.h  CubicChebyshevMassDistribution.h gaskell.h penalty.h
-SOURCES += MovingLayers.cpp CubicChebyshevMassDistribution.cpp 
+HEADERS += 
+SOURCES += dummyGravityFile.cpp 
 
 

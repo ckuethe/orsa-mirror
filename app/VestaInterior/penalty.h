@@ -22,7 +22,6 @@ double MassDistributionPenalty(const std::vector<orsa::Vector> & rv,
     return penalty;
 }
 
-
 double MassDistributionPenalty(const std::vector<orsa::Vector> & rv,
                                const orsa::MassDistribution * md) {
     std::vector<double> dv;
