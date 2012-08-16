@@ -705,7 +705,6 @@ int main(int argc, char **argv) {
                     ORSA_DEBUG("par[%03i] = [%s] = %+12.6f",s,par->name(s).c_str(),par->get(s));
                 }
                 
-                
                 for (size_t s=0; s<=T_degree; ++s) {
                     for (size_t i=0; i<=T_degree; ++i) {
                         for (size_t j=0; j<=T_degree-i; ++j) {
@@ -734,14 +733,128 @@ int main(int argc, char **argv) {
         }
     }
     
-    const size_t T_degree = densityCCC.size()-1;
-    
     osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
         new CubicChebyshevMassDistribution(densityCCC,
                                            densityScale,     
                                            plateModelR0,
                                            layerData);
     randomPointsInShape->updateMassDistribution(massDistribution.get());
+    
+    if (0) {
+        // test: project massDistribution, which includes layerData, onto a pure Chebyshev MD (no layers)
+        const bool decompose_layerData = true;
+        massDistribution =
+            CubicChebyshevMassDistributionDecomposition(massDistribution,
+                                                        T_degree_input,
+                                                        densityScale,
+                                                        plateModelR0,
+                                                        layerData,
+                                                        decompose_layerData);
+        
+        densityCCC = massDistribution->coeff;
+        layerData  = massDistribution->layerData;
+    }
+
+    if (0) {
+        // use multifit to project massDistribution, which includes layerData, onto a pure Chebyshev MD (no layers)
+        
+        const size_t T_degree = T_degree_input;
+        
+        osg::ref_ptr<orsa::MultifitParameters> par = 
+            new orsa::MultifitParameters;
+        char varName[1024];
+        for (size_t s=0; s<=T_degree; ++s) {
+            for (size_t i=0; i<=T_degree; ++i) {
+                for (size_t j=0; j<=T_degree-i; ++j) {
+                    for (size_t k=0; k<=T_degree-i-j; ++k) {
+                        if (i+j+k==s) {
+                            sprintf(varName,"c%03i%03i%03i",i,j,k);
+                            par->insert(varName,0,1.0);
+                        }
+                    }
+                }
+            }
+        }
+        
+        osg::ref_ptr<orsa::MultifitData> data = 
+            new orsa::MultifitData;
+        data->insertVariable("x");
+        data->insertVariable("y");
+        data->insertVariable("z");
+        orsa::Vector v;
+        double density;
+        const double oneOverR0 = 1.0/plateModelR0;
+        randomPointsInShape->reset();
+        size_t row=0;
+        size_t iter=0;
+        while (randomPointsInShape->get(v,density)) { 
+            data->insertD("x",row,v.getX()*oneOverR0);
+            data->insertD("y",row,v.getY()*oneOverR0);
+            data->insertD("z",row,v.getZ()*oneOverR0);
+            data->insertF(row,density/densityScale);
+            data->insertSigma(row,1.0);
+            ++row;
+            ++iter;
+        }
+        const size_t maxRow = --row;
+        
+        char logFile[1024];
+        snprintf(logFile,1024,"MD2G_ChebyshevFit3D.log");
+        
+        osg::ref_ptr<ChebyshevFit3D> cf = new ChebyshevFit3D(T_degree);
+        //
+        cf->setMultifitParameters(par.get());
+        cf->setMultifitData(data.get());
+        //
+        cf->setLogFile(logFile);
+        //
+        cf->run();
+        
+        for (size_t row=0; row<=maxRow; ++row) {
+            const double x = data->getD("x",row);
+            const double y = data->getD("y",row);
+            const double z = data->getD("z",row);
+            const double f = data->getF(row);
+            const double T = cf->fun(par.get(),
+                                     data.get(),
+                                     0,
+                                     0,
+                                     row);
+            const double err = T-f;
+            ORSA_DEBUG("FINAL: %+.3f %+.3f %+.3f %+.3f %+.3f %+.3f",
+                       x,y,z,f,T,err);
+        }
+        
+        for (size_t s=0; s<par->totalSize(); ++s) {
+            ORSA_DEBUG("par[%03i] = [%s] = %+12.6f",s,par->name(s).c_str(),par->get(s));
+        }
+        
+        for (size_t s=0; s<=T_degree; ++s) {
+            for (size_t i=0; i<=T_degree; ++i) {
+                for (size_t j=0; j<=T_degree-i; ++j) {
+                    for (size_t k=0; k<=T_degree-i-j; ++k) {
+                        if (i+j+k==s) {
+                            sprintf(varName,"c%03i%03i%03i",i,j,k);
+                            densityCCC[i][j][k] = par->get(varName);
+                        }
+                    }
+                }
+            }
+        }
+
+        layerData = 0;
+        
+        massDistribution =
+            new CubicChebyshevMassDistribution(densityCCC,
+                                               densityScale,     
+                                               plateModelR0,
+                                               layerData);
+        randomPointsInShape->updateMassDistribution(massDistribution.get());
+    }
+    
+    const size_t T_degree = densityCCC.size()-1;
+    
+    // randomPointsInShape->updateMassDistribution(massDistribution.get());
     
     std::vector< std::vector< std::vector<double> > > N;
     CCMD2ijk(N,
