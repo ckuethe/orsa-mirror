@@ -156,7 +156,8 @@ CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(con
                                                                              const size_t & degree,
                                                                              const double & densityScale,
                                                                              const double & R0,
-                                                                             const LayerData * layerData) {
+                                                                             const LayerData * layerData,
+                                                                             const bool & decompose_layerData) {
     CubicChebyshevMassDistribution::CoefficientType coeff;
     CubicChebyshevMassDistribution::resize(coeff,degree);
     
@@ -181,12 +182,21 @@ CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(con
                                    massDistribution->density(R0*orsa::Vector(x,y,z)) / densityScale;
                                 */
                                 
+                                const orsa::Vector p = R0*orsa::Vector(x,y,z);
+                                
                                 double delta_density = 
-                                    massDistribution->density(R0*orsa::Vector(x,y,z));
+                                    massDistribution->density(p);
                                 if (layerData != 0) {
-                                    delta_density -=
-                                        layerData->density(R0*orsa::Vector(x,y,z));
+                                    if (!decompose_layerData) {
+                                        delta_density -=
+                                            layerData->density(p);
+                                    }
                                 }
+                                
+                                /* ORSA_DEBUG("p:");
+                                   orsa::print(p);
+                                   ORSA_DEBUG("density: %g",delta_density);
+                                */
                                 
                                 sum +=
                                     cos(nx*orsa::pi()*(kx+0.5)/degree) *
@@ -201,6 +211,7 @@ CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(con
                         (2-orsa::kronecker(0,ny)) *
                         (2-orsa::kronecker(0,nz)) *
                         sum/orsa::cube(degree);
+                    
                     /* ORSA_DEBUG("coeff[%02i][%02i][%02i] = %20.12f",
                        nx,ny,nz,coeff[nx][ny][nz]);
                     */
@@ -209,8 +220,12 @@ CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(con
         }
     }
     
-    CubicChebyshevMassDistribution * CCMD =
-        new CubicChebyshevMassDistribution(coeff,densityScale,R0,layerData);
+    CubicChebyshevMassDistribution * CCMD;
+    if (decompose_layerData) {
+        CCMD = new CubicChebyshevMassDistribution(coeff,densityScale,R0,0);
+    } else {
+        CCMD = new CubicChebyshevMassDistribution(coeff,densityScale,R0,layerData);
+    }
     
     return CCMD;
 }
@@ -321,6 +336,7 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
                 for (size_t k=0; k<=T_degree-i-j; ++k) {
                     if (i+j+k == runningDegree) {
                         if (1 != gmp_fscanf(fp,"%lf",&data.coeff[i][j][k])) return false;
+                        // ORSA_DEBUG("ijk: %i %i %i   coeff: %g",i,j,k,data.coeff[i][j][k]);
                     }
                 }
             }
@@ -330,6 +346,7 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
     LayerData::EllipsoidLayerVectorType ellipsoidLayerVector;
     size_t ellipsoidLayerVectorSize;
     if (1 == gmp_fscanf(fp,"%zi",&ellipsoidLayerVectorSize)) {
+        // ORSA_DEBUG("ellipsoidLayerVectorSize: %i",ellipsoidLayerVectorSize);
         if (ellipsoidLayerVectorSize > 0) {
             haveLayerData=true;
             double excessDensity;
@@ -363,6 +380,7 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
     LayerData::SHLayerVectorType shLayerVector;
     size_t shLayerVectorSize;
     if (1 == gmp_fscanf(fp,"%zi",&shLayerVectorSize)) {
+        // ORSA_DEBUG("shLayerVectorSize: %i",shLayerVectorSize);
         if (shLayerVectorSize > 0) {
             haveLayerData=true;
             for (unsigned int k=0; k<shLayerVectorSize; ++k) {

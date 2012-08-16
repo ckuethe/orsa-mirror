@@ -85,7 +85,7 @@ public:
     public: /* input */
         const double excessDensity;
         const SHcoeff norm_A, norm_B;
-        const orsa::Vector v0; // center of ellipsoid
+        const orsa::Vector v0; // center 
     public:
         // derived
         mutable orsa::Cache<double> volume_, excessMass_;
@@ -241,7 +241,8 @@ CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(con
                                                                              const size_t & degree,
                                                                              const double & densityScale,
                                                                              const double & R0,
-                                                                             const LayerData * layerData = 0);
+                                                                             const LayerData * layerData = 0,
+                                                                             const bool & decompose_layerData=false);
 
 class CubicChebyshevMassDistributionFile {
 public:

@@ -253,13 +253,25 @@ double E1(void * xp) {
 #warning choose one return value, should be a parameter!
     
     // most flat
-    return (maxDensity-minDensity)+10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
+    // return (maxDensity-minDensity)+10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
     
     // most peaks
     // return (minDensity-maxDensity)+10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
     
     // generic
-    // return 10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
+    return 10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
+    
+    // most flat, no penalty
+    // return (maxDensity-minDensity)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
+    
+    // most peaks, no penalty
+    // return (minDensity-maxDensity)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
+    
+    // generic, no penalty
+    // return 10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
+    
+    // most peaks, negative penalty
+    // return (minDensity-maxDensity)-10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
     
     // return penalty;
 }
