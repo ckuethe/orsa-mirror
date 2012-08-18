@@ -114,6 +114,7 @@ public:
     SHIntegration(const SHcoeff & nA,
                   const SHcoeff & nB,
                   const T & R0_,
+                  const T & epsabs_,
                   const T & epsrel_,
                   const std::string & SQLiteDBFileName) :
         osg::Referenced(),
@@ -123,9 +124,10 @@ public:
         // triShape(s),
         // R0(R0_),
         oneOverR0(1.0/R0_),
+        epsabs(epsabs_),
         epsrel(epsrel_) {
         
-        if (epsrel != 0.0) ORSA_DEBUG("NOTE: using non-zero relative accuracy coefficient = %g",::to_double(epsrel));
+        ORSA_DEBUG("NOTE: using accuracy coefficients epsabs = %g and epsrel = %g",::to_double(epsabs),::to_double(epsrel));
         
         int rc = sqlite3_open(SQLiteDBFileName.c_str(),&db);
         //
@@ -211,6 +213,7 @@ protected:
     const SHcoeff & norm_B;
     // const double R0;
     const T oneOverR0;
+    const T epsabs;
     const T epsrel;
     mutable std::vector< orsa::Cache<double> > val; // integral value
     // mutable std::vector< SHInternals > aux;
@@ -759,7 +762,7 @@ public:
 #warning check again the maximum value of each integral!
                         if (min_abs_big_sum.isSet()) {
                             // coefficients_factor_threshold = epsrel*min_abs_big_sum/(4*orsa::pi()*Nr_factorial_dd);
-                            coefficients_factor_threshold = epsrel*min_abs_big_sum/(4*orsa::pi());
+                            coefficients_factor_threshold = (epsabs + epsrel*min_abs_big_sum) / (4*orsa::pi());
                         } else {
                             coefficients_factor_threshold.reset();
                         }

@@ -19,8 +19,9 @@ template <typename T> std::vector< std::vector< std::vector< std::vector<size_t>
 int main(int argc, char **argv) {
     
     if ( (argc != 7) &&
-         (argc != 8) ) {
-        printf("Usage: %s <SH-model-file> <R0_km> <min-degree> <max-degree> <mod-N> <mod-i> [epsrel=0.0]\n",argv[0]);
+         (argc != 8) &&
+         (argc != 9) ) {
+        printf("Usage: %s <SH-model-file> <R0_km> <min-degree> <max-degree> <mod-N> <mod-i> [epsabs=0.0] [epsrel=0.0]\n",argv[0]);
         exit(0);
     }
     
@@ -30,7 +31,8 @@ int main(int argc, char **argv) {
     const int maxDegree = atoi(argv[4]);
     const int mod_N = atoi(argv[5]);
     const int mod_i = atoi(argv[6]);
-    const double epsrel = (argc >= 8) ? fabs(atof(argv[7])) : 0.0;
+    const double epsabs = (argc >= 8) ? fabs(atof(argv[7])) : 0.0;
+    const double epsrel = (argc >= 9) ? fabs(atof(argv[8])) : 0.0;
     
     if ( (R0 <= 0.0) ||
          (minDegree < 0) ||
@@ -112,7 +114,7 @@ int main(int argc, char **argv) {
        }
     */
     
-    osg::ref_ptr<SHIntegration<SH_T> > shi = new SHIntegration<SH_T>(norm_A, norm_B, R0, epsrel, SQLiteDBFileName);
+    osg::ref_ptr<SHIntegration<SH_T> > shi = new SHIntegration<SH_T>(norm_A, norm_B, R0, epsabs, epsrel, SQLiteDBFileName);
     
     shi->reserve(maxDegree);
     // si_unit_R0->reserve(maxDegree);

@@ -527,7 +527,7 @@ double LayerData::SHLayer::volume() const {
     
     const std::string SQLiteDBFileName = getSqliteDBFileName_SH(MD5(),dummy_R0);
     
-    osg::ref_ptr<SHIntegration<T> > shi = new SHIntegration<T>(norm_A, norm_B, dummy_R0, global_SH_epsrel, SQLiteDBFileName);
+    osg::ref_ptr<SHIntegration<T> > shi = new SHIntegration<T>(norm_A, norm_B, dummy_R0, global_SH_epsabs, global_SH_epsrel, SQLiteDBFileName);
     
     volume_ = shi->getIntegral(0,0,0)*orsa::cube(dummy_R0);
     

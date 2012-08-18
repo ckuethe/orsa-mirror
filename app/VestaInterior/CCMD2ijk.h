@@ -138,6 +138,7 @@ void CCMD2ijk(std::vector< std::vector< std::vector<double> > > & N,
                 osg::ref_ptr< SHIntegration<T> > shi = new SHIntegration<T>(shlv[k]->norm_A,
                                                                             shlv[k]->norm_B,
                                                                             plateModelR0,
+                                                                            global_SH_epsabs,
                                                                             global_SH_epsrel,
                                                                             SQLiteDBFileName);
                 std::vector< std::vector< std::vector<double> > > N_SH;
