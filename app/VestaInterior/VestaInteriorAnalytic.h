@@ -44,6 +44,7 @@ public:
     orsa::Cache<double> R0_gravity;
     orsa::Cache<double> bulkDensity;
     std::vector<orsa::Vector> rv;
+    std::vector<double> hv;
     orsa::Cache<size_t> SH_degree;
     orsa::Cache<size_t> T_degree;
     orsa::Cache<size_t> T_size;
@@ -55,6 +56,7 @@ public:
     orsa::Cache<double> maximumDensity;
     orsa::Cache<double> penaltyThreshold;
     osg::ref_ptr<const LayerData> layerData;
+    osg::ref_ptr<orsa::Shape> shapeModel;
 };
 
 
@@ -65,6 +67,7 @@ void SIMAN_copy (void * source, void * dest) {
     d->R0_gravity          = s->R0_gravity;
     d->bulkDensity         = s->bulkDensity;
     d->rv                  = s->rv;
+    d->hv                  = s->hv;
     d->SH_degree           = s->SH_degree;
     d->T_degree            = s->T_degree;
     d->T_size              = s->T_size;
@@ -76,6 +79,7 @@ void SIMAN_copy (void * source, void * dest) {
     d->maximumDensity      = s->maximumDensity;
     d->penaltyThreshold    = s->penaltyThreshold;
     d->layerData           = s->layerData;
+    d->shapeModel          = s->shapeModel;
 }
 
 void * SIMAN_copy_construct (void * xp) {
@@ -158,10 +162,17 @@ double E1(void * xp) {
        }
     */
     //
+    /* const double penalty =
+       MassDistributionPenalty(x->rv,
+       dv,
+       massDistribution.get());
+    */
+    //
     const double penalty =
-        MassDistributionPenalty(x->rv,
-                                dv,
-                                massDistribution.get());
+        MassDistributionDepthPenalty(dv,
+                                     x->hv,
+                                     x->bulkDensity,
+                                     x->R0_plate);
     
     /* orsa::Vector v;
        double density;
@@ -251,6 +262,13 @@ double E1(void * xp) {
     gsl_vector_free(cT);
     
 #warning choose one return value, should be a parameter!
+
+    double retVal = 10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
+    if ( (minDensity > x->minimumDensity) &&
+         (maxDensity > x->maximumDensity) ) {
+        retVal += 1.0*(penalty/x->penaltyThreshold);
+    }
+    return retVal;
     
     // most flat
     // return (maxDensity-minDensity)+10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
@@ -259,7 +277,7 @@ double E1(void * xp) {
     // return (minDensity-maxDensity)+10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
     
     // generic
-    return 10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
+    // return 10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
     
     // most flat, no penalty
     // return (maxDensity-minDensity)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));

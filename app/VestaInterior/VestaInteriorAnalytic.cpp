@@ -543,10 +543,10 @@ int main(int argc, char **argv) {
     
     gsl_vector * pds_coeff    = mod_gravityData_getCoefficientVector(gravityData.get());
     gsl_matrix * pds_covm     = mod_gravityData_getCovarianceMatrix(gravityData.get());
-    gsl_matrix * pds_inv_covm = mod_gravityData_getInverseCovarianceMatrix(gravityData.get());
+    // gsl_matrix * pds_inv_covm = mod_gravityData_getInverseCovarianceMatrix(gravityData.get());
     
     gsl_matrix_view     pds_covm_view = gsl_matrix_submatrix(    pds_covm, 0, 0, SH_size, SH_size);
-    gsl_matrix_view pds_inv_covm_view = gsl_matrix_submatrix(pds_inv_covm, 0, 0, SH_size, SH_size);
+    // gsl_matrix_view pds_inv_covm_view = gsl_matrix_submatrix(pds_inv_covm, 0, 0, SH_size, SH_size);
     
     {
         
@@ -828,12 +828,21 @@ int main(int argc, char **argv) {
                         rv.push_back(v);
                     }
                 }
+
+                std::vector<double> hv; // depth
+                {
+                    hv.resize(rv.size());
+                    for (size_t k=0; k<rv.size(); ++k) {
+                        hv[k] = (rv[k]-shapeModel->closestVertex(rv[k])).length();
+                    }
+                }
                 
                 SIMAN_xp x0;
                 x0.R0_plate   = plateModelR0;
                 x0.R0_gravity = gravityData->R0;
                 x0.bulkDensity = bulkDensity;
                 x0.rv = rv;
+                x0.hv = hv;
                 x0.SH_degree = SH_degree;
                 x0.T_degree = T_degree;
                 x0.T_size = T_size;
@@ -844,12 +853,12 @@ int main(int argc, char **argv) {
                 x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(2.00,orsa::Unit::GRAM),orsa::Unit::CM,-3);
                 x0.maximumDensity = orsa::FromUnits(orsa::FromUnits(8.00,orsa::Unit::GRAM),orsa::Unit::CM,-3);
                 x0.penaltyThreshold = 1.00;
-                
                 if (massDistribution.get() != 0) {
                     x0.layerData = massDistribution->layerData;
                 } else {
                     x0.layerData = 0;
                 }
+                x0.shapeModel = shapeModel;
                 
                 // fix value of x0.factor[]  
                 
@@ -902,7 +911,7 @@ int main(int argc, char **argv) {
     // free GSL stuff
     gsl_vector_free(pds_coeff);
     gsl_matrix_free(pds_covm);
-    gsl_matrix_free(pds_inv_covm);
+    // gsl_matrix_free(pds_inv_covm);
     gsl_matrix_free(cT2sh);
     
 #warning call gsl_*_free as needed...

@@ -394,10 +394,10 @@ int main(int argc, char **argv) {
     
     gsl_vector * pds_coeff    = mod_gravityData_getCoefficientVector(gravityData.get());
     gsl_matrix * pds_covm     = mod_gravityData_getCovarianceMatrix(gravityData.get());
-    gsl_matrix * pds_inv_covm = mod_gravityData_getInverseCovarianceMatrix(gravityData.get());
+    // gsl_matrix * pds_inv_covm = mod_gravityData_getInverseCovarianceMatrix(gravityData.get());
     
     gsl_matrix_view     pds_covm_view = gsl_matrix_submatrix(    pds_covm, 0, 0, SH_size, SH_size);
-    gsl_matrix_view pds_inv_covm_view = gsl_matrix_submatrix(pds_inv_covm, 0, 0, SH_size, SH_size);
+    // gsl_matrix_view pds_inv_covm_view = gsl_matrix_submatrix(pds_inv_covm, 0, 0, SH_size, SH_size);
     
     {
         
@@ -1145,7 +1145,7 @@ int main(int argc, char **argv) {
     // free GSL stuff
     gsl_vector_free(pds_coeff);
     gsl_matrix_free(pds_covm);
-    gsl_matrix_free(pds_inv_covm);
+    // gsl_matrix_free(pds_inv_covm);
     gsl_matrix_free(cT2sh);
     
 #warning call gsl_*_free as needed...

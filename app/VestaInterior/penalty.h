@@ -45,4 +45,21 @@ double MassDistributionPenalty(const orsa::RandomPointsInShape * randomPointsInS
     return MassDistributionPenalty(rv,dv,randomPointsInShape->md.get());
 }
 
+double MassDistributionDepthPenalty(const std::vector<double>       & dv,
+                                    const std::vector<double>       & hv,
+                                    const double & bulkDensity,
+                                    const double & R0) {
+    if (dv.size() != hv.size()) ORSA_DEBUG("problems...");
+    double penalty = 0.0;
+    for (size_t k=0; k<dv.size(); ++k) {
+        // penalty -= dv[k]*hv[k];
+        // const double dp = (dv[k]/bulkDensity - 1.0)*(hv[k]/R0 - 1.0);
+        const double dp = (1.0 - dv[k]/bulkDensity)*(1.0 + hv[k]/R0);
+        penalty += dp;
+        // ORSA_DEBUG("density: %g  depth: %g  dp: %g",dv[k],hv[k],dp);
+    }
+    penalty /= dv.size();
+    return penalty;
+}
+
 #endif // ORSA_INTERIOR_PENALTY_H

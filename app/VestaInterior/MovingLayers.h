@@ -10,7 +10,7 @@
 #include <gsl/gsl_siman.h>
 
 #include "CubicChebyshevMassDistribution.h"
-#include "penalty.h"
+// #include "penalty.h"
 
 #include "simplex.h"
 

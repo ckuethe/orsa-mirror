@@ -442,7 +442,7 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
     gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.minDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
     gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.maxDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
     gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.deltaDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
-    gmp_fprintf(fp,"%.3f ",data.penalty);
+    gmp_fprintf(fp,"%.6f ",data.penalty);
     gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.densityScale,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
     gmp_fprintf(fp,"%g ",orsa::FromUnits(data.R0,orsa::Unit::KM,-1));
     gmp_fprintf(fp,"%i ",data.SH_degree);
