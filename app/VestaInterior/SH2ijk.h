@@ -482,8 +482,6 @@ public:
                                            ::to_double(fv.Q));
                                         */
                                     }
-                                    
-                                    
                                 }
                             }
                         }
@@ -534,12 +532,22 @@ public:
                     big_sum[jj] = 0.0;
                 }
                 
+                /* std::vector<bool> skip_big_sum;
+                   skip_big_sum.resize(big_sum.size());
+                   for (size_t jj=0; jj<skip_big_sum.size(); ++jj) {
+                   skip_big_sum[jj] = false;
+                   }
+                */
+                
                 std::vector<size_t> pos;
                 pos.resize(Nr);
+                for (size_t p=0; p<Nr; ++p) {
+                    pos[p] = 0;
+                }
                 
-                const dd_real Nr_factorial_dd = mpzToDD(orsa::factorial(Nr));
-                dd_real min_abs_big_sum = 0.0;
-                dd_real coefficients_factor_threshold = 0.0;
+                // const dd_real Nr_factorial_dd = mpzToDD(orsa::factorial(Nr));
+                orsa::Cache<dd_real> min_abs_big_sum;
+                orsa::Cache<dd_real> coefficients_factor_threshold;
                 
                 while (1) {
 
@@ -584,14 +592,6 @@ public:
                         std::cout << std::endl;
                     }
                     
-                    /* min_abs_big_sum=fabs(big_sum[0]);
-                       for (size_t jj=1; jj<ii.size(); ++jj) {
-                       if (fabs(big_sum[jj]) < min_abs_big_sum) min_abs_big_sum = fabs(big_sum[jj]);
-                       }
-                       // the 10 factor comes from the two integrals which are up to pi^2
-                       coefficients_factor_threshold = epsrel*min_abs_big_sum/(10*Nr_factorial_dd);
-                    */
-                    
                     std::vector<int> count;
                     count.resize(fvv.size());
                     for (size_t c=0; c<count.size(); ++c) {
@@ -603,8 +603,16 @@ public:
 
                     bool skip_term=false;
                     
+                    mpz_class binomial_factor = orsa::factorial(Nr);
+                    for (size_t c=0; c<count.size(); ++c) {
+                        binomial_factor /= orsa::factorial(count[c]);
+                    }
+                    const dd_real binomial_factor_dd = mpzToDD(binomial_factor); 
+                    // ORSA_DEBUG("binomial_factor: %Zi",binomial_factor.get_mpz_t());
+                    
                     // dd_real just_norm_factors = 1.0;
-                    dd_real coefficients_factor = 1.0;
+                    // dd_real coefficients_factor = 1.0;
+                    dd_real coefficients_factor = binomial_factor_dd;
                     //  dividing here already...
                     // dd_real coefficients_factor = pow(oneOverR0,Nr)/Nr; // 1/(Nr*R0^Nr)
                     for (size_t c=0; c<fvv.size(); ++c) {
@@ -624,39 +632,32 @@ public:
                         // can skip this term?
                         if ((nx==0) && (ny==0) && (nz==0)) {
                             // cannot skip for 0,0,0 term, it would introduce a larger error
-                        } else if ( (fabs(coefficients_factor) < coefficients_factor_threshold) &&
-                                    (fabs(fvv[c].ABQ_R0) < 1.0) &&
-                                    (min_abs_big_sum != 0.0) ) {
-                            if (verbose) {
-                                if (1) {
-                                    std::cout << "pos:";
-                                    size_t p=pos.size();
-                                    while(p!=0) {
-                                        --p;
-                                        std::cout << " " << pos[p];
-                                    }
-                                    std::cout << std::endl;
-                                }
-                                ORSA_DEBUG("skipping term, min_abs_big_sum = %g   coefficients_factor: %g",::to_double(min_abs_big_sum),::to_double(coefficients_factor));
+                        } else if (coefficients_factor_threshold.isSet()) {
+                            if ( (fabs(coefficients_factor) < coefficients_factor_threshold) &&
+                                 (fabs(fvv[c].ABQ_R0) < 1.0) ) {
+                                /* if (verbose) {
+                                   if (1) {
+                                   std::cout << "pos:";
+                                   size_t p=pos.size();
+                                   while(p!=0) {
+                                   --p;
+                                   std::cout << " " << pos[p];
+                                   }
+                                   std::cout << std::endl;
+                                   }
+                                   ORSA_DEBUG("skipping term, min_abs_big_sum = %g   coefficients_factor: %g",::to_double(min_abs_big_sum),::to_double(coefficients_factor));
+                                   }
+                                */
+                                skip_term=true;
+                                break;
                             }
-                            
-                            skip_term=true;
-                            break;
                         }
-                        
                     }
                     
                     // ORSA_DEBUG("coefficients_factor: %g",::to_double(coefficients_factor));
                     
                     if ( (!skip_term) &&
                          (coefficients_factor != 0.0) ) {
-                        
-                        mpz_class binomial_factor = orsa::factorial(Nr);
-                        for (size_t c=0; c<count.size(); ++c) {
-                            binomial_factor /= orsa::factorial(count[c]);
-                        }
-                        const dd_real binomial_factor_dd = mpzToDD(binomial_factor); 
-                        // ORSA_DEBUG("binomial_factor: %Zi",binomial_factor.get_mpz_t());
                         
                         // initial values...
                         /* int pow_cos_phi=nx;
@@ -695,12 +696,22 @@ public:
                                                                                pow_sin_theta+ii[jj].nx+ii[jj].ny+1,
                                                                                1);
                             
-                            // ORSA_DEBUG("csk: %i %i %i  itg: %g",pow_cos_phi,pow_sin_phi,2,::to_double(factor_phi_integral));
-                            // ORSA_DEBUG("csk: %i %i %i  itg: %g",pow_cos_theta,pow_sin_theta,1,::to_double(factor_theta_integral));
+                            /* ORSA_DEBUG("jj: %02i   csk: %i %i %i   itg: %g",
+                               jj,
+                               pow_cos_phi+ii[jj].nx,
+                               pow_sin_phi+ii[jj].ny,
+                               2,
+                               ::to_double(factor_phi_integral));
+                               ORSA_DEBUG("jj: %02i   csk: %i %i %i   itg: %g",
+                               jj,
+                               pow_cos_theta+ii[jj].nz,
+                               pow_sin_theta+ii[jj].nx+ii[jj].ny+1,
+                               1,
+                               ::to_double(factor_theta_integral));
+                            */
                             
-                            // const T old_big_sum = big_sum;
                             big_sum[jj] +=
-                                binomial_factor_dd * // mpzToDD(binomial_factor) *
+                                /* binomial already included... */ // binomial_factor_dd * // mpzToDD(binomial_factor) *
                                 coefficients_factor *
                                 factor_phi_integral *
                                 factor_theta_integral;
@@ -718,43 +729,40 @@ public:
                             
                         }
                         
-                        // ORSA_DEBUG("big_sum: %g",::to_double(big_sum));
-                        
-                        /* 
-                           if (0) if (big_sum != old_big_sum) {
-                           // debug only...
-                           {
-                           size_t p=pos.size();
-                           while(p!=0) {
-                           --p;
-                           const FiveVars & fv = fvv[pos[p]];
-                           char line[4096];
-                           gmp_sprintf(line," [%i,%i,%i,%i,%i|%g]",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.ABQ_R0));
-                           std::cout << line; // << " ";
-                           // if (p=!0) cout << " ";
-                           }
-                           }
-                           char line[4096];
-                           gmp_sprintf(line," s: %g   ds: %g   bin: %g   coeff: %g   phi: %g   theta: %g   jnf: %g",
-                           ::to_double(big_sum),
-                           ::to_double(big_sum-old_big_sum),                                       
-                           binomial_factor.get_d(),
-                           ::to_double(coefficients_factor),
-                           ::to_double(factor_phi_integral),
-                           ::to_double(factor_theta_integral),
-                           ::to_double(just_norm_factors));
-                           std::cout << line << std::endl;
+                        /* for (size_t jj=0; jj<big_sum.size(); ++jj) {
+                           ORSA_DEBUG("big_sum[%02i] = %g",jj,::to_double(big_sum[jj]));
                            }
                         */
-
-                        // important update
-                        min_abs_big_sum=fabs(big_sum[0]);
-                        for (size_t jj=1; jj<ii.size(); ++jj) {
-                            if (fabs(big_sum[jj]) < min_abs_big_sum) min_abs_big_sum = fabs(big_sum[jj]);
-                        }
-                        // the 10 factor comes from the two integrals which are up to pi^2
-                        coefficients_factor_threshold = epsrel*min_abs_big_sum/(10*Nr_factorial_dd);
                         
+                        /* bool skip_all_big_sum=true;
+                           for (size_t jj=0; jj<skip_big_sum.size(); ++jj) {
+                           if (big_sum[jj] == 0.0) {
+                           skip_big_sum[jj]=true;
+                           }
+                           if (skip_big_sum[jj]==false) {
+                           skip_all_big_sum=false;
+                           }
+                           }
+                           #warning include a break here?
+                           // if (skip_all_big_sum) break;
+                           
+                        */
+                        
+                        // important update
+                        min_abs_big_sum.reset();
+                        for (size_t jj=0; jj<ii.size(); ++jj) {
+                            if (big_sum[jj] != 0.0) {
+                                min_abs_big_sum.setIfSmaller(fabs(big_sum[jj]));
+                            }
+                        }
+                        // the factor (4*pi) comes from the two integrals which are up to 2*pi and 2, respectively
+#warning check again the maximum value of each integral!
+                        if (min_abs_big_sum.isSet()) {
+                            // coefficients_factor_threshold = epsrel*min_abs_big_sum/(4*orsa::pi()*Nr_factorial_dd);
+                            coefficients_factor_threshold = epsrel*min_abs_big_sum/(4*orsa::pi());
+                        } else {
+                            coefficients_factor_threshold.reset();
+                        }
                     }
                     
                     // now, increment while avoiding repetitions
