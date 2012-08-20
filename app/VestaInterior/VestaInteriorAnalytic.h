@@ -21,14 +21,14 @@
 #define ITERS_FIXED_T 100 // 200 // 100 // 1000 // 
 
 /* max step size in random walk */
-#define STEP_SIZE 0.05
+#define STEP_SIZE 1.0
 
 /* Boltzmann constant */
 #define K 1.0                   
 
 /* initial temperature */
 // #define T_INITIAL 0.008     
-#define T_INITIAL 0.100
+#define T_INITIAL 0.001
 
 /* damping factor for temperature */
 #warning no damping??
@@ -94,7 +94,7 @@ void SIMAN_destroy (void * xp) {
 
 double E1(void * xp) {
 
-    const bool verbose = false;
+    const bool verbose = true;
     
     SIMAN_xp * x = (SIMAN_xp *) xp;
     
@@ -162,7 +162,7 @@ double E1(void * xp) {
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: closest to uniform density]",delta_penalty);
         }
         
-        if (0) {
+        if (1) {
             // target: most volume with high density
             // const double exponent = 1.0;
             double delta_penalty = 0.0;
@@ -176,7 +176,7 @@ double E1(void * xp) {
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: most volume with high density]",delta_penalty);
         }
         
-        if (1) {
+        if (0) {
             // target: highest single density peak
             const double delta_penalty = (minDensity-maxDensity)/x->bulkDensity;
             penalty += delta_penalty;
@@ -242,7 +242,7 @@ double E1(void * xp) {
     // return (minDensity-maxDensity)-10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
     */
     
-    ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]   penalty: %g",
+    ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]   penalty: %+10.6f",
                orsa::FromUnits(orsa::FromUnits(minDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
                orsa::FromUnits(orsa::FromUnits(maxDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
                orsa::FromUnits(orsa::FromUnits(averageSampledDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
@@ -287,8 +287,8 @@ void S1(const gsl_rng * r, void * xp, double step_size) {
     SIMAN_xp * x = (SIMAN_xp *) xp;
     
     for (size_t b=0; b<x->uK_size; ++b) {
-        // x->factor[b] += step_size*(2*gsl_rng_uniform(r)-1)/x->uK_size;
-        x->factor[b] += step_size*(2*gsl_rng_uniform(r)-1);
+        x->factor[b] += step_size*(2*gsl_rng_uniform(r)-1)/x->uK_size;
+        // x->factor[b] += step_size*(2*gsl_rng_uniform(r)-1);
     }
 }
 
