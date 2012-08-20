@@ -21,18 +21,18 @@
 #define ITERS_FIXED_T 100 // 200 // 100 // 1000 // 
 
 /* max step size in random walk */
-#define STEP_SIZE 1.0           
+#define STEP_SIZE 1.0
 
 /* Boltzmann constant */
 #define K 1.0                   
 
 /* initial temperature */
 // #define T_INITIAL 0.008     
-#define T_INITIAL 0.010         
+#define T_INITIAL 0.005
 
 /* damping factor for temperature */
 #warning no damping??
-#define MU_T 1.000 // 1.010 // 1.003      
+#define MU_T 1.001 // 1.000 // 1.010 // 1.003      
 #define T_MIN 1.0e-5 // 2.0e-6
 
 gsl_siman_params_t params  = {N_TRIES, ITERS_FIXED_T, STEP_SIZE,
@@ -121,18 +121,6 @@ double E1(void * xp) {
     osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
         new CubicChebyshevMassDistribution(coeff,x->bulkDensity,x->R0_plate,x->layerData);
     
-    // x->randomPointsInShape->updateMassDistribution(massDistribution);
-
-    /* osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
-       orsa::Cache<double> minDensity, maxDensity;
-       for (size_t k=0; k<x->rv.size(); ++k) {
-       const double density = massDistribution->density(x->rv[k]);
-       stat->insert(density);
-       minDensity.setIfSmaller(density);
-       maxDensity.setIfLarger(density);
-       }
-    */
-    
     osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
     orsa::Cache<double> minDensity, maxDensity;
     std::vector<double> dv;
@@ -145,131 +133,86 @@ double E1(void * xp) {
     }
     // const double minDensity = stat->min();
     // const double maxDensity = stat->max();
-    const double averageDensity = stat->average();
-    
-    /* double penalty = 0.0;
-       for (size_t k1=0; k1<x->rv.size(); ++k1) {
-       for (size_t k2=0; k2<k1; ++k2) {
-       #warning assuming all middle points are inside the body; slightly more complicated algorithm needed with stongly concave bodies
-       const orsa::Vector rm = 0.5*(x->rv[k1]+x->rv[k2]);
-       const double dm = massDistribution->density(rm);
-       const double d12 = std::min(dv[k1],dv[k2]);
-       if (dm<d12) {
-       // penalty += (d12-dm)/d12;
-       penalty = std::max(penalty,(d12-dm)/d12);
-       }
-       }
-       }
-    */
-    //
-    /* const double penalty =
-       MassDistributionPenalty(x->rv,
-       dv,
-       massDistribution.get());
-    */
-    //
-    const double penalty =
-        MassDistributionDepthPenalty(dv,
-                                     x->hv,
-                                     x->bulkDensity,
-                                     x->R0_plate);
-    
-    /* orsa::Vector v;
-       double density;
-       osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
-       orsa::Cache<double> minDensity, maxDensity;
-       x->randomPointsInShape->reset();
-       while (x->randomPointsInShape->get(v,density)) { 
-       stat->insert(density);
-       minDensity.setIfSmaller(density);
-       maxDensity.setIfLarger(density);
-       }
-    */
-    
-#warning find a better way to compute average density? (based on simplexIntegral and not on randomPointsInShape)
-    
-    ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]   penalty: %g",
-               orsa::FromUnits(orsa::FromUnits(minDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
-               orsa::FromUnits(orsa::FromUnits(maxDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
-               orsa::FromUnits(orsa::FromUnits(averageDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
-               penalty);
-    
-    /* 
-       {
-       // quick output
-       char filename[1024];
-       sprintf(filename,"quickProfile_%+.6f_%d.dat",orsa::FromUnits(orsa::FromUnits(stat->min(),orsa::Unit::GRAM,-1),orsa::Unit::CM,3),(*orsa::GlobalRNG::randomSeed));
-       ORSA_DEBUG("writing file [%s]",filename);
-       FILE * fp = fopen(filename,"w");
-       double PP = -285.0;
-       while (PP < 285.0) {
-       v = orsa::Vector(orsa::FromUnits(PP,orsa::Unit::KM),0,0);
-       density = massDistribution->density(v);
-       gmp_fprintf(fp,"%g %g\n",PP,orsa::FromUnits(orsa::FromUnits(density,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
-       PP += 1.0;
-       }
-       fclose(fp);
-       }
-    */
-    
-    if ( (minDensity >= x->minimumDensity) &&
-         (maxDensity <= x->maximumDensity) &&
-         (penalty <= x->penaltyThreshold) ) {
-        // another quick output...
-#warning pass filename as parameter...
-        CubicChebyshevMassDistributionFile::CCMDF_data data;
-        data.minDensity = minDensity;
-        data.maxDensity = maxDensity;
-        data.deltaDensity = maxDensity-minDensity;
-        data.penalty = penalty;
-        data.densityScale = x->bulkDensity;
-        data.R0 = x->R0_plate;
-        data.SH_degree = x->SH_degree;
-        data.coeff = coeff;
-        data.layerData = x->layerData;
-        CubicChebyshevMassDistributionFile::append(data,"CCMDF.out");
-    }
-    
-    // first approach: maximize the minimum density
-    // return -minDensity;
-    // alternative: minimize density range
-    // return (stat->max()-stat->min());
-    // more versions
-    // return std::max(0.0,-minDensity);
-    // return std::max(0.0,-minDensity)*(maxDensity-minDensity);
-    // return -minDensity*(maxDensity-minDensity);
-    // return maxDensity-minDensity; /**/
-    // return -minDensity*(maxDensity-minDensity);
-    // return minDensity*(maxDensity-minDensity);
-    
-    // maximum amplitude!
-    // return minDensity-maxDensity;
-    
-    /* if (minDensity < x->minimumDensity) {
-       return 1.0;
-       } else {
-       return 0.0;
-       }
-    */
-    
-    /* ORSA_DEBUG("Mm: %g  p: %g  mm: %g",
-       (maxDensity-minDensity),
-       penalty,
-       (x->minimumDensity-minDensity));
-    */
+    const double averageSampledDensity = stat->average(); // can differ a bit from nominal average density
     
     // make sure this is called before leaving...
     gsl_vector_free(cT);
     
-#warning choose one return value, should be a parameter!
-
-    double retVal = 10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
+    // condensed all variants here below...
+    double retVal  =
+        10.0*std::max(0.0,(x->minimumDensity-minDensity)) +
+        10.0*std::max(0.0,(maxDensity-x->maximumDensity));
+    double penalty = retVal;
     if ( (minDensity > x->minimumDensity) &&
-         (maxDensity > x->maximumDensity) ) {
-        retVal += 1.0*(penalty/x->penaltyThreshold);
+         (maxDensity < x->maximumDensity) ) {
+        
+        // target: low penalty value...
+        
+        if (0) {
+            double delta_penalty = 0.0;
+            // target: closest to uniform density
+            for (size_t k=0; k<dv.size(); ++k) {
+                delta_penalty += fabs(dv[k]/x->bulkDensity - 1.0);
+            }
+            delta_penalty /= dv.size();
+            penalty += delta_penalty;
+        }
+        
+        if (0) {
+            // target: most volume with high density
+            const double exponent = 1.0;
+            double delta_penalty = 0.0;
+            for (size_t k=0; k<dv.size(); ++k) {
+                delta_penalty -= pow(dv[k]/x->bulkDensity,exponent);
+            }
+            delta_penalty /= dv.size();
+            penalty += delta_penalty;
+        }
+
+        if (1) {
+            // target: highest single density peak
+            const double exponent = 1.0;
+            double delta_penalty = 0.0;
+            for (size_t k=0; k<dv.size(); ++k) {
+                delta_penalty -= pow(dv[k]/x->bulkDensity,exponent);
+            }
+            delta_penalty /= dv.size();
+            penalty += delta_penalty;
+        }
+        
+        if (0) {
+            // target: density proportional to depth
+            double delta_penalty = 0.0;
+            for (size_t k=0; k<dv.size(); ++k) {
+                delta_penalty += (1.0 - dv[k]/x->bulkDensity)*(1.0 + x->hv[k]/x->R0_plate);
+            }
+            delta_penalty /= dv.size();
+            penalty += delta_penalty;
+        }
+        
+        if (1) {
+            // target: no low-density "holes"
+            double delta_penalty = 0.0;
+            for (size_t k=1; k<dv.size(); ++k) {
+                // assuming the mid-point rm is still contained in body...
+                const orsa::Vector rm = 0.5*(x->rv[k] + x->rv[k-1]);
+                const double dm = massDistribution->density(rm);
+                const double d12 = std::min(dv[k],dv[k-1]);
+                if (dm<d12) {
+                    delta_penalty += (d12-dm)/x->bulkDensity;
+                }
+            }
+            delta_penalty /= dv.size()-1;
+            penalty += delta_penalty;
+        }
+        
+        retVal = penalty;
     }
-    return retVal;
     
+#warning do not call return here, call it only at the very end of this method
+
+    /* 
+    // OLD VERSIONS...
     // most flat
     // return (maxDensity-minDensity)+10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
     
@@ -290,8 +233,33 @@ double E1(void * xp) {
     
     // most peaks, negative penalty
     // return (minDensity-maxDensity)-10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
+    */
     
-    // return penalty;
+    ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]   penalty: %g",
+               orsa::FromUnits(orsa::FromUnits(minDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+               orsa::FromUnits(orsa::FromUnits(maxDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+               orsa::FromUnits(orsa::FromUnits(averageSampledDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+               penalty);
+    
+    if ( (minDensity >= x->minimumDensity) &&
+         (maxDensity <= x->maximumDensity) &&
+         (penalty <= x->penaltyThreshold) ) {
+        // another quick output...
+#warning pass filename as parameter...
+        CubicChebyshevMassDistributionFile::CCMDF_data data;
+        data.minDensity = minDensity;
+        data.maxDensity = maxDensity;
+        data.deltaDensity = maxDensity-minDensity;
+        data.penalty = penalty;
+        data.densityScale = x->bulkDensity;
+        data.R0 = x->R0_plate;
+        data.SH_degree = x->SH_degree;
+        data.coeff = coeff;
+        data.layerData = x->layerData;
+        CubicChebyshevMassDistributionFile::append(data,"CCMDF.out");
+    }
+    
+    return retVal;
 }
 
 double M1(void * xp, void * yp) {

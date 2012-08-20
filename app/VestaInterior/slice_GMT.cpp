@@ -298,11 +298,11 @@ int main(int argc, char **argv) {
        const double y_max  =  300.00;
     */
     //
-    const double x_step =    1.00;
+    const double x_step =    0.30;
     const double x_min  = - 80.00;
     const double x_max  =  100.00;
     //
-    const double y_step =    1.00;
+    const double y_step =    0.30;
     const double y_min  = - 50.00;
     const double y_max  =   50.00;
     
@@ -325,6 +325,7 @@ int main(int argc, char **argv) {
         ORSA_DEBUG("sampling...");
         // random points on given plane
         std::deque<orsa::Vector> rv_in;
+        std::deque<orsa::Vector> rv_out;
         {
             double x = x_min + 0.5*x_step;
             while (x<x_max) {
@@ -344,6 +345,8 @@ int main(int argc, char **argv) {
                     
                     if (shapeModel->isInside(v)) {
                         rv_in.push_back(v);
+                    } else {
+                        rv_out.push_back(v);
                     }
                     
                     y += y_step;
@@ -369,12 +372,12 @@ int main(int argc, char **argv) {
             while (it_rv_in != rv_in.end()) {
 #warning double-check why adding step here...
                 // XZ
-                xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1) + x_step;
-                xVector[1] = orsa::FromUnits((*it_rv_in).getZ(),orsa::Unit::KM,-1) + y_step;
+                xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1);
+                xVector[1] = orsa::FromUnits((*it_rv_in).getZ(),orsa::Unit::KM,-1);
                 
                 // XY
-                /* xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1) + x_step;
-                   xVector[1] = orsa::FromUnits((*it_rv_in).getY(),orsa::Unit::KM,-1) + y_step;
+                /* xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1);
+                   xVector[1] = orsa::FromUnits((*it_rv_in).getY(),orsa::Unit::KM,-1);
                 */
                 
                 fprintf(fp_xyz,"%g %g %g\n",xVector[0],xVector[1],orsa::FromUnits(orsa::FromUnits(md->density((*it_rv_in)),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
@@ -385,6 +388,25 @@ int main(int argc, char **argv) {
                 
                 ++it_rv_in;
             }
+
+            // append zeros outside body
+            std::deque<orsa::Vector>::const_iterator it_rv_out = rv_out.begin();
+            while (it_rv_out != rv_out.end()) {
+#warning double-check why adding step here...
+                // XZ
+                xVector[0] = orsa::FromUnits((*it_rv_out).getX(),orsa::Unit::KM,-1);
+                xVector[1] = orsa::FromUnits((*it_rv_out).getZ(),orsa::Unit::KM,-1);
+                
+                // XY
+                /* xVector[0] = orsa::FromUnits((*it_rv_out).getX(),orsa::Unit::KM,-1);
+                   xVector[1] = orsa::FromUnits((*it_rv_out).getY(),orsa::Unit::KM,-1);
+                */
+                
+                fprintf(fp_xyz,"%g %g %g\n",xVector[0],xVector[1],0.0);
+                
+                ++it_rv_out;
+            }
+
             
             ++it_CCMDF;
         }
