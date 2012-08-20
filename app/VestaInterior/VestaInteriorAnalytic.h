@@ -21,14 +21,14 @@
 #define ITERS_FIXED_T 100 // 200 // 100 // 1000 // 
 
 /* max step size in random walk */
-#define STEP_SIZE 1.0
+#define STEP_SIZE 0.05
 
 /* Boltzmann constant */
 #define K 1.0                   
 
 /* initial temperature */
 // #define T_INITIAL 0.008     
-#define T_INITIAL 0.005
+#define T_INITIAL 0.100
 
 /* damping factor for temperature */
 #warning no damping??
@@ -93,6 +93,8 @@ void SIMAN_destroy (void * xp) {
 }
 
 double E1(void * xp) {
+
+    const bool verbose = false;
     
     SIMAN_xp * x = (SIMAN_xp *) xp;
     
@@ -155,29 +157,30 @@ double E1(void * xp) {
                 delta_penalty += fabs(dv[k]/x->bulkDensity - 1.0);
             }
             delta_penalty /= dv.size();
+            delta_penalty *= 10.0;
             penalty += delta_penalty;
+            if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: closest to uniform density]",delta_penalty);
         }
         
         if (0) {
             // target: most volume with high density
-            const double exponent = 1.0;
+            // const double exponent = 1.0;
             double delta_penalty = 0.0;
             for (size_t k=0; k<dv.size(); ++k) {
-                delta_penalty -= pow(dv[k]/x->bulkDensity,exponent);
+                // delta_penalty -= pow(dv[k]/x->bulkDensity,exponent);
+                delta_penalty += 1.0 - dv[k]/x->bulkDensity;
             }
             delta_penalty /= dv.size();
+            delta_penalty *= 100.0;
             penalty += delta_penalty;
+            if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: most volume with high density]",delta_penalty);
         }
-
+        
         if (1) {
             // target: highest single density peak
-            const double exponent = 1.0;
-            double delta_penalty = 0.0;
-            for (size_t k=0; k<dv.size(); ++k) {
-                delta_penalty -= pow(dv[k]/x->bulkDensity,exponent);
-            }
-            delta_penalty /= dv.size();
+            const double delta_penalty = (minDensity-maxDensity)/x->bulkDensity;
             penalty += delta_penalty;
+            if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: highest single density peak]",delta_penalty);
         }
         
         if (0) {
@@ -187,7 +190,9 @@ double E1(void * xp) {
                 delta_penalty += (1.0 - dv[k]/x->bulkDensity)*(1.0 + x->hv[k]/x->R0_plate);
             }
             delta_penalty /= dv.size();
+            delta_penalty *= 100.0;
             penalty += delta_penalty;
+            if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: density proportional to depth]",delta_penalty);
         }
         
         if (1) {
@@ -203,7 +208,9 @@ double E1(void * xp) {
                 }
             }
             delta_penalty /= dv.size()-1;
+            delta_penalty *= 1000.0;
             penalty += delta_penalty;
+            if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: no low-density \"holes\"]",delta_penalty);
         }
         
         retVal = penalty;
@@ -280,7 +287,8 @@ void S1(const gsl_rng * r, void * xp, double step_size) {
     SIMAN_xp * x = (SIMAN_xp *) xp;
     
     for (size_t b=0; b<x->uK_size; ++b) {
-        x->factor[b] += step_size*(2*gsl_rng_uniform(r)-1)/x->uK_size;
+        // x->factor[b] += step_size*(2*gsl_rng_uniform(r)-1)/x->uK_size;
+        x->factor[b] += step_size*(2*gsl_rng_uniform(r)-1);
     }
 }
 
