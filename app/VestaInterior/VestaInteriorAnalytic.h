@@ -93,8 +93,8 @@ void SIMAN_destroy (void * xp) {
 }
 
 double E1(void * xp) {
-
-    const bool verbose = true;
+    
+    const bool verbose = false;
     
     SIMAN_xp * x = (SIMAN_xp *) xp;
     
@@ -139,12 +139,16 @@ double E1(void * xp) {
     
     // make sure this is called before leaving...
     gsl_vector_free(cT);
+
+    std::vector<double> pv;
+    pv.reserve(10);
     
     // condensed all variants here below...
     double retVal  =
         10.0*std::max(0.0,(x->minimumDensity-minDensity)) +
         10.0*std::max(0.0,(maxDensity-x->maximumDensity));
     double penalty = retVal;
+    pv.push_back(penalty);
     if ( (minDensity > x->minimumDensity) &&
          (maxDensity < x->maximumDensity) ) {
         
@@ -159,6 +163,7 @@ double E1(void * xp) {
             delta_penalty /= dv.size();
             delta_penalty *= 10.0;
             penalty += delta_penalty;
+            pv.push_back(delta_penalty);
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: closest to uniform density]",delta_penalty);
         }
         
@@ -173,6 +178,7 @@ double E1(void * xp) {
             delta_penalty /= dv.size();
             delta_penalty *= 100.0;
             penalty += delta_penalty;
+            pv.push_back(delta_penalty);
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: most volume with high density]",delta_penalty);
         }
         
@@ -180,6 +186,7 @@ double E1(void * xp) {
             // target: highest single density peak
             const double delta_penalty = (minDensity-maxDensity)/x->bulkDensity;
             penalty += delta_penalty;
+            pv.push_back(delta_penalty);
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: highest single density peak]",delta_penalty);
         }
         
@@ -192,6 +199,7 @@ double E1(void * xp) {
             delta_penalty /= dv.size();
             delta_penalty *= 100.0;
             penalty += delta_penalty;
+            pv.push_back(delta_penalty);
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: density proportional to depth]",delta_penalty);
         }
         
@@ -210,6 +218,7 @@ double E1(void * xp) {
             delta_penalty /= dv.size()-1;
             delta_penalty *= 1000.0;
             penalty += delta_penalty;
+            pv.push_back(delta_penalty);
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: no low-density \"holes\"]",delta_penalty);
         }
         
@@ -242,11 +251,27 @@ double E1(void * xp) {
     // return (minDensity-maxDensity)-10000*(penalty/x->penaltyThreshold)+10*std::max(0.0,(x->minimumDensity-minDensity))+10*std::max(0.0,(maxDensity-x->maximumDensity));
     */
     
-    ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]   penalty: %+10.6f",
+    char pvline[4096];
+    sprintf(pvline,"");
+    {
+        char str[4096];
+        for (size_t p=0; p<pv.size(); ++p) {
+            if (p==0) {
+                sprintf(str, "%+10.6f",pv[p]);
+            } else {
+                sprintf(str," %+10.6f",pv[p]);
+            }
+            strcat(pvline,str);
+        }
+    }
+    // ORSA_DEBUG("pvline: [%s]",pvline);
+    
+    ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]   penalty: %+10.6f [%s]",
                orsa::FromUnits(orsa::FromUnits(minDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
                orsa::FromUnits(orsa::FromUnits(maxDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
                orsa::FromUnits(orsa::FromUnits(averageSampledDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
-               penalty);
+               penalty,
+               pvline);
     
     if ( (minDensity >= x->minimumDensity) &&
          (maxDensity <= x->maximumDensity) &&
