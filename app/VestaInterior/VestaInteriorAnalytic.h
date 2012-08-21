@@ -98,6 +98,11 @@ double E1(void * xp) {
     
     SIMAN_xp * x = (SIMAN_xp *) xp;
     
+    /* for (size_t q=0; q<x->factor.size(); ++q) {
+       ORSA_DEBUG("factor[%02i] = %+12.6e",q,x->factor[q]);
+       }
+    */
+    
     gsl_vector * cT = gsl_vector_alloc(x->T_size);
     gsl_vector_memcpy(cT,x->cT0);
     for (size_t b=0; b<x->uK_size; ++b) {
@@ -168,15 +173,30 @@ double E1(void * xp) {
         }
         
         if (1) {
+            // target: closest to uniform (simple)
+            const double delta_penalty = (maxDensity-minDensity)/x->bulkDensity;
+            penalty += delta_penalty;
+            pv.push_back(delta_penalty);
+            if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: closest to uniform (simple)]",delta_penalty);
+        }
+        
+        if (0) {
             // target: most volume with high density
             // const double exponent = 1.0;
             double delta_penalty = 0.0;
             for (size_t k=0; k<dv.size(); ++k) {
+                // v1
                 // delta_penalty -= pow(dv[k]/x->bulkDensity,exponent);
                 delta_penalty += 1.0 - dv[k]/x->bulkDensity;
+                
+                // v2 (which does the opposite of what it should...)
+                /* if ((dv[k] - x->bulkDensity) > 0.85*(maxDensity - x->bulkDensity)) {
+                   delta_penalty -= 1.0;
+                   }
+                */
             }
             delta_penalty /= dv.size();
-            delta_penalty *= 100.0;
+            delta_penalty *= 1.0e3/sqrt(dv.size());
             penalty += delta_penalty;
             pv.push_back(delta_penalty);
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: most volume with high density]",delta_penalty);
@@ -206,17 +226,20 @@ double E1(void * xp) {
         if (1) {
             // target: no low-density "holes"
             double delta_penalty = 0.0;
+            size_t entries=0;
             for (size_t k=1; k<dv.size(); ++k) {
                 // assuming the mid-point rm is still contained in body...
                 const orsa::Vector rm = 0.5*(x->rv[k] + x->rv[k-1]);
                 const double dm = massDistribution->density(rm);
                 const double d12 = std::min(dv[k],dv[k-1]);
                 if (dm<d12) {
-                    delta_penalty += (d12-dm)/x->bulkDensity;
+                    delta_penalty += (d12-dm)/x->bulkDensity * x->R0_plate/(x->rv[k] - x->rv[k-1]).length();
+                    ++entries;
                 }
             }
-            delta_penalty /= dv.size()-1;
-            delta_penalty *= 1000.0;
+            delta_penalty *= 100.0;
+            if (entries!=0) delta_penalty /= entries;
+            
             penalty += delta_penalty;
             pv.push_back(delta_penalty);
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: no low-density \"holes\"]",delta_penalty);
@@ -257,9 +280,9 @@ double E1(void * xp) {
         char str[4096];
         for (size_t p=0; p<pv.size(); ++p) {
             if (p==0) {
-                sprintf(str, "%+10.6f",pv[p]);
+                sprintf(str, "%+12.6g",pv[p]);
             } else {
-                sprintf(str," %+10.6f",pv[p]);
+                sprintf(str," %+12.6g",pv[p]);
             }
             strcat(pvline,str);
         }
