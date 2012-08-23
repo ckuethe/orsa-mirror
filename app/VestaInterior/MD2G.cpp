@@ -1004,10 +1004,18 @@ int main(int argc, char **argv) {
                     orsa::FromUnits(CMx,orsa::Unit::KM,-1),
                     orsa::FromUnits(CMy,orsa::Unit::KM,-1),
                     orsa::FromUnits(CMz,orsa::Unit::KM,-1));
+        gmp_fprintf(fp,"Ixx / (M*R0^2) = %9.6f   [R0=%g km]\n",
+                    inertiaMomentXX_over_plateModelR0squared,
+                    orsa::FromUnits(plateModelR0,orsa::Unit::KM,-1));
+        gmp_fprintf(fp,"Iyy / (M*R0^2) = %9.6f   [R0=%g km]\n",
+                    inertiaMomentYY_over_plateModelR0squared,
+                    orsa::FromUnits(plateModelR0,orsa::Unit::KM,-1));
         gmp_fprintf(fp,"Izz / (M*R0^2) = %9.6f   [R0=%g km]\n",
                     inertiaMomentZZ_over_plateModelR0squared,
                     orsa::FromUnits(plateModelR0,orsa::Unit::KM,-1));
         gmp_fprintf(fp,"Volume: %.6e [km^3]\n",orsa::FromUnits(si->getIntegral(0,0,0)*orsa::cube(plateModelR0),orsa::Unit::KM,-3));
+        gmp_fprintf(fp,"Total Mass: %.6e [kg]\n",orsa::FromUnits(totalMass,orsa::Unit::KG,-1));
+        gmp_fprintf(fp,"Bulk Density: %9.6f [g/cm^3]\n",orsa::FromUnits(orsa::FromUnits(totalMass/volume,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
         fclose(fp);
     }
     
