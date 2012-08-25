@@ -60,17 +60,40 @@ void CCMD2ijk(std::vector< std::vector< std::vector<double> > > & N,
                                 CCMD->densityScale *
                                 CCMD->coeff[ti][tj][tk] *
                                 mpz_class(cTi[ci] * cTj[cj] * cTk[ck]).get_d();
-                            for (size_t ni=0; ni<=degree; ++ni) {
-                                for (size_t nj=0; nj<=degree-ni; ++nj) {
-                                    for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
-                                        N[ni][nj][nk] += baseFactor * si->getIntegral(ci+ni,cj+nj,ck+nk);
-                                        /* ORSA_DEBUG("N[%i][%i][%i] += %12.6g x %12.6g     t: %i %i %i   c: %i %i %i",
-                                           ni,nj,nk,
-                                           baseFactor,
-                                           si->getIntegral(ci+ni,cj+nj,ck+nk),
-                                           ti,tj,tk,
-                                           ci,cj,ck);
-                                        */
+                            if (0) {
+                                // debug only
+                                for (size_t ni=0; ni<=degree; ++ni) {
+                                    for (size_t nj=0; nj<=degree-ni; ++nj) {
+                                        for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
+                                            ORSA_DEBUG("N[%i][%i][%i] += coeff[%i][%i][%i] * cTi[%i] * cTj[%i] * cTj[%i] * shape_integral[%i][%i][%i]",
+                                                       ni,nj,nk,
+                                                       ti,tj,tk,
+                                                       ci,cj,ck,
+                                                       ci+ni,cj+nj,ck+nk);
+                                            ORSA_DEBUG("%12.6g += %12.6g * %12.6g * %12.6g * %12.6g * %12.6g",
+                                                       N[ni][nj][nk],
+                                                       CCMD->densityScale*CCMD->coeff[ti][tj][tk],
+                                                       cTi[ci].get_d(),
+                                                       cTj[cj].get_d(),
+                                                       cTk[ck].get_d(),
+                                                       si->getIntegral(ci+ni,cj+nj,ck+nk));
+                                        }
+                                    }
+                                }
+                            }
+                            if (baseFactor != 0.0) {
+                                for (size_t ni=0; ni<=degree; ++ni) {
+                                    for (size_t nj=0; nj<=degree-ni; ++nj) {
+                                        for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
+                                            N[ni][nj][nk] += baseFactor * si->getIntegral(ci+ni,cj+nj,ck+nk);
+                                            /* ORSA_DEBUG("N[%i][%i][%i] += %12.6g * %12.6g     t: %i %i %i   c: %i %i %i",
+                                               ni,nj,nk,
+                                               baseFactor,
+                                               si->getIntegral(ci+ni,cj+nj,ck+nk),
+                                               ti,tj,tk,
+                                               ci,cj,ck);
+                                            */
+                                        }
                                     }
                                 }
                             }

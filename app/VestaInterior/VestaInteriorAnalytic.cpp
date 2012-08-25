@@ -442,6 +442,8 @@ int main(int argc, char **argv) {
                 mod_gravityData_index(gravityData.get(),orsaPDS::RadioScienceGravityData::keyC(l,m));
             const size_t z_S = (m==0) ? 0 : mod_gravityData_index(gravityData.get(),orsaPDS::RadioScienceGravityData::keyS(l,m));
             
+            // ORSA_DEBUG("l=%i m=%i z_C=%i z_S=%i",l,m,z_C,z_S);
+            
             // ni,nj,nk are the expansion of C_lm,S_lm in terms of N_ijk
             for (size_t ni=0; ni<=l; ++ni) {
                 for (size_t nj=0; nj<=l-ni; ++nj) {
@@ -458,6 +460,8 @@ int main(int argc, char **argv) {
                                         const std::vector<mpz_class> & cTk = orsa::ChebyshevTcoeff(tk);
                                         
                                         const size_t z_cT = CubicChebyshevMassDistribution::index(ti,tj,tk);
+                                        
+                                        // ORSA_DEBUG("i=%i j=%i k=%i z_cT=%i",ti,tj,tk,z_cT);
                                         
                                         double C2cT = 0.0;
                                         double S2cT = 0.0;
@@ -588,7 +592,9 @@ int main(int argc, char **argv) {
         gsl_matrix * R = gsl_matrix_alloc(N,M);
         
         gsl_linalg_QR_unpack(QR,tau,Q,R);
-
+        
+        ORSA_DEBUG("null space size: %i",N-M);
+        
         // null space basis
         gsl_vector * uK[N-M];
         for (size_t b=0; b<(N-M); ++b) {
@@ -803,6 +809,10 @@ int main(int argc, char **argv) {
             
             gsl_vector * cT0 = gsl_vector_calloc(N);
             gsl_vector_memcpy(cT0,cT);
+
+            for (size_t s=0; s<N; ++s) {
+                ORSA_DEBUG("cT0[%i] = %g",s,gsl_vector_get(cT0,s));
+            }
             
             if (1) {
                 
@@ -850,8 +860,8 @@ int main(int argc, char **argv) {
                 x0.uK = &uK[0];
                 x0.uK_size = N-M;
                 x0.factor.resize(x0.uK_size);
-                x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(2.00,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-                x0.maximumDensity = orsa::FromUnits(orsa::FromUnits(8.00,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+                x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(1.90,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+                x0.maximumDensity = orsa::FromUnits(orsa::FromUnits(3.30,orsa::Unit::GRAM),orsa::Unit::CM,-3);
                 x0.penaltyThreshold = 1.00;
                 if (massDistribution.get() != 0) {
                     x0.layerData = massDistribution->layerData;
@@ -877,6 +887,14 @@ int main(int argc, char **argv) {
                                 cT_CCMDF = massDistribution->coeff[Tx][Ty][Tz];
                             }
                             x0.factor[b] += (cT_CCMDF-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
+
+                            /* ORSA_DEBUG("cT_CCMDF = %+12.6e   cT0[%02i] = %+12.6e   uK[%02i][%02i] = %+12.6e   x0.factor[%02i] = %+12.6e",
+                               cT_CCMDF,
+                               s,gsl_vector_get(cT0,s),
+                               b,s,gsl_vector_get(uK[b],s),
+                               b,x0.factor[b]);
+                            */
+                            
                         }
                         ORSA_DEBUG("factor[%03i] = %g",b,x0.factor[b]);
                     }
