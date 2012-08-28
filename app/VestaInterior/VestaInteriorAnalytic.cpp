@@ -101,6 +101,7 @@ gsl_vector * mod_gravityData_getCoefficientVector(const orsaPDS::RadioScienceGra
             gsl_vector_set(mod_mu,k,gsl_vector_get(mu,k-3));
         }
     }
+    gsl_vector_free(mu);
     return mod_mu;
 }
 
@@ -447,9 +448,11 @@ int main(int argc, char **argv) {
             const orsa::triIndex_mpq S_tri_integral = orsa::conversionCoefficients_S_integral(l,m);
             const orsa::triIndex_d   S_tri_norm     = orsa::conversionCoefficients_S_norm(l,m);
             
-            const size_t z_C = (l==0) ?
-                mod_gravityData_index(gravityData.get(),"GM") :
-                mod_gravityData_index(gravityData.get(),orsaPDS::RadioScienceGravityData::keyC(l,m));
+            /* const size_t z_C = (l==0) ?
+               mod_gravityData_index(gravityData.get(),"GM") :
+               mod_gravityData_index(gravityData.get(),orsaPDS::RadioScienceGravityData::keyC(l,m));
+            */
+            const size_t z_C = mod_gravityData_index(gravityData.get(),orsaPDS::RadioScienceGravityData::keyC(l,m));
             const size_t z_S = (m==0) ? 0 : mod_gravityData_index(gravityData.get(),orsaPDS::RadioScienceGravityData::keyS(l,m));
             
             // ORSA_DEBUG("l=%i m=%i z_C=%i z_S=%i",l,m,z_C,z_S);
@@ -794,7 +797,8 @@ int main(int argc, char **argv) {
                     layer_coeff = 0.0;
                 } else {
                     const QString ref_key = mod_gravityData_key(gravityData.get(),i);
-                    if (ref_key == "GM") {
+                    // if (ref_key == "GM") {
+                    if (ref_key == orsaPDS::RadioScienceGravityData::keyC(0,0)) {
                         // ORSA_DEBUG("found: [%s]",ref_key.toStdString().c_str());
                         layer_coeff = massDistribution->layerData->totalExcessMass()*orsa::Unit::G();
                     } else {

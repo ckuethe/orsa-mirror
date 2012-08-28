@@ -33,7 +33,9 @@ template <typename T> std::vector< std::vector< std::vector< std::vector<size_t>
 unsigned int mod_gravityData_index(const orsaPDS::RadioScienceGravityData * gravityData,
                                    const QString & key) {
     unsigned int index;
-    if (key == orsaPDS::RadioScienceGravityData::keyC(1,0)) {
+    if (key == orsaPDS::RadioScienceGravityData::keyC(0,0)) {
+        index = 0;
+    } else if (key == orsaPDS::RadioScienceGravityData::keyC(1,0)) {
         index = 1;
     } else if (key == orsaPDS::RadioScienceGravityData::keyC(1,1)) {
         index = 2;
@@ -49,7 +51,8 @@ unsigned int mod_gravityData_index(const orsaPDS::RadioScienceGravityData * grav
 QString mod_gravityData_key(const orsaPDS::RadioScienceGravityData * gravityData,
                             const unsigned int & index) {
     if (index == 0) {
-        return gravityData->key(index);
+        // return gravityData->key(index);
+        return orsaPDS::RadioScienceGravityData::keyC(0,0);    
     } else if (index == 1) {
         return orsaPDS::RadioScienceGravityData::keyC(1,0);        
     } else if (index == 2) {
@@ -64,21 +67,23 @@ QString mod_gravityData_key(const orsaPDS::RadioScienceGravityData * gravityData
 double mod_gravityData_getCoeff(const orsaPDS::RadioScienceGravityData * gravityData,
                                 const QString & key) {
     double coeff;
-    if ( (key == orsaPDS::RadioScienceGravityData::keyC(1,0)) ||  
-         (key == orsaPDS::RadioScienceGravityData::keyC(1,1)) ||
-         (key == orsaPDS::RadioScienceGravityData::keyS(1,1)) ) {
+    if (key == orsaPDS::RadioScienceGravityData::keyC(0,0)) {
+        coeff = 1.0;
+    } else if ( (key == orsaPDS::RadioScienceGravityData::keyC(1,0)) ||  
+                (key == orsaPDS::RadioScienceGravityData::keyC(1,1)) ||
+                (key == orsaPDS::RadioScienceGravityData::keyS(1,1)) ) {
         coeff = 0.0;
     } else {
         coeff = gravityData->getCoeff(key);
     }
     return coeff;
 }
-//
+
 double mod_gravityData_getCoeff(const orsaPDS::RadioScienceGravityData * gravityData,
                                 const unsigned int & index) {
     return mod_gravityData_getCoeff(gravityData,mod_gravityData_key(gravityData,index));
 }
-//
+
 unsigned int mod_gravityData_numberOfCoefficients(const orsaPDS::RadioScienceGravityData * gravityData) {
     return gravityData->numberOfCoefficients+3;
 }
@@ -88,7 +93,8 @@ gsl_vector * mod_gravityData_getCoefficientVector(const orsaPDS::RadioScienceGra
     gsl_vector * mod_mu = gsl_vector_alloc(mod_gravityData_numberOfCoefficients(gravityData));
     for (unsigned int k=0; k<mod_gravityData_numberOfCoefficients(gravityData); ++k) {
         if (k==0) {
-            gsl_vector_set(mod_mu,k,gsl_vector_get(mu,k));
+            // gsl_vector_set(mod_mu,k,gsl_vector_get(mu,k));
+            gsl_vector_set(mod_mu,k,1.0);
         } else if ( (k==1) || (k==2) || (k==3) ) {
             gsl_vector_set(mod_mu,k,0.0);
         } else {
@@ -106,7 +112,9 @@ gsl_matrix * mod_gravityData_getCovarianceMatrix(const orsaPDS::RadioScienceGrav
     for (unsigned int l=0; l<mod_gravityData_numberOfCoefficients(gravityData); ++l) {
         for (unsigned int m=0; m<mod_gravityData_numberOfCoefficients(gravityData); ++m) { 
             if ((l==0) && (m==0)) {
-                gsl_matrix_set(mod_covm,l,m,gsl_matrix_get(covm,l,m));
+                // gsl_matrix_set(mod_covm,l,m,gsl_matrix_get(covm,l,m));
+                gsl_matrix_set(mod_covm,l,m,gsl_matrix_get(covm,l,m)/orsa::square(gravityData->GM));
+#warning NEED TO SCALE THIS DOWN: from GM to 1.0 level... C_{00}... so check this!
             } else if ((l==1) || (l==2) || (l==3) || (m==1) || (m==2) || (m==3)) {
                 gsl_matrix_set(mod_covm,l,m,0.0);
             } else if ((l==0) && (m!=0)) {
@@ -129,7 +137,9 @@ gsl_matrix * mod_gravityData_getInverseCovarianceMatrix(const orsaPDS::RadioScie
     for (unsigned int l=0; l<mod_gravityData_numberOfCoefficients(gravityData); ++l) {
         for (unsigned int m=0; m<mod_gravityData_numberOfCoefficients(gravityData); ++m) { 
             if ((l==0) && (m==0)) {
-                gsl_matrix_set(mod_inv_covm,l,m,gsl_matrix_get(inv_covm,l,m));
+                // gsl_matrix_set(mod_inv_covm,l,m,gsl_matrix_get(inv_covm,l,m));
+                gsl_matrix_set(mod_inv_covm,l,m,gsl_matrix_get(inv_covm,l,m)/orsa::square(gravityData->GM));
+#warning NEED TO SCALE THIS DOWN: from GM to 1.0 level... C_{00}... so check this!
             } else if ((l==1) || (l==2) || (l==3) || (m==1) || (m==2) || (m==3)) {
                 gsl_matrix_set(mod_inv_covm,l,m,0.0);
             } else if ((l==0) && (m!=0)) {
@@ -298,9 +308,11 @@ int main(int argc, char **argv) {
             const orsa::triIndex_mpq S_tri_integral = orsa::conversionCoefficients_S_integral(l,m);
             const orsa::triIndex_d   S_tri_norm     = orsa::conversionCoefficients_S_norm(l,m);
             
-            const size_t z_C = (l==0) ?
-                mod_gravityData_index(gravityData.get(),"GM") :
-                mod_gravityData_index(gravityData.get(),orsaPDS::RadioScienceGravityData::keyC(l,m));
+            /* const size_t z_C = (l==0) ?
+               mod_gravityData_index(gravityData.get(),"GM") :
+               mod_gravityData_index(gravityData.get(),orsaPDS::RadioScienceGravityData::keyC(l,m));
+            */
+            const size_t z_C = mod_gravityData_index(gravityData.get(),orsaPDS::RadioScienceGravityData::keyC(l,m));
             const size_t z_S = (m==0) ? 0 : mod_gravityData_index(gravityData.get(),orsaPDS::RadioScienceGravityData::keyS(l,m));
             
             // ni,nj,nk are the expansion of C_lm,S_lm in terms of N_ijk
@@ -311,11 +323,11 @@ int main(int argc, char **argv) {
                         // ti,tj,tk are the expansion of the density in terms of the cubic Chebyshev
                         for (size_t running_T_degree=0; running_T_degree<=T_degree; ++running_T_degree) {
                             for (size_t ti=0; ti<=T_degree; ++ti) {
+                                const std::vector<mpz_class> & cTi = orsa::ChebyshevTcoeff(ti);
                                 for (size_t tj=0; tj<=T_degree-ti; ++tj) {
+                                    const std::vector<mpz_class> & cTj = orsa::ChebyshevTcoeff(tj);
                                     for (size_t tk=0; tk<=T_degree-ti-tj; ++tk) {
                                         if (ti+tj+tk != running_T_degree) continue;
-                                        const std::vector<mpz_class> & cTi = orsa::ChebyshevTcoeff(ti);
-                                        const std::vector<mpz_class> & cTj = orsa::ChebyshevTcoeff(tj);
                                         const std::vector<mpz_class> & cTk = orsa::ChebyshevTcoeff(tk);
                                         
                                         const size_t z_cT = CubicChebyshevMassDistribution::index(ti,tj,tk);
@@ -375,9 +387,11 @@ int main(int argc, char **argv) {
                                         C2cT /= si->getIntegral(0,0,0);
                                         if (m!=0) S2cT /= si->getIntegral(0,0,0);
                                         
-                                        if (l==0) {
-                                            C2cT *= GM;
-                                        }
+                                        // removed the GM factor, now scaling to C_00
+                                        /* if (l==0) {
+                                           C2cT *= GM;
+                                           }
+                                        */
                                         
                                         // saving, NOTE how we are adding terms here
                                         gsl_matrix_set(cT2sh,z_C,z_cT,gsl_matrix_get(cT2sh,z_C,z_cT)+C2cT);
@@ -665,7 +679,8 @@ int main(int argc, char **argv) {
                 uniformShape_coeff = 0.0;
             } else {
                 const QString ref_key = mod_gravityData_key(gravityData.get(),i);
-                if (ref_key == "GM") {
+                // if (ref_key == "GM") {
+                if (ref_key == orsaPDS::RadioScienceGravityData::keyC(0,0)) {
                     // ORSA_DEBUG("found: [%s]",ref_key.toStdString().c_str());
                     layer_coeff        = layersTotalMassFraction*GM;
                     uniformShape_coeff = uniformShapeMassFraction*GM;
@@ -1217,7 +1232,8 @@ double E1(void * xp) {
         orsa::Cache<double> layer_coeff;
         orsa::Cache<double> uniformShape_coeff;
         const QString ref_key = mod_gravityData_key(x->gravityData.get(),i);
-        if (ref_key == "GM") {
+        // if (ref_key == "GM") {
+        if (ref_key == orsaPDS::RadioScienceGravityData::keyC(0,0)) {
             // ORSA_DEBUG("found: [%s]",ref_key.toStdString().c_str());
             layer_coeff        =  layersTotalMassFraction*x->gravityData->GM;
             uniformShape_coeff = uniformShapeMassFraction*x->gravityData->GM;
@@ -1524,7 +1540,8 @@ double MovingLayersMultifit::fun(const orsa::MultifitParameters * par,
         orsa::Cache<double> layer_coeff;
         // orsa::Cache<double> uniformShape_coeff;
         const QString ref_key = mod_gravityData_key(gravityData.get(),i);
-        if (ref_key == "GM") {
+        // if (ref_key == "GM") {
+        if (ref_key == orsaPDS::RadioScienceGravityData::keyC(0,0)) {
             // ORSA_DEBUG("found: [%s]",ref_key.toStdString().c_str());
             layer_coeff        =  layersTotalMassFraction*gravityData->GM;
             // uniformShape_coeff = uniformShapeMassFraction*gravityData->GM;
@@ -1693,7 +1710,8 @@ void MovingLayersMultifit::save_CCMDF(const orsa::MultifitParameters * par) cons
         orsa::Cache<double> layer_coeff;
         orsa::Cache<double> uniformShape_coeff;
         const QString ref_key = mod_gravityData_key(gravityData.get(),i);
-        if (ref_key == "GM") {
+        // if (ref_key == "GM") {
+        if (ref_key == orsaPDS::RadioScienceGravityData::keyC(0,0)) {
             // ORSA_DEBUG("found: [%s]",ref_key.toStdString().c_str());
             layer_coeff        =  layersTotalMassFraction*gravityData->GM;
             uniformShape_coeff = uniformShapeMassFraction*gravityData->GM;
