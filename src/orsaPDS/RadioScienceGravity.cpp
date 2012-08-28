@@ -187,6 +187,11 @@ bool RadioScienceGravityFile::read(RadioScienceGravityData * data,
     }
     
     // ORSA_DEBUG("n. coeff: %i",data->numberOfCoefficients);
+
+    if (data->numberOfCoefficients != (data->degree+1)*(data->degree+1)-3) {
+        ORSA_DEBUG("PROBLEM: mismatch between degree and expected number of coefficients");
+        exit(0);
+    }
     
     data->coeff.resize(data->numberOfCoefficients);
 
@@ -214,7 +219,7 @@ bool RadioScienceGravityFile::read(RadioScienceGravityData * data,
             readD(d,fp);
             // ORSA_DEBUG("d: [%g]",d);
             if (k == data->index("GM")) {
-                // GM is in km^2/s^2
+                // GM is in km^3/s^2
                 d = orsa::FromUnits(orsa::FromUnits(d,orsa::Unit::KM,3),orsa::Unit::SECOND,-2);
                 // ORSA_DEBUG("--units factor--");
             }
@@ -232,11 +237,11 @@ bool RadioScienceGravityFile::read(RadioScienceGravityData * data,
                 readD(d,fp);
                 // ORSA_DEBUG("d: [%g]",d);
                 if (k == data->index("GM")) {
-                    // GM is in km^2/s^2
+                    // GM is in km^3/s^2
                     d = orsa::FromUnits(orsa::FromUnits(d,orsa::Unit::KM,3),orsa::Unit::SECOND,-2);
                 }
                 if (r == data->index("GM")) {
-                    // GM is in km^2/s^2
+                    // GM is in km^3/s^2
                     d = orsa::FromUnits(orsa::FromUnits(d,orsa::Unit::KM,3),orsa::Unit::SECOND,-2);
                 }
                 data->covar[k][r] = d;

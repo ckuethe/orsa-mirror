@@ -19,19 +19,19 @@ namespace orsaPDS {
     class RadioScienceGravityFile;
     
     class RadioScienceGravityData : public osg::Referenced {
-        friend class orsaPDS::RadioScienceGravityFile;
+        // friend class orsaPDS::RadioScienceGravityFile;
     public:
         double R0, GM, sigmaGM;
         unsigned int degree, order;
         unsigned int normalizationState;
         unsigned int numberOfCoefficients;
         double referenceLongitude, referenceLatitude;
-    protected:
+    public:
         // maps the coefficient name to its index
         // keys are: GM, C002000, C002001, S002001, C002002, S002002, ...
     public:
         typedef QHash<QString, unsigned int> HashType;
-    protected:
+    public:
         HashType hash;
     public:
         static QString keyC(unsigned int l, unsigned int m);
@@ -39,9 +39,20 @@ namespace orsaPDS {
     public:
         unsigned int index(const QString & key) const;
         QString key(const unsigned int & index) const;
-    protected:
+    public:
         std::vector< orsa::Cache<double> >                coeff;
         std::vector< std::vector< orsa::Cache<double> > > covar; // triangular
+        /* public:
+           void resize(const unsigned int degree_) {
+           degree = degree_;
+           numberOfCoefficients = (degree+1)*(degree+1)-3;
+           coeff.resize(numberOfCoefficients);
+           covar.resize(numberOfCoefficients);
+           for (unsigned int k=0; k<numberOfCoefficients; ++k) {
+           covar[k].resize(k+1);
+           }
+           }
+        */
     public:
         double getCoeff(const QString &) const;
         double getCovar(const QString &, const QString &) const;
