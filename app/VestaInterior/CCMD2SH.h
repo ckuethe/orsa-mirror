@@ -66,6 +66,9 @@ void CCMD2SH(orsa::Cache<orsa::Vector>             & CM,
                 for (size_t ni=0; ni<=l; ++ni) {
                     for (size_t nj=0; nj<=l-ni; ++nj) {
                         for (size_t nk=0; nk<=l-ni-nj; ++nk) {
+#warning is it necessary/correct to have nk go from 0 to l-ni-nj, OR it should just be nk=l-ni-nj ?
+                            // const size_t nk=l-ni-nj;
+                            
                             norm_C[l][m] +=
                                 radiusCorrectionFactor *
                                 C_tri_norm[ni][nj][nk] *
@@ -77,6 +80,14 @@ void CCMD2SH(orsa::Cache<orsa::Vector>             & CM,
                                     translated_N[ni][nj][nk] / translated_N[0][0][0];  
                             } else {
                                 norm_S[l][m] = 0.0;
+                            }
+
+                            if (1) {
+                                // debug
+                                ORSA_DEBUG("matrix conversion factor:  C[%i][%i] = %g x N[%i][%i][%i]",l,m,C_tri_norm[ni][nj][nk],ni,nj,nk);
+                                if (m != 0) {
+                                    ORSA_DEBUG("matrix conversion factor:  S[%i][%i] = %g x N[%i][%i][%i]",l,m,S_tri_norm[ni][nj][nk],ni,nj,nk);
+                                }
                             }
                         }
                     }

@@ -44,10 +44,10 @@ void CCMD2ijk(std::vector< std::vector< std::vector<double> > > & N,
     
     // ti,tj,tk are the expansion of the density in terms of the cubic Chebyshev 
     for (size_t ti=0; ti<=T_degree; ++ti) {
+        const std::vector<mpz_class> & cTi = orsa::ChebyshevTcoeff(ti);
         for (size_t tj=0; tj<=T_degree-ti; ++tj) {
+            const std::vector<mpz_class> & cTj = orsa::ChebyshevTcoeff(tj);
             for (size_t tk=0; tk<=T_degree-ti-tj; ++tk) {
-                const std::vector<mpz_class> & cTi = orsa::ChebyshevTcoeff(ti);
-                const std::vector<mpz_class> & cTj = orsa::ChebyshevTcoeff(tj);
                 const std::vector<mpz_class> & cTk = orsa::ChebyshevTcoeff(tk);
                 // ci,cj,ck are the expansion of each Chebyshev polynomial in terms of powers of x,y,z
                 for (size_t ci=0; ci<=ti; ++ci) {
@@ -60,15 +60,17 @@ void CCMD2ijk(std::vector< std::vector< std::vector<double> > > & N,
                                 CCMD->densityScale *
                                 CCMD->coeff[ti][tj][tk] *
                                 mpz_class(cTi[ci] * cTj[cj] * cTk[ck]).get_d();
-                            if (0) {
+                            if (1) {
                                 // debug only
                                 for (size_t ni=0; ni<=degree; ++ni) {
                                     for (size_t nj=0; nj<=degree-ni; ++nj) {
                                         for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
-                                            ORSA_DEBUG("N[%i][%i][%i] += coeff[%i][%i][%i] * cTi[%i] * cTj[%i] * cTj[%i] * shape_integral[%i][%i][%i]",
+                                            ORSA_DEBUG("N[%i][%i][%i] += coeff[%i][%i][%i] * cT(%i,%i) * cT(%i,%i) * cT(%i,%i) * shape_integral[%i][%i][%i]",
                                                        ni,nj,nk,
                                                        ti,tj,tk,
-                                                       ci,cj,ck,
+                                                       ti,ci,
+                                                       tj,cj,
+                                                       tk,ck,
                                                        ci+ni,cj+nj,ck+nk);
                                             ORSA_DEBUG("%12.6g += %12.6g * %12.6g * %12.6g * %12.6g * %12.6g",
                                                        N[ni][nj][nk],

@@ -1000,7 +1000,7 @@ int main(int argc, char **argv) {
         const double CMx = CMx_over_plateModelR0*plateModelR0;
         const double CMy = CMy_over_plateModelR0*plateModelR0;
         const double CMz = CMz_over_plateModelR0*plateModelR0;
-        gmp_fprintf(fp,"CM: %+9.3f %+9.3f %+9.3f [km]\n",
+        gmp_fprintf(fp,"CM: %+12.6f %+12.6f %+12.6f [km]\n",
                     orsa::FromUnits(CMx,orsa::Unit::KM,-1),
                     orsa::FromUnits(CMy,orsa::Unit::KM,-1),
                     orsa::FromUnits(CMz,orsa::Unit::KM,-1));
