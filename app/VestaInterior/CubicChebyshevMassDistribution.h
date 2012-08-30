@@ -204,7 +204,7 @@ public:
     typedef std::vector< std::vector< std::vector<double> > > CoefficientType;
 public:
     const CoefficientType coeff;
-    const double densityScale;
+    // const double densityScale;
     const double oneOverR0;
     osg::ref_ptr<const LayerData> layerData;
 public:
@@ -224,7 +224,7 @@ protected:
     static void updateIndexTable(const size_t & requestedDegree);
 public:
     CubicChebyshevMassDistribution(const CoefficientType & coefficient,
-                                   const double & densityScale, // = bulk density if coefficients are relative
+                                   // const double & densityScale, // = bulk density if coefficients are relative
                                    const double & R0,
                                    const LayerData * layerData = 0);
 protected:
@@ -239,7 +239,7 @@ public:
 //       returns the same density as the input at any given point
 CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(const orsa::MassDistribution * massDistribution,
                                                                              const size_t & degree,
-                                                                             const double & densityScale,
+                                                                             // const double & densityScale,
                                                                              const double & R0,
                                                                              const LayerData * layerData = 0,
                                                                              const bool & decompose_layerData=false);
@@ -251,7 +251,7 @@ public:
     public:
         double minDensity, maxDensity, deltaDensity;
         double penalty;
-        double densityScale;
+        // double densityScale;
         double R0;
         size_t SH_degree;
         CubicChebyshevMassDistribution::CoefficientType coeff;
@@ -262,7 +262,7 @@ public:
         void clear() {
             minDensity = maxDensity = deltaDensity = 0.0;
             penalty = 0.0;
-            densityScale = 1.0;
+            // densityScale = 1.0;
             R0 = 1.0;
             SH_degree = 0;
             coeff.clear();
@@ -288,7 +288,7 @@ protected:
 
 inline CubicChebyshevMassDistribution * CCMD(const CubicChebyshevMassDistributionFile::CCMDF_data & data) {
     return new CubicChebyshevMassDistribution(data.coeff,
-                                              data.densityScale,
+                                              // data.densityScale,
                                               data.R0,
                                               data.layerData);
 }

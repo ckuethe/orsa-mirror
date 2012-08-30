@@ -82,7 +82,7 @@ void CCMD2SH(orsa::Cache<orsa::Vector>             & CM,
                                 norm_S[l][m] = 0.0;
                             }
 
-                            if (1) {
+                            if (0) {
                                 // debug
                                 ORSA_DEBUG("matrix conversion factor:  C[%i][%i] = %g x N[%i][%i][%i]",l,m,C_tri_norm[ni][nj][nk],ni,nj,nk);
                                 if (m != 0) {

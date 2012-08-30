@@ -528,8 +528,13 @@ int main(int argc, char **argv) {
                                             }                                        
                                         }
                                         
-                                        C2cT /= si->getIntegral(0,0,0);
-                                        if (m!=0) S2cT /= si->getIntegral(0,0,0);
+                                        /* C2cT /= si->getIntegral(0,0,0);
+                                           if (m!=0) S2cT /= si->getIntegral(0,0,0);
+                                        */
+
+                                        // R0^3/M factor
+                                        C2cT *= orsa::cube(plateModelR0)*orsa::Unit::G()/GM;
+                                        if (m!=0) S2cT *= orsa::cube(plateModelR0)*orsa::Unit::G()/GM;
                                         
                                         // removed the GM factor, now scaling to C_00
                                         /* if (l==0) {
@@ -560,26 +565,25 @@ int main(int argc, char **argv) {
        }
     */
     
-    if (1) {
+    if (0) {
         // LaTeX output
         ORSA_DEBUG("LaTeX output --------------------");
+        // bulk density = M/V = M / (si000*R0^3) 
+        const double matrix_factor = 1.0/bulkDensity;
+        ORSA_DEBUG(">>>>> NOTE: common factor in front of matrix: %g",matrix_factor);
         for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
             for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
-                /* size_t Tx,Ty,Tz;
-                   CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,z_cT);
-                   ORSA_DEBUG("cT2sh[%03i][%03i] = %+9.6f [%s -> cT[%i][%i][%i]]",
-                   z_sh,z_cT,gsl_matrix_get(cT2sh,z_sh,z_cT),mod_gravityData_key(gravityData.get(),z_sh).toStdString().c_str(),Tx,Ty,Tz);
+                const double val = gsl_matrix_get(cT2sh,z_sh,z_cT) / matrix_factor;
+                /* if (val == 0.0) {
+                   gmp_printf("%20.3g \& ",val);
+                   } else {
+                   const int l10 = floor(log10(fabs(val)));
+                   const double t10 = pow(10.0,l10);
+                   const double v10 = val/t10;
+                   gmp_printf("%6.2f \\times 10^{%i} \& ",v10,l10);
+                   }
                 */
-                // gmp_printf("%10.3g \& ",gsl_matrix_get(cT2sh,z_sh,z_cT));
-                const double val = gsl_matrix_get(cT2sh,z_sh,z_cT);
-                if (val == 0.0) {
-                    gmp_printf("%20.3g \& ",val);
-                } else {
-                    const int l10 = floor(log10(fabs(val)));
-                    const double t10 = pow(10.0,l10);
-                    const double v10 = val/t10;
-                    gmp_printf("%6.2f \\times 10^{%i} \& ",v10,l10);
-                }
+                gmp_printf("%9.6f \& ",val);
             }   
             gmp_printf("\n");
         }
@@ -643,10 +647,10 @@ int main(int argc, char **argv) {
             for (size_t s=0; s<N; ++s) {
                 gsl_vector_set(uK[b],s,gsl_matrix_get(Q,s,M+b));
                 //
-                if (0) {
+                if (1) {
                     size_t Tx,Ty,Tz;
                     CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,s);
-                    ORSA_DEBUG("uK[%03i][%03i] =%+12.6f (null space base vector for cT[%i][%i][%i])",b,s,gsl_vector_get(uK[b],s),Tx,Ty,Tz);
+                    ORSA_DEBUG("uK[%03i][%03i] =%12.6f (null space base vector for cT[%i][%i][%i])",b,s,gsl_vector_get(uK[b],s),Tx,Ty,Tz);
                 }
             }
         }
@@ -708,6 +712,36 @@ int main(int argc, char **argv) {
         
         gsl_blas_dgemm(CblasNoTrans,CblasNoTrans,1.0,AT,inv_A_AT,0.0,pseudoInvA);
         
+        if (1) {
+            // LaTeX output
+            ORSA_DEBUG("LaTeX output --------------------");
+            const double matrix_factor = bulkDensity;
+            ORSA_DEBUG(">>>>> NOTE: common factor in front of matrix: %g",matrix_factor);
+            // const double eps = 1.0e-12; // values smaller than eps are printed as zeros
+            for (size_t row=0; row<N; ++row) {
+                for (size_t col=0; col<M; ++col) {
+                    const double val = gsl_matrix_get(pseudoInvA,row,col) / matrix_factor;
+                    /* if (fabs(val) < eps) {
+                    // gmp_printf("%20.3g \& ",val);
+                    gmp_printf("                    0 \& ");
+                    } else {
+                    const int l10 = floor(log10(fabs(val)));
+                    const double t10 = pow(10.0,l10);
+                    const double v10 = val/t10;
+                    if (l10 != 0) {
+                    gmp_printf("%6.2f \\times 10^{%2i} \& ",v10,l10);
+                    } else {
+                    gmp_printf("%21.2f \& ",val);
+                    }
+                    }
+                    */
+                    gmp_printf("%12.6f \& ",val);
+                }
+                gmp_printf("\n");
+            }
+            ORSA_DEBUG("---------------------------------");
+        }
+        
         
         gsl_vector * sh = gsl_vector_calloc(M); // b  of A x = b
         gsl_vector * cT = gsl_vector_calloc(N); // x  of A x = b
@@ -756,7 +790,7 @@ int main(int argc, char **argv) {
                     md_lD_coeff[0][0][0] = 0;
                     osg::ref_ptr<CubicChebyshevMassDistribution> md_lD =
                         new CubicChebyshevMassDistribution(md_lD_coeff,
-                                                           0.0,    
+                                                           // 0.0,    
                                                            plateModelR0,
                                                            massDistribution->layerData.get());
                     orsa::Cache<orsa::Vector> CM = sampled_CM;
@@ -798,20 +832,20 @@ int main(int argc, char **argv) {
                 } else {
                     const QString ref_key = mod_gravityData_key(gravityData.get(),i);
                     // if (ref_key == "GM") {
-                    if (ref_key == orsaPDS::RadioScienceGravityData::keyC(0,0)) {
-                        // ORSA_DEBUG("found: [%s]",ref_key.toStdString().c_str());
-                        layer_coeff = massDistribution->layerData->totalExcessMass()*orsa::Unit::G();
+                    /* if (ref_key == orsaPDS::RadioScienceGravityData::keyC(0,0)) {
+                    // ORSA_DEBUG("found: [%s]",ref_key.toStdString().c_str());
+                    // layer_coeff = massDistribution->layerData->totalExcessMass()*orsa::Unit::G();
                     } else {
-                        for (size_t l=1; l<=SH_degree; ++l) {
-                            for (size_t m=0; m<=l; ++m) {
-                                if (orsaPDS::RadioScienceGravityData::keyC(l,m) == ref_key) {
-                                    // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
-                                    layer_coeff = layerData_norm_C[l][m].get_d();
-                                } else if (orsaPDS::RadioScienceGravityData::keyS(l,m) == ref_key) {
-                                    // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
-                                    layer_coeff = layerData_norm_S[l][m].get_d();
-                                }                       
-                            }
+                    */
+                    for (size_t l=1; l<=SH_degree; ++l) {
+                        for (size_t m=0; m<=l; ++m) {
+                            if (orsaPDS::RadioScienceGravityData::keyC(l,m) == ref_key) {
+                                // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
+                                layer_coeff = layerData_norm_C[l][m].get_d();
+                            } else if (orsaPDS::RadioScienceGravityData::keyS(l,m) == ref_key) {
+                                // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
+                                layer_coeff = layerData_norm_S[l][m].get_d();
+                            }                       
                         }
                     }
                 }
@@ -854,6 +888,10 @@ int main(int argc, char **argv) {
 
             for (size_t s=0; s<N; ++s) {
                 ORSA_DEBUG("cT0[%i] = %g",s,gsl_vector_get(cT0,s));
+            }
+            
+            for (size_t s=0; s<N; ++s) {
+                ORSA_DEBUG("cT0[%i] = %12.6f * bulkDensity",s,gsl_vector_get(cT0,s)/bulkDensity);
             }
             
             if (1) {
@@ -926,10 +964,10 @@ int main(int argc, char **argv) {
                             double cT_CCMDF = 0.0; // default value
                             if (s < cT_CCMDF_size) {
                                 CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,s);
-                                cT_CCMDF = massDistribution->coeff[Tx][Ty][Tz];
+                                cT_CCMDF  = massDistribution->coeff[Tx][Ty][Tz];
                             }
                             x0.factor[b] += (cT_CCMDF-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
-
+                            
                             /* ORSA_DEBUG("cT_CCMDF = %+12.6e   cT0[%02i] = %+12.6e   uK[%02i][%02i] = %+12.6e   x0.factor[%02i] = %+12.6e",
                                cT_CCMDF,
                                s,gsl_vector_get(cT0,s),
@@ -949,7 +987,8 @@ int main(int argc, char **argv) {
                         for (size_t s=0; s<N; ++s) {
                             if (s==0) {
                                 // first element of target cT = 1
-                                x0.factor[b] += (1.0-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
+                                // first element of target cT = bulkDensity
+                                x0.factor[b] += (bulkDensity-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
                             } else {
                                 // all other elements of target cT = 0
                                 x0.factor[b] += (0.0-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);

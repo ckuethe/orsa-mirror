@@ -21,7 +21,7 @@
 #define ITERS_FIXED_T 100 // 200 // 100 // 1000 // 
 
 /* max step size in random walk */
-#define STEP_SIZE 1.0
+#define STEP_SIZE 1000.0
 
 /* Boltzmann constant */
 #define K 1.0                   
@@ -124,9 +124,11 @@ double E1(void * xp) {
             }            
         }
     }
-    
+    /* osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
+       new CubicChebyshevMassDistribution(coeff,x->bulkDensity,x->R0_plate,x->layerData);
+    */
     osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
-        new CubicChebyshevMassDistribution(coeff,x->bulkDensity,x->R0_plate,x->layerData);
+        new CubicChebyshevMassDistribution(coeff,x->R0_plate,x->layerData);
     
     osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
     orsa::Cache<double> minDensity, maxDensity;
@@ -172,7 +174,7 @@ double E1(void * xp) {
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: closest to uniform density]",delta_penalty);
         }
         
-        if (1) {
+        if (0) {
             // target: closest to uniform (simple)
             const double delta_penalty = (maxDensity-minDensity)/x->bulkDensity;
             penalty += delta_penalty;
@@ -210,7 +212,7 @@ double E1(void * xp) {
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: highest single density peak]",delta_penalty);
         }
         
-        if (0) {
+        if (1) {
             // target: density proportional to depth
             double delta_penalty = 0.0;
             for (size_t k=0; k<dv.size(); ++k) {
@@ -306,7 +308,7 @@ double E1(void * xp) {
         data.maxDensity = maxDensity;
         data.deltaDensity = maxDensity-minDensity;
         data.penalty = penalty;
-        data.densityScale = x->bulkDensity;
+        // data.densityScale = x->bulkDensity;
         data.R0 = x->R0_plate;
         data.SH_degree = x->SH_degree;
         data.coeff = coeff;

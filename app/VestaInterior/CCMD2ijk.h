@@ -38,7 +38,7 @@ void CCMD2ijk(std::vector< std::vector< std::vector<double> > > & N,
     const size_t T_degree = CCMD->degree();
     const double volume = si->getIntegral(0,0,0)*orsa::cube(plateModelR0);
     
-    ORSA_DEBUG("volume: %g",volume);
+    // ORSA_DEBUG("volume: %g",volume);
     
     const bool verbose=true;
     
@@ -57,10 +57,10 @@ void CCMD2ijk(std::vector< std::vector< std::vector<double> > > & N,
                         for (size_t ck=0; ck<=tk; ++ck) {
                             if (cTk[ck] == 0) continue;
                             const double baseFactor =
-                                CCMD->densityScale *
+                                // CCMD->densityScale *
                                 CCMD->coeff[ti][tj][tk] *
                                 mpz_class(cTi[ci] * cTj[cj] * cTk[ck]).get_d();
-                            if (1) {
+                            if (0) {
                                 // debug only
                                 for (size_t ni=0; ni<=degree; ++ni) {
                                     for (size_t nj=0; nj<=degree-ni; ++nj) {
@@ -74,7 +74,8 @@ void CCMD2ijk(std::vector< std::vector< std::vector<double> > > & N,
                                                        ci+ni,cj+nj,ck+nk);
                                             ORSA_DEBUG("%12.6g += %12.6g * %12.6g * %12.6g * %12.6g * %12.6g",
                                                        N[ni][nj][nk],
-                                                       CCMD->densityScale*CCMD->coeff[ti][tj][tk],
+                                                       // CCMD->densityScale*CCMD->coeff[ti][tj][tk],
+                                                       CCMD->coeff[ti][tj][tk],
                                                        cTi[ci].get_d(),
                                                        cTj[cj].get_d(),
                                                        cTk[ck].get_d(),

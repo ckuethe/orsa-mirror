@@ -88,12 +88,12 @@ void CubicChebyshevMassDistribution::updateIndexTable(const size_t & requestedDe
 }
 
 CubicChebyshevMassDistribution::CubicChebyshevMassDistribution(const CoefficientType & coefficient,
-                                                               const double & densityScale_,
+                                                               // const double & densityScale_,
                                                                const double & R0,
                                                                const LayerData * layerData_) :
     orsa::MassDistribution(),
     coeff(coefficient),
-    densityScale(densityScale_),
+    // densityScale(densityScale_),
     oneOverR0(1.0/R0),
     layerData(layerData_) {
 }
@@ -136,7 +136,7 @@ double CubicChebyshevMassDistribution::density(const orsa::Vector & p) const {
             }
         }
     }
-    density *= densityScale;
+    // density *= densityScale;
     
     if (layerData.get() != 0) {
         density += layerData->density(p);
@@ -154,7 +154,7 @@ double CubicChebyshevMassDistribution::density(const orsa::Vector & p) const {
 //       returns the same density as the input at any given point
 CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(const orsa::MassDistribution * massDistribution,
                                                                              const size_t & degree,
-                                                                             const double & densityScale,
+                                                                             // const double & densityScale,
                                                                              const double & R0,
                                                                              const LayerData * layerData,
                                                                              const bool & decompose_layerData) {
@@ -198,11 +198,18 @@ CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(con
                                    ORSA_DEBUG("density: %g",delta_density);
                                 */
                                 
+                                /* sum +=
+                                   cos(nx*orsa::pi()*(kx+0.5)/degree) *
+                                   cos(ny*orsa::pi()*(ky+0.5)/degree) *
+                                   cos(nz*orsa::pi()*(kz+0.5)/degree) *
+                                   delta_density / densityScale;
+                                */
+
                                 sum +=
                                     cos(nx*orsa::pi()*(kx+0.5)/degree) *
                                     cos(ny*orsa::pi()*(ky+0.5)/degree) *
                                     cos(nz*orsa::pi()*(kz+0.5)/degree) *
-                                    delta_density / densityScale;
+                                    delta_density;
                             }
                         }
                     }
@@ -220,11 +227,19 @@ CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(con
         }
     }
     
+    /* CubicChebyshevMassDistribution * CCMD;
+       if (decompose_layerData) {
+       CCMD = new CubicChebyshevMassDistribution(coeff,densityScale,R0,0);
+       } else {
+       CCMD = new CubicChebyshevMassDistribution(coeff,densityScale,R0,layerData);
+       }
+    */
+    
     CubicChebyshevMassDistribution * CCMD;
     if (decompose_layerData) {
-        CCMD = new CubicChebyshevMassDistribution(coeff,densityScale,R0,0);
+        CCMD = new CubicChebyshevMassDistribution(coeff,R0,0);
     } else {
-        CCMD = new CubicChebyshevMassDistribution(coeff,densityScale,R0,layerData);
+        CCMD = new CubicChebyshevMassDistribution(coeff,R0,layerData);
     }
     
     return CCMD;
@@ -233,7 +248,7 @@ CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(con
 /***/
 
 void CubicChebyshevMassDistributionFile::CCMDF_data::print() const {
-    ORSA_DEBUG("densityScale: %g",densityScale);
+    // ORSA_DEBUG("densityScale: %g",densityScale);
     ORSA_DEBUG("R0: %g",R0);
     ORSA_DEBUG("SH_degree: %i",SH_degree);
     const size_t T_degree = CubicChebyshevMassDistribution::degree(coeff);
@@ -322,8 +337,8 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
     if (1 != gmp_fscanf(fp,"%lf",&data.deltaDensity)) return false;                                    
     data.deltaDensity = orsa::FromUnits(orsa::FromUnits(data.deltaDensity,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     if (1 != gmp_fscanf(fp,"%lf",&data.penalty)) return false;
-    if (1 != gmp_fscanf(fp,"%lf",&data.densityScale)) return false;                                
-    data.densityScale = orsa::FromUnits(orsa::FromUnits(data.densityScale,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+    // if (1 != gmp_fscanf(fp,"%lf",&data.densityScale)) return false;                                
+    // data.densityScale = orsa::FromUnits(orsa::FromUnits(data.densityScale,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     if (1 != gmp_fscanf(fp,"%lf",&data.R0)) return false;                                
     data.R0 = orsa::FromUnits(data.R0,orsa::Unit::KM,1);
     if (1 != gmp_fscanf(fp,"%zi",&data.SH_degree)) return false;   
@@ -336,6 +351,7 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
                 for (size_t k=0; k<=T_degree-i-j; ++k) {
                     if (i+j+k == runningDegree) {
                         if (1 != gmp_fscanf(fp,"%lf",&data.coeff[i][j][k])) return false;
+                        data.coeff[i][j][k] = orsa::FromUnits(orsa::FromUnits(data.coeff[i][j][k],orsa::Unit::GRAM),orsa::Unit::CM,-3);
                         // ORSA_DEBUG("ijk: %i %i %i   coeff: %g",i,j,k,data.coeff[i][j][k]);
                     }
                 }
@@ -443,7 +459,7 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
     gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.maxDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
     gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.deltaDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
     gmp_fprintf(fp,"%.6f ",data.penalty);
-    gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.densityScale,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+    // gmp_fprintf(fp,"%.3f ",orsa::FromUnits(orsa::FromUnits(data.densityScale,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
     gmp_fprintf(fp,"%g ",orsa::FromUnits(data.R0,orsa::Unit::KM,-1));
     gmp_fprintf(fp,"%i ",data.SH_degree);
     const size_t T_degree = CubicChebyshevMassDistribution::degree(data.coeff);
@@ -453,7 +469,7 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
             for (size_t j=0; j<=T_degree-i; ++j) {
                 for (size_t k=0; k<=T_degree-i-j; ++k) {
                     if (i+j+k == runningDegree) {
-                        gmp_fprintf(fp,"%+9.6f ",data.coeff[i][j][k]);
+                        gmp_fprintf(fp,"%+9.6f ",orsa::FromUnits(orsa::FromUnits(data.coeff[i][j][k],orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
                     }
                 }
             }

@@ -127,8 +127,6 @@ public:
         epsabs(epsabs_),
         epsrel(epsrel_) {
         
-        ORSA_DEBUG("NOTE: using accuracy coefficients epsabs = %g and epsrel = %g",::to_double(epsabs),::to_double(epsrel));
-        
         int rc = sqlite3_open(SQLiteDBFileName.c_str(),&db);
         //
         if (rc) {
@@ -448,11 +446,13 @@ public:
             } else {
                 if (verbose) ORSA_DEBUG("value for [%i][%i][%i] not available, computing it...",nx,ny,nz);
                 
-                std::vector<FiveVars> fvv;
-                
-                // size_t num_skipped=0;
+                ORSA_DEBUG("NOTE: using accuracy coefficients epsabs = %g and epsrel = %g",::to_double(epsabs),::to_double(epsrel));
                 
                 const size_t l_max = std::max(norm_A.size()-1,norm_B.size()-1);
+                
+                std::vector<FiveVars> fvv;
+                fvv.reserve(l_max*l_max*l_max);
+                
                 for (size_t tau=0; tau<=1; ++tau) {
                     for (size_t l=0; l<=l_max; ++l) {
                         for (size_t m=0; m<=l; ++m) {
@@ -466,7 +466,6 @@ public:
                                         fv.m=m;
                                         fv.u=u;
                                         fv.nu=nu;
-                                        // fv.Q = Q(fv);
                                         // NOTE the normalization factor included here...
                                         // fv.ABQ_R0 = orsa::int_pow(norm_A[l][m],1-tau)*orsa::int_pow(norm_B[l][m],tau)*Q(fv)/normalization_factor(l,m);
                                         // fv.ABQ_R0 = pow(norm_A[l][m],1-tau)*pow(norm_B[l][m],tau)*Q(fv)/normalization_factor(l,m);
@@ -475,15 +474,7 @@ public:
                                         if (fv.ABQ_R0 != 0.0) {
                                             fvv.push_back(fv);
                                             // if (verbose) ORSA_DEBUG("[%i,%i,%i,%i,%i] = %+12.9f",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.ABQ_R0));
-                                        } else {
-                                            // ++num_skipped;
-                                            // ORSA_DEBUG("skipped!");
-                                        }
-                                        
-                                        /* ORSA_DEBUG("tau: %i   l: %i   m: %i   u: %i   nu: %i    Q: %g",
-                                           tau,l,m,u,nu,
-                                           ::to_double(fv.Q));
-                                        */
+                                        } 
                                     }
                                 }
                             }
@@ -501,6 +492,7 @@ public:
                 
                 // include those integrals needed at same Nr
                 std::vector<Trii> ii; // includedIntegrals;
+                ii.reserve(degree*degree*degree);
                 Trii trii;
                 trii.nx=nx; trii.ny=ny; trii.nz=nz; trii.index=getIndex(nx,ny,nz);
                 ii.push_back(trii);

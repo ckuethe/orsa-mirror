@@ -273,7 +273,7 @@ gsl_siman_params_t params  = {N_TRIES, ITERS_FIXED_T, STEP_SIZE,
 class SIMAN_xp {
 public:
     CubicChebyshevMassDistribution::CoefficientType coeff;
-    orsa::Cache<double> densityScale; // old name: bulkDensity;
+    // orsa::Cache<double> densityScale; // old name: bulkDensity;
     orsa::Cache<double> R0_plate;
     std::vector<orsa::Vector> rv;
     orsa::Cache<double> ref_penalty;
@@ -285,7 +285,7 @@ void SIMAN_copy (void * source, void * dest) {
     SIMAN_xp * s = (SIMAN_xp *) source;
     SIMAN_xp * d = (SIMAN_xp *) dest;
     d->coeff       = s->coeff;
-    d->densityScale = s->densityScale;
+    // d->densityScale = s->densityScale;
     d->R0_plate    = s->R0_plate;
     d->rv          = s->rv;
     d->ref_penalty = s->ref_penalty;
@@ -309,7 +309,7 @@ double E1(void * xp) {
     
     osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
         new CubicChebyshevMassDistribution(x->coeff,
-                                           x->densityScale,
+                                           // x->densityScale,
                                            x->R0_plate,
                                            x->layerData);
     
@@ -334,7 +334,7 @@ double E1(void * xp) {
         data.maxDensity = 0.0;
         data.deltaDensity = 0.0;
         data.penalty = penalty;
-        data.densityScale = x->densityScale;
+        // data.densityScale = x->densityScale;
         data.R0 = x->R0_plate;
         data.SH_degree = 0;
         data.coeff = x->coeff;
@@ -452,7 +452,7 @@ int main(int argc, char **argv) {
     // const double GM = gravityData->GM; 
     const double volume = si->getIntegral(0,0,0)*orsa::cube(plateModelR0);
     // const double densityScale = GM/orsa::Unit::G()/volume;
-    double densityScale = 1000.0;
+    // double densityScale = 1000.0;
     
     CubicChebyshevMassDistribution::CoefficientType densityCCC; // CCC=CubicChebyshevCoefficient
     CubicChebyshevMassDistribution::resize(densityCCC,T_degree_input);
@@ -485,7 +485,7 @@ int main(int argc, char **argv) {
         }
         densityCCC   = CCMDF[CCMDF.size()-1].coeff;
         layerData    = CCMDF[CCMDF.size()-1].layerData;
-        densityScale = CCMDF[CCMDF.size()-1].densityScale;
+        // densityScale = CCMDF[CCMDF.size()-1].densityScale;
         
     } else {
         
@@ -613,7 +613,7 @@ int main(int argc, char **argv) {
                 
                 SIMAN_xp x0;
                 x0.coeff = densityCCC;
-                x0.densityScale = densityScale;
+                // x0.densityScale = densityScale;
                 x0.R0_plate    = plateModelR0;
                 x0.rv          = rv;
                 x0.ref_penalty = ref_penalty;
@@ -667,7 +667,8 @@ int main(int argc, char **argv) {
                     data->insertD("x",row,v.getX()*oneOverR0);
                     data->insertD("y",row,v.getY()*oneOverR0);
                     data->insertD("z",row,v.getZ()*oneOverR0);
-                    data->insertF(row,density/densityScale);
+                    // data->insertF(row,density/densityScale);
+                    data->insertF(row,density);
                     data->insertSigma(row,1.0);
                     ++row;
                     ++iter;
@@ -724,7 +725,7 @@ int main(int argc, char **argv) {
                 osg::ref_ptr<CubicChebyshevMassDistribution> CCMD =
                     CubicChebyshevMassDistributionDecomposition(massDistribution,
                                                                 T_degree_input,
-                                                                densityScale,
+                                                                // densityScale,
                                                                 plateModelR0,
                                                                 layerData);
                 densityCCC = CCMD->coeff;
@@ -735,7 +736,7 @@ int main(int argc, char **argv) {
     
     osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
         new CubicChebyshevMassDistribution(densityCCC,
-                                           densityScale,     
+                                           // densityScale,     
                                            plateModelR0,
                                            layerData);
     randomPointsInShape->updateMassDistribution(massDistribution.get());
@@ -746,7 +747,7 @@ int main(int argc, char **argv) {
         massDistribution =
             CubicChebyshevMassDistributionDecomposition(massDistribution,
                                                         T_degree_input,
-                                                        densityScale,
+                                                        // densityScale,
                                                         plateModelR0,
                                                         layerData,
                                                         decompose_layerData);
@@ -791,7 +792,8 @@ int main(int argc, char **argv) {
             data->insertD("x",row,v.getX()*oneOverR0);
             data->insertD("y",row,v.getY()*oneOverR0);
             data->insertD("z",row,v.getZ()*oneOverR0);
-            data->insertF(row,density/densityScale);
+            // data->insertF(row,density/densityScale);
+            data->insertF(row,density);
             data->insertSigma(row,1.0);
             ++row;
             ++iter;
@@ -846,7 +848,7 @@ int main(int argc, char **argv) {
         
         massDistribution =
             new CubicChebyshevMassDistribution(densityCCC,
-                                               densityScale,     
+                                               // densityScale,     
                                                plateModelR0,
                                                layerData);
         randomPointsInShape->updateMassDistribution(massDistribution.get());
@@ -983,7 +985,7 @@ int main(int argc, char **argv) {
         data.maxDensity = maxDensity;
         data.deltaDensity = maxDensity-minDensity;
         data.penalty = penalty;
-        data.densityScale = densityScale;
+        // data.densityScale = densityScale;
         data.R0 = plateModelR0;
         data.SH_degree = gravityData->degree;
         data.coeff = densityCCC;
