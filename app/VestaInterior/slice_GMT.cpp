@@ -259,14 +259,28 @@ int main(int argc, char **argv) {
     // mpf_set_default_prec(512);
     // ORSA_DEBUG("updated mpf precision: %i",mpf_get_default_prec());
     
-    if (argc != 4) {
-        printf("Usage: %s <plate-model-file> <R0_km> <CCMDF-file>\n",argv[0]);
+    if (argc != 5) {
+        printf("Usage: %s <plate-model-file> <R0_km> <CCMDF-file> <XY|XZ|YZ>\n",argv[0]);
         exit(0);
     }
     
     const std::string plateModelFile = argv[1];
     const double plateModelR0 = orsa::FromUnits(atof(argv[2]),orsa::Unit::KM);
     const std::string CCMDF_filename = argv[3];
+    const std::string mode_str = argv[4];
+    
+    enum MODE {XY,XZ,YZ};
+    MODE mode;
+    if (mode_str == "XY") {
+        mode = XY;
+    } else if (mode_str == "XZ") {
+        mode = XZ;
+    } else if (mode_str == "YZ") {
+        mode = YZ;
+    } else {
+        ORSA_DEBUG("mode [%s] not recognized",mode_str.c_str());
+        exit(0);
+    }
     
     if (plateModelR0 <= 0.0){
         ORSA_DEBUG("invalid input...");
@@ -287,6 +301,31 @@ int main(int argc, char **argv) {
     if (CCMDF.size() == 0) exit(0);
     
     /*** plotting ***/
+
+    // plot range in km
+    double xs,xm,xM;
+    double ys,ym,yM;
+    switch (mode) {
+        case XY:
+            xs=0.30; xm=-80.0; xM=100.0;
+            ys=0.30; ym=-70.0; yM= 70.0;
+            break;
+        case XZ:
+            xs=0.30; xm=-80.0; xM=100.0;
+            ys=0.30; ym=-70.0; yM= 70.0;
+            break;
+        case YZ:
+            xs=0.30; xm=-70.0; xM= 70.0;
+            ys=0.30; ym=-70.0; yM= 70.0;
+            break;
+    }
+    const double x_step = xs;
+    const double x_min  = xm;
+    const double x_max  = xM;
+    //
+    const double y_step = ys;
+    const double y_min  = ym;
+    const double y_max  = yM;
     
     // plot range in km
     /* const double x_step =    5.00;
@@ -298,14 +337,14 @@ int main(int argc, char **argv) {
        const double y_max  =  300.00;
     */
     //
-    const double x_step =    0.30;
-    const double x_min  = - 80.00;
-    const double x_max  =  100.00;
-    //
-    const double y_step =    0.30;
-    const double y_min  = - 50.00;
-    const double y_max  =   50.00;
-    
+    /* const double x_step =    0.30;
+       const double x_min  = - 80.00;
+       const double x_max  =  100.00;
+       //
+       const double y_step =    0.30;
+       const double y_min  = - 50.00;
+       const double y_max  =   50.00;
+    */
     
     std::vector< osg::ref_ptr<PlotStats::Var> > varDefinition;
     //
@@ -331,12 +370,29 @@ int main(int argc, char **argv) {
             while (x<x_max) {
                 double y = y_min + 0.5*y_step;
                 while (y<y_max) {
+
+                    double vx,vy,vz;
+                    switch (mode) {
+                        case XY:
+                            vx=x; vy=y; vz=0;
+                            break;
+                        case XZ:
+                            vx=x; vy=0; vz=y;
+                            break;
+                        case YZ:
+                            vx=0; vy=x; vz=y;
+                            break;
+                    }
+                    const orsa::Vector v(orsa::FromUnits(vx,orsa::Unit::KM),
+                                         orsa::FromUnits(vy,orsa::Unit::KM),
+                                         orsa::FromUnits(vz,orsa::Unit::KM));
                     
                     // XZ
-                    const orsa::Vector v(orsa::FromUnits(x,orsa::Unit::KM),
-                                         orsa::FromUnits(0,orsa::Unit::KM),
-                                         orsa::FromUnits(y,orsa::Unit::KM));
-
+                    /* const orsa::Vector v(orsa::FromUnits(x,orsa::Unit::KM),
+                       orsa::FromUnits(0,orsa::Unit::KM),
+                       orsa::FromUnits(y,orsa::Unit::KM));
+                    */
+                    
                     // XY
                     /* const orsa::Vector v(orsa::FromUnits(x,orsa::Unit::KM),
                        orsa::FromUnits(y,orsa::Unit::KM),
@@ -370,10 +426,28 @@ int main(int argc, char **argv) {
             osg::ref_ptr<CubicChebyshevMassDistribution> md = CCMD(*it_CCMDF);
             std::deque<orsa::Vector>::const_iterator it_rv_in = rv_in.begin();
             while (it_rv_in != rv_in.end()) {
-#warning double-check why adding step here...
+                // #warning double-check why adding step here...
+                
+                switch (mode) {
+                    case XY:
+                        xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1);
+                        xVector[1] = orsa::FromUnits((*it_rv_in).getY(),orsa::Unit::KM,-1);
+                        break;
+                    case XZ:
+                        xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1);
+                        xVector[1] = orsa::FromUnits((*it_rv_in).getZ(),orsa::Unit::KM,-1);
+                        break;
+                    case YZ:
+                        xVector[0] = orsa::FromUnits((*it_rv_in).getY(),orsa::Unit::KM,-1);
+                        xVector[1] = orsa::FromUnits((*it_rv_in).getZ(),orsa::Unit::KM,-1);
+                        break;
+                }
+                
+                
                 // XZ
-                xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1);
-                xVector[1] = orsa::FromUnits((*it_rv_in).getZ(),orsa::Unit::KM,-1);
+                /* xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1);
+                   xVector[1] = orsa::FromUnits((*it_rv_in).getZ(),orsa::Unit::KM,-1);
+                */
                 
                 // XY
                 /* xVector[0] = orsa::FromUnits((*it_rv_in).getX(),orsa::Unit::KM,-1);
@@ -392,10 +466,28 @@ int main(int argc, char **argv) {
             // append zeros outside body
             std::deque<orsa::Vector>::const_iterator it_rv_out = rv_out.begin();
             while (it_rv_out != rv_out.end()) {
-#warning double-check why adding step here...
+                // #warning double-check why adding step here...
+
+                switch (mode) {
+                    case XY:
+                        xVector[0] = orsa::FromUnits((*it_rv_out).getX(),orsa::Unit::KM,-1);
+                        xVector[1] = orsa::FromUnits((*it_rv_out).getY(),orsa::Unit::KM,-1);
+                        break;
+                    case XZ:
+                        xVector[0] = orsa::FromUnits((*it_rv_out).getX(),orsa::Unit::KM,-1);
+                        xVector[1] = orsa::FromUnits((*it_rv_out).getZ(),orsa::Unit::KM,-1);
+                        break;
+                    case YZ:
+                        xVector[0] = orsa::FromUnits((*it_rv_out).getY(),orsa::Unit::KM,-1);
+                        xVector[1] = orsa::FromUnits((*it_rv_out).getZ(),orsa::Unit::KM,-1);
+                        break;
+                }
+                
+                
                 // XZ
-                xVector[0] = orsa::FromUnits((*it_rv_out).getX(),orsa::Unit::KM,-1);
-                xVector[1] = orsa::FromUnits((*it_rv_out).getZ(),orsa::Unit::KM,-1);
+                /* xVector[0] = orsa::FromUnits((*it_rv_out).getX(),orsa::Unit::KM,-1);
+                   xVector[1] = orsa::FromUnits((*it_rv_out).getZ(),orsa::Unit::KM,-1);
+                */
                 
                 // XY
                 /* xVector[0] = orsa::FromUnits((*it_rv_out).getX(),orsa::Unit::KM,-1);
