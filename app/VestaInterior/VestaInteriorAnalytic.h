@@ -212,6 +212,11 @@ double E1(void * xp) {
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: highest single density peak]",delta_penalty);
         }
         
+        if (0) {
+#warning need to look more into this
+            // target: fraction of mass at given density ranges
+        }
+        
         if (1) {
             // target: density proportional to depth
             double delta_penalty = 0.0;
@@ -337,8 +342,8 @@ void S1(const gsl_rng * r, void * xp, double step_size) {
     SIMAN_xp * x = (SIMAN_xp *) xp;
     
     for (size_t b=0; b<x->uK_size; ++b) {
-        x->factor[b] += step_size*(2*gsl_rng_uniform(r)-1)/x->uK_size;
-        // x->factor[b] += step_size*(2*gsl_rng_uniform(r)-1);
+        // x->factor[b] += step_size*(2*gsl_rng_uniform(r)-1)/x->uK_size;
+        x->factor[b] += step_size*(2*gsl_rng_uniform(r)-1);
     }
 }
 

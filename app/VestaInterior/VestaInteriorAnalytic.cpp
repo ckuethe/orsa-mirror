@@ -565,7 +565,7 @@ int main(int argc, char **argv) {
        }
     */
     
-    if (0) {
+    if (1) {
         // LaTeX output
         ORSA_DEBUG("LaTeX output --------------------");
         // bulk density = M/V = M / (si000*R0^3) 
@@ -837,7 +837,7 @@ int main(int argc, char **argv) {
                     // layer_coeff = massDistribution->layerData->totalExcessMass()*orsa::Unit::G();
                     } else {
                     */
-                    for (size_t l=1; l<=SH_degree; ++l) {
+                    for (size_t l=0; l<=SH_degree; ++l) {
                         for (size_t m=0; m<=l; ++m) {
                             if (orsaPDS::RadioScienceGravityData::keyC(l,m) == ref_key) {
                                 // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
@@ -850,7 +850,7 @@ int main(int argc, char **argv) {
                     }
                 }
                 if (!layer_coeff.isSet()) {
-                    ORSA_DEBUG("problems...");
+                    ORSA_DEBUG("problems... M=%i",M);
                     exit(0);
                 }
                 // choose here if sampling or using nominal value
@@ -940,8 +940,8 @@ int main(int argc, char **argv) {
                 x0.uK = &uK[0];
                 x0.uK_size = N-M;
                 x0.factor.resize(x0.uK_size);
-                x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(1.90,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-                x0.maximumDensity = orsa::FromUnits(orsa::FromUnits(3.30,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+                x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(1.60,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+                x0.maximumDensity = orsa::FromUnits(orsa::FromUnits(9.90,orsa::Unit::GRAM),orsa::Unit::CM,-3);
                 x0.penaltyThreshold = 1.00;
                 if (massDistribution.get() != 0) {
                     x0.layerData = massDistribution->layerData;
