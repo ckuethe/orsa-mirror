@@ -12,6 +12,7 @@ template <typename T>
 void CCMD2SH(orsa::Cache<orsa::Vector>             & CM,
              std::vector< std::vector<mpf_class> > & norm_C,
              std::vector< std::vector<mpf_class> > & norm_S,
+             mpf_class                             & IzzMR2,
              // std::vector< std::vector< std::vector<double> > > & global_N,
              // std::vector< std::vector< std::vector<double> > > & translated_global_N,
              const size_t                          & SH_degree,
@@ -39,7 +40,7 @@ void CCMD2SH(orsa::Cache<orsa::Vector>             & CM,
     // std::vector< std::vector< std::vector<double> > > & translated_N = translated_global_N;
     std::vector< std::vector< std::vector<double> > > translated_N;
     translate(translated_N,N,-CM_over_plateModelR0);
-    if (1) {
+    if (0) {
         for (size_t degree=0; degree<=SH_degree; ++degree) {
             for (size_t ni=0; ni<=degree; ++ni) {
                 for (size_t nj=0; nj<=degree-ni; ++nj) {
@@ -52,6 +53,7 @@ void CCMD2SH(orsa::Cache<orsa::Vector>             & CM,
             }
         }
     }
+    IzzMR2 = (translated_N[2][0][0] + translated_N[0][2][0]) / translated_N[0][0][0];
     {
         const double radiusCorrectionRatio = plateModelR0/gravityDataR0;
         norm_C.resize(SH_degree+1);

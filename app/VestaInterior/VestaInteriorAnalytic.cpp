@@ -28,6 +28,33 @@ template <typename T> std::vector< std::vector< std::vector< std::vector<size_t>
 
 /*******/
 
+// when using this index, IzzMR2 is used instead of one of the natural Clm or Slm in the gravityData file;
+orsa::Cache<size_t> IzzMR2_index;
+size_t get_IzzMR2_index() {
+    if (IzzMR2_index.isSet()) {
+        return IzzMR2_index;
+    } else {
+        ORSA_DEBUG("error: requesting unset value of IzzMR2_index");
+        return -1;
+    }
+}
+orsa::Cache<double> IzzMR2;
+double get_IzzMR2() {
+    if (IzzMR2.isSet()) {
+        return IzzMR2;
+    } else {
+        ORSA_DEBUG("error: requesting unset value of IzzMR2");
+        return 0.0;
+    }
+}
+bool have_IzzMR2() {
+    if (IzzMR2.isSet()) {
+        return (IzzMR2 > 0.0);
+    } else {
+        return false;
+    }
+}
+
 // modified versions of RadioScienceGravityData calls, to include C10,C11,S11
 unsigned int mod_gravityData_index(const orsaPDS::RadioScienceGravityData * gravityData,
                                    const QString & key) {
@@ -40,6 +67,8 @@ unsigned int mod_gravityData_index(const orsaPDS::RadioScienceGravityData * grav
         index = 2;
     } else if (key == orsaPDS::RadioScienceGravityData::keyS(1,1)) {
         index = 3;
+    } else if (key == "IzzMR2") {
+        index = get_IzzMR2_index();
     } else {
         index = gravityData->index(key);
         if (index != 0) index += 3;
@@ -49,15 +78,17 @@ unsigned int mod_gravityData_index(const orsaPDS::RadioScienceGravityData * grav
 
 QString mod_gravityData_key(const orsaPDS::RadioScienceGravityData * gravityData,
                             const unsigned int & index) {
+    // ORSA_DEBUG("index: %i   gravityData->numberOfCoefficients+3: %i",index,gravityData->numberOfCoefficients);
     if (index == 0) {
-        // return gravityData->key(index);
         return orsaPDS::RadioScienceGravityData::keyC(0,0);    
     } else if (index == 1) {
         return orsaPDS::RadioScienceGravityData::keyC(1,0);        
     } else if (index == 2) {
         return orsaPDS::RadioScienceGravityData::keyC(1,1);        
     } else if (index == 3) {
-        return orsaPDS::RadioScienceGravityData::keyS(1,1);        
+        return orsaPDS::RadioScienceGravityData::keyS(1,1);
+    } else if (index == get_IzzMR2_index()) {
+        return "IzzMR2";
     } else {
         return gravityData->key(index-3);
     }
@@ -72,20 +103,19 @@ double mod_gravityData_getCoeff(const orsaPDS::RadioScienceGravityData * gravity
                 (key == orsaPDS::RadioScienceGravityData::keyC(1,1)) ||
                 (key == orsaPDS::RadioScienceGravityData::keyS(1,1)) ) {
         coeff = 0.0;
+    } else if (key == "IzzMR2") {
+        coeff = get_IzzMR2();
     } else {
         coeff = gravityData->getCoeff(key);
     }
     return coeff;
 }
-//
-/* double mod_gravityData_getCovar(const QString & key1, const QString & key2) {
-   double covar;
-   ORSA_DEBUG("complete here...");
-   }
-*/
-//
+
 unsigned int mod_gravityData_numberOfCoefficients(const orsaPDS::RadioScienceGravityData * gravityData) {
-    return gravityData->numberOfCoefficients+3;
+    // return (gravityData->numberOfCoefficients + 3 + (have_IzzMR2() ? 1 : 0));
+    unsigned int retVal = gravityData->numberOfCoefficients + 3;
+    if (get_IzzMR2_index()==retVal) ++retVal;
+    return retVal;
 }
 
 gsl_vector * mod_gravityData_getCoefficientVector(const orsaPDS::RadioScienceGravityData * gravityData) {
@@ -97,6 +127,8 @@ gsl_vector * mod_gravityData_getCoefficientVector(const orsaPDS::RadioScienceGra
             gsl_vector_set(mod_mu,k,1.0);
         } else if ( (k==1) || (k==2) || (k==3) ) {
             gsl_vector_set(mod_mu,k,0.0);
+        } else if (k == get_IzzMR2_index()) {
+            gsl_vector_set(mod_mu,k,get_IzzMR2());
         } else {
             gsl_vector_set(mod_mu,k,gsl_vector_get(mu,k-3));
         }
@@ -115,7 +147,7 @@ gsl_matrix * mod_gravityData_getCovarianceMatrix(const orsaPDS::RadioScienceGrav
                 // gsl_matrix_set(mod_covm,l,m,gsl_matrix_get(covm,l,m));
                 gsl_matrix_set(mod_covm,l,m,gsl_matrix_get(covm,l,m)/orsa::square(gravityData->GM));
 #warning NEED TO SCALE THIS DOWN: from GM to 1.0 level... C_{00}... so check this!
-            } else if ((l==1) || (l==2) || (l==3) || (m==1) || (m==2) || (m==3)) {
+            } else if ((l==1) || (l==2) || (l==3) || (l==get_IzzMR2_index()) || (m==1) || (m==2) || (m==3) || (m==get_IzzMR2_index())) {
                 gsl_matrix_set(mod_covm,l,m,0.0);
             } else if ((l==0) && (m!=0)) {
                 gsl_matrix_set(mod_covm,l,m,gsl_matrix_get(covm,l,m-3));
@@ -140,7 +172,7 @@ gsl_matrix * mod_gravityData_getInverseCovarianceMatrix(const orsaPDS::RadioScie
                 // gsl_matrix_set(mod_inv_covm,l,m,gsl_matrix_get(inv_covm,l,m));
                 gsl_matrix_set(mod_inv_covm,l,m,gsl_matrix_get(inv_covm,l,m)/orsa::square(gravityData->GM));
 #warning NEED TO SCALE THIS DOWN: from GM to 1.0 level... C_{00}... so check this!
-            } else if ((l==1) || (l==2) || (l==3) || (m==1) || (m==2) || (m==3)) {
+            } else if ((l==1) || (l==2) || (l==3) || (l==get_IzzMR2_index()) || (m==1) || (m==2) || (m==3) || (m==get_IzzMR2_index())) {
                 gsl_matrix_set(mod_inv_covm,l,m,0.0);
             } else if ((l==0) && (m!=0)) {
                 gsl_matrix_set(mod_inv_covm,l,m,gsl_matrix_get(inv_covm,l,m-3));
@@ -175,9 +207,9 @@ int main(int argc, char **argv) {
     // mpf_set_default_prec(512);
     // ORSA_DEBUG("updated mpf precision: %i",mpf_get_default_prec());
     
-    if ( (argc != 13) &&
-         (argc != 14) ) {
-        printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> <num-sample-points> [CCMDF-input-file]\n",argv[0]);
+    if ( (argc != 14) &&
+         (argc != 15) ) {
+        printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> <Izz/MR^2> <num-sample-points> [CCMDF-input-file]\n",argv[0]);
         exit(0);
     }   
     
@@ -192,9 +224,10 @@ int main(int argc, char **argv) {
     const double CM_sx = orsa::FromUnits(atof(argv[9]),orsa::Unit::KM);
     const double CM_sy = orsa::FromUnits(atof(argv[10]),orsa::Unit::KM);
     const double CM_sz = orsa::FromUnits(atof(argv[11]),orsa::Unit::KM);
-    const int numSamplePoints = atoi(argv[12]);
-    const bool have_CCMDF_file = (argc == 14);
-    const std::string CCMDF_filename = (argc == 14) ? argv[13] : "";
+    IzzMR2 = atof(argv[12]); // global
+    const int numSamplePoints = atoi(argv[13]);
+    const bool have_CCMDF_file = (argc == 15);
+    const std::string CCMDF_filename = (argc == 15) ? argv[14] : "";
     
     // safer over NFS
     sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
@@ -377,17 +410,22 @@ int main(int argc, char **argv) {
     const size_t SH_degree = gravityDegree; // shperical harmonics degree
     const size_t  T_degree = polynomialDegree; // chebyshev polynomials degree
     
-    const size_t  SH_size = (SH_degree+1)*(SH_degree+1);
+    // const size_t SH_size = (SH_degree+1)*(SH_degree+1);
+    const size_t  SH_size = (SH_degree+1)*(SH_degree+1) + (have_IzzMR2() ? 1 : 0);
     const size_t   T_size = CubicChebyshevMassDistribution::totalSize(T_degree);
+    
+    IzzMR2_index = (have_IzzMR2() ? SH_size-1 : -1); // global
     
     const double GM = gravityData->GM; 
     
     ORSA_DEBUG("SH_size: %d   T_size: %d   mod_gravityData_numberOfCoefficients: %d",SH_size,T_size,mod_gravityData_numberOfCoefficients(gravityData.get()));
     
-    if (T_size <= SH_size) {
-        ORSA_DEBUG("this method works only when the problem is under-determined, exiting");
-        exit(0);
-    }
+    /* 
+       if (T_size <= SH_size) {
+       ORSA_DEBUG("this method works only when the problem is under-determined, exiting");
+       exit(0);
+       }
+    */
     
     if (gravityDegree > gravityData->degree) {
         ORSA_DEBUG("requested gravity degree [%i] is larger than the RadioScienceGravityFile [%s] degree [%i]; exiting",
@@ -553,6 +591,96 @@ int main(int argc, char **argv) {
                 }
             }
         }
+    }
+    if (have_IzzMR2()) {
+        // one line after all entries above
+        const size_t z_IzzMR2 = 1 + mod_gravityData_index(gravityData.get(),orsaPDS::RadioScienceGravityData::keyS(gravityDegree,gravityDegree));
+        
+        const size_t l = 2;
+        
+        const double radiusCorrectionFactor = 1.0; // orsa::int_pow(radiusCorrectionRatio,l);
+        
+        // ni,nj,nk are the expansion of IzzMR2 in terms of N_ijk
+        for (size_t ni=0; ni<=l; ++ni) {
+            for (size_t nj=0; nj<=l-ni; ++nj) {
+                for (size_t nk=0; nk<=l-ni-nj; ++nk) {
+                    // if ( (C_tri_integral[ni][nj][nk] == 0) && (S_tri_integral[ni][nj][nk] == 0) ) continue;
+                    // ti,tj,tk are the expansion of the density in terms of the cubic Chebyshev
+                    // IzzMR2
+                    if ( (ni==2 && nj==0 && nk==0) ||
+                         (ni==0 && nj==2 && nk==0) ) {
+                        for (size_t running_T_degree=0; running_T_degree<=T_degree; ++running_T_degree) {
+                            for (size_t ti=0; ti<=T_degree; ++ti) {
+                                const std::vector<mpz_class> & cTi = orsa::ChebyshevTcoeff(ti);
+                                for (size_t tj=0; tj<=T_degree-ti; ++tj) {
+                                    const std::vector<mpz_class> & cTj = orsa::ChebyshevTcoeff(tj);
+                                    for (size_t tk=0; tk<=T_degree-ti-tj; ++tk) {
+                                        if (ti+tj+tk != running_T_degree) continue;
+                                        const std::vector<mpz_class> & cTk = orsa::ChebyshevTcoeff(tk);
+                                        
+                                        const size_t z_cT = CubicChebyshevMassDistribution::index(ti,tj,tk);
+                                        
+                                        // ORSA_DEBUG("i=%i j=%i k=%i z_cT=%i",ti,tj,tk,z_cT);
+                                        
+                                        double IzzMR2_to_cT = 0.0;
+                                        
+                                        // ci,cj,ck are the expansion of each Chebyshev polynomial in terms of powers of x,y,z
+                                        for (size_t ci=0; ci<=ti; ++ci) {
+                                            if (cTi[ci] == 0) continue;
+                                            for (size_t cj=0; cj<=tj; ++cj) {
+                                                if (cTj[cj] == 0) continue;
+                                                for (size_t ck=0; ck<=tk; ++ck) {
+                                                    if (cTk[ck] == 0) continue;
+                                                    // bi,bj,bk are the binomial expansion about the center of mass
+                                                    // this also introduces a power_sign
+                                                    for (size_t bi=0; bi<=ni; ++bi) {
+                                                        for (size_t bj=0; bj<=nj; ++bj) {
+                                                            for (size_t bk=0; bk<=nk; ++bk) {
+                                                                
+                                                                IzzMR2_to_cT +=
+                                                                    orsa::power_sign(bi+bj+bk) *
+                                                                    radiusCorrectionFactor *
+                                                                    // C_tri_norm[ni][nj][nk] *
+                                                                    mpz_class(orsa::binomial(ni,bi) *
+                                                                              orsa::binomial(nj,bj) *
+                                                                              orsa::binomial(nk,bk) *
+                                                                              cTi[ci] * cTj[cj] * cTk[ck]).get_d() *
+                                                                    orsa::int_pow(CMx_over_plateModelR0,bi) *
+                                                                    orsa::int_pow(CMy_over_plateModelR0,bj) *
+                                                                    orsa::int_pow(CMz_over_plateModelR0,bk) *
+                                                                    si->getIntegral(ni-bi+ci,nj-bj+cj,nk-bk+ck);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }                                        
+                                        }
+                                        
+                                        /* C2cT /= si->getIntegral(0,0,0);
+                                           if (m!=0) S2cT /= si->getIntegral(0,0,0);
+                                        */
+                                        
+                                        // R0^3/M factor
+                                        IzzMR2_to_cT *= orsa::cube(plateModelR0)*orsa::Unit::G()/GM;
+                                        // if (m!=0) S2cT *= orsa::cube(plateModelR0)*orsa::Unit::G()/GM;
+                                        
+                                        // removed the GM factor, now scaling to C_00
+                                        /* if (l==0) {
+                                           C2cT *= GM;
+                                           }
+                                        */
+                                        
+                                        // saving, NOTE how we are adding terms here
+                                        gsl_matrix_set(cT2sh,z_IzzMR2,z_cT,gsl_matrix_get(cT2sh,z_IzzMR2,z_cT)+IzzMR2_to_cT);
+                                        // if (m!=0) gsl_matrix_set(cT2sh,z_S,z_cT,gsl_matrix_get(cT2sh,z_S,z_cT)+S2cT);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }    
     }
     
     /* for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
@@ -782,6 +910,7 @@ int main(int argc, char **argv) {
                     layerData_norm_S[l][m] = 0.0;
                 }
             }
+            mpf_class layerData_IzzMR2 = 0.0;
             
             if (massDistribution.get() != 0) {
                 if (massDistribution->layerData.get() != 0) {
@@ -798,6 +927,7 @@ int main(int argc, char **argv) {
                     CCMD2SH(CM,
                             layerData_norm_C,
                             layerData_norm_S,
+                            layerData_IzzMR2,
                             SH_degree, // gravityData->degree,
                             si.get(),
                             md_lD,
@@ -811,7 +941,7 @@ int main(int argc, char **argv) {
                             layerData_norm_S[l][m] *= layerMassFraction;
                         }
                     }
-                    
+                    layerData_IzzMR2 *= layerMassFraction;
                 }
             }
             
@@ -847,6 +977,9 @@ int main(int argc, char **argv) {
                                 layer_coeff = layerData_norm_S[l][m].get_d();
                             }                       
                         }
+                    }
+                    if ("IzzMR2" == ref_key) {
+                        layer_coeff = layerData_IzzMR2.get_d();
                     }
                 }
                 if (!layer_coeff.isSet()) {
