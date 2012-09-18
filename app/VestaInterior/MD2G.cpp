@@ -1006,13 +1006,13 @@ int main(int argc, char **argv) {
                     orsa::FromUnits(CMx,orsa::Unit::KM,-1),
                     orsa::FromUnits(CMy,orsa::Unit::KM,-1),
                     orsa::FromUnits(CMz,orsa::Unit::KM,-1));
-        gmp_fprintf(fp,"Ixx / (M*R0^2) = %9.6f   [R0=%g km]\n",
+        gmp_fprintf(fp,"Ixx / (M*R0^2) = %12.9f   [R0=%g km]\n",
                     inertiaMomentXX_over_plateModelR0squared,
                     orsa::FromUnits(plateModelR0,orsa::Unit::KM,-1));
-        gmp_fprintf(fp,"Iyy / (M*R0^2) = %9.6f   [R0=%g km]\n",
+        gmp_fprintf(fp,"Iyy / (M*R0^2) = %12.9f   [R0=%g km]\n",
                     inertiaMomentYY_over_plateModelR0squared,
                     orsa::FromUnits(plateModelR0,orsa::Unit::KM,-1));
-        gmp_fprintf(fp,"Izz / (M*R0^2) = %9.6f   [R0=%g km]\n",
+        gmp_fprintf(fp,"Izz / (M*R0^2) = %12.9f   [R0=%g km]\n",
                     inertiaMomentZZ_over_plateModelR0squared,
                     orsa::FromUnits(plateModelR0,orsa::Unit::KM,-1));
         gmp_fprintf(fp,"Volume: %.6e [km^3]\n",orsa::FromUnits(si->getIntegral(0,0,0)*orsa::cube(plateModelR0),orsa::Unit::KM,-3));
@@ -1026,9 +1026,18 @@ int main(int argc, char **argv) {
     orsa::Cache<orsa::Vector> CM;
     std::vector< std::vector<mpf_class> > norm_C;
     std::vector< std::vector<mpf_class> > norm_S;
+    mpf_class IzzMR2;
+    // 
+    if (0) {
+        // test only!
+        CM = orsa::Vector(0,0,0);
+        CM.lock();
+    }
+    //
     CCMD2SH(CM,
             norm_C,
             norm_S,
+            IzzMR2,
             gravityData->degree,
             si.get(),
             massDistribution,
