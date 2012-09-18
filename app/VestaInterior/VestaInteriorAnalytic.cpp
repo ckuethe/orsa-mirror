@@ -594,8 +594,8 @@ int main(int argc, char **argv) {
     }
     if (have_IzzMR2()) {
         // one line after all entries above
-        const size_t z_IzzMR2 = 1 + mod_gravityData_index(gravityData.get(),orsaPDS::RadioScienceGravityData::keyS(gravityDegree,gravityDegree));
-        
+        // const size_t z_IzzMR2 = 1 + mod_gravityData_index(gravityData.get(),orsaPDS::RadioScienceGravityData::keyS(gravityDegree,gravityDegree));
+        const size_t z_IzzMR2 = IzzMR2_index;
         const size_t l = 2;
         
         const double radiusCorrectionFactor = 1.0; // orsa::int_pow(radiusCorrectionRatio,l);
@@ -702,18 +702,10 @@ int main(int argc, char **argv) {
         for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
             for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
                 const double val = gsl_matrix_get(cT2sh,z_sh,z_cT) / matrix_factor;
-                /* if (val == 0.0) {
-                   gmp_printf("%20.3g \& ",val);
-                   } else {
-                   const int l10 = floor(log10(fabs(val)));
-                   const double t10 = pow(10.0,l10);
-                   const double v10 = val/t10;
-                   gmp_printf("%6.2f \\times 10^{%i} \& ",v10,l10);
-                   }
-                */
-                gmp_printf("%9.6f \& ",val);
+                gmp_fprintf(stderr,"%9.6f \& ",val);
+                // gmp_fprintf(stderr,"@%02i/%02i %9.6f \&",z_sh,z_cT,val);
             }   
-            gmp_printf("\n");
+            gmp_fprintf(stderr,"\n");
         }
         ORSA_DEBUG("---------------------------------");
     }
@@ -849,23 +841,9 @@ int main(int argc, char **argv) {
             for (size_t row=0; row<N; ++row) {
                 for (size_t col=0; col<M; ++col) {
                     const double val = gsl_matrix_get(pseudoInvA,row,col) / matrix_factor;
-                    /* if (fabs(val) < eps) {
-                    // gmp_printf("%20.3g \& ",val);
-                    gmp_printf("                    0 \& ");
-                    } else {
-                    const int l10 = floor(log10(fabs(val)));
-                    const double t10 = pow(10.0,l10);
-                    const double v10 = val/t10;
-                    if (l10 != 0) {
-                    gmp_printf("%6.2f \\times 10^{%2i} \& ",v10,l10);
-                    } else {
-                    gmp_printf("%21.2f \& ",val);
-                    }
-                    }
-                    */
-                    gmp_printf("%12.6f \& ",val);
+                    gmp_fprintf(stderr,"%12.6f \& ",val);
                 }
-                gmp_printf("\n");
+                gmp_fprintf(stderr,"\n");
             }
             ORSA_DEBUG("---------------------------------");
         }
