@@ -28,6 +28,7 @@ public:
     std::vector<SHLayerData> shLayerData;
     std::vector< std::vector<mpf_class> > uniformShape_norm_C;
     std::vector< std::vector<mpf_class> > uniformShape_norm_S;
+    mpf_class                             uniformShape_IzzMR2;
     double R0_plate;
     double R0_gravity;
     double bulkDensity;

@@ -55,7 +55,7 @@ bool have_IzzMR2() {
     }
 }
 
-// modified versions of RadioScienceGravityData calls, to include C10,C11,S11
+// modified versions of RadioScienceGravityData calls, to include C10,C11,S11 and IzzMR2
 unsigned int mod_gravityData_index(const orsaPDS::RadioScienceGravityData * gravityData,
                                    const QString & key) {
     unsigned int index;
@@ -109,6 +109,11 @@ double mod_gravityData_getCoeff(const orsaPDS::RadioScienceGravityData * gravity
         coeff = gravityData->getCoeff(key);
     }
     return coeff;
+}
+
+double mod_gravityData_getCoeff(const orsaPDS::RadioScienceGravityData * gravityData,
+                                const unsigned int & index) {
+    return mod_gravityData_getCoeff(gravityData,mod_gravityData_key(gravityData,index));
 }
 
 unsigned int mod_gravityData_numberOfCoefficients(const orsaPDS::RadioScienceGravityData * gravityData) {
