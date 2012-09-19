@@ -13,8 +13,6 @@ void CCMD2SH(orsa::Cache<orsa::Vector>             & CM,
              std::vector< std::vector<mpf_class> > & norm_C,
              std::vector< std::vector<mpf_class> > & norm_S,
              mpf_class                             & IzzMR2,
-             // std::vector< std::vector< std::vector<double> > > & global_N,
-             // std::vector< std::vector< std::vector<double> > > & translated_global_N,
              const size_t                          & SH_degree,
              const SimplexIntegration<T>           * si,
              const CubicChebyshevMassDistribution  * CCMD,
@@ -97,14 +95,52 @@ void CCMD2SH(orsa::Cache<orsa::Vector>             & CM,
             }
         }
         // debug output
-        ORSA_DEBUG("reference R0: %g [km]",orsa::FromUnits(gravityDataR0,orsa::Unit::KM,-1));
-        for (size_t l=0; l<=SH_degree; ++l) {
-            for (size_t m=0; m<=l; ++m) {
-                ORSA_DEBUG("norm_C[%i][%i] = %Fg",l,m,norm_C[l][m].get_mpf_t());
-                if (m != 0) ORSA_DEBUG("norm_S[%i][%i] = %Fg",l,m,norm_S[l][m].get_mpf_t());
+        if (0) {
+            ORSA_DEBUG("reference R0: %g [km]",orsa::FromUnits(gravityDataR0,orsa::Unit::KM,-1));
+            for (size_t l=0; l<=SH_degree; ++l) {
+                for (size_t m=0; m<=l; ++m) {
+                    ORSA_DEBUG("norm_C[%i][%i] = %Fg",l,m,norm_C[l][m].get_mpf_t());
+                    if (m != 0) ORSA_DEBUG("norm_S[%i][%i] = %Fg",l,m,norm_S[l][m].get_mpf_t());
+                }
             }
         }
     }
+}
+
+// a shorter version of CCMD2SH, just to get inertia values...
+// note on CM: it is used as input if set, or it is computed using CCMD if unset
+template <typename T>
+void inertia(orsa::Cache<orsa::Vector>             & CM,
+             mpf_class                             & IxxMR2,
+             mpf_class                             & IyyMR2,
+             mpf_class                             & IzzMR2,
+             const size_t                          & SH_degree,
+             const SimplexIntegration<T>           * si,
+             const CubicChebyshevMassDistribution  * CCMD,
+             const double                          & plateModelR0) {
+    
+    // std::vector< std::vector< std::vector<double> > > & N = global_N;
+    std::vector< std::vector< std::vector<double> > > N;
+    CCMD2ijk(N,
+             SH_degree,
+             si,
+             CCMD,
+             plateModelR0);
+    
+    const orsa::Vector CM_over_plateModelR0 =
+        (CM.isSet()) ? (CM/plateModelR0) : orsa::Vector(N[1][0][0]/N[0][0][0],
+                                                        N[0][1][0]/N[0][0][0],
+                                                        N[0][0][1]/N[0][0][0]);
+    if (!CM.isSet()) {
+        CM = CM_over_plateModelR0*plateModelR0;
+    }
+    
+    // std::vector< std::vector< std::vector<double> > > & translated_N = translated_global_N;
+    std::vector< std::vector< std::vector<double> > > translated_N;
+    translate(translated_N,N,-CM_over_plateModelR0);
+    IxxMR2 = (translated_N[0][2][0] + translated_N[0][0][2]) / translated_N[0][0][0];
+    IyyMR2 = (translated_N[2][0][0] + translated_N[0][0][2]) / translated_N[0][0][0];
+    IzzMR2 = (translated_N[2][0][0] + translated_N[0][2][0]) / translated_N[0][0][0];
 }
 
 #endif // CCMD2SH_H

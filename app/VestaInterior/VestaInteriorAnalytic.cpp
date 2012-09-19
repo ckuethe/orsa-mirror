@@ -19,12 +19,12 @@
 /*** CHOOSE ONE ***/
 // typedef double simplex_T;
 // typedef mpf_class simplex_T;
-typedef dd_real simplex_T;
+// typedef dd_real simplex_T;
 // typedef qd_real simplex_T;
 
 #warning how to write this using the typedef inside the class?
-template <typename T> std::vector< std::vector< std::vector<size_t> > > SimplexIntegration<T>::indexTable;
-template <typename T> std::vector< std::vector< std::vector< std::vector<size_t> > > > SimplexIntegration<T>::index4Table;
+// template <typename T> std::vector< std::vector< std::vector<size_t> > > SimplexIntegration<T>::indexTable;
+// template <typename T> std::vector< std::vector< std::vector< std::vector<size_t> > > > SimplexIntegration<T>::index4Table;
 
 /*******/
 
@@ -1065,6 +1065,7 @@ int main(int argc, char **argv) {
                     x0.layerData = 0;
                 }
                 x0.shapeModel = shapeModel;
+                x0.si = si;
                 
                 // fix value of x0.factor[]  
                 

@@ -1,10 +1,13 @@
 #ifndef CUBIC_CHEBYSHEV_MASS_DISTRIBUTION_H
 #define CUBIC_CHEBYSHEV_MASS_DISTRIBUTION_H
 
+#include <orsa/cache.h>
 #include <orsa/chebyshev.h>
 #include <orsa/massDistribution.h>
 #include <orsa/legendre.h>
 #include <orsa/util.h>
+
+#include <string>
 
 // note: most SH code is from SH2ijk.h, should merge into a single new header file
 
@@ -256,6 +259,7 @@ public:
         size_t SH_degree;
         CubicChebyshevMassDistribution::CoefficientType coeff;
         osg::ref_ptr<const LayerData> layerData;
+        std::string comment;
     public:
         void print() const;
     public:
@@ -267,6 +271,7 @@ public:
             SH_degree = 0;
             coeff.clear();
             layerData = 0;
+            comment = "";
         }
     };
 public:

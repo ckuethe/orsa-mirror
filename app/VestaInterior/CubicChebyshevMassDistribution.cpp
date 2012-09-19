@@ -519,6 +519,10 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
         // a zero for each vector in LayerData
         gmp_fprintf(fp,"0 0 ");
     }
+    // comment
+    if (data.comment != "") {
+        gmp_fprintf(fp,"# %s",data.comment.c_str());
+    }
     gmp_fprintf(fp,"\n");
     return true;
 }

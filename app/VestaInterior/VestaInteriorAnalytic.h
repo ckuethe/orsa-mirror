@@ -12,6 +12,20 @@
 #include "CubicChebyshevMassDistribution.h"
 #include "penalty.h"
 
+#include "simplex.h"
+
+#include "CCMD2SH.h"
+
+/*** CHOOSE ONE ***/
+// typedef double simplex_T;
+// typedef mpf_class simplex_T;
+typedef dd_real simplex_T;
+// typedef qd_real simplex_T;
+
+#warning how to write this using the typedef inside the class?
+template <typename T> std::vector< std::vector< std::vector<size_t> > > SimplexIntegration<T>::indexTable;
+template <typename T> std::vector< std::vector< std::vector< std::vector<size_t> > > > SimplexIntegration<T>::index4Table;
+
 // GSL Simulated Annealing
 
 /* how many points do we try before stepping */      
@@ -57,6 +71,7 @@ public:
     orsa::Cache<double> penaltyThreshold;
     osg::ref_ptr<const LayerData> layerData;
     osg::ref_ptr<orsa::Shape> shapeModel;
+    osg::ref_ptr< SimplexIntegration<simplex_T> > si;    
 };
 
 
@@ -80,6 +95,7 @@ void SIMAN_copy (void * source, void * dest) {
     d->penaltyThreshold    = s->penaltyThreshold;
     d->layerData           = s->layerData;
     d->shapeModel          = s->shapeModel;
+    d->si                  = s->si;
 }
 
 void * SIMAN_copy_construct (void * xp) {
@@ -217,7 +233,7 @@ double E1(void * xp) {
             // target: fraction of mass at given density ranges
         }
         
-        if (1) {
+        if (0) {
             // target: density proportional to depth
             double delta_penalty = 0.0;
             for (size_t k=0; k<dv.size(); ++k) {
@@ -318,6 +334,29 @@ double E1(void * xp) {
         data.SH_degree = x->SH_degree;
         data.coeff = coeff;
         data.layerData = x->layerData;
+        //
+        if (1) {
+            orsa::Cache<orsa::Vector> CM;
+            mpf_class IxxMR2, IyyMR2, IzzMR2;
+            inertia(CM,
+                    IxxMR2,
+                    IyyMR2,
+                    IzzMR2,
+                    x->SH_degree,
+                    x->si.get(),
+                    massDistribution.get(),
+                    x->R0_plate);
+            
+            char comment[4096];
+            sprintf(comment,"%.6f %.6f %.6f",IxxMR2.get_d(),IyyMR2.get_d(),IzzMR2.get_d());
+            char tmpstr[4096];
+            for (size_t b=0; b<x->uK_size; ++b) {
+                sprintf(tmpstr," %.6f",x->factor[b]);
+                strcat(comment,tmpstr);
+            }
+            data.comment = comment;
+        }
+        //
         CubicChebyshevMassDistributionFile::append(data,"CCMDF.out");
     }
     
