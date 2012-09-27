@@ -112,6 +112,13 @@ void SIMAN_destroy (void * xp) {
     delete (SIMAN_xp *) xp;
 }
 
+std::string penalty_string_util(const std::string & type,
+                                const double & val) {
+    char line[4096];
+    gmp_sprintf(line,"%s %+.6f",type.c_str(),val);
+    return line;
+}
+
 double E1(void * xp) {
     
     const bool verbose = false;
@@ -166,8 +173,8 @@ double E1(void * xp) {
     
     // make sure this is called before leaving...
     gsl_vector_free(cT);
-
-    std::vector<double> pv;
+    
+    std::vector<std::string> pv;
     pv.reserve(10);
     
     // condensed all variants here below...
@@ -175,7 +182,7 @@ double E1(void * xp) {
         10.0*std::max(0.0,(x->minimumDensity-minDensity)) +
         10.0*std::max(0.0,(maxDensity-x->maximumDensity));
     double penalty = retVal;
-    pv.push_back(penalty);
+    pv.push_back(penalty_string_util("DR",penalty));
     if ( (minDensity > x->minimumDensity) &&
          (maxDensity < x->maximumDensity) ) {
         
@@ -190,7 +197,7 @@ double E1(void * xp) {
             delta_penalty /= dv.size();
             delta_penalty *= 10.0;
             penalty += delta_penalty;
-            pv.push_back(delta_penalty);
+            pv.push_back(penalty_string_util("ALT_MINDR",delta_penalty));
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: closest to uniform density]",delta_penalty);
         }
         
@@ -198,7 +205,7 @@ double E1(void * xp) {
             // target: closest to uniform (simple)
             const double delta_penalty = (maxDensity-minDensity)/x->bulkDensity;
             penalty += delta_penalty;
-            pv.push_back(delta_penalty);
+            pv.push_back(penalty_string_util("MINDR",delta_penalty));
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: closest to uniform (simple)]",delta_penalty);
         }
         
@@ -220,7 +227,7 @@ double E1(void * xp) {
             delta_penalty /= dv.size();
             delta_penalty *= 1.0e3/sqrt(dv.size());
             penalty += delta_penalty;
-            pv.push_back(delta_penalty);
+            pv.push_back(penalty_string_util("MVHD",delta_penalty));
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: most volume with high density]",delta_penalty);
         }
         
@@ -228,7 +235,7 @@ double E1(void * xp) {
             // target: highest single density peak
             const double delta_penalty = (minDensity-maxDensity)/x->bulkDensity;
             penalty += delta_penalty;
-            pv.push_back(delta_penalty);
+            pv.push_back(penalty_string_util("MAXDR",delta_penalty));
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: highest single density peak]",delta_penalty);
         }
         
@@ -246,7 +253,7 @@ double E1(void * xp) {
             delta_penalty /= dv.size();
             delta_penalty *= 100.0;
             penalty += delta_penalty;
-            pv.push_back(delta_penalty);
+            pv.push_back(penalty_string_util("DID",delta_penalty));
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: density proportional to depth]",delta_penalty);
         }
         
@@ -259,8 +266,8 @@ double E1(void * xp) {
             delta_penalty /= dv.size();
             delta_penalty *= 100.0;
             penalty += delta_penalty;
-            pv.push_back(delta_penalty);
-            if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: density proportional to depth]",delta_penalty);
+            pv.push_back(penalty_string_util("DDB",delta_penalty));
+            if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: density decreasing from barycenter]",delta_penalty);
         }
         
         if (1) {
@@ -281,7 +288,7 @@ double E1(void * xp) {
             if (entries!=0) delta_penalty /= entries;
             
             penalty += delta_penalty;
-            pv.push_back(delta_penalty);
+            pv.push_back(penalty_string_util("NDH",delta_penalty));
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: no low-density \"holes\"]",delta_penalty);
         }
         
@@ -320,9 +327,9 @@ double E1(void * xp) {
         char str[4096];
         for (size_t p=0; p<pv.size(); ++p) {
             if (p==0) {
-                sprintf(str, "%+12.6g",pv[p]);
+                sprintf(str, "%s",pv[p].c_str());
             } else {
-                sprintf(str," %+12.6g",pv[p]);
+                sprintf(str," %s",pv[p].c_str());
             }
             strcat(pvline,str);
         }
@@ -368,9 +375,11 @@ double E1(void * xp) {
             sprintf(comment,"%.6f %.6f %.6f",IxxMR2.get_d(),IyyMR2.get_d(),IzzMR2.get_d());
             char tmpstr[4096];
             for (size_t b=0; b<x->uK_size; ++b) {
-                sprintf(tmpstr," %.6f",x->factor[b]);
+                sprintf(tmpstr," %+12.6f",x->factor[b]);
                 strcat(comment,tmpstr);
             }
+            strcat(comment," ");
+            strcat(comment,pvline);
             data.comment = comment;
         }
         //
