@@ -59,6 +59,7 @@ public:
     orsa::Cache<double> bulkDensity;
     std::vector<orsa::Vector> rv;
     std::vector<double> hv;
+    std::vector<double> dfb;
     orsa::Cache<size_t> SH_degree;
     orsa::Cache<size_t> T_degree;
     orsa::Cache<size_t> T_size;
@@ -71,7 +72,8 @@ public:
     orsa::Cache<double> penaltyThreshold;
     osg::ref_ptr<const LayerData> layerData;
     osg::ref_ptr<orsa::Shape> shapeModel;
-    osg::ref_ptr< SimplexIntegration<simplex_T> > si;    
+    osg::ref_ptr< SimplexIntegration<simplex_T> > si;
+    orsa::Cache<orsa::Vector> sampled_CM;
 };
 
 
@@ -83,6 +85,7 @@ void SIMAN_copy (void * source, void * dest) {
     d->bulkDensity         = s->bulkDensity;
     d->rv                  = s->rv;
     d->hv                  = s->hv;
+    d->dfb                 = s->dfb;
     d->SH_degree           = s->SH_degree;
     d->T_degree            = s->T_degree;
     d->T_size              = s->T_size;
@@ -96,6 +99,7 @@ void SIMAN_copy (void * source, void * dest) {
     d->layerData           = s->layerData;
     d->shapeModel          = s->shapeModel;
     d->si                  = s->si;
+    d->sampled_CM          = s->sampled_CM;
 }
 
 void * SIMAN_copy_construct (void * xp) {
@@ -198,7 +202,7 @@ double E1(void * xp) {
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: closest to uniform (simple)]",delta_penalty);
         }
         
-        if (0) {
+        if (0) { /* ALT */
             // target: most volume with high density
             // const double exponent = 1.0;
             double delta_penalty = 0.0;
@@ -238,6 +242,19 @@ double E1(void * xp) {
             double delta_penalty = 0.0;
             for (size_t k=0; k<dv.size(); ++k) {
                 delta_penalty += (1.0 - dv[k]/x->bulkDensity)*(1.0 + x->hv[k]/x->R0_plate);
+            }
+            delta_penalty /= dv.size();
+            delta_penalty *= 100.0;
+            penalty += delta_penalty;
+            pv.push_back(delta_penalty);
+            if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: density proportional to depth]",delta_penalty);
+        }
+        
+        if (1) {
+            // target: density decreasing from barycenter
+            double delta_penalty = 0.0;
+            for (size_t k=0; k<dv.size(); ++k) {
+                delta_penalty += (1.0 - dv[k]/x->bulkDensity)*(1.0 - x->dfb[k]/x->R0_plate);
             }
             delta_penalty /= dv.size();
             delta_penalty *= 100.0;

@@ -1042,6 +1042,14 @@ int main(int argc, char **argv) {
                         hv[k] = (rv[k]-shapeModel->closestVertex(rv[k])).length();
                     }
                 }
+
+                std::vector<double> dfb; // distance from barycenter
+                {
+                    dfb.resize(rv.size());
+                    for (size_t k=0; k<rv.size(); ++k) {
+                        dfb[k] = (rv[k]-sampled_CM).length();
+                    }
+                }
                 
                 SIMAN_xp x0;
                 x0.R0_plate   = plateModelR0;
@@ -1049,6 +1057,7 @@ int main(int argc, char **argv) {
                 x0.bulkDensity = bulkDensity;
                 x0.rv = rv;
                 x0.hv = hv;
+                x0.dfb = dfb;
                 x0.SH_degree = SH_degree;
                 x0.T_degree = T_degree;
                 x0.T_size = T_size;
@@ -1056,7 +1065,7 @@ int main(int argc, char **argv) {
                 x0.uK = &uK[0];
                 x0.uK_size = N-M;
                 x0.factor.resize(x0.uK_size);
-                x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(1.60,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+                x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(2.00,orsa::Unit::GRAM),orsa::Unit::CM,-3);
                 x0.maximumDensity = orsa::FromUnits(orsa::FromUnits(9.90,orsa::Unit::GRAM),orsa::Unit::CM,-3);
                 x0.penaltyThreshold = 1.00;
                 if (massDistribution.get() != 0) {
@@ -1066,6 +1075,7 @@ int main(int argc, char **argv) {
                 }
                 x0.shapeModel = shapeModel;
                 x0.si = si;
+                x0.sampled_CM = sampled_CM;
                 
                 // fix value of x0.factor[]  
                 
