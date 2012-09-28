@@ -32,8 +32,8 @@ public:
     double R0_plate;
     double R0_gravity;
     double bulkDensity;
-    double layersTotalMassFraction;
-    double uniformShapeMassFraction;
+    mutable double layersTotalMassFraction;
+    mutable double uniformShapeMassFraction;
     orsa::Vector sampled_CM;
     osg::ref_ptr<SimplexIntegration<simplex_T> > si;
     osg::ref_ptr<orsaPDS::RadioScienceGravityData> gravityData;

@@ -808,8 +808,8 @@ int main(int argc, char **argv) {
         //
         gsl_blas_dgemv(CblasNoTrans,1.0,evec,sampleCoeff_x,0.0,sampleCoeff_y);
         //
-        const double layersTotalMassFraction = massDistribution->layerData->totalExcessMass() / (GM/orsa::Unit::G());
-        const double uniformShapeMassFraction = 1.0 - massDistribution->layerData->totalExcessMass()*orsa::Unit::G()/GM;
+        const double layersTotalMassFraction  = massDistribution->layerData->totalExcessMass()*orsa::Unit::G()/GM;
+        const double uniformShapeMassFraction = 1.0 - layersTotalMassFraction;
         ORSA_DEBUG("layers total mass fraction: %g   uniform shape total mass fraction: %g",layersTotalMassFraction,uniformShapeMassFraction);
         //
         for (size_t i=0; i<M; ++i) {
@@ -990,7 +990,8 @@ int main(int argc, char **argv) {
                     // double sigma = sqrt(gsl_matrix_get(pds_covm,row,row));
                     // if (sigma == 0.0) sigma = 1.0e-3*data->getF(row); // for degree 1 terms, which have zero covariance
                     // this sigma is not the one from data, but it's arbitrarily chosen to make the algorithm converge
-                    const double sigma = 1.0e-6 + 0.01*fabs(data->getF(row));
+                    // const double sigma = 1.0e-6 + 0.01*fabs(data->getF(row));
+                    const double sigma = 1.0e-6;
                     data->insertSigma(row,sigma);
                     ORSA_DEBUG("F for index %03i = [%7s] = %12.6g +/- %12.6g",
                                row,
@@ -1382,22 +1383,26 @@ double MovingLayersMultifit::fun(const orsa::MultifitParameters * par,
                 }
             }
         }
-        
-        // make sure the mass fractions are unchanged, by scaling all norm_A and norm_B coefficients by a volume correction factor^(1/3)
-        
-        osg::ref_ptr<LayerData::SHLayer> tmpSHLayer = new LayerData::SHLayer(shLayerData[k].excessDensity,
-                                                                             norm_A,
-                                                                             norm_B,
-                                                                             shLayerData[k].v0);
-        const double tmpVolume = tmpSHLayer->volume();
-        
-        const double volumeCorrectionFactor = cbrt(shLayerData[k].volume/tmpVolume);
-        
-        for (size_t l=0; l<norm_A.size(); ++l) {
-            for (size_t m=0; m<=l; ++m) {
-                norm_A[l][m] *= volumeCorrectionFactor;
-                if (m!=0) norm_B[l][m] *= volumeCorrectionFactor;
+
+        if (0) {
+
+            // make sure the mass fractions are unchanged, by scaling all norm_A and norm_B coefficients by a volume correction factor^(1/3)
+            
+            osg::ref_ptr<LayerData::SHLayer> tmpSHLayer = new LayerData::SHLayer(shLayerData[k].excessDensity,
+                                                                                 norm_A,
+                                                                                 norm_B,
+                                                                                 shLayerData[k].v0);
+            const double tmpVolume = tmpSHLayer->volume();
+            
+            const double volumeCorrectionFactor = cbrt(shLayerData[k].volume/tmpVolume);
+            
+            for (size_t l=0; l<norm_A.size(); ++l) {
+                for (size_t m=0; m<=l; ++m) {
+                    norm_A[l][m] *= volumeCorrectionFactor;
+                    if (m!=0) norm_B[l][m] *= volumeCorrectionFactor;
+                }
             }
+            
         }
         
         for (size_t l=0; l<norm_A.size(); ++l) {
@@ -1415,6 +1420,11 @@ double MovingLayersMultifit::fun(const orsa::MultifitParameters * par,
     
     osg::ref_ptr<LayerData> layerData = new LayerData(ellipsoidLayerVector,
                                                       newSHLayerVector);
+    
+    // update mass fractions, needed if layers volume is not conserved...
+    layersTotalMassFraction  = layerData->totalExcessMass()*orsa::Unit::G()/gravityData->GM;
+    uniformShapeMassFraction = 1.0 - layersTotalMassFraction;
+    ORSA_DEBUG("layers total mass fraction: %g   uniform shape total mass fraction: %g",layersTotalMassFraction,uniformShapeMassFraction);
     
     std::vector< std::vector<mpf_class> > layerData_norm_C;
     std::vector< std::vector<mpf_class> > layerData_norm_S;
