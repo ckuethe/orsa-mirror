@@ -707,8 +707,8 @@ int main(int argc, char **argv) {
         for (size_t z_sh=0; z_sh<SH_size; ++z_sh) {
             for (size_t z_cT=0; z_cT<T_size; ++z_cT) {
                 const double val = gsl_matrix_get(cT2sh,z_sh,z_cT) / matrix_factor;
-                gmp_fprintf(stderr,"%9.6f \& ",val);
-                // gmp_fprintf(stderr,"@%02i/%02i %9.6f \&",z_sh,z_cT,val);
+                gmp_fprintf(stderr,"%9.6f & ",val);
+                // gmp_fprintf(stderr,"@%02i/%02i %9.6f &",z_sh,z_cT,val);
             }   
             gmp_fprintf(stderr,"\n");
         }
@@ -846,7 +846,7 @@ int main(int argc, char **argv) {
             for (size_t row=0; row<N; ++row) {
                 for (size_t col=0; col<M; ++col) {
                     const double val = gsl_matrix_get(pseudoInvA,row,col) / matrix_factor;
-                    gmp_fprintf(stderr,"%12.6f \& ",val);
+                    gmp_fprintf(stderr,"%12.6f & ",val);
                 }
                 gmp_fprintf(stderr,"\n");
             }
