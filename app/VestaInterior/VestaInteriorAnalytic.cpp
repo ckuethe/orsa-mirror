@@ -1065,7 +1065,7 @@ int main(int argc, char **argv) {
                 x0.uK = &uK[0];
                 x0.uK_size = N-M;
                 x0.factor.resize(x0.uK_size);
-                x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(2.00,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+                x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(1.90,orsa::Unit::GRAM),orsa::Unit::CM,-3);
                 x0.maximumDensity = orsa::FromUnits(orsa::FromUnits(9.90,orsa::Unit::GRAM),orsa::Unit::CM,-3);
                 x0.penaltyThreshold = 1.00;
                 if (massDistribution.get() != 0) {
@@ -1078,6 +1078,18 @@ int main(int argc, char **argv) {
                 x0.sampled_CM = sampled_CM;
                 
                 // fix value of x0.factor[]  
+                
+                // output file, global
+                {
+                    char line[4096];
+                    gmp_sprintf(line,
+                                "CCMDF_%i_%i_%g_%i.out",
+                                gravityDegree,
+                                polynomialDegree,
+                                orsa::FromUnits(orsa::FromUnits(x0.minimumDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+                                randomSeed);
+                    CCMDF_output_filename = line;
+                }
                 
                 if (have_CCMDF_file) {
                     

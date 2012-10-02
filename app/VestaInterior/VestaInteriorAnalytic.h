@@ -35,7 +35,7 @@ template <typename T> std::vector< std::vector< std::vector< std::vector<size_t>
 #define ITERS_FIXED_T 100 // 200 // 100 // 1000 // 
 
 /* max step size in random walk */
-#define STEP_SIZE 1000.0
+#define STEP_SIZE 100.0 // 1000.0
 
 /* Boltzmann constant */
 #define K 1.0                   
@@ -111,6 +111,8 @@ void * SIMAN_copy_construct (void * xp) {
 void SIMAN_destroy (void * xp) {
     delete (SIMAN_xp *) xp;
 }
+
+static std::string CCMDF_output_filename;
 
 std::string penalty_string_util(const std::string & type,
                                 const double & val) {
@@ -231,7 +233,7 @@ double E1(void * xp) {
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: most volume with high density]",delta_penalty);
         }
         
-        if (0) {
+        if (1) {
             // target: highest single density peak
             const double delta_penalty = (minDensity-maxDensity)/x->bulkDensity;
             penalty += delta_penalty;
@@ -257,7 +259,7 @@ double E1(void * xp) {
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: density proportional to depth]",delta_penalty);
         }
         
-        if (1) {
+        if (0) {
             // target: density decreasing from barycenter
             double delta_penalty = 0.0;
             for (size_t k=0; k<dv.size(); ++k) {
@@ -373,17 +375,20 @@ double E1(void * xp) {
             
             char comment[4096];
             sprintf(comment,"%.6f %.6f %.6f",IxxMR2.get_d(),IyyMR2.get_d(),IzzMR2.get_d());
-            char tmpstr[4096];
-            for (size_t b=0; b<x->uK_size; ++b) {
-                sprintf(tmpstr," %+12.6f",x->factor[b]);
-                strcat(comment,tmpstr);
+            if (0) {
+                char tmpstr[4096];
+                for (size_t b=0; b<x->uK_size; ++b) {
+                    sprintf(tmpstr," %+12.6f",x->factor[b]);
+                    strcat(comment,tmpstr);
+                }
             }
             strcat(comment," ");
             strcat(comment,pvline);
             data.comment = comment;
         }
         //
-        CubicChebyshevMassDistributionFile::append(data,"CCMDF.out");
+        // CubicChebyshevMassDistributionFile::append(data,"CCMDF.out");
+        CubicChebyshevMassDistributionFile::append(data,CCMDF_output_filename.c_str());
     }
     
     return retVal;
