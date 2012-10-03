@@ -1087,7 +1087,7 @@ int main(int argc, char **argv) {
                                 gravityDegree,
                                 polynomialDegree,
                                 orsa::FromUnits(orsa::FromUnits(x0.minimumDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
-                                randomSeed);
+                                getpid());
                     CCMDF_output_filename = line;
                 }
                 
