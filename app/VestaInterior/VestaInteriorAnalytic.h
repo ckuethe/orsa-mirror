@@ -290,7 +290,8 @@ double E1(void * xp) {
             if (entries!=0) delta_penalty /= entries;
             
             penalty += delta_penalty;
-            pv.push_back(penalty_string_util("NDH",delta_penalty));
+            // pv.push_back(penalty_string_util("NDH",delta_penalty));
+            pv.push_back(penalty_string_util("CDP",delta_penalty)); // Convex Density Profile
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: no low-density \"holes\"]",delta_penalty);
         }
         
