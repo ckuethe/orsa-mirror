@@ -69,8 +69,8 @@ int main(int argc, char **argv) {
         ORSA_ERROR("problems encountered while reading shape file...");
         exit(0);
     }
-
-    {
+    
+    if (0) {
         // output .xyz file for plotting with GMT
         char filename[1024];
         sprintf(filename,"%s.xyz",inputFile.c_str());
