@@ -112,7 +112,7 @@ public:
             
             if (createTable) {
                 // create results table
-                sql = "CREATE TABLE simplex(id INTEGER PRIMARY KEY, nx INTEGER, ny INTEGER, nz INTEGER, integral REAL)";
+                sql = "CREATE TABLE simplex(id INTEGER PRIMARY KEY UNIQUE, nx INTEGER, ny INTEGER, nz INTEGER, integral REAL)";
                 rc = sqlite3_exec(db,sql.c_str(),NULL,NULL,&zErr);
                 //
                 if (rc != SQLITE_OK) {
