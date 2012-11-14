@@ -68,7 +68,11 @@ public:
             // ORSA_DEBUG("fi: %02i  volume: %g",fi,(*aux[fi].volume));
         }
         
-        int rc = sqlite3_open(SQLiteDBFileName.c_str(),&db);
+        // int rc = sqlite3_open(SQLiteDBFileName.c_str(),&db);
+        int rc = sqlite3_open_v2(SQLiteDBFileName.c_str(),
+                                 &db,
+                                 SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+                                 "unix-dotfile");
         //
         if (rc) {
             fprintf(stderr,"Can't open db: %s\n",sqlite3_errmsg(db));
