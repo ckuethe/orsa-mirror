@@ -80,13 +80,10 @@ public:
         }
         
         {
-            // get list of tables, to see if some results have been obtained already
-            // if no table is present, create it
-            char **result;
-            int nrows, ncols;
             char * zErr;
-            std::string sql = "SELECT name FROM sqlite_master";
-            rc = sqlite3_get_table(db,sql.c_str(),&result,&nrows,&ncols,&zErr);
+            // create results table
+            std::string sql = "CREATE TABLE if not exists simplex(id INTEGER PRIMARY KEY UNIQUE, nx INTEGER, ny INTEGER, nz INTEGER, integral REAL)";
+            rc = sqlite3_exec(db,sql.c_str(),NULL,NULL,&zErr);
             //
             if (rc != SQLITE_OK) {
                 if (zErr != NULL) {
@@ -94,39 +91,7 @@ public:
                     sqlite3_free(zErr);
                 }
             }
-            // ORSA_DEBUG("nrows: %i  ncols: %i",nrows, ncols);
-            //
-            /* for (int i=0; i<nrows; ++i) {
-               for (int j=0; j<ncols; ++j) {
-               // i=0 is the header
-               const int index = (i+1)*ncols+j;
-               ORSA_DEBUG("result[%i] = %s",index, result[index]);
-               }
-               }
-            */
-            //
-            bool createTable=true;
-            //
-            // if nrows == number of tables, don't need to create them
-            if (nrows==1) {
-                createTable=false;
-            }
-            //
-            sqlite3_free_table(result);
-            
-            if (createTable) {
-                // create results table
-                sql = "CREATE TABLE simplex(id INTEGER PRIMARY KEY UNIQUE, nx INTEGER, ny INTEGER, nz INTEGER, integral REAL)";
-                rc = sqlite3_exec(db,sql.c_str(),NULL,NULL,&zErr);
-                //
-                if (rc != SQLITE_OK) {
-                    if (zErr != NULL) {
-                        fprintf(stderr,"SQL error: %s\n",zErr);
-                        sqlite3_free(zErr);
-                    }
-                }
-            }
-        }
+        }        
     }
 protected:
     virtual ~SimplexIntegration() {
