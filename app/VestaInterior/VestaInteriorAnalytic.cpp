@@ -698,7 +698,7 @@ int main(int argc, char **argv) {
        }
     */
     
-    if (1) {
+    if (0) {
         // LaTeX output
         ORSA_DEBUG("LaTeX output --------------------");
         // bulk density = M/V = M / (si000*R0^3) 
@@ -772,7 +772,7 @@ int main(int argc, char **argv) {
             for (size_t s=0; s<N; ++s) {
                 gsl_vector_set(uK[b],s,gsl_matrix_get(Q,s,M+b));
                 //
-                if (1) {
+                if (0) {
                     size_t Tx,Ty,Tz;
                     CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,s);
                     ORSA_DEBUG("uK[%03i][%03i] =%12.6f (null space base vector for cT[%i][%i][%i])",b,s,gsl_vector_get(uK[b],s),Tx,Ty,Tz);
@@ -837,7 +837,7 @@ int main(int argc, char **argv) {
         
         gsl_blas_dgemm(CblasNoTrans,CblasNoTrans,1.0,AT,inv_A_AT,0.0,pseudoInvA);
         
-        if (1) {
+        if (0) {
             // LaTeX output
             ORSA_DEBUG("LaTeX output --------------------");
             const double matrix_factor = bulkDensity;
@@ -1002,12 +1002,16 @@ int main(int argc, char **argv) {
             gsl_vector * cT0 = gsl_vector_calloc(N);
             gsl_vector_memcpy(cT0,cT);
 
-            for (size_t s=0; s<N; ++s) {
-                ORSA_DEBUG("cT0[%i] = %g",s,gsl_vector_get(cT0,s));
+            if (0) {
+                for (size_t s=0; s<N; ++s) {
+                    ORSA_DEBUG("cT0[%i] = %g",s,gsl_vector_get(cT0,s));
+                }
             }
-            
-            for (size_t s=0; s<N; ++s) {
-                ORSA_DEBUG("cT0[%i] = %12.6f * bulkDensity",s,gsl_vector_get(cT0,s)/bulkDensity);
+
+            if (0) {
+                for (size_t s=0; s<N; ++s) {
+                    ORSA_DEBUG("cT0[%i] = %12.6f * bulkDensity",s,gsl_vector_get(cT0,s)/bulkDensity);
+                }
             }
             
             if (1) {
@@ -1065,9 +1069,9 @@ int main(int argc, char **argv) {
                 x0.uK = &uK[0];
                 x0.uK_size = N-M;
                 x0.factor.resize(x0.uK_size);
-                x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(1.90,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+                x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(1.50,orsa::Unit::GRAM),orsa::Unit::CM,-3);
                 x0.maximumDensity = orsa::FromUnits(orsa::FromUnits(9.90,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-                x0.penaltyThreshold = 1.00;
+                x0.penaltyThreshold = 5.00;
                 if (massDistribution.get() != 0) {
                     x0.layerData = massDistribution->layerData;
                 } else {
