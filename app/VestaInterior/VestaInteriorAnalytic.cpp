@@ -423,6 +423,8 @@ int main(int argc, char **argv) {
     
     const double GM = gravityData->GM; 
     
+    const double R0_cube_over_M = orsa::cube(plateModelR0)*orsa::Unit::G()/GM;
+    
     ORSA_DEBUG("SH_size: %d   T_size: %d   mod_gravityData_numberOfCoefficients: %d",SH_size,T_size,mod_gravityData_numberOfCoefficients(gravityData.get()));
     
     /* 
@@ -475,6 +477,37 @@ int main(int argc, char **argv) {
     const double radiusCorrectionRatio = plateModelR0/gravityData->R0;
     
     gsl_matrix * cT2sh = gsl_matrix_calloc(SH_size,T_size);
+
+    // SQLite db
+    char db_name[4096];
+    gmp_sprintf(db_name,".cT2sh_CM_%.12g_%.12g_%.12g%s",
+                CMx_over_plateModelR0,
+                CMy_over_plateModelR0,
+                CMz_over_plateModelR0,
+                SQLiteDBFileName.c_str());
+    sqlite3 * db;
+    int rc = sqlite3_open_v2(db_name,
+                             &db,
+                             SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+                             "unix-dotfile");
+    if (rc) {
+        fprintf(stderr,"Can't open db: %s\n",sqlite3_errmsg(db));
+        sqlite3_close(db);
+    }
+
+    {
+        char * zErr;
+        // create results table
+        std::string sql = "CREATE TABLE if not exists matrix(z_sh INTEGER, z_cT INTEGER, val REAL)";
+        rc = sqlite3_exec(db,sql.c_str(),NULL,NULL,&zErr);
+        //
+        if (rc != SQLITE_OK) {
+            if (zErr != NULL) {
+                fprintf(stderr,"SQL error: %s\n",zErr);
+                sqlite3_free(zErr);
+            }
+        }
+    }
     
     for (size_t l=0; l<=(size_t)gravityDegree; ++l) {
         // #warning should try to print degree 1 terms, just as a check 
@@ -500,35 +533,122 @@ int main(int argc, char **argv) {
             
             // ORSA_DEBUG("l=%i m=%i z_C=%i z_S=%i",l,m,z_C,z_S);
             
-            // ni,nj,nk are the expansion of C_lm,S_lm in terms of N_ijk
-            for (size_t ni=0; ni<=l; ++ni) {
-                for (size_t nj=0; nj<=l-ni; ++nj) {
-                    for (size_t nk=0; nk<=l-ni-nj; ++nk) {
-                        if ( (C_tri_integral[ni][nj][nk] == 0) && (S_tri_integral[ni][nj][nk] == 0) ) continue;
-                        // ti,tj,tk are the expansion of the density in terms of the cubic Chebyshev
-                        for (size_t running_T_degree=0; running_T_degree<=T_degree; ++running_T_degree) {
-                            for (size_t ti=0; ti<=T_degree; ++ti) {
-                                const std::vector<mpz_class> & cTi = orsa::ChebyshevTcoeff(ti);
-                                for (size_t tj=0; tj<=T_degree-ti; ++tj) {
-                                    const std::vector<mpz_class> & cTj = orsa::ChebyshevTcoeff(tj);
-                                    for (size_t tk=0; tk<=T_degree-ti-tj; ++tk) {
-                                        if (ti+tj+tk != running_T_degree) continue;
-                                        const std::vector<mpz_class> & cTk = orsa::ChebyshevTcoeff(tk);
-                                        
-                                        const size_t z_cT = CubicChebyshevMassDistribution::index(ti,tj,tk);
-                                        
-                                        // ORSA_DEBUG("i=%i j=%i k=%i z_cT=%i",ti,tj,tk,z_cT);
-                                        
-                                        double C2cT = 0.0;
-                                        double S2cT = 0.0;
-                                        
-                                        // ci,cj,ck are the expansion of each Chebyshev polynomial in terms of powers of x,y,z
-                                        for (size_t ci=0; ci<=ti; ++ci) {
-                                            if (cTi[ci] == 0) continue;
-                                            for (size_t cj=0; cj<=tj; ++cj) {
-                                                if (cTj[cj] == 0) continue;
-                                                for (size_t ck=0; ck<=tk; ++ck) {
-                                                    if (cTk[ck] == 0) continue;
+            // ti,tj,tk are the expansion of the density in terms of the cubic Chebyshev
+            for (size_t running_T_degree=0; running_T_degree<=T_degree; ++running_T_degree) {
+                for (size_t ti=0; ti<=T_degree; ++ti) {
+                    const std::vector<mpz_class> & cTi = orsa::ChebyshevTcoeff(ti);
+                    for (size_t tj=0; tj<=T_degree-ti; ++tj) {
+                        const std::vector<mpz_class> & cTj = orsa::ChebyshevTcoeff(tj);
+                        for (size_t tk=0; tk<=T_degree-ti-tj; ++tk) {
+                            
+                            if (ti+tj+tk != running_T_degree) continue;
+                            
+                            const std::vector<mpz_class> & cTk = orsa::ChebyshevTcoeff(tk);
+                            
+                            const size_t z_cT = CubicChebyshevMassDistribution::index(ti,tj,tk);
+
+                            // ORSA_DEBUG("i=%i j=%i k=%i z_cT=%i",ti,tj,tk,z_cT);
+                            
+                            // check if available in db
+                            
+                            bool needToCompute_C=true;
+                            {
+                                // first check if it is in the SQLite db
+                                char **result;
+                                int nrows, ncols;
+                                char * zErr;
+                                char sql_line[1024];
+                                sprintf(sql_line,
+                                        "SELECT val FROM matrix WHERE z_sh=%zi and z_cT=%zi",
+                                        z_C,z_cT);
+                                int rc = sqlite3_get_table(db,sql_line,&result,&nrows,&ncols,&zErr);
+                                //
+                                if (rc != SQLITE_OK) {
+                                    if (zErr != NULL) {
+                                        fprintf(stderr,"SQL error: %s\n",zErr);
+                                        sqlite3_free(zErr);
+                                    }
+                                }
+                                ORSA_DEBUG("nrows: %i  ncols: %i",nrows, ncols);
+                                //
+                                for (int i=0; i<nrows; ++i) {
+                                    for (int j=0; j<ncols; ++j) {
+                                        // i=0 is the header
+                                        const int index = (i+1)*ncols+j;
+                                        ORSA_DEBUG("result[%i] = %s",index, result[index]);
+                                    }
+                                }
+                                //
+                                if (nrows==0) {
+                                    // nothing, but must keep this case!
+                                } else if (nrows==1) {
+                                    gsl_matrix_set(cT2sh,z_C,z_cT,atof(result[1])*R0_cube_over_M);
+                                    needToCompute_C = false;
+                                } else { // if (nrows>size_H) {
+                                    ORSA_ERROR("database corrupted, only 1 entry per index is admitted");
+                                }
+                                //
+                                sqlite3_free_table(result);
+                            }
+                            
+                            bool needToCompute_S=true;
+                            if (m==0) needToCompute_S=false;
+                            if (m!=0) {
+                                // first check if it is in the SQLite db
+                                char **result;
+                                int nrows, ncols;
+                                char * zErr;
+                                char sql_line[1024];
+                                sprintf(sql_line,
+                                        "SELECT val FROM matrix WHERE z_sh=%zi and z_cT=%zi",
+                                        z_S,z_cT);
+                                int rc = sqlite3_get_table(db,sql_line,&result,&nrows,&ncols,&zErr);
+                                //
+                                if (rc != SQLITE_OK) {
+                                    if (zErr != NULL) {
+                                        fprintf(stderr,"SQL error: %s\n",zErr);
+                                        sqlite3_free(zErr);
+                                    }
+                                }
+                                ORSA_DEBUG("nrows: %i  ncols: %i",nrows, ncols);
+                                //
+                                for (int i=0; i<nrows; ++i) {
+                                    for (int j=0; j<ncols; ++j) {
+                                        // i=0 is the header
+                                        const int index = (i+1)*ncols+j;
+                                        ORSA_DEBUG("result[%i] = %s",index, result[index]);
+                                    }
+                                }
+                                //
+                                if (nrows==0) {
+                                    // nothing, but must keep this case!
+                                } else if (nrows==1) {
+                                    gsl_matrix_set(cT2sh,z_S,z_cT,atof(result[1])*R0_cube_over_M);
+                                    needToCompute_S = false;
+                                } else { // if (nrows>size_H) {
+                                    ORSA_ERROR("database corrupted, only 1 entry per index is admitted");
+                                }
+                                //
+                                sqlite3_free_table(result);
+                            }
+                            
+                            if (!needToCompute_C && !needToCompute_S) continue;
+                            
+                            double C2cT = 0.0;
+                            double S2cT = 0.0;
+                            
+                            // ci,cj,ck are the expansion of each Chebyshev polynomial in terms of powers of x,y,z
+                            for (size_t ci=0; ci<=ti; ++ci) {
+                                if (cTi[ci] == 0) continue;
+                                for (size_t cj=0; cj<=tj; ++cj) {
+                                    if (cTj[cj] == 0) continue;
+                                    for (size_t ck=0; ck<=tk; ++ck) {
+                                        if (cTk[ck] == 0) continue;
+                                        // ni,nj,nk are the expansion of C_lm,S_lm in terms of N_ijk
+                                        for (size_t ni=0; ni<=l; ++ni) {
+                                            for (size_t nj=0; nj<=l-ni; ++nj) {
+                                                for (size_t nk=0; nk<=l-ni-nj; ++nk) {
+                                                    if ( (C_tri_integral[ni][nj][nk] == 0) && (S_tri_integral[ni][nj][nk] == 0) ) continue;
                                                     // bi,bj,bk are the binomial expansion about the center of mass
                                                     // this also introduces a power_sign
                                                     for (size_t bi=0; bi<=ni; ++bi) {
@@ -570,24 +690,69 @@ int main(int argc, char **argv) {
                                                 }
                                             }                                        
                                         }
-                                        
-                                        /* C2cT /= si->getIntegral(0,0,0);
-                                           if (m!=0) S2cT /= si->getIntegral(0,0,0);
-                                        */
+                                    }
+                                }
+                            }
+                            
+                            /* C2cT /= si->getIntegral(0,0,0);
+                               if (m!=0) S2cT /= si->getIntegral(0,0,0);
+                            */
+                            
+                            // R0^3/M factor
+                            C2cT *= R0_cube_over_M;
+                            if (m!=0) S2cT *= R0_cube_over_M;
+                            
+                            // removed the GM factor, now scaling to C_00
+                            /* if (l==0) {
+                               C2cT *= GM;
+                               }
+                            */
+                            
+                            // saving, NOTE how we are adding terms here
+                            gsl_matrix_set(cT2sh,z_C,z_cT,gsl_matrix_get(cT2sh,z_C,z_cT)+C2cT);
+                            if (m!=0) gsl_matrix_set(cT2sh,z_S,z_cT,gsl_matrix_get(cT2sh,z_S,z_cT)+S2cT);
 
-                                        // R0^3/M factor
-                                        C2cT *= orsa::cube(plateModelR0)*orsa::Unit::G()/GM;
-                                        if (m!=0) S2cT *= orsa::cube(plateModelR0)*orsa::Unit::G()/GM;
-                                        
-                                        // removed the GM factor, now scaling to C_00
-                                        /* if (l==0) {
-                                           C2cT *= GM;
-                                           }
-                                        */
-                                        
-                                        // saving, NOTE how we are adding terms here
-                                        gsl_matrix_set(cT2sh,z_C,z_cT,gsl_matrix_get(cT2sh,z_C,z_cT)+C2cT);
-                                        if (m!=0) gsl_matrix_set(cT2sh,z_S,z_cT,gsl_matrix_get(cT2sh,z_S,z_cT)+S2cT);
+                            {
+                                // save in db
+                                char * zErr;
+                                char sql_line[1024];
+                                sprintf(sql_line,
+                                        "INSERT INTO matrix VALUES(%zi,%zi,%.12e)",
+                                        z_C,z_cT,gsl_matrix_get(cT2sh,z_C,z_cT)/R0_cube_over_M);
+                                int rc;
+                                do {
+                                    rc = sqlite3_exec(db,sql_line,NULL,NULL,&zErr);
+                                    if (rc==SQLITE_BUSY) {
+                                        ORSA_DEBUG("database busy, retrying...");
+                                        usleep(100000);
+                                    }
+                                } while (rc==SQLITE_BUSY);
+                                if (rc != SQLITE_OK) {
+                                    if (zErr != NULL) {
+                                        fprintf(stderr,"SQL error: %s\n",zErr);
+                                        sqlite3_free(zErr);
+                                    }
+                                }
+                            }
+                            if (m!=0) {
+                                // save in db
+                                char * zErr;
+                                char sql_line[1024];
+                                sprintf(sql_line,
+                                        "INSERT INTO matrix VALUES(%zi,%zi,%.12e)",
+                                        z_S,z_cT,gsl_matrix_get(cT2sh,z_S,z_cT)/R0_cube_over_M);
+                                int rc;
+                                do {
+                                    rc = sqlite3_exec(db,sql_line,NULL,NULL,&zErr);
+                                    if (rc==SQLITE_BUSY) {
+                                        ORSA_DEBUG("database busy, retrying...");
+                                        usleep(100000);
+                                    }
+                                } while (rc==SQLITE_BUSY);
+                                if (rc != SQLITE_OK) {
+                                    if (zErr != NULL) {
+                                        fprintf(stderr,"SQL error: %s\n",zErr);
+                                        sqlite3_free(zErr);
                                     }
                                 }
                             }
@@ -605,37 +770,37 @@ int main(int argc, char **argv) {
         
         const double radiusCorrectionFactor = 1.0; // orsa::int_pow(radiusCorrectionRatio,l);
         
-        // ni,nj,nk are the expansion of IzzMR2 in terms of N_ijk
-        for (size_t ni=0; ni<=l; ++ni) {
-            for (size_t nj=0; nj<=l-ni; ++nj) {
-                for (size_t nk=0; nk<=l-ni-nj; ++nk) {
-                    // if ( (C_tri_integral[ni][nj][nk] == 0) && (S_tri_integral[ni][nj][nk] == 0) ) continue;
-                    // ti,tj,tk are the expansion of the density in terms of the cubic Chebyshev
-                    // IzzMR2
-                    if ( (ni==2 && nj==0 && nk==0) ||
-                         (ni==0 && nj==2 && nk==0) ) {
-                        for (size_t running_T_degree=0; running_T_degree<=T_degree; ++running_T_degree) {
-                            for (size_t ti=0; ti<=T_degree; ++ti) {
-                                const std::vector<mpz_class> & cTi = orsa::ChebyshevTcoeff(ti);
-                                for (size_t tj=0; tj<=T_degree-ti; ++tj) {
-                                    const std::vector<mpz_class> & cTj = orsa::ChebyshevTcoeff(tj);
-                                    for (size_t tk=0; tk<=T_degree-ti-tj; ++tk) {
-                                        if (ti+tj+tk != running_T_degree) continue;
-                                        const std::vector<mpz_class> & cTk = orsa::ChebyshevTcoeff(tk);
-                                        
-                                        const size_t z_cT = CubicChebyshevMassDistribution::index(ti,tj,tk);
-                                        
-                                        // ORSA_DEBUG("i=%i j=%i k=%i z_cT=%i",ti,tj,tk,z_cT);
-                                        
-                                        double IzzMR2_to_cT = 0.0;
-                                        
-                                        // ci,cj,ck are the expansion of each Chebyshev polynomial in terms of powers of x,y,z
-                                        for (size_t ci=0; ci<=ti; ++ci) {
-                                            if (cTi[ci] == 0) continue;
-                                            for (size_t cj=0; cj<=tj; ++cj) {
-                                                if (cTj[cj] == 0) continue;
-                                                for (size_t ck=0; ck<=tk; ++ck) {
-                                                    if (cTk[ck] == 0) continue;
+        for (size_t running_T_degree=0; running_T_degree<=T_degree; ++running_T_degree) {
+            for (size_t ti=0; ti<=T_degree; ++ti) {
+                const std::vector<mpz_class> & cTi = orsa::ChebyshevTcoeff(ti);
+                for (size_t tj=0; tj<=T_degree-ti; ++tj) {
+                    const std::vector<mpz_class> & cTj = orsa::ChebyshevTcoeff(tj);
+                    for (size_t tk=0; tk<=T_degree-ti-tj; ++tk) {
+                        if (ti+tj+tk != running_T_degree) continue;
+                        const std::vector<mpz_class> & cTk = orsa::ChebyshevTcoeff(tk);
+                        
+                        const size_t z_cT = CubicChebyshevMassDistribution::index(ti,tj,tk);
+                        
+                        // ORSA_DEBUG("i=%i j=%i k=%i z_cT=%i",ti,tj,tk,z_cT);
+                        
+                        double IzzMR2_to_cT = 0.0;
+                        
+                        // ci,cj,ck are the expansion of each Chebyshev polynomial in terms of powers of x,y,z
+                        for (size_t ci=0; ci<=ti; ++ci) {
+                            if (cTi[ci] == 0) continue;
+                            for (size_t cj=0; cj<=tj; ++cj) {
+                                if (cTj[cj] == 0) continue;
+                                for (size_t ck=0; ck<=tk; ++ck) {
+                                    if (cTk[ck] == 0) continue;
+                                    // ni,nj,nk are the expansion of IzzMR2 in terms of N_ijk
+                                    for (size_t ni=0; ni<=l; ++ni) {
+                                        for (size_t nj=0; nj<=l-ni; ++nj) {
+                                            for (size_t nk=0; nk<=l-ni-nj; ++nk) {
+                                                // if ( (C_tri_integral[ni][nj][nk] == 0) && (S_tri_integral[ni][nj][nk] == 0) ) continue;
+                                                // ti,tj,tk are the expansion of the density in terms of the cubic Chebyshev
+                                                // IzzMR2
+                                                if ( (ni==2 && nj==0 && nk==0) ||
+                                                     (ni==0 && nj==2 && nk==0) ) {
                                                     // bi,bj,bk are the binomial expansion about the center of mass
                                                     // this also introduces a power_sign
                                                     for (size_t bi=0; bi<=ni; ++bi) {
@@ -660,27 +825,26 @@ int main(int argc, char **argv) {
                                                 }
                                             }                                        
                                         }
-                                        
-                                        /* C2cT /= si->getIntegral(0,0,0);
-                                           if (m!=0) S2cT /= si->getIntegral(0,0,0);
-                                        */
-                                        
-                                        // R0^3/M factor
-                                        IzzMR2_to_cT *= orsa::cube(plateModelR0)*orsa::Unit::G()/GM;
-                                        // if (m!=0) S2cT *= orsa::cube(plateModelR0)*orsa::Unit::G()/GM;
-                                        
-                                        // removed the GM factor, now scaling to C_00
-                                        /* if (l==0) {
-                                           C2cT *= GM;
-                                           }
-                                        */
-                                        
-                                        // saving, NOTE how we are adding terms here
-                                        gsl_matrix_set(cT2sh,z_IzzMR2,z_cT,gsl_matrix_get(cT2sh,z_IzzMR2,z_cT)+IzzMR2_to_cT);
-                                        // if (m!=0) gsl_matrix_set(cT2sh,z_S,z_cT,gsl_matrix_get(cT2sh,z_S,z_cT)+S2cT);
                                     }
                                 }
                             }
+                            /* C2cT /= si->getIntegral(0,0,0);
+                               if (m!=0) S2cT /= si->getIntegral(0,0,0);
+                            */
+                            
+                            // R0^3/M factor
+                            IzzMR2_to_cT *= R0_cube_over_M;
+                            // if (m!=0) S2cT *= R0_cube_over_M;
+                            
+                            // removed the GM factor, now scaling to C_00
+                            /* if (l==0) {
+                               C2cT *= GM;
+                               }
+                            */
+                            
+                            // saving, NOTE how we are adding terms here
+                            gsl_matrix_set(cT2sh,z_IzzMR2,z_cT,gsl_matrix_get(cT2sh,z_IzzMR2,z_cT)+IzzMR2_to_cT);
+                            // if (m!=0) gsl_matrix_set(cT2sh,z_S,z_cT,gsl_matrix_get(cT2sh,z_S,z_cT)+S2cT);
                         }
                     }
                 }
@@ -698,7 +862,7 @@ int main(int argc, char **argv) {
        }
     */
     
-    if (0) {
+    if (1) {
         // LaTeX output
         ORSA_DEBUG("LaTeX output --------------------");
         // bulk density = M/V = M / (si000*R0^3) 
