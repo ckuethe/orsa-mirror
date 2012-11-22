@@ -569,15 +569,17 @@ int main(int argc, char **argv) {
                                         sqlite3_free(zErr);
                                     }
                                 }
-                                ORSA_DEBUG("nrows: %i  ncols: %i",nrows, ncols);
                                 //
-                                for (int i=0; i<nrows; ++i) {
-                                    for (int j=0; j<ncols; ++j) {
-                                        // i=0 is the header
-                                        const int index = (i+1)*ncols+j;
-                                        ORSA_DEBUG("result[%i] = %s",index, result[index]);
-                                    }
-                                }
+                                // ORSA_DEBUG("nrows: %i  ncols: %i",nrows, ncols);
+                                //
+                                /* for (int i=0; i<nrows; ++i) {
+                                   for (int j=0; j<ncols; ++j) {
+                                   // i=0 is the header
+                                   const int index = (i+1)*ncols+j;
+                                   ORSA_DEBUG("result[%i] = %s",index, result[index]);
+                                   }
+                                   }
+                                */
                                 //
                                 if (nrows==0) {
                                     // nothing, but must keep this case!
@@ -610,15 +612,17 @@ int main(int argc, char **argv) {
                                         sqlite3_free(zErr);
                                     }
                                 }
-                                ORSA_DEBUG("nrows: %i  ncols: %i",nrows, ncols);
+                                // 
+                                // ORSA_DEBUG("nrows: %i  ncols: %i",nrows, ncols);
                                 //
-                                for (int i=0; i<nrows; ++i) {
-                                    for (int j=0; j<ncols; ++j) {
-                                        // i=0 is the header
-                                        const int index = (i+1)*ncols+j;
-                                        ORSA_DEBUG("result[%i] = %s",index, result[index]);
-                                    }
-                                }
+                                /* for (int i=0; i<nrows; ++i) {
+                                   for (int j=0; j<ncols; ++j) {
+                                   // i=0 is the header
+                                   const int index = (i+1)*ncols+j;
+                                   ORSA_DEBUG("result[%i] = %s",index, result[index]);
+                                   }
+                                   }
+                                */
                                 //
                                 if (nrows==0) {
                                     // nothing, but must keep this case!
