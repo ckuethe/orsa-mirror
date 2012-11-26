@@ -288,7 +288,7 @@ int main(int argc, char **argv) {
     }
     
     // safer over NFS
-    sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
+    // sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
     
     osg::ref_ptr<GaskellPlateModel> shapeModel = new GaskellPlateModel;
     if (!shapeModel->read(plateModelFile)) {

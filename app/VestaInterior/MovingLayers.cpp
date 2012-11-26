@@ -233,7 +233,7 @@ int main(int argc, char **argv) {
     const std::string CCMDF_filename = (argc == 15) ? argv[14] : "";
     
     // safer over NFS
-    sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
+    // sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
     
     const std::string SQLiteDBFileName = getSqliteDBFileName_simplex(plateModelFile,plateModelR0);
     

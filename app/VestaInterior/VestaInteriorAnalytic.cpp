@@ -235,7 +235,7 @@ int main(int argc, char **argv) {
     const std::string CCMDF_filename = (argc == 15) ? argv[14] : "";
     
     // safer over NFS
-    sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
+    // sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
     
     const std::string SQLiteDBFileName = getSqliteDBFileName_simplex(plateModelFile,plateModelR0);
     
@@ -486,19 +486,21 @@ int main(int argc, char **argv) {
                 CMz_over_plateModelR0,
                 SQLiteDBFileName.c_str());
     sqlite3 * db;
-    int rc = sqlite3_open_v2(db_name,
-                             &db,
-                             SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
-                             "unix-dotfile");
+    int rc = sqlite3_open(db_name,&db);
+    /* int rc = sqlite3_open_v2(db_name,
+       &db,
+       SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE,
+       "unix-dotfile");
+    */
     if (rc) {
         fprintf(stderr,"Can't open db: %s\n",sqlite3_errmsg(db));
         sqlite3_close(db);
     }
-
+    
     {
         char * zErr;
         // create results table
-        std::string sql = "CREATE TABLE if not exists matrix(z_sh INTEGER, z_cT INTEGER, val REAL)";
+        std::string sql = "CREATE TABLE if not exists matrix(z_sh INTEGER, z_cT INTEGER, val REAL, CONSTRAINT un_sh_cT UNIQUE(z_sh,z_cT) ON CONFLICT IGNORE)";
         rc = sqlite3_exec(db,sql.c_str(),NULL,NULL,&zErr);
         //
         if (rc != SQLITE_OK) {
@@ -715,7 +717,7 @@ int main(int argc, char **argv) {
                             // saving, NOTE how we are adding terms here
                             gsl_matrix_set(cT2sh,z_C,z_cT,gsl_matrix_get(cT2sh,z_C,z_cT)+C2cT);
                             if (m!=0) gsl_matrix_set(cT2sh,z_S,z_cT,gsl_matrix_get(cT2sh,z_S,z_cT)+S2cT);
-
+                            
                             {
                                 // save in db
                                 char * zErr;

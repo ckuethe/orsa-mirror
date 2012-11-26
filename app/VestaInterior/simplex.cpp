@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
     }
 
     // safer over NFS
-    sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
+    // sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
     
     const std::string SQLiteDBFileName = getSqliteDBFileName_simplex(inputFile,R0);
     
@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
         exit(0);
     }
     
-    if (0) {
+    if (1) {
         // output .xyz file for plotting with GMT
         char filename[1024];
         sprintf(filename,"%s.xyz",inputFile.c_str());

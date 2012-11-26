@@ -35,7 +35,7 @@ template <typename T> std::vector< std::vector< std::vector< std::vector<size_t>
 #define ITERS_FIXED_T 100 // 200 // 100 // 1000 // 
 
 /* max step size in random walk */
-#define STEP_SIZE 100.0 // 1000.0
+#define STEP_SIZE 50.0 // 1000.0
 
 /* Boltzmann constant */
 #define K 1.0                   
@@ -203,7 +203,7 @@ double E1(void * xp) {
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: closest to uniform density]",delta_penalty);
         }
         
-        if (0) {
+        if (1) {
             // target: closest to uniform (simple)
             const double delta_penalty = (maxDensity-minDensity)/x->bulkDensity;
             penalty += delta_penalty;
@@ -233,7 +233,7 @@ double E1(void * xp) {
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: most volume with high density]",delta_penalty);
         }
         
-        if (1) {
+        if (0) {
             // target: highest single density peak
             const double delta_penalty = (minDensity-maxDensity)/x->bulkDensity;
             penalty += delta_penalty;
@@ -286,7 +286,7 @@ double E1(void * xp) {
                     ++entries;
                 }
             }
-            delta_penalty *= 100.0;
+            delta_penalty *= 200.0;
             if (entries!=0) delta_penalty /= entries;
             
             penalty += delta_penalty;
