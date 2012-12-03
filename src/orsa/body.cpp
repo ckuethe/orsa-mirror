@@ -14,7 +14,7 @@ const orsa::Shape * InertialBodyProperty::localShape() const {
        ORSA_DEBUG("%x",ls_cache->data.get());
        }
     */
-  
+    
     if (ls_cache.get() != 0) {
         if (ls_cache->data.get() != 0) {
             bool valid=true;

@@ -14,6 +14,17 @@ Interaction::Interaction() : osg::Referenced(true) {
     dummyPaulMoment->setM(1,0,0,0);
     // dummyPaulMoment->setCenterOfMass(orsa::Vector(0,0,0));
     // dummyPaulMoment->setInertiaMoment(orsa::Matrix::identity());
+    
+    osg::ref_ptr<orsa::Shape> dummyShape = new EllipsoidShape(1,1,1);
+    osg::ref_ptr<orsa::MassDistribution> dummyMD = new orsa::UniformMassDistribution;
+    orsa::Cache<orsa::Vector> dummyCM = orsa::Vector(0,0,0);
+    dummyMassCluster =
+        new MassCluster(dummyShape.get(),
+                        dummyMD.get(),
+                        1,
+                        1.0,
+                        dummyCM);
+    
 }	
 
 bool Interaction::acceleration(InteractionVector & a,  
@@ -409,7 +420,42 @@ bool Interaction::acceleration(InteractionVector & a,
                         */
 	    
                     }
-	  
+
+
+                } else if (ref_b_ibps.inertial->massCluster() || b_ibps.inertial->massCluster()) {
+                    
+                    ORSA_DEBUG("using MassCluster...");
+                    
+                    osg::ref_ptr<const MassCluster> ref_b_mc = 
+                        (ref_b_ibps.inertial->massCluster()) ? 
+                        (ref_b_ibps.inertial->massCluster()) :
+                        (dummyMassCluster.get());
+                    
+                    osg::ref_ptr<const MassCluster> b_mc = 
+                        (b_ibps.inertial->massCluster()) ? 
+                        (b_ibps.inertial->massCluster()) :
+                        (dummyMassCluster.get());
+
+                    const orsa::Matrix ref_b_l2g = orsa::localToGlobal(ref_b,bg,t);
+                    const orsa::Matrix ref_b_g2l = orsa::globalToLocal(ref_b,bg,t);
+                    
+                    const orsa::Matrix b_l2g = orsa::localToGlobal(b,bg,t);
+                    const orsa::Matrix b_g2l = orsa::globalToLocal(b,bg,t);
+                    
+                    const orsa::Vector R =
+                        b_ibps.translational->position() - 
+                        ref_b_ibps.translational->position();
+                    
+                    const orsa::Vector accTerm =
+                        MassCluster::gravitationalForce(ref_b_mc.get(),
+                                                        ref_b_g2l,
+                                                        b_mc.get(),
+                                                        b_g2l,
+                                                        R);
+                    
+                    a[j] += orsa::Unit::G() * m_b     * accTerm;
+                    a[k] -= orsa::Unit::G() * m_ref_b * accTerm;
+                    
                 } else {
 	  
                     // ORSA_DEBUG("--MARK--");
@@ -722,8 +768,12 @@ bool Interaction::torque(InteractionVector & N,
                                                                     b_ibps.translational.get());
                     }
 	  
+                } else if (ref_b_ibps.inertial->massCluster() || b_ibps.inertial->massCluster()) {
+                    
+                    ORSA_DEBUG("need code here...");
+                    
                 }
-	
+                
                 //++b_it;
             }
       

@@ -24,6 +24,8 @@
 // #include "kleopatrashape.h"
 #include "gaskell.h"
 
+//#include <GL/gl.h>
+
 using namespace orsa;
 using namespace orsaSolarSystem;
 using namespace orsaSPICE;
@@ -101,8 +103,8 @@ MainThread::MainThread() :
 void MainThread::run() {
     
     // const Time samplingPeriod(0,0,30,0,0);
-  const Time samplingPeriod(0,0,5,0,0);
-
+    const Time samplingPeriod(0,0,5,0,0);
+  
   // if false, use interpolation
   // DON'T change this
   const bool accurateSPICE = true;
@@ -398,9 +400,8 @@ void MainThread::run() {
 									     coreDensity,
 									     mantleDensity);
       } else {
-	massDistribution = new orsa::UniformMassDistribution;
+          massDistribution = new orsa::UniformMassDistribution;
       }
-      
       
       const unsigned int order =  4;
       const unsigned int N =  10000;
@@ -428,6 +429,8 @@ void MainThread::run() {
       
       orsa::print(shapeToLocal);
       orsa::print(localToShape);
+      
+#warning replace shapeToLocal and localToShape with identity?
       
       if (1) {
 	// print out...
@@ -466,12 +469,13 @@ void MainThread::run() {
       }
       
       ibps.inertial = new ConstantInertialBodyProperty(vestaMass,
-						       shape.get(),
-						       centerOfMass,
-						       shapeToLocal,
-						       localToShape,
-						       inertiaMatrix,
-						       paulMoment);
+                                                       shape.get(),
+                                                       centerOfMass,
+                                                       shapeToLocal,
+                                                       localToShape,
+                                                       inertiaMatrix,
+                                                       paulMoment,
+                                                       0);
       
       ibps.translational = sbtc.get();
       

@@ -2,6 +2,7 @@
 #define _ORSA_INTERACTION_
 
 #include <orsa/datetime.h>
+#include <orsa/massCluster.h>
 #include <orsa/vector.h>
 
 #include <osg/Referenced>
@@ -66,9 +67,9 @@ namespace orsa {
     
     protected:
         osg::ref_ptr<PaulMoment> dummyPaulMoment;
-    
+        osg::ref_ptr<MassCluster> dummyMassCluster;
     };
-  
+    
 } // namespace orsa
 
 #endif // _ORSA_INTERACTION_

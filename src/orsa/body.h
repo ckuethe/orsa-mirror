@@ -7,6 +7,7 @@
 #include <orsa/cache.h>
 #include <orsa/datetime.h>
 #include <orsa/debug.h>
+#include <orsa/massCluster.h>
 #include <orsa/paulMoment.h>
 #include <orsa/propulsion.h>
 #include <orsa/quaternion.h>
@@ -169,6 +170,7 @@ namespace orsa {
         virtual orsa::Matrix localToShape() const = 0;
         virtual orsa::Matrix inertiaMatrix() const = 0;
         virtual const orsa::PaulMoment * paulMoment() const = 0;
+        virtual const orsa::MassCluster * massCluster() const = 0;
     public:
         virtual bool setMass(const double &) = 0;
         virtual bool setOriginalShape(const orsa::Shape *) = 0;
@@ -177,6 +179,7 @@ namespace orsa {
         virtual bool setLocalToShape(const orsa::Matrix &) = 0;
         virtual bool setInertiaMatrix(const orsa::Matrix &) = 0;
         virtual bool setPaulMoment(const orsa::PaulMoment *) = 0;
+        virtual bool setMassCluster(const orsa::MassCluster *) = 0;
     public:
         // the shape, transformed into "local" coordinates
         virtual const orsa::Shape * localShape() const;
@@ -212,6 +215,7 @@ namespace orsa {
         orsa::Matrix localToShape() const { return orsa::Matrix::identity(); }
         orsa::Matrix inertiaMatrix() const { return orsa::Matrix::identity(); }
         const orsa::PaulMoment * paulMoment() const { return 0; }
+        const orsa::MassCluster * massCluster() const { return 0; }
     public:
         bool setMass(const double &) {
             ORSA_ERROR("this method should not have been called, please check your code.");
@@ -238,6 +242,10 @@ namespace orsa {
             return false;
         }
         bool setPaulMoment(const orsa::PaulMoment *) {
+            ORSA_ERROR("this method should not have been called, please check your code.");
+            return false;
+        }
+        bool setMassCluster(const orsa::MassCluster *) {
             ORSA_ERROR("this method should not have been called, please check your code.");
             return false;
         }
@@ -262,7 +270,8 @@ namespace orsa {
                                      const orsa::Matrix     & s2l,
                                      const orsa::Matrix     & l2s,
                                      const orsa::Matrix     & I,
-                                     const orsa::PaulMoment * pm) :
+                                     const orsa::PaulMoment * pm,
+                                     const orsa::MassCluster * mc) :
             InertialBodyProperty(), 
             _m(m),
             _s(s),
@@ -270,7 +279,8 @@ namespace orsa {
             _s2l(s2l),
             _l2s(l2s),
             _I(I),
-            _pm(pm) { }
+            _pm(pm),
+            _mc(mc) { }
     public:
         ConstantInertialBodyProperty(const ConstantInertialBodyProperty & ibp) :
             InertialBodyProperty(ibp), 
@@ -280,7 +290,8 @@ namespace orsa {
             _s2l(ibp._s2l),
             _l2s(ibp._l2s),
             _I(ibp._I),
-            _pm(ibp._pm) { }
+            _pm(ibp._pm),
+            _mc(ibp._mc) { }
     public:
         ConstantInertialBodyProperty & operator = (const ConstantInertialBodyProperty &) {
             ORSA_ERROR("this class is not supposed to change...");
@@ -294,6 +305,7 @@ namespace orsa {
         const orsa::Matrix _l2s;
         const orsa::Matrix _I;
         osg::ref_ptr<const orsa::PaulMoment> _pm;
+        osg::ref_ptr<const orsa::MassCluster> _mc;
     public:
         double mass() const { return _m; }
         const orsa::Shape * originalShape() const { return _s.get(); }
@@ -302,6 +314,7 @@ namespace orsa {
         orsa::Matrix localToShape() const { return _l2s; }
         orsa::Matrix inertiaMatrix() const { return _I; }
         const orsa::PaulMoment * paulMoment() const { return _pm.get(); }
+        const orsa::MassCluster * massCluster() const { return _mc.get(); }
     public:
         bool setMass(const double &) {
             ORSA_ERROR("this method should not have been called, please check your code.");
@@ -328,6 +341,10 @@ namespace orsa {
             return false;
         }
         bool setPaulMoment(const orsa::PaulMoment *) {
+            ORSA_ERROR("this method should not have been called, please check your code.");
+            return false;
+        }
+        bool setMassCluster(const orsa::MassCluster *) {
             ORSA_ERROR("this method should not have been called, please check your code.");
             return false;
         }
@@ -706,40 +723,6 @@ namespace orsa {
     private:
         static BodyID bodyID_counter;
         const BodyID _id;
-    
-        /* 
-           public:
-           virtual bool setMass(const double & mass) {
-           // ORSA_DEBUG("called setMass(%Fg) [***]",mass());
-           return (_mass.set(mass) && _mu.set(Unit::instance()->getG()*mass));
-           }
-           public:
-           virtual bool setMu(const double & mu) {
-           // ORSA_DEBUG("called setMu(%Fg) [***]",mu());
-           return (_mass.set(mu/Unit::instance()->getG()) && _mu.set(mu));
-           }
-           public:
-           virtual const double & getMass() const {
-           if (_mass.isSet()) {
-           return _mass;
-           } else {
-           ORSA_ERROR("mass has never been set for this Body.");
-           }
-           return _mass;
-           }
-           public:
-           virtual const double & getMu() const {
-           if (_mu.isSet()) {
-           return _mu;
-           } else {
-           ORSA_ERROR("mu has never been set for this Body.");
-           }
-           return _mu; 
-           }
-           protected:
-           orsa::Cache<double> _mass;
-           orsa::Cache<double> _mu;
-        */
         
     public:
         bool setInitialConditions(const orsa::IBPS & ibps) {
@@ -768,47 +751,7 @@ namespace orsa {
         virtual const std::string & getName() const;
     protected:
         std::string _name;
-    
-        /* 
-           public:
-           inline virtual bool setShape(const orsa::Shape * s) {
-           _shape = s;
-           return true;
-           }
-           public:
-           inline virtual const orsa::Shape * getShape() const {
-           return _shape.get();
-           }
-           protected:
-           osg::ref_ptr<const orsa::Shape> _shape;
-        */
-    
-        /* 
-           public:
-           inline virtual bool setPaulMoment(const orsa::PaulMoment * m) {
-           _paulMoment = m;
-           return true;
-           }
-           public:
-           inline virtual const orsa::PaulMoment * getPaulMoment() const {
-           return _paulMoment.get();
-           }
-           protected:
-           osg::ref_ptr<const orsa::PaulMoment> _paulMoment;
-        */
-    
-        /* 
-           public:
-           inline virtual bool setPropulsion(const orsa::Propulsion * p) {
-           _propulsion = p;
-           return true;
-           }
-           public:
-           inline virtual const orsa::Propulsion * getPropulsion() const {
-           return _propulsion.get();
-           }
-           protected:
-        */
+        
     public:
         osg::ref_ptr<const orsa::Propulsion> propulsion;
     
