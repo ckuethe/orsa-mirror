@@ -42,6 +42,7 @@ HEADERS = angle.h \
           interaction.h \
           interval.h \
           legendre.h \
+          massCluster.h \
           massDistribution.h \
           matrix.h \
           multifit.h \
@@ -79,6 +80,7 @@ SOURCES = angle.cpp \
           integrator_radau.cpp \
           interaction.cpp \
           legendre.cpp \
+          massCluster.cpp \
           matrix.cpp \
           multifit.cpp \
           multimin.cpp \
