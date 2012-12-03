@@ -13,6 +13,7 @@ namespace orsa {
     
     class MassCluster : public osg::Referenced {
         class MassClusterElement {
+        public:
             orsa::Vector position;
             double mass;
         };
@@ -26,25 +27,25 @@ namespace orsa {
     public:
         double softeningDistance;
         MassClusterVector massClusterVector;
+    public:
+        static double gravitationalPotential(const orsa::MassCluster * M1,
+                                             const orsa::Matrix      & A1_g2l,
+                                             const orsa::MassCluster * M2,
+                                             const orsa::Matrix      & A2_g2l,
+                                             const orsa::Vector      & R);
+    public:
+        static orsa::Vector gravitationalForce(const orsa::MassCluster * M1,
+                                               const orsa::Matrix      & A1_g2l,
+                                               const orsa::MassCluster * M2,
+                                               const orsa::Matrix      & A2_g2l,
+                                               const orsa::Vector      & R);
+    public:
+        static orsa::Vector gravitationalTorque(const orsa::MassCluster * M1,
+                                                const orsa::Matrix      & A1_g2l,
+                                                const orsa::MassCluster * M2,
+                                                const orsa::Matrix      & A2_g2l,
+                                                const orsa::Vector      & R);
     };
-
-    static double gravitationalPotential(const orsa::MassCluster * M1,
-                                         const orsa::Matrix      & A1_g2l,
-                                         const orsa::MassCluster * M2,
-                                         const orsa::Matrix      & A2_g2l,
-                                         const orsa::Vector      & R);
-    
-    static orsa::Vector gravitationalForce(const orsa::MassCluster * M1,
-                                           const orsa::Matrix      & A1_g2l,
-                                           const orsa::MassCluster * M2,
-                                           const orsa::Matrix      & A2_g2l,
-                                           const orsa::Vector      & R);
-    
-    static orsa::Vector gravitationalTorque(const orsa::MassCluster * M1,
-                                            const orsa::Matrix      & A1_g2l,
-                                            const orsa::MassCluster * M2,
-                                            const orsa::Matrix      & A2_g2l,
-                                            const orsa::Vector      & R);
     
 }; // namespace orsa
 
