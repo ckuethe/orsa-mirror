@@ -3,7 +3,9 @@
 
 #include <vector>
 
+#include <orsa/massDistribution.h>
 #include <orsa/matrix.h>
+#include <orsa/shape.h>
 #include <orsa/vector.h>
 
 #include <osg/Referenced>
@@ -19,13 +21,15 @@ namespace orsa {
         };
         typedef std::vector<MassClusterElement> MassClusterVector;
     public:
-        MassCluster() : osg::Referenced(true) {
-            softeningDistance=0.0;
-        }
+        MassCluster(const orsa::Shape * shape,
+                    const orsa::MassDistribution * massDistribution,
+                    const size_t & samplePoints,
+                    const double & softeningDistance_,
+                    const orsa::Cache<orsa::Vector> nominalCenterOfMass);
     protected:
         virtual ~MassCluster() { }
     public:
-        double softeningDistance;
+        const double softeningDistance;
         MassClusterVector massClusterVector;
     public:
         static double gravitationalPotential(const orsa::MassCluster * M1,

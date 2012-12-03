@@ -1,6 +1,50 @@
 #include <orsa/massCluster.h>
 
+#include <orsa/util.h>
+
 using namespace orsa;
+
+MassCluster::MassCluster(const orsa::Shape * shape,
+                         const orsa::MassDistribution * massDistribution,
+                         const size_t & samplePoints,
+                         const double & softeningDistance_,
+                         const orsa::Cache<orsa::Vector> nominalCenterOfMass) :
+    osg::Referenced(true),
+    softeningDistance(softeningDistance_) {
+    
+    osg::ref_ptr<RandomPointsInShape> randomPointsInShape =
+        new RandomPointsInShape(shape,
+                                massDistribution,
+                                samplePoints,
+                                false);
+    const orsa::Vector centerOfMass = orsa::centerOfMass(randomPointsInShape);
+    if (nominalCenterOfMass.isSet()) {
+        ORSA_DEBUG("global offset: %g [km]",
+                   orsa::FromUnits((nominalCenterOfMass - centerOfMass).length(),orsa::Unit::KM,-1));
+    }
+    orsa::Vector v;
+    double density;
+    massClusterVector.reserve(samplePoints);
+    randomPointsInShape->reset();
+    double sum=0.0;
+    while (randomPointsInShape->get(v,density)) {
+        if (density > 0) {
+            sum += density;
+            // enforce center of mass position?
+            if (nominalCenterOfMass.isSet()) {
+                v += nominalCenterOfMass - centerOfMass;
+            }
+            MassCluster::MassClusterElement el;
+            el.position = v;
+            el.mass     = density;
+            massClusterVector.push_back(el);
+        }
+    }
+    const double factor = 1.0/sum;
+    for (size_t k=0; k<massClusterVector.size(); ++k) {
+        massClusterVector[k].mass *= factor;
+    }
+}
 
 double MassCluster::gravitationalPotential(const orsa::MassCluster * M1,
                                            const orsa::Matrix      & A1_g2l,
