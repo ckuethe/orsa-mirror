@@ -32,6 +32,7 @@ int main (int argc, char **argv) {
     // orsa::GlobalRNG::randomSeed = -1316703212;
     // orsa::GlobalRNG::randomSeed = 1960578200;
     // orsa::GlobalRNG::randomSeed = 97180168;
+    // orsa::GlobalRNG::randomSeed = 1584895759;
     
     // NOTE: two alternative mechanisms for ejection velocity
     // 1) sampling distribution= rotational component + ejection velocity model (no gas drag)
@@ -59,10 +60,11 @@ int main (int argc, char **argv) {
     const double nucleus_ax = orsa::FromUnits(1.00,orsa::Unit::KM);
     const double nucleus_ay = orsa::FromUnits(0.45,orsa::Unit::KM);
     const double nucleus_az = orsa::FromUnits(0.45,orsa::Unit::KM);
-    const size_t gravity_degree = 2;
+    const size_t gravity_degree = 8; // used in PM
+    const size_t massCluster_points = 1024;
     const double comet_density = orsa::FromUnits(orsa::FromUnits(0.22,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double grain_density = orsa::FromUnits(orsa::FromUnits(0.50,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-    const double rotation_period = orsa::FromUnits(18.34,orsa::Unit::HOUR);
+    const double rotation_period = orsa::FromUnits(6.00,orsa::Unit::HOUR); // orsa::FromUnits(18.34,orsa::Unit::HOUR);
     const double pole_phi_Tp = 0.0*orsa::degToRad(); // rotation angle at time Tp
     const double pole_ecliptic_longitude = +69.0*orsa::degToRad();
     const double pole_ecliptic_latitude  = +34.0*orsa::degToRad();
@@ -71,7 +73,7 @@ int main (int argc, char **argv) {
     const double min_grain_radius = orsa::FromUnits(0.000001,orsa::Unit::METER);
     const double max_grain_radius = orsa::FromUnits(1.000000,orsa::Unit::METER);    
     const int min_time_seconds =  60; // grains flying less than this time are not included
-    const int max_time_days    = 200; // 100;
+    const int max_time_days    =  10; // 100;
     const size_t pow_10_max_distance = 9;
     
     // gas (drag) coefficients
@@ -83,7 +85,7 @@ int main (int argc, char **argv) {
     // molecules per unit area per unit time
 #warning EYE ON THIS!!! (zero?)
 #warning FACTOR for NON-pure ICE...
-    const double grain_sublimation_rate = orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1);
+    const double grain_sublimation_rate = 0.0*orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1); // 0.0*...
     const double grain_sublimation_molecule_mass = orsa::FromUnits(gas_molar_mass*1.66e-27,orsa::Unit::KG); // conversion from molar
     
 #warning drag coefficient Cd should be close to 2.0 when the grain size is close to the free mean path
@@ -139,6 +141,7 @@ int main (int argc, char **argv) {
             orsaSPICE::SpiceBodyTranslationalCallback * sbtc = new orsaSPICE::SpiceBodyTranslationalCallback(sun->getName());
             orsa::IBPS ibps;
             ibps.inertial = new PointLikeConstantInertialBodyProperty(orsaSolarSystem::Data::MSun());
+            // ibps.inertial = new PointLikeConstantInertialBodyProperty(0.0);
             ibps.translational = sbtc;
             sun->setInitialConditions(ibps);
         }
@@ -190,32 +193,59 @@ int main (int argc, char **argv) {
             ibps.time = t0;
             // const double volume = 4.0*orsa::pi()*nucleus_ax*nucleus_ay*nucleus_az/3.0;
             // const double nucleus_mass = comet_density*volume;
-            osg::ref_ptr<orsa::PaulMoment> pm = new orsa::PaulMoment(gravity_degree);
-            orsa::EllipsoidExpansion(pm.get(),
-                                     nucleus_ax,
-                                     nucleus_ay,
-                                     nucleus_az);
-            if (0) {
-                // test
-                std::vector< std::vector<mpf_class> > C, S, norm_C, norm_S;
-                std::vector<mpf_class> J;
-                orsa::convert(C,
-                              S,
-                              norm_C,
-                              norm_S,
-                              J,
-                              pm.get(),
-                              orsa::FromUnits(10.0,orsa::Unit::KM),
-                              true);
-            }
+
+
+            // choose here between PM and MC
+            // PM
+            /* osg::ref_ptr<orsa::PaulMoment> pm = new orsa::PaulMoment(gravity_degree);
+               orsa::EllipsoidExpansion(pm.get(),
+               nucleus_ax,
+               nucleus_ay,
+               nucleus_az);
+               ibps.inertial = new orsa::ConstantInertialBodyProperty(nucleus_mass,
+               nucleus_shape.get(),
+               orsa::Vector(0,0,0),
+               orsa::Matrix::identity(),
+               orsa::Matrix::identity(),
+               orsa::Matrix::identity(),
+               pm.get(),
+               0);
+            */
             
+            // MC 
+            osg::ref_ptr<orsa::MassDistribution> dummyMD = new orsa::UniformMassDistribution;
+            orsa::Cache<orsa::Vector> dummyCM = orsa::Vector(0,0,0);
+            osg::ref_ptr<orsa::MassCluster> mc =
+                new orsa::MassCluster(nucleus_shape,
+                                      dummyMD.get(),
+                                      massCluster_points,
+                                      dummyCM);
             ibps.inertial = new orsa::ConstantInertialBodyProperty(nucleus_mass,
                                                                    nucleus_shape.get(),
                                                                    orsa::Vector(0,0,0),
                                                                    orsa::Matrix::identity(),
                                                                    orsa::Matrix::identity(),
                                                                    orsa::Matrix::identity(),
-                                                                   pm.get());
+                                                                   0,
+                                                                   mc.get());
+            
+            
+            /* 
+               if (0) {
+               // test
+               std::vector< std::vector<mpf_class> > C, S, norm_C, norm_S;
+               std::vector<mpf_class> J;
+               orsa::convert(C,
+               S,
+               norm_C,
+               norm_S,
+               J,
+               pm.get(),
+               orsa::FromUnits(10.0,orsa::Unit::KM),
+               true);
+               }
+            */
+            
             ibps.translational = new orsa::DynamicTranslationalBodyProperty;
             ibps.translational->setPosition(nucleus_r0);
             ibps.translational->setVelocity(nucleus_v0);
@@ -269,9 +299,11 @@ int main (int argc, char **argv) {
                                            false);
             // const orsa::Vector r0 = intersectionPoint;
             // just above the surface, to avoid roundoff problems
+#warning RESTORE!
+            // r0 = intersectionPoint.normalized()*(intersectionPoint.length()+orsa::FromUnits(1.0,orsa::Unit::METER));
             r0 = intersectionPoint.normalized()*(intersectionPoint.length()+orsa::FromUnits(1.0,orsa::Unit::METER));
             n0 = normal;
-
+            
             // this is needed to normalize for local projected surface area
             /* const double min_cos_angle = cos(85.0*orsa::degToRad()); // less than 90 deg, not too close to 90 for efficiency
                if (min_cos_angle <= 0.0) {
@@ -453,6 +485,15 @@ int main (int argc, char **argv) {
                orsa::print(u_sun);
                orsa::print(u_ortho);
             */
+
+            {
+                static bool printed=false;
+                if (!printed) {
+                    ORSA_DEBUG("Hill radius: %g [km]",orsa::FromUnits(Hill_radius,orsa::Unit::KM,-1));
+                    printed=true;
+                }
+            }
+            
         }
         
         osg::ref_ptr<CGDIntegrator> integrator = new CGDIntegrator(grain.get(),grain_initial_radius,grain_density,nucleus.get(),bound_radius,pow_10_max_distance,t0);
@@ -626,7 +667,9 @@ int main (int argc, char **argv) {
                     const orsa::Vector u_X(1,0,0);
                     const orsa::Vector u_Y(0,1,0);
                     const orsa::Vector u_Z(0,0,1);
-
+                    
+#warning for future runs, need to invert u_orbit_plane to be in the same general direction of u_orbit_velocity
+                    
                     // sun, orbit pole, orbit plane
                     const orsa::Vector u_sun = (sun_r_global-nucleus_r_global).normalized();
                     const orsa::Vector u_tmp = (nucleus_v_global-sun_v_global).normalized();

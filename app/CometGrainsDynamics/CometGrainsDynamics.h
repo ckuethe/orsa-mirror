@@ -221,6 +221,7 @@ public:
     orsa::Matrix localToShape() const { return orsa::Matrix::identity(); }
     orsa::Matrix inertiaMatrix() const { return orsa::Matrix::identity(); }
     const orsa::PaulMoment * paulMoment() const { return 0; }
+    const orsa::MassCluster * massCluster() const { return 0; }
 public:
     bool setMass(const double &) {
         ORSA_ERROR("this method should not have been called, please check your code.");
@@ -248,6 +249,10 @@ public:
         return false;
     }
     bool setPaulMoment(const orsa::PaulMoment *) {
+        ORSA_ERROR("this method should not have been called, please check your code.");
+        return false;
+    }
+    bool setMassCluster(const orsa::MassCluster *) {
         ORSA_ERROR("this method should not have been called, please check your code.");
         return false;
     }
@@ -452,15 +457,14 @@ public:
         if (0) {
 #warning MUST pass the parameters as arguments...
 #warning what is the multiplicative factor in front?
-            const double sublimationForceFactor = 0.01;
+            const double sublimationForceFactor = 0.00;
             const double grain_sublimation_rate = orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1);
             sublimationForce =
                 // -uS*sublimationForceFactor*Mgas*grain_sublimation_rate*v_gas_h/(grainRadius*grainDensity); // this is just acc
                 -uS*sublimationForceFactor*Mgas*grain_sublimation_rate*v_gas_h*grainArea;
         }
         
-        if (0) {
-            
+        if (1) {
             gmp_printf("%12.6f %12.3f %12.6f %12.6f %12.6f %12.6f %g %g %g %g\n",
                        orsa::FromUnits(t.get_d(),orsa::Unit::DAY,-1),
                        orsa::FromUnits(R_c.length(),orsa::Unit::KM,-1),
