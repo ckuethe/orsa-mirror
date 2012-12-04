@@ -72,6 +72,7 @@ const Vector & TriShape::_getVertexNormal(const unsigned int vertex_index) const
 }
 
 const Vector & TriShape::_getFaceNormal(const unsigned int face_index) const {
+    _updateCache();
     if (_face_normal.size() != _face.size()) {
         _face_normal.resize(_face.size());
         for (unsigned int _f=0; _f<_face.size(); ++_f) {
@@ -468,9 +469,9 @@ bool TriShape::rayIntersection(orsa::Vector & intersectionPoint,
                                   fullLine)) {
       
             normal = _getFaceNormal(j);
-            // if ((normal*u) < 0) {
-            return true;
-            // }
+            if ((normal*u) < 0) {
+                return true;
+            }
         }
     }
     return false;
@@ -918,6 +919,20 @@ bool orsa::rayIntersectsTriangle(orsa::Vector & intersectionPoint,
     }
   
     return false;
+}
+
+double TriShape::volume() const {
+    if (_volume.isSet()) return _volume;
+    _updateCache();
+    // here we assume that the origin is within the body...
+    FaceVector::const_iterator _it = _face.begin();
+    double _vol = 0.0;
+    while (_it != _face.end()) {
+        _vol += fabs(_vertex[(*_it).i()] * orsa::externalProduct(_vertex[(*_it).i()],_vertex[(*_it).k()]));
+        ++_it;
+    }
+    _vol /= 6.0;
+    _volume = _vol;
 }
 
 // LatLonShape

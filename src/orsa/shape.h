@@ -123,13 +123,6 @@ namespace orsa {
     class TriShape : public orsa::Shape {
     public:
         class TriIndex {
-            /* 
-               public:
-               TriIndex() : 
-               _i(0), 
-               _j(0),
-               _k(0) { }
-            */
         public:
             TriIndex(const unsigned int i, 
                      const unsigned int j, 
@@ -204,7 +197,9 @@ namespace orsa {
                              const orsa::Vector & u,
                              const bool fullLine = false) const;
     public:
-        double volume() const { ORSA_DEBUG("code needed!"); return 0.0; }
+        double volume() const;
+    protected:
+        mutable orsa::Cache<double> _volume;
         
     protected:
         mutable orsa::Cache<double> _delta_min, _delta_max;
