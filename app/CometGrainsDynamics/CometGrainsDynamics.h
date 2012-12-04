@@ -371,11 +371,14 @@ public:
         nucleus_shape->getABC(na,nb,nc);
         const double nucleus_max_radius = std::max(na,std::max(nb,nc));
         
-        if (nucleus_shape->isInside(g2l*(rGrain-rComet))) {
-            // ORSA_DEBUG("zero thrust for grain inside comet nucleus...");
+      
 #warning this would be good if force from sublimation was not computed too in this method
-            // return orsa::Vector(0,0,0);
-        }
+        /* 
+           if (nucleus_shape->isInside(g2l*(rGrain-rComet))) {
+           // ORSA_DEBUG("zero thrust for grain inside comet nucleus...");
+           // return orsa::Vector(0,0,0);
+           }
+        */
         
         // switch to radial when difference is approximately smaller than 1 deg
         orsa::Vector u_gas;
