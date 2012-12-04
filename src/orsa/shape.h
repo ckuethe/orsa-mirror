@@ -73,7 +73,9 @@ namespace orsa {
                                      const orsa::Vector & P,
                                      const orsa::Vector & u,
                                      const bool fullLine = false) const = 0;
-    
+    public:
+        virtual double volume() const = 0;
+        
     public:
         const double & boundingRadius() const { 
             if (!_r_max.isSet()) {
@@ -201,7 +203,9 @@ namespace orsa {
                              const orsa::Vector & P,
                              const orsa::Vector & u,
                              const bool fullLine = false) const;
-    
+    public:
+        double volume() const { ORSA_DEBUG("code needed!"); return 0.0; }
+        
     protected:
         mutable orsa::Cache<double> _delta_min, _delta_max;
     
@@ -299,7 +303,10 @@ namespace orsa {
            public:
            bool draw() const { return false; }
         */
-    
+        
+    public:
+        double volume() const { ORSA_DEBUG("code needed!"); return 0.0; }
+        
     protected:
         // lat: -90 to +90, lon: 0 to 360
         double _lat_step_DEG;
@@ -358,7 +365,12 @@ namespace orsa {
             b = _b;
             c = _c;
         }
-    
+
+    public:
+        double volume() const {
+            return 4.0*orsa::pi()*_a*_b*_c/3.0;
+        }
+        
     public:
         bool isInside(const Vector &) const;
     

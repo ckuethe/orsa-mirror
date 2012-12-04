@@ -24,7 +24,6 @@ Interaction::Interaction() : osg::Referenced(true) {
         new MassCluster(0,
                         0,
                         0,
-                        0,
                         dummyCM);
     dummyMassCluster->massClusterVector.resize(1);
     orsa::MassCluster::MassClusterElement el;

@@ -25,7 +25,6 @@ namespace orsa {
         MassCluster(const orsa::Shape * shape,
                     const orsa::MassDistribution * massDistribution,
                     const size_t & samplePoints,
-                    const double & softeningDistance_,
                     const orsa::Cache<orsa::Vector> nominalCenterOfMass);
     protected:
         virtual ~MassCluster() { }

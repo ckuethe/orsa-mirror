@@ -7,10 +7,8 @@ using namespace orsa;
 MassCluster::MassCluster(const orsa::Shape * shape,
                          const orsa::MassDistribution * massDistribution,
                          const size_t & samplePoints,
-                         const double & softeningDistance_,
                          const orsa::Cache<orsa::Vector> nominalCenterOfMass) :
-    osg::Referenced(true),
-    softeningDistance(softeningDistance_) {
+    osg::Referenced(true) {
     
     if (!shape) return;
     if (!massDistribution) return;
@@ -43,6 +41,12 @@ MassCluster::MassCluster(const orsa::Shape * shape,
             massClusterVector.push_back(el);
         }
     }
+    if (massClusterVector.size() == 0) {
+        ORSA_DEBUG("problems...");
+        exit(0);
+    }
+    softeningDistance = cbrt(shape->volume()/massClusterVector.size());
+    ORSA_DEBUG("softeningDistance: %g [km]",orsa::FromUnits(softeningDistance,orsa::Unit::KM,-1));
 }
 
 void MassCluster::print() const {
