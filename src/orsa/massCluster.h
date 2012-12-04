@@ -14,10 +14,11 @@
 namespace orsa {
     
     class MassCluster : public osg::Referenced {
+    public:
         class MassClusterElement {
         public:
             orsa::Vector position;
-            double mass;
+            double density;
         };
         typedef std::vector<MassClusterElement> MassClusterVector;
     public:
@@ -29,8 +30,10 @@ namespace orsa {
     protected:
         virtual ~MassCluster() { }
     public:
-        const double softeningDistance;
+        double softeningDistance;
         MassClusterVector massClusterVector;
+    public:
+        void print() const;
     public:
         static double gravitationalPotential(const orsa::MassCluster * M1,
                                              const orsa::Matrix      & A1_g2l,

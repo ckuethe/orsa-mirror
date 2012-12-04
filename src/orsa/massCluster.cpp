@@ -12,37 +12,50 @@ MassCluster::MassCluster(const orsa::Shape * shape,
     osg::Referenced(true),
     softeningDistance(softeningDistance_) {
     
+    if (!shape) return;
+    if (!massDistribution) return;
+    
     osg::ref_ptr<RandomPointsInShape> randomPointsInShape =
         new RandomPointsInShape(shape,
                                 massDistribution,
                                 samplePoints,
                                 false);
     const orsa::Vector centerOfMass = orsa::centerOfMass(randomPointsInShape);
+    orsa::Vector global_offset(0,0,0);
     if (nominalCenterOfMass.isSet()) {
-        ORSA_DEBUG("global offset: %g [km]",
-                   orsa::FromUnits((nominalCenterOfMass - centerOfMass).length(),orsa::Unit::KM,-1));
+        global_offset = nominalCenterOfMass - centerOfMass;
+        // ORSA_DEBUG("global offset: %g [km]",orsa::FromUnits(global_offset.length(),orsa::Unit::KM,-1));
     }
     orsa::Vector v;
     double density;
     massClusterVector.reserve(samplePoints);
     randomPointsInShape->reset();
-    double sum=0.0;
     while (randomPointsInShape->get(v,density)) {
         if (density > 0) {
-            sum += density;
             // enforce center of mass position?
             if (nominalCenterOfMass.isSet()) {
-                v += nominalCenterOfMass - centerOfMass;
+                // v += nominalCenterOfMass - centerOfMass;
+                v += global_offset;
             }
             MassCluster::MassClusterElement el;
             el.position = v;
-            el.mass     = density;
+            el.density  = density;
             massClusterVector.push_back(el);
         }
     }
-    const double factor = 1.0/sum;
+}
+
+void MassCluster::print() const {
+    ORSA_DEBUG("sD: %g [km]",orsa::FromUnits(softeningDistance,orsa::Unit::KM,-1));
+    ORSA_DEBUG("massClusterVector.size(): %i",massClusterVector.size());
     for (size_t k=0; k<massClusterVector.size(); ++k) {
-        massClusterVector[k].mass *= factor;
+        const MassCluster::MassClusterElement el = massClusterVector[k];
+        ORSA_DEBUG("element[%06i] density: %g [g/cm^3]   position: %g %g %g [km]",
+                   k,
+                   orsa::FromUnits(orsa::FromUnits(el.density,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+                   orsa::FromUnits(el.position.getX(),orsa::Unit::KM,-1),
+                   orsa::FromUnits(el.position.getY(),orsa::Unit::KM,-1),
+                   orsa::FromUnits(el.position.getZ(),orsa::Unit::KM,-1));
     }
 }
 
@@ -71,13 +84,20 @@ orsa::Vector MassCluster::gravitationalForce(const orsa::MassCluster * M1,
         orsa::square(M1->softeningDistance) +
         orsa::square(M2->softeningDistance);
     orsa::Vector F(0,0,0);
+    double sum_weight=0.0;
     for (size_t k1=0; k1<mcv1.size(); ++k1) {
         for (size_t k2=0; k2<mcv2.size(); ++k2) {
             const orsa::Vector d12 =
                 R + A2_l2g*mcv2[k2].position - A1_l2g*mcv1[k1].position;
-            F += mcv2[k2].mass*d12/pow(d12.lengthSquared()+eps_sq,1.5);
+            const double weight = mcv1[k1].density * mcv2[k2].density;
+            F += weight*d12/pow(d12.lengthSquared()+eps_sq,1.5);
+            sum_weight += weight;
         }
     }
+    if (sum_weight != 0.0) F /= sum_weight;
+    
+    ORSA_DEBUG("R: %g   1/R^2 = %g   F = %g",R.length(),1.0/R.lengthSquared(),F.length());
+    
     return F;
 }
 

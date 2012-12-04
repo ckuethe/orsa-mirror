@@ -15,15 +15,22 @@ Interaction::Interaction() : osg::Referenced(true) {
     // dummyPaulMoment->setCenterOfMass(orsa::Vector(0,0,0));
     // dummyPaulMoment->setInertiaMoment(orsa::Matrix::identity());
     
-    osg::ref_ptr<orsa::Shape> dummyShape = new EllipsoidShape(1,1,1);
-    osg::ref_ptr<orsa::MassDistribution> dummyMD = new orsa::UniformMassDistribution;
-    orsa::Cache<orsa::Vector> dummyCM = orsa::Vector(0,0,0);
+    /* osg::ref_ptr<orsa::Shape> dummyShape = new EllipsoidShape(1,1,1);
+       osg::ref_ptr<orsa::MassDistribution> dummyMD = new orsa::UniformMassDistribution;
+       orsa::Cache<orsa::Vector> dummyCM = orsa::Vector(0,0,0);
+    */
+    orsa::Cache<orsa::Vector> dummyCM;
     dummyMassCluster =
-        new MassCluster(dummyShape.get(),
-                        dummyMD.get(),
-                        1,
-                        1.0,
+        new MassCluster(0,
+                        0,
+                        0,
+                        0,
                         dummyCM);
+    dummyMassCluster->massClusterVector.resize(1);
+    orsa::MassCluster::MassClusterElement el;
+    el.density = 1.0;
+    el.position = orsa::Vector(0,0,0);
+    dummyMassCluster->massClusterVector[0] = el;
     
 }	
 
@@ -66,9 +73,9 @@ bool Interaction::acceleration(InteractionVector & a,
             if (!ref_b->alive(t)) {
                 continue;
             }
-      
+            
             // ORSA_DEBUG("ref_b is [%s]",ref_b->getName().c_str());
-      
+            
             if (ref_b->getInitialConditions().translational.get()) {
                 if (!(ref_b->getInitialConditions().translational->dynamic())) {
                     continue;
@@ -379,7 +386,10 @@ bool Interaction::acceleration(InteractionVector & a,
                                                      b_pm.get(),
                                                      b_g2l,
                                                      R);
-	    
+                        
+                        ORSA_DEBUG("accTerm between [%s] and [%s]:",ref_b->getName().c_str(),b->getName().c_str());
+                        orsa::print(accTerm);
+                        
                         a[j] += orsa::Unit::G() * m_b     * accTerm;
                         a[k] -= orsa::Unit::G() * m_ref_b * accTerm;
 	    
@@ -424,7 +434,7 @@ bool Interaction::acceleration(InteractionVector & a,
 
                 } else if (ref_b_ibps.inertial->massCluster() || b_ibps.inertial->massCluster()) {
                     
-                    ORSA_DEBUG("using MassCluster...");
+                    // ORSA_DEBUG("using MassCluster...");
                     
                     osg::ref_ptr<const MassCluster> ref_b_mc = 
                         (ref_b_ibps.inertial->massCluster()) ? 
@@ -435,7 +445,13 @@ bool Interaction::acceleration(InteractionVector & a,
                         (b_ibps.inertial->massCluster()) ? 
                         (b_ibps.inertial->massCluster()) :
                         (dummyMassCluster.get());
-
+                    
+                    // ORSA_DEBUG("ref_b_mc:");
+                    // ref_b_mc->print();
+                    
+                    // ORSA_DEBUG("b_mc:");
+                    // b_mc->print();
+                    
                     const orsa::Matrix ref_b_l2g = orsa::localToGlobal(ref_b,bg,t);
                     const orsa::Matrix ref_b_g2l = orsa::globalToLocal(ref_b,bg,t);
                     
@@ -453,6 +469,9 @@ bool Interaction::acceleration(InteractionVector & a,
                                                         b_g2l,
                                                         R);
                     
+                    ORSA_DEBUG("accTerm between [%s] and [%s]:",ref_b->getName().c_str(),b->getName().c_str());
+                    orsa::print(accTerm);
+                    
                     a[j] += orsa::Unit::G() * m_b     * accTerm;
                     a[k] -= orsa::Unit::G() * m_ref_b * accTerm;
                     
@@ -468,13 +487,13 @@ bool Interaction::acceleration(InteractionVector & a,
                     orsa::Vector _d =
                         b_ibps.translational->position() - 
                         ref_b_ibps.translational->position();
-	  
+                    
                     const double _l = _d.length();
-	  
+                    
                     if (_l > epsilon()) {
-	    
+                        
                         _d /= (_l*_l*_l);
-	    
+                        
                         if (ref_b->betaSun == b) {
                             const orsa::Vector accTerm = (1 - ref_b->beta) * _d;
                             // a[(*ref_b_it).get()] += (*b_it)->getMu()     * accTerm;
