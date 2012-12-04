@@ -386,8 +386,8 @@ bool Interaction::acceleration(InteractionVector & a,
                                                      b_g2l,
                                                      R);
                         
-                        ORSA_DEBUG("accTerm between [%s] and [%s]:",ref_b->getName().c_str(),b->getName().c_str());
-                        orsa::print(accTerm);
+                        // ORSA_DEBUG("accTerm between [%s] and [%s]:",ref_b->getName().c_str(),b->getName().c_str());
+                        // orsa::print(accTerm);
                         
                         a[j] += orsa::Unit::G() * m_b     * accTerm;
                         a[k] -= orsa::Unit::G() * m_ref_b * accTerm;
@@ -468,8 +468,8 @@ bool Interaction::acceleration(InteractionVector & a,
                                                         b_g2l,
                                                         R);
                     
-                    ORSA_DEBUG("accTerm between [%s] and [%s]:",ref_b->getName().c_str(),b->getName().c_str());
-                    orsa::print(accTerm);
+                    // ORSA_DEBUG("accTerm between [%s] and [%s]:",ref_b->getName().c_str(),b->getName().c_str());
+                    // orsa::print(accTerm);
                     
                     a[j] += orsa::Unit::G() * m_b     * accTerm;
                     a[k] -= orsa::Unit::G() * m_ref_b * accTerm;
