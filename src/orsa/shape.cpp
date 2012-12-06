@@ -160,6 +160,7 @@ bool TriShape::_updateCache() const {
         double _d2_min = _r_max*_r_max;
         double _d2_max = 0;
         while (_it != _face.end()) {
+            // ORSA_DEBUG("%i %i %i",(*_it).i(),(*_it).j(),(*_it).k());
             _d2_ij = (_vertex[(*_it).i()]-_vertex[(*_it).j()]).lengthSquared();
             _d2_ik = (_vertex[(*_it).i()]-_vertex[(*_it).k()]).lengthSquared();
             _d2_jk = (_vertex[(*_it).j()]-_vertex[(*_it).k()]).lengthSquared();
@@ -922,17 +923,29 @@ bool orsa::rayIntersectsTriangle(orsa::Vector & intersectionPoint,
 }
 
 double TriShape::volume() const {
-    if (_volume.isSet()) return _volume;
-    _updateCache();
-    // here we assume that the origin is within the body...
-    FaceVector::const_iterator _it = _face.begin();
-    double _vol = 0.0;
-    while (_it != _face.end()) {
-        _vol += fabs(_vertex[(*_it).i()] * orsa::externalProduct(_vertex[(*_it).i()],_vertex[(*_it).k()]));
-        ++_it;
+    if (!_volume.isSet()) {
+        _updateCache();
+        // here we assume that the origin is within the body...
+        FaceVector::const_iterator _it = _face.begin();
+        _volume = 0.0;
+        while (_it != _face.end()) {
+            _volume += fabs(_vertex[(*_it).i()] * orsa::externalProduct(_vertex[(*_it).j()],_vertex[(*_it).k()]));
+            ++_it;
+        }
+        _volume /= 6.0;
     }
-    _vol /= 6.0;
-    _volume = _vol;
+    return _volume;
+}
+
+double TriShape::surfaceArea() const {
+    if (!_area.isSet()) {
+        _updateCache();
+        _area = 0.0;
+        for (size_t k=0; k<_face.size(); ++k) {
+            _area += _getFaceArea(k);
+        }
+    }
+    return _area;
 }
 
 // LatLonShape

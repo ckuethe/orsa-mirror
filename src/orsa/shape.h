@@ -240,6 +240,11 @@ namespace orsa {
         double _getFaceArea(const unsigned int face_index) const;
     protected:  
         mutable std::vector<double> _face_area;   // size: [face]
+        
+    public:
+        double surfaceArea() const;
+    protected:
+        mutable orsa::Cache<double> _area;
     
     public:
         typedef std::vector<double> AngleVector;
