@@ -41,8 +41,8 @@ int main (int argc, char **argv) {
     // all depends on the gas_drag_coefficient value
     
 #warning TODO: consider using fractal density for grains?
-#warning TODO: mascons gravity
-#warning TODO: fraction of active nucleus (list of lat-lon ranges) and correlate with total production rate
+    // (done) #warning TODO: mascons gravity
+    // (done in post-processing) #warning TODO: fraction of active nucleus (list of lat-lon ranges) and correlate with total production rate
 #warning TODO: fraction of grain as ice, fraction as dust
 #warning TODO: 
     
@@ -57,30 +57,31 @@ int main (int argc, char **argv) {
     const orsa::Time comet_orbit_Tp = orsaSolarSystem::gregorTime(2010,10,28.25696720); // 2010-Oct-28.25696720
     const orsa::Time comet_orbit_epoch = orsaSolarSystem::gregorTime(2010,9,17.0); // comet_orbit_Tp; // orsaSolarSystem::gregorTime(2010,1,1);
     //
-    const double nucleus_ax = orsa::FromUnits(1.00,orsa::Unit::KM);
-    const double nucleus_ay = orsa::FromUnits(0.45,orsa::Unit::KM);
-    const double nucleus_az = orsa::FromUnits(0.45,orsa::Unit::KM);
-    const size_t gravity_degree = 8; // used in PM
+    /* const double nucleus_ax = orsa::FromUnits(50.45,orsa::Unit::KM);
+       const double nucleus_ay = orsa::FromUnits(50.45,orsa::Unit::KM);
+       const double nucleus_az = orsa::FromUnits(50.45,orsa::Unit::KM);
+    */
+    // const size_t gravity_degree = 8; // used in PM
     const size_t massCluster_points = 1024;
     const double comet_density = orsa::FromUnits(orsa::FromUnits(0.22,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double grain_density = orsa::FromUnits(orsa::FromUnits(0.50,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-    const double rotation_period = orsa::FromUnits(6.00,orsa::Unit::HOUR); // orsa::FromUnits(18.34,orsa::Unit::HOUR);
+    const double rotation_period = orsa::FromUnits(18.34,orsa::Unit::HOUR);
     const double pole_phi_Tp = 0.0*orsa::degToRad(); // rotation angle at time Tp
     const double pole_ecliptic_longitude = +69.0*orsa::degToRad();
     const double pole_ecliptic_latitude  = +34.0*orsa::degToRad();
-    const double min_latitude = -90.0*orsa::degToRad();
-    const double max_latitude = +90.0*orsa::degToRad();
-    const double min_grain_radius = orsa::FromUnits(0.000001,orsa::Unit::METER);
-    const double max_grain_radius = orsa::FromUnits(1.000000,orsa::Unit::METER);    
+    // const double min_latitude = -90.0*orsa::degToRad(); // can do this in post-processing
+    // const double max_latitude = +90.0*orsa::degToRad(); // can do this in post-processing
+    const double min_grain_radius = orsa::FromUnits(0.010000,orsa::Unit::METER);
+    const double max_grain_radius = orsa::FromUnits(0.100000,orsa::Unit::METER);    
     const int min_time_seconds =  60; // grains flying less than this time are not included
     const int max_time_days    =  10; // 100;
     const size_t pow_10_max_distance = 9;
     
     // gas (drag) coefficients
-    const double gas_production_rate_at_1AU = orsa::FromUnits(1.0e28,orsa::Unit::SECOND,-1); // molecules/second
+    const double gas_production_rate_at_1AU = orsa::FromUnits(1.0e27,orsa::Unit::SECOND,-1); // molecules/second
     const double gas_velocity_at_1AU = orsa::FromUnits(orsa::FromUnits(0.5,orsa::Unit::KM),orsa::Unit::SECOND,-1);
     const double gas_molar_mass = 18; // 18 for H20
-    const double gas_drag_coefficient = 2.00; // Cd nominal: 0.40 (OR 2.00 ??)
+    const double gas_drag_coefficient = 0.40; // Cd nominal: 0.40 (OR 2.00 ??)
     
     // molecules per unit area per unit time
 #warning EYE ON THIS!!! (zero?)
@@ -93,8 +94,8 @@ int main (int argc, char **argv) {
     // const orsa::Time t_snapshot = comet_orbit_Tp - orsa::Time(60,0,0,0,0);
     const orsa::Time t_snapshot = orsaSolarSystem::gregorTime(2010,11,4.60); // comet_orbit_Tp; // + orsa::Time(30,0,0,0,0);
     
-    const double nucleus_volume = 4.0*orsa::pi()*nucleus_ax*nucleus_ay*nucleus_az/3.0;
-    const double nucleus_mass = comet_density*nucleus_volume; 
+    // const double nucleus_volume = 4.0*orsa::pi()*nucleus_ax*nucleus_ay*nucleus_az/3.0;
+    // const double nucleus_mass = comet_density*nucleus_volume; 
     const double omega = orsa::twopi()/rotation_period;
     
     orsaSPICE::SPICE::instance()->setDefaultObserver("SSB");
@@ -117,6 +118,25 @@ int main (int argc, char **argv) {
     IBPS grain_ibps;
     osg::ref_ptr<GrainUpdateIBPS> grainUpdateIBPS = new GrainUpdateIBPS;
     grain_ibps.updateIBPS = grainUpdateIBPS;
+    
+    osg::ref_ptr<GaskellPlateModel> nucleus_shape = new GaskellPlateModel;
+    if (!nucleus_shape->read("shape.plt")) {
+        ORSA_ERROR("problems encountered while reading shape file...");
+        exit(0);
+    }
+    const double nucleus_mass = comet_density*nucleus_shape->volume();
+    
+    // now: for shapes with plates, emit proportionally to the area of each plate
+    std::vector<double> cumulative_face_area;
+    {
+        cumulative_face_area.reserve(nucleus_shape->getFaceVector().size());
+        double sum = 0.0;
+        for (size_t plt=0; plt<nucleus_shape->getFaceVector().size(); ++plt) {
+            sum += nucleus_shape->_getFaceArea(plt);
+            cumulative_face_area.push_back(sum);
+        }
+        ORSA_DEBUG("--------> %g %g equal??",cumulative_face_area[cumulative_face_area.size()-1],nucleus_shape->surfaceArea());
+    }
     
     size_t iter=0;
     while (iter < 1250000) {
@@ -159,13 +179,12 @@ int main (int argc, char **argv) {
         bg->addBody(earth);        
         
         osg::ref_ptr<orsa::Body> nucleus = new orsa::Body;
-        osg::ref_ptr<orsa::EllipsoidShape> nucleus_shape;
+        // osg::ref_ptr<orsa::EllipsoidShape> nucleus_shape = new orsa::EllipsoidShape(nucleus_ax,nucleus_ay,nucleus_az);
+        // nucleus_shape->closestVertexEpsilonRelative = 1.0e-3;
+
         orsa::Vector nucleus_r0;
         orsa::Vector nucleus_v0;
         {
-            nucleus_shape = new orsa::EllipsoidShape(nucleus_ax,nucleus_ay,nucleus_az);
-            nucleus_shape->closestVertexEpsilonRelative = 1.0e-3;
-            
             orsa::Vector rSun, vSun;
             if (!bg->getInterpolatedPosVel(rSun,vSun,sun.get(),t0)) {
                 ORSA_DEBUG("problems...");
@@ -267,81 +286,91 @@ int main (int argc, char **argv) {
            WRONG: UNIFORM! const double lat = min_latitude  + (max_latitude-min_latitude)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
         */
         //
-        double lon,lat;
-        orsa::Vector r0,n0;
-        size_t local_trials=0;
-        const double min_cos_angle = cos(85.0*orsa::degToRad()); // less than 90 deg, not too close to 90 for efficiency
-        if (min_cos_angle <= 0.0) {
-            ORSA_DEBUG("problems...");
-            exit(0);
-        }
-        const double max_r0 = std::max(nucleus_ax,std::max(nucleus_ay,nucleus_az));
-        while (1) {
-            ++local_trials;
-            double x,y,z;
-            orsa::GlobalRNG::instance()->rng()->gsl_ran_dir_3d(&x,&y,&z);
-            const orsa::Vector u_ray(x,y,z);
-            
-            /* double s_lon, c_lon;
-               sincos(lon,&s_lon,&c_lon);
-               double s_lat, c_lat;
-               sincos(lat,&s_lat,&c_lat);
-               const orsa::Vector u_ray(c_lat*c_lon,
-               c_lat*s_lon,
-               s_lat);
-            */
-            orsa::Vector intersectionPoint;
-            orsa::Vector normal;
-            nucleus_shape->rayIntersection(intersectionPoint,
-                                           normal,
-                                           orsa::Vector(0,0,0),
-                                           u_ray,
-                                           false);
-            // const orsa::Vector r0 = intersectionPoint;
-            // just above the surface, to avoid roundoff problems
-#warning RESTORE!
-            // r0 = intersectionPoint.normalized()*(intersectionPoint.length()+orsa::FromUnits(1.0,orsa::Unit::METER));
-            r0 = intersectionPoint.normalized()*(intersectionPoint.length()+orsa::FromUnits(1.0,orsa::Unit::METER));
-            n0 = normal;
-            
-            // this is needed to normalize for local projected surface area
-            /* const double min_cos_angle = cos(85.0*orsa::degToRad()); // less than 90 deg, not too close to 90 for efficiency
-               if (min_cos_angle <= 0.0) {
-               ORSA_DEBUG("problems...");
-               exit(0);
-               }
-            */
-            // const double max_r0 = std::max(nucleus_ax,std::max(nucleus_ay,nucleus_az));
-            const double cos_angle = std::max(min_cos_angle,r0.normalized()*n0.normalized());
-            /* {
-               static double max_angle = 0.0;
-               max_angle = std::max(max_angle,acos(r0.normalized()*n0.normalized()));
-               ORSA_DEBUG("lat: %g [deg]   lon: %g [deg] angle: %g [deg]   max: %g [deg]",
-               lat*orsa::radToDeg(),
-               lon*orsa::radToDeg(),
-               acos(r0.normalized()*n0.normalized())*orsa::radToDeg(),
-               max_angle*orsa::radToDeg());
-               }
-            */
-            // const double rdm = (1.0/min_cos_angle)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
-            const double rdm = (orsa::square(max_r0)/min_cos_angle)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
-            if (rdm < r0.lengthSquared()/cos_angle) {
-                // found (almost)
-                lon = atan2(u_ray.getY(),u_ray.getX());
-                lat = asin(u_ray.getZ());
-                if ((lat >= min_latitude) && (lat <= max_latitude)) {
-                    // ORSA_DEBUG("local_trials: %i",local_trials);
-                    break; 
-                }
-            }
-        }
+        /* double lon,lat;
+           orsa::Vector r0,n0;
+           size_t local_trials=0;
+           const double min_cos_angle = cos(85.0*orsa::degToRad()); // less than 90 deg, not too close to 90 for efficiency
+           if (min_cos_angle <= 0.0) {
+           ORSA_DEBUG("problems...");
+           exit(0);
+           }
+           const double max_r0 = std::max(nucleus_ax,std::max(nucleus_ay,nucleus_az));
+           while (1) {
+           ++local_trials;
+           double x,y,z;
+           orsa::GlobalRNG::instance()->rng()->gsl_ran_dir_3d(&x,&y,&z);
+           const orsa::Vector u_ray(x,y,z);
+           
+           orsa::Vector intersectionPoint;
+           orsa::Vector normal;
+           nucleus_shape->rayIntersection(intersectionPoint,
+           normal,
+           orsa::Vector(0,0,0),
+           u_ray,
+           false);
+           // const orsa::Vector r0 = intersectionPoint;
+           // just above the surface, to avoid roundoff problems
+           #warning RESTORE!
+           // r0 = intersectionPoint.normalized()*(intersectionPoint.length()+orsa::FromUnits(1.0,orsa::Unit::METER));
+           r0 = intersectionPoint.normalized()*(intersectionPoint.length()+orsa::FromUnits(1.0,orsa::Unit::METER));
+           n0 = normal;
+           
+           // this is needed to normalize for local projected surface area
+           
+           // const double max_r0 = std::max(nucleus_ax,std::max(nucleus_ay,nucleus_az));
+           const double cos_angle = std::max(min_cos_angle,r0.normalized()*n0.normalized());
+           
+           // const double rdm = (1.0/min_cos_angle)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+           const double rdm = (orsa::square(max_r0)/min_cos_angle)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+           if (rdm < r0.lengthSquared()/cos_angle) {
+           // found (almost)
+           lon = atan2(u_ray.getY(),u_ray.getX());
+           lat = asin(u_ray.getZ());
+           if ((lat >= min_latitude) && (lat <= max_latitude)) {
+           // ORSA_DEBUG("local_trials: %i",local_trials);
+           break; 
+           }
+           }
+           }
+        */
+        
+        // pick face
+        const std::vector<double>::iterator emit_face_it =
+            lower_bound(cumulative_face_area.begin(),
+                        cumulative_face_area.end(),
+                        nucleus_shape->surfaceArea()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
+        const size_t emit_face_index = std::distance(cumulative_face_area.begin(), emit_face_it);
+        const orsa::TriShape::TriIndex emit_face = nucleus_shape->getFaceVector()[emit_face_index];
+        // random point in triangle
+        double rnd1,rnd2;
+        do {
+            rnd1 = orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+            rnd2 = orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+        } while (rnd1+rnd2>1.0);
+        const orsa::Vector tmp_r0 =
+            nucleus_shape->getVertexVector()[emit_face.i()] +
+            rnd1 * (nucleus_shape->getVertexVector()[emit_face.j()]-nucleus_shape->getVertexVector()[emit_face.i()]) +
+            rnd2 * (nucleus_shape->getVertexVector()[emit_face.k()]-nucleus_shape->getVertexVector()[emit_face.i()]);
+        // lift it a bit
+        const orsa::Vector r0 = tmp_r0 + tmp_r0.normalized()*orsa::FromUnits(1.0,orsa::Unit::METER);
+        const orsa::Vector n0 = nucleus_shape->_getFaceNormal(emit_face_index);
+        
+        ORSA_DEBUG("--------> positive: %g",r0.normalized()*n0.normalized());
+        orsa::print(r0);
+        orsa::print(n0);
+        
+        const orsa::Vector u_r0 = r0.normalized();
+        
+        const double lon = atan2(u_r0.getY(),
+                                 u_r0.getX());
+        const double lat =  asin(u_r0.getZ());
         
         /* const orsa::Vector u_rot =
            orsa::externalProduct(orsa::Vector(0,0,1),n0).normalized();
            const orsa::Vector u_pol =
            orsa::externalProduct(n0,u_rot).normalized();
         */
-
+        
         // not including rotation yet
 #warning escape velocity approximate for points within the bounding sphere of the body
         const double escape_velocity = sqrt(2*orsa::Unit::G()*nucleus_mass/r0.length());
@@ -557,9 +586,9 @@ int main (int argc, char **argv) {
                 FILE * fp = fopen(filename_CGD.c_str(),"a");
                 gmp_fprintf(fp,"%.6f %g %g %g     %.3e %.3e %.3e %.3e %g     %g %g %g %g %g     %g %g %g %7.3f %+7.3f     %7.3f %7.3f %.3f %.3f %.3f     %.3f %.3e %.3e %10.6f %10.6f     %10.6f %10.6f %10.6f %10.6f %10.6f     %+.3e %+.3e %+.3e %+.3e %+.3e     %+.3e %.3e %.3e %.3e %i     %8.3f %+8.3f %+8.3f %+8.3f %+8.3f     %10.6f %i \n",
                             orsa::FromUnits(r_comet_t0,orsa::Unit::AU,-1),
-                            orsa::FromUnits(nucleus_ax,orsa::Unit::KM,-1),
-                            orsa::FromUnits(nucleus_ay,orsa::Unit::KM,-1),
-                            orsa::FromUnits(nucleus_az,orsa::Unit::KM,-1),
+                            0, // orsa::FromUnits(nucleus_ax,orsa::Unit::KM,-1),
+                            0, // orsa::FromUnits(nucleus_ay,orsa::Unit::KM,-1),
+                            0, // orsa::FromUnits(nucleus_az,orsa::Unit::KM,-1),
                             /* 5 */ orsa::FromUnits(nucleus_mass,orsa::Unit::KG,-1),
                             orsa::FromUnits(Hill_radius,orsa::Unit::KM,-1),
                             orsa::FromUnits(exo_radius,orsa::Unit::KM,-1),

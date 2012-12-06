@@ -18,6 +18,10 @@
 #include <orsaSPICE/spice.h>
 #include <orsaSPICE/spiceBodyTranslationalCallback.h>
 
+// choose one depending on the shape file loaded
+// #include "gaskell.h"
+#include "gaskell_mod.h"
+
 using namespace orsa;
 
 // Burns, Lamy, Soter 1979, Eq. (19)
@@ -365,13 +369,25 @@ public:
             orsa::print(t);
             orsa::crash();
         }
-        const orsa::EllipsoidShape * nucleus_shape =
-            dynamic_cast<const orsa::EllipsoidShape *> (ibps.inertial->originalShape());
-        double na, nb, nc;
-        nucleus_shape->getABC(na,nb,nc);
-        const double nucleus_max_radius = std::max(na,std::max(nb,nc));
+        /* 
+           const orsa::EllipsoidShape * nucleus_shape =
+           dynamic_cast<const orsa::EllipsoidShape *> (ibps.inertial->originalShape());
+           double na, nb, nc;
+           nucleus_shape->getABC(na,nb,nc);
+           const double nucleus_max_radius = std::max(na,std::max(nb,nc));
+        */
+        const GaskellPlateModel * nucleus_shape =
+            dynamic_cast<const GaskellPlateModel *> (ibps.inertial->originalShape());
+        if (!nucleus_shape) {
+            ORSA_DEBUG("problems...");
+            exit(0);
+        }
+        const double nucleus_volume_equivalent_average_radius = cbrt(3*nucleus_shape->volume()/(4*orsa::pi()));
+        /* ORSA_DEBUG("nucleus_volume_equivalent_average_radius = %g [km]   nucleus volume: %g [km^3]",
+           orsa::FromUnits(nucleus_volume_equivalent_average_radius,orsa::Unit::KM,-1),
+           orsa::FromUnits(nucleus_shape->volume(),orsa::Unit::KM,-3));
+        */
         
-      
 #warning this would be good if force from sublimation was not computed too in this method
         /* 
            if (nucleus_shape->isInside(g2l*(rGrain-rComet))) {
@@ -395,10 +411,12 @@ public:
             // modify V_gas_c to smoothly decrease near nucleus
             const orsa::Vector dr_g = rGrain-rComet;
             const orsa::Vector dr_l = g2l*dr_g;
-            const orsa::Vector closest_point =
-                nucleus_shape->closestVertex(dr_l);
-            const orsa::Vector normal_l =
-                nucleus_shape->normalVector(closest_point);
+            /* const orsa::Vector closest_point =
+               nucleus_shape->closestVertex(dr_l);
+               const orsa::Vector normal_l =
+               nucleus_shape->normalVector(closest_point);
+            */
+            const orsa::Vector normal_l = nucleus_shape->_getVertexNormal(nucleus_shape->closestVertexIndex(dr_l));
             n0 = normal_l.normalized();
             const orsa::Vector normal_g = l2g*normal_l;
             u_gas = normal_g;
@@ -423,6 +441,8 @@ public:
         // optional: can multiply x cos(theta_sun) to account for gas only from lit side of comet
         // const double theta_sun = acos((rSun-rComet).normalized() * R_c.normalized());
         const double theta_sun = acos((rSun-rComet).normalized() * n0);
+#warning MAKE SURE n0 is LOCAL or GLOBAL...
+        
         
         // #warning restore this one!
         const double theta_sun_factor = cos(0.5*theta_sun);
@@ -446,7 +466,8 @@ public:
         
         // NOTE: gas direction is proportional to normal_g, which gets close to radial at large distances
         
-        const double dist_ratio = r_c / nucleus_max_radius;
+        // const double dist_ratio = r_c / nucleus_max_radius;
+        const double dist_ratio = r_c / nucleus_volume_equivalent_average_radius;
         const double v_Gas_factor = dist_ratio/(1.0+dist_ratio); // goes from 0.5 near nucleus to 1.0 asymptotically
         const orsa::Vector V_Gas_c = v_Gas_factor * v_gas_h * u_gas;
         const orsa::Vector V_Grain_c = vGrain-vComet;
@@ -604,7 +625,7 @@ public:
         }
         
         if (nucleusIBPS.inertial->originalShape()->isInside(grain_r_relative_local)) {
-            // ORSA_DEBUG("collision, aborting integration");
+            ORSA_DEBUG("collision, aborting integration");
 #warning note: the collision is not resolved exactly (i.e. rewind time for exact contact of body surface)
             outcome = IMPACT;
             // ORSA_DEBUG("outcome: %i",outcome);

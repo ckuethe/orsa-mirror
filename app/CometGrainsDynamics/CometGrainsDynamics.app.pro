@@ -25,5 +25,5 @@ macx {
 	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaSolarSystem -lorsaEssentialOSG -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads
 }
 
-HEADERS += CometGrainsDynamics.h
+HEADERS += CometGrainsDynamics.h    gaskell.h   gaskell_mod.h
 SOURCES += CometGrainsDynamics.cpp
