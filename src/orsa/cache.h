@@ -89,6 +89,20 @@ namespace orsa {
             }
             return (*this);
         }
+    public:
+        Cache<T> & operator *= (const T & val) {
+            if (canChange()) {
+                _val *= val;
+            }
+            return (*this);
+        }
+    public:
+        Cache<T> & operator /= (const T & val) {
+            if (canChange()) {
+                _val /= val;
+            }
+            return (*this);
+        }
         
     public:
         // set only if still not set
