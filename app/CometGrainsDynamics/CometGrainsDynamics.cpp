@@ -49,13 +49,22 @@ int main (int argc, char **argv) {
     // input
 
     // 103P/Hartley 2
-    const double comet_orbit_q = orsa::FromUnits(1.058690085281137,orsa::Unit::AU);
-    const double comet_orbit_e = .6951452964967095;
+    /* const double comet_orbit_q = orsa::FromUnits(1.058690085281137,orsa::Unit::AU);
+       const double comet_orbit_e = .6951452964967095;
+       const double comet_orbit_i = 13.61716956119923*orsa::degToRad();
+       const double comet_orbit_node = 219.7626609177958*orsa::degToRad();
+       const double comet_orbit_peri = 181.1954811299036*orsa::degToRad();
+       const orsa::Time comet_orbit_Tp = orsaSolarSystem::gregorTime(2010,10,28.25696720); // 2010-Oct-28.25696720
+       const orsa::Time comet_orbit_epoch = orsaSolarSystem::gregorTime(2010,9,17.0); // comet_orbit_Tp; // orsaSolarSystem::gregorTime(2010,1,1);
+    */
+    //
+    const double comet_orbit_q = orsa::FromUnits(2.0,orsa::Unit::AU);
+    const double comet_orbit_e = .5;
     const double comet_orbit_i = 13.61716956119923*orsa::degToRad();
     const double comet_orbit_node = 219.7626609177958*orsa::degToRad();
     const double comet_orbit_peri = 181.1954811299036*orsa::degToRad();
     const orsa::Time comet_orbit_Tp = orsaSolarSystem::gregorTime(2010,10,28.25696720); // 2010-Oct-28.25696720
-    const orsa::Time comet_orbit_epoch = orsaSolarSystem::gregorTime(2010,9,17.0); // comet_orbit_Tp; // orsaSolarSystem::gregorTime(2010,1,1);
+    const orsa::Time comet_orbit_epoch = comet_orbit_Tp; // orsaSolarSystem::gregorTime(2010,1,1);
     //
     /* const double nucleus_ax = orsa::FromUnits(50.45,orsa::Unit::KM);
        const double nucleus_ay = orsa::FromUnits(50.45,orsa::Unit::KM);
@@ -65,20 +74,22 @@ int main (int argc, char **argv) {
     const size_t massCluster_points = 1024;
     const double comet_density = orsa::FromUnits(orsa::FromUnits(0.22,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double grain_density = orsa::FromUnits(orsa::FromUnits(0.50,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-    const double rotation_period = orsa::FromUnits(18.34,orsa::Unit::HOUR);
+    const double rotation_period = orsa::FromUnits(6.00,orsa::Unit::HOUR); // orsa::FromUnits(18.34,orsa::Unit::HOUR);
     const double pole_phi_Tp = 0.0*orsa::degToRad(); // rotation angle at time Tp
     const double pole_ecliptic_longitude = +69.0*orsa::degToRad();
     const double pole_ecliptic_latitude  = +34.0*orsa::degToRad();
+    const double water_sublimation_rate_at_1AU = orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1); // water
     // const double min_latitude = -90.0*orsa::degToRad(); // can do this in post-processing
     // const double max_latitude = +90.0*orsa::degToRad(); // can do this in post-processing
-    const double min_grain_radius = orsa::FromUnits(0.010000,orsa::Unit::METER);
+    const double min_grain_radius = orsa::FromUnits(0.000001,orsa::Unit::METER);
     const double max_grain_radius = orsa::FromUnits(0.100000,orsa::Unit::METER);    
     const int min_time_seconds =  60; // grains flying less than this time are not included
     const int max_time_days    =  10; // 100;
-    const size_t pow_10_max_distance = 9;
+    const size_t pow_10_max_distance = 6;
     
     // gas (drag) coefficients
-    const double gas_production_rate_at_1AU = orsa::FromUnits(1.0e27,orsa::Unit::SECOND,-1); // molecules/second
+    // const double gas_production_rate_at_1AU = orsa::FromUnits(1.0e27,orsa::Unit::SECOND,-1); // molecules/second
+    const double nucleus_water_production_rate_factor = 1.0; // to be multiplied later by total nucleus surface, water_sublimation_rate, and illumination factor, to give the total gas production rate of the comet
     const double gas_velocity_at_1AU = orsa::FromUnits(orsa::FromUnits(0.5,orsa::Unit::KM),orsa::Unit::SECOND,-1);
     const double gas_molar_mass = 18; // 18 for H20
     const double gas_drag_coefficient = 0.40; // Cd nominal: 0.40 (OR 2.00 ??)
@@ -86,13 +97,13 @@ int main (int argc, char **argv) {
     // molecules per unit area per unit time
 #warning EYE ON THIS!!! (zero?)
 #warning FACTOR for NON-pure ICE...
-    const double grain_sublimation_rate = 0.0*orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1); // 0.0*...
+    const double grain_sublimation_rate_at_1AU = 0.0*water_sublimation_rate_at_1AU; // 0.0*orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1); // 0.0*...
     const double grain_sublimation_molecule_mass = orsa::FromUnits(gas_molar_mass*1.66e-27,orsa::Unit::KG); // conversion from molar
     
 #warning drag coefficient Cd should be close to 2.0 when the grain size is close to the free mean path
     
     // const orsa::Time t_snapshot = comet_orbit_Tp - orsa::Time(60,0,0,0,0);
-    const orsa::Time t_snapshot = orsaSolarSystem::gregorTime(2010,11,4.60); // comet_orbit_Tp; // + orsa::Time(30,0,0,0,0);
+    const orsa::Time t_snapshot = comet_orbit_Tp; // orsaSolarSystem::gregorTime(2010,11,4.60); // comet_orbit_Tp; // + orsa::Time(30,0,0,0,0);
     
     // const double nucleus_volume = 4.0*orsa::pi()*nucleus_ax*nucleus_ay*nucleus_az/3.0;
     // const double nucleus_mass = comet_density*nucleus_volume; 
@@ -126,6 +137,8 @@ int main (int argc, char **argv) {
     }
     const double nucleus_mass = comet_density*nucleus_shape->volume();
     
+    const orsa::TriShape::VertexVector & vv = nucleus_shape->getVertexVector();
+    
     // now: for shapes with plates, emit proportionally to the area of each plate
     std::vector<double> cumulative_face_area;
     {
@@ -135,7 +148,6 @@ int main (int argc, char **argv) {
             sum += nucleus_shape->_getFaceArea(plt);
             cumulative_face_area.push_back(sum);
         }
-        ORSA_DEBUG("--------> %g %g equal??",cumulative_face_area[cumulative_face_area.size()-1],nucleus_shape->surfaceArea());
     }
     
     size_t iter=0;
@@ -348,16 +360,17 @@ int main (int argc, char **argv) {
             rnd2 = orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
         } while (rnd1+rnd2>1.0);
         const orsa::Vector tmp_r0 =
-            nucleus_shape->getVertexVector()[emit_face.i()] +
-            rnd1 * (nucleus_shape->getVertexVector()[emit_face.j()]-nucleus_shape->getVertexVector()[emit_face.i()]) +
-            rnd2 * (nucleus_shape->getVertexVector()[emit_face.k()]-nucleus_shape->getVertexVector()[emit_face.i()]);
+            vv[emit_face.i()] +
+            rnd1 * (vv[emit_face.j()]-vv[emit_face.i()]) +
+            rnd2 * (vv[emit_face.k()]-vv[emit_face.i()]);
         // lift it a bit
-        const orsa::Vector r0 = tmp_r0 + tmp_r0.normalized()*orsa::FromUnits(1.0,orsa::Unit::METER);
+        const orsa::Vector r0 = tmp_r0 + tmp_r0.normalized()*orsa::FromUnits(10.0,orsa::Unit::METER);
         const orsa::Vector n0 = nucleus_shape->_getFaceNormal(emit_face_index);
         
-        ORSA_DEBUG("--------> positive: %g",r0.normalized()*n0.normalized());
-        orsa::print(r0);
-        orsa::print(n0);
+        /* ORSA_DEBUG("--------> positive: %g",r0.normalized()*n0.normalized());
+           orsa::print(r0);
+           orsa::print(n0);
+        */
         
         const orsa::Vector u_r0 = r0.normalized();
         
@@ -412,9 +425,11 @@ int main (int argc, char **argv) {
             grain_ibps.inertial = new GrainDynamicInertialBodyProperty(t0,
                                                                        grain_initial_radius,
                                                                        grain_density,
-                                                                       grain_sublimation_rate,
+                                                                       grain_sublimation_rate_at_1AU,
                                                                        grain_sublimation_molecule_mass,
-                                                                       grain.get());
+                                                                       grain.get(),
+                                                                       sun.get(),
+                                                                       bg.get());
             grain_ibps.translational = new orsa::DynamicTranslationalBodyProperty;
             const orsa::Matrix nucleus_l2g_t0 = orsa::localToGlobal(nucleus.get(),
                                                                     bg.get(),
@@ -435,7 +450,7 @@ int main (int argc, char **argv) {
                                                 grain,
                                                 // grain->beta,
                                                 grain_density,
-                                                gas_production_rate_at_1AU,
+                                                nucleus_water_production_rate_factor, // gas_production_rate_at_1AU,
                                                 gas_velocity_at_1AU,
                                                 gas_molar_mass,
                                                 gas_drag_coefficient);
@@ -598,7 +613,7 @@ int main (int argc, char **argv) {
                             orsa::FromUnits(rotation_period,orsa::Unit::HOUR,-1),
                             pole_ecliptic_longitude*orsa::radToDeg(),
                             pole_ecliptic_latitude*orsa::radToDeg(),
-                            gas_production_rate_at_1AU,
+                            0, // gas_production_rate_at_1AU,
                             /* 15 */ gas_velocity_at_1AU,
                             gas_molar_mass,
                             gas_drag_coefficient,
@@ -854,7 +869,19 @@ bool GrainUpdateIBPS::update(const orsa::Time & t,
     
     // ORSA_DEBUG("set: %i",grain_r_relative_local_initial->var.isSet());
     
-    orsa::UpdateIBPS::update(t,inertial,translational,rotational);
+    
+    // orsa::UpdateIBPS::update(t,inertial,translational,rotational);
+    //
+    // modify this to call the inertial as last...
+    if (translational) {
+        translational->update(t);
+    }
+    if (rotational) {
+        rotational->update(t);
+    }
+    if (inertial) {
+        inertial->update(t);
+    }
     
     // ORSA_DEBUG("bg: %x",bg.get());
     
@@ -896,4 +923,6 @@ bool GrainUpdateIBPS::update(const orsa::Time & t,
     
     return true;
 }
+
+bool GrainDynamicInertialBodyProperty::update_call_already_in_progress;
 

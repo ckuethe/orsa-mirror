@@ -58,8 +58,9 @@ Vector Vector::normalized() const {
                       _y*_one_over_l,
                       _z*_one_over_l);
     } else {
-        ORSA_DEBUG("cannot normalize zero vector, time to die!");
-        orsa::crash();
+        // ORSA_DEBUG("cannot normalize zero vector, time to die!");
+        // orsa::crash();
+        // ORSA_DEBUG("cannot normalize zero vector, check your code!");
         // placeholder, to keep compiler happy
         return (*this);
     }
@@ -73,7 +74,7 @@ Vector & Vector::normalize() {
         _z *= _one_over_l;
         check();
     } else {
-        orsa::crash();
+        // orsa::crash();
     } 
     _reset_cache(); 
     return *this;

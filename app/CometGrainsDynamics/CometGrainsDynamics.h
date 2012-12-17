@@ -19,8 +19,8 @@
 #include <orsaSPICE/spiceBodyTranslationalCallback.h>
 
 // choose one depending on the shape file loaded
-// #include "gaskell.h"
-#include "gaskell_mod.h"
+#include "gaskell.h"
+// #include "gaskell_mod.h"
 
 using namespace orsa;
 
@@ -179,16 +179,21 @@ public:
     GrainDynamicInertialBodyProperty(const orsa::Time & t0,
                                      const double & initialRadius,
                                      const double & density,
-                                     const double & sublimationRate, /* molecules per unit area per unit time */
+                                     const double & sublimationRate_at_1AU, /* molecules per unit area per unit time */
                                      const double & moleculeMass, /* water molecule mass */
-                                     const orsa::Body * grain) : 
+                                     const orsa::Body * grain,
+                                     const orsa::Body * sun,
+                                     const orsa::BodyGroup * bg) : 
         InertialBodyProperty(),
         _t0(t0),
         _initialRadius(initialRadius),
         _density(density),
-        _dRadius_dt(sublimationRate*moleculeMass/(4.0*density)), /* check factors! i.e. the factor 4.0 due to energy balance, so it's sublimating from pi*Rg^2 instead of 4*pi*Rg^2 */
-        _grain(grain) {
+        _dRadius_dt_at_1AU(sublimationRate_at_1AU*moleculeMass/(4.0*density)), /* check factors! i.e. the factor 4.0 due to energy balance, so it's sublimating from pi*Rg^2 instead of 4*pi*Rg^2 */
+        _grain(grain),
+        _sun(sun),
+        _bg(bg) {
         // ORSA_DEBUG("dRdt: %g",_dRadius_dt);
+        update_call_already_in_progress = false;
         _init();
     }
 public:
@@ -197,8 +202,11 @@ public:
         _t0(ibp._t0),
         _initialRadius(ibp._initialRadius),
         _density(ibp._density),
-        _dRadius_dt(ibp._dRadius_dt),
-        _grain(ibp._grain) {
+        _dRadius_dt_at_1AU(ibp._dRadius_dt_at_1AU),
+        _grain(ibp._grain),
+        _sun(ibp._sun),
+        _bg(ibp._bg) {
+        update_call_already_in_progress = ibp.update_call_already_in_progress;
         _init();
     }
 protected:
@@ -211,8 +219,10 @@ public:
     const orsa::Time _t0;
     const double _initialRadius;
     const double _density;
-    const double _dRadius_dt; // radius shrinking rate
+    const double _dRadius_dt_at_1AU; // radius shrinking rate
     const orsa::Body * _grain;
+    const orsa::Body * _sun;
+    const orsa::BodyGroup * _bg;
 protected:
     double _radius; // updated by update(t) calls
     double _mass;   // updated by update(t) calls
@@ -266,15 +276,53 @@ public:
     }
 public:
     BodyPropertyType type() const { return BP_DYNAMIC; }
+
+protected:
+    // hack to prevent recursive calls...
+    static bool update_call_already_in_progress;
 public:
     bool update(const orsa::Time & t) {
         
+        /* ORSA_DEBUG("update_call_already_in_progress: %i   this: %x",
+           update_call_already_in_progress,this);
+        */
+        
+        if (update_call_already_in_progress) return true;
+        update_call_already_in_progress = true;
+        
+#warning minimum radius here should be a parameter...
+        const double min_radius = orsa::FromUnits(1.0e-6,orsa::Unit::METER);
+        
         // orsa::print(t);
+        
         const double dt = (t-_t0).get_d();
         
-#warning minimum size here should be a parameter...
-        _radius = std::max(orsa::FromUnits(1.0e-6,orsa::Unit::METER),
-                           _initialRadius -_dRadius_dt*dt);
+        // ORSA_DEBUG("dt: %g",dt);
+        
+        if (t==_t0) {
+            _radius = std::max(min_radius,_initialRadius);
+        } else {
+            orsa::Vector rSun, vSun;
+            if (!_bg->getInterpolatedPosVel(rSun,vSun,_sun,t)) {
+                ORSA_DEBUG("problems...");
+            }	
+            orsa::Vector rGrain,vGrain;
+            if (!_bg->getInterpolatedPosVel(rGrain,vGrain,_grain,t)) {
+                ORSA_DEBUG("problems...");
+            }
+            /* 
+               orsa::IBPS ibps;
+               _bg->getIBPS(ibps,_grain,t);
+               ibps.lock();
+               const orsa::Vector rGrain = ibps.translational->position();
+               ibps.unlock();
+            */
+            const orsa::Vector R_h = (rGrain-rSun);
+            const double r_h = R_h.length();
+            const double r_h_AU = orsa::FromUnits(r_h,orsa::Unit::AU,-1);
+            
+            _radius = std::max(min_radius,_initialRadius-_dRadius_dt_at_1AU*pow(r_h_AU,-2)*dt);
+        }
         
         // ORSA_DEBUG("dt: %g  _radius: %g",dt,_radius);
         
@@ -289,6 +337,8 @@ public:
         _mass = 4.0/3.0*orsa::pi()*orsa::cube(_radius)*_density;
         
         // _grain->beta is now updated in GrainUpdateIBPS
+        
+        update_call_already_in_progress = false;
         
         return true;
     }
@@ -305,7 +355,7 @@ public:
             const orsa::Body * grain_in,
             // const double & grain_beta_in,
             const double & grain_density_in,
-            const double & gas_production_rate_at_1AU,
+            const double & nucleus_water_production_rate_factor, // gas_production_rate_at_1AU,
             const double & gas_velocity_at_1AU,
             const double & gas_molar_mass, // i.e. 18 for H20
             const double & gas_drag_coefficient) :
@@ -318,7 +368,7 @@ public:
         grainDensity(grain_density_in),
         // grainRadius(GrainBetaToRadius(grainBeta,grainDensity)),
         // grainArea(orsa::pi()*orsa::square(grainRadius)),
-        Q_1AU(gas_production_rate_at_1AU),
+        eta_water(nucleus_water_production_rate_factor),
         Vgas_1AU(gas_velocity_at_1AU),
         Mgas(orsa::FromUnits(gas_molar_mass*1.66e-27,orsa::Unit::KG)), // conversion from molar
         Cd(gas_drag_coefficient),
@@ -327,6 +377,8 @@ protected:
     virtual ~GasDrag() { }
 public:	
     orsa::Vector getThrust(const orsa::Time & t) const {
+        
+        static const double water_sublimation_rate_at_1AU = orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1);
         
         // ORSA_DEBUG("referenceCount(): %i",referenceCount());
         
@@ -388,6 +440,8 @@ public:
            orsa::FromUnits(nucleus_shape->volume(),orsa::Unit::KM,-3));
         */
         
+        const orsa::TriShape::VertexVector & vv = nucleus_shape->getVertexVector();
+        
 #warning this would be good if force from sublimation was not computed too in this method
         /* 
            if (nucleus_shape->isInside(g2l*(rGrain-rComet))) {
@@ -397,64 +451,168 @@ public:
         */
         
         // switch to radial when difference is approximately smaller than 1 deg
-        orsa::Vector u_gas;
+        // orsa::Vector u_gas;
         /* #warning shoud replace this test with one more physically sound, comparing rotation period with gas expansion time to reach the distance
            if (r_c/nucleus_max_radius > 1000) {
            // radial
            u_gas = R_c.normalized();
            } else {
         */
-        orsa::Vector n0;
-        {
-            // relative to comet
-            // const orsa::Vector V_Gas_c   = v_gas_h * (rGrain-rComet).normalized();
-            // modify V_gas_c to smoothly decrease near nucleus
-            const orsa::Vector dr_g = rGrain-rComet;
-            const orsa::Vector dr_l = g2l*dr_g;
-            /* const orsa::Vector closest_point =
-               nucleus_shape->closestVertex(dr_l);
-               const orsa::Vector normal_l =
-               nucleus_shape->normalVector(closest_point);
-            */
-            const orsa::Vector normal_l = nucleus_shape->_getVertexNormal(nucleus_shape->closestVertexIndex(dr_l));
-            n0 = normal_l.normalized();
-            const orsa::Vector normal_g = l2g*normal_l;
-            u_gas = normal_g;
-        }
+        // orsa::Vector n0;
+        /* 
+           {
+           // relative to comet
+           // const orsa::Vector V_Gas_c   = v_gas_h * (rGrain-rComet).normalized();
+           // modify V_gas_c to smoothly decrease near nucleus
+           const orsa::Vector dr_g = rGrain-rComet;
+           const orsa::Vector dr_l = g2l*dr_g;
+           const orsa::Vector normal_l = nucleus_shape->_getVertexNormal(nucleus_shape->closestVertexIndex(dr_l));
+           n0 = normal_l.normalized();
+           const orsa::Vector normal_g = l2g*normal_l;
+           u_gas = normal_g;
+           }
+        */
         
         const orsa::Vector R_h = (rComet-rSun);
         const double r_h = R_h.length();
-
+        
         const double r_h_AU = orsa::FromUnits(r_h,orsa::Unit::AU,-1);
         
         const orsa::Vector R_c = (rGrain-rComet);
         const double r_c = R_c.length();
         
+        const double water_sublimation_rate = water_sublimation_rate_at_1AU * pow(r_h_AU,-2);
+        
+        // const double dist_ratio = r_c / nucleus_shape->boundingRadius();
+        const double dist_ratio = r_c / nucleus_volume_equivalent_average_radius;
         // gas velocity at r_h, relative to comet
         const double v_gas_h = Vgas_1AU * pow(r_h_AU,-0.5);
+        const double v_gas_factor = dist_ratio/(1.0+dist_ratio); // goes from 0.5 near nucleus to 1.0 asymptotically
+        const double v_gas_at_grain = v_gas_h*v_gas_factor;
+        
+        // ORSA_DEBUG("v_gas_at_grain: %g [km/s]",orsa::FromUnits(orsa::FromUnits(v_gas_at_grain,orsa::Unit::KM,-1),orsa::Unit::SECOND));
+        
+        // compute at class init?
+        const double production_rate_per_unit_surface = eta_water*water_sublimation_rate;
+        
+#warning compute plate center and size once for all in Shape class?
+        
+        double effective_production_rate=0.0;
+        orsa::Vector tmp_u_gas(0,0,0);
+        double tmp_number_density_gas=0.0;
+        // double max_test=0.0, mtt1=0.0, mtt2=0.0, mtt3=0.0, mtt4=0.0;
+        for (size_t plt=0; plt<nucleus_shape->getFaceVector().size(); ++plt) {
+            
+            const orsa::TriShape::TriIndex plt_TriIndex = nucleus_shape->getFaceVector()[plt];
+            
+            const orsa::Vector & v_i = vv[plt_TriIndex.i()];
+            const orsa::Vector & v_j = vv[plt_TriIndex.j()];
+            const orsa::Vector & v_k = vv[plt_TriIndex.k()];
+            
+            const orsa::Vector & plt_center = (v_i+v_j+v_k)/3.0;
+            
+            const orsa::Vector & plt_normal = nucleus_shape->_getFaceNormal(plt);
+            
+            const orsa::Vector delta_l = (g2l*(rGrain-rComet)-plt_center);
+            
+            const double theta_sun = acos(g2l*(rSun-rComet).normalized() * plt_normal);
+            
+            effective_production_rate +=
+                production_rate_per_unit_surface *
+                nucleus_shape->_getFaceArea(plt) *
+                cos(0.5*theta_sun);
+            
+            if (plt_normal*delta_l <= 0.0) continue;
+            
+            // ORSA_DEBUG("one good...");
+            
+            // RMS of each side lenght
+            /* const double plt_RMS_scale = sqrt(((v_j-v_i).lengthSquared()+
+               (v_k-v_i).lengthSquared()+
+               (v_k-v_j).lengthSquared())/3.0);
+            */
+
+            // const double mx_factor = std::max(0.0,plt_normal*delta_l) / pow(delta_l.lengthSquared()+orsa::square(plt_RMS_scale),1.5);
+            // const double mx_factor = std::max(0.0,plt_normal*delta_l) / pow(delta_l.lengthSquared()+nucleus_shape->_getFaceArea(plt),1.5);
+            // const double mx_factor = std::max(0.0,plt_normal*delta_l) * nucleus_shape->_getFaceArea(plt) / pow(delta_l.lengthSquared()+nucleus_shape->_getFaceArea(plt),1.5);
+            // const double mx_factor = 1.0 / (nucleus_shape->_getFaceArea(plt) + orsa::square(plt_normal*delta_l));
+            // const double lp = (delta_l.length()-delta_l*plt_normal);
+            const double lp = (delta_l-(delta_l*plt_normal)*plt_normal).length();
+            const double lp_ratio  = lp/sqrt(nucleus_shape->_getFaceArea(plt)/orsa::pi());
+            const double lp_factor = 1.0 / (1.0 + orsa::square(lp_ratio));
+            const double lp_integral_normalization = 1.0/orsa::square(orsa::pi());
+            const double mx_factor =
+                lp_integral_normalization * lp_factor / (nucleus_shape->_getFaceArea(plt) + orsa::square(plt_normal*delta_l)); // ~ 1/r^2
+            
+            const double plt_term = 
+                production_rate_per_unit_surface *
+                nucleus_shape->_getFaceArea(plt) *
+                cos(0.5*theta_sun) * 
+                mx_factor;
+            
+            // std::max(0.0,plt_normal*delta_l) / pow(orsa::square(plt_normal*delta_l)+orsa::square(plt_RMS_scale),1.5);
+            // std::max(0.0,plt_normal*delta_l) / pow(orsa::square(plt_normal*delta_l)+1.0,1.5);
+            // std::max(0.0,plt_normal*delta_l) / pow(delta_l.lengthSquared()+orsa::square(plt_RMS_scale),1.5);
+            tmp_number_density_gas += plt_term;
+            // tmp_u_gas += plt_term*delta_l.normalized();
+            // tmp_u_gas += plt_term*plt_normal;
+            // tmp_u_gas += plt_term*(lp_factor*plt_normal+(1.0-lp_factor)*delta_l.normalized());
+            tmp_u_gas += plt_term*delta_l.normalized();
+            
+            /* if (plt_term > max_test) {
+               max_test = plt_term;
+               mtt1 = delta_l.length();
+               mtt2 = lp_ratio;
+               mtt3 = lp_factor;
+               mtt4 = nucleus_shape->_getFaceArea(plt) * mx_factor;
+               }   
+            */
+            
+        }
+        const double number_density_gas_at_grain = 1.0/(orsa::twopi()*v_gas_at_grain)*tmp_number_density_gas;
+        // const orsa::Vector u_gas_l = 1.0/(orsa::twopi()*v_gas_at_grain*number_density_gas_at_grain)*tmp_u_gas.normalized();
+        // ORSA_DEBUG("------------");
+        const orsa::Vector u_gas_l = tmp_u_gas.normalized();
+        const orsa::Vector v_gas_g = l2g*u_gas_l*v_gas_at_grain;
+        // orsa::print(u_gas_l);
+        // orsa::print(v_gas_g);
+        
+        /* ORSA_DEBUG("max_test = %10.5e mtt: %10.5f %10.5f %10.5f %10.5f",
+           max_test,mtt1,mtt2,mtt3,mtt4);
+        */
+        
+        const double rho = number_density_gas_at_grain * Mgas;
+        
+        // ORSA_DEBUG("effecitive production rate: %g [molecules/second]",orsa::FromUnits(effective_production_rate,orsa::Unit::SECOND));
+        // ORSA_DEBUG("number density: %g",number_density_gas_at_grain);
+        
+        // ORSA_DEBUG("scp: %g",v_gas_g.normalized()*(rGrain-rComet).normalized());
+        
+        // gas velocity at r_h, relative to comet
+        // const double v_gas_h = Vgas_1AU * pow(r_h_AU,-0.5);
         
         // production rate at r_h
-        const double Q_h = Q_1AU * pow(r_h_AU,-2);
+        // const double Q_h = Q_1AU * pow(r_h_AU,-2);
         
         // number density at r_c for production rate Q_h
         //const double n = Q_h / (4*orsa::pi()*orsa::square(r_c)*v_gas_h);
         // optional: can multiply x cos(theta_sun) to account for gas only from lit side of comet
         // const double theta_sun = acos((rSun-rComet).normalized() * R_c.normalized());
-        const double theta_sun = acos((rSun-rComet).normalized() * n0);
-#warning MAKE SURE n0 is LOCAL or GLOBAL...
+        //         const double theta_sun = acos((rSun-rComet).normalized() * n0);
+        // #warning MAKE SURE n0 is LOCAL or GLOBAL...
         
         
         // #warning restore this one!
-        const double theta_sun_factor = cos(0.5*theta_sun);
+        // const double theta_sun_factor = cos(0.5*theta_sun);
         // const double theta_sun_factor = 1.0;
         
         // const double theta_sun_factor = std::max(0.0,pow(cos(theta_sun),0.25)); // temperature for a low thermal inertia body goes as cos(theta_sun)^(1/4)
-        const double n = Q_h * theta_sun_factor / (4*orsa::pi()*orsa::square(r_c)*v_gas_h);
+        // const double n = Q_h * theta_sun_factor / (4*orsa::pi()*orsa::square(r_c)*v_gas_h);
         
         // ORSA_DEBUG("theta_sun_factor: %g",theta_sun_factor);
         
         // rho = mass density = number density x molecular mass
-        const double rho = n * Mgas;
+        // const double rho = n * Mgas;
         
         orsa::IBPS grain_ibps;
         // GrainIBPS grain_ibps;
@@ -467,14 +625,21 @@ public:
         // NOTE: gas direction is proportional to normal_g, which gets close to radial at large distances
         
         // const double dist_ratio = r_c / nucleus_max_radius;
-        const double dist_ratio = r_c / nucleus_volume_equivalent_average_radius;
-        const double v_Gas_factor = dist_ratio/(1.0+dist_ratio); // goes from 0.5 near nucleus to 1.0 asymptotically
-        const orsa::Vector V_Gas_c = v_Gas_factor * v_gas_h * u_gas;
+        // const double dist_ratio = r_c / nucleus_volume_equivalent_average_radius;
+        // const double v_Gas_factor = dist_ratio/(1.0+dist_ratio); // goes from 0.5 near nucleus to 1.0 asymptotically
+        // const orsa::Vector V_Gas_c = v_Gas_factor * v_gas_h * u_gas;
+        
         const orsa::Vector V_Grain_c = vGrain-vComet;
-        const double dV = (V_Grain_c - V_Gas_c)*(V_Gas_c.normalized());
+        // const double dV = (V_Grain_c - V_Gas_c)*(V_Gas_c.normalized());
+        const double dV = (V_Grain_c - v_gas_g) * v_gas_g.normalized();
         const double sign = (dV>0) ? -1 : +1;
         const orsa::Vector thrust =
-            sign*0.5*rho*dV*dV*Cd*grainArea*V_Gas_c.normalized();
+            sign*0.5*rho*dV*dV*Cd*grainArea*v_gas_g.normalized();
+        
+        /* ORSA_DEBUG("dV: %g m/s",orsa::FromUnits(orsa::FromUnits(dV,orsa::Unit::METER,-1),orsa::Unit::SECOND));
+           orsa::print(V_Grain_c);
+           orsa::print(v_gas_g);
+        */
         
         // force due to sublimation? acc = mol*Vgas*Z / (Rg*rho_grain)
         orsa::Vector sublimationForce(0,0,0);
@@ -482,18 +647,17 @@ public:
 #warning MUST pass the parameters as arguments...
 #warning what is the multiplicative factor in front?
             const double sublimationForceFactor = 0.00;
-            const double grain_sublimation_rate = orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1);
+            const double grain_sublimation_rate_at_1AU = orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1);
             sublimationForce =
-                // -uS*sublimationForceFactor*Mgas*grain_sublimation_rate*v_gas_h/(grainRadius*grainDensity); // this is just acc
-                -uS*sublimationForceFactor*Mgas*grain_sublimation_rate*v_gas_h*grainArea;
+                -uS*sublimationForceFactor*Mgas*grain_sublimation_rate_at_1AU*pow(r_h_AU,-2)*v_gas_h*grainArea;
         }
         
         if (1) {
-            gmp_printf("%12.6f %12.3f %12.6f %12.6f %12.6f %12.6f %g %g %g %g\n",
+            gmp_printf("%12.6f %12.3f %12.6f %12.6f %12.6f %12.6f %10.3f %10.3f %10.3f %10.6f\n",
                        orsa::FromUnits(t.get_d(),orsa::Unit::DAY,-1),
                        orsa::FromUnits(R_c.length(),orsa::Unit::KM,-1),
                        dist_ratio,
-                       orsa::radToDeg()*acos(std::min(1.0,u_gas*(R_c.normalized()))),
+                       orsa::radToDeg()*acos(std::min(1.0,v_gas_g.normalized()*(R_c.normalized()))),
                        orsa::radToDeg()*acos(std::min(1.0,(vGrain-vComet).normalized()*(R_c.normalized()))),
                        orsa::radToDeg()*acos(std::min(1.0,(rSun-rComet).normalized()*(R_c.normalized()))),
                        orsa::FromUnits(R_c*uS,orsa::Unit::KM,-1),
@@ -521,7 +685,8 @@ protected:
     const double grainDensity;
     // const double grainRadius;
     // const double grainArea;
-    const double Q_1AU; // gas production rate at 1 AU [units: number/second]
+    // const double Q_1AU; // gas production rate at 1 AU [units: number/second]
+    const double eta_water; // nucleus_water_production_rate_factor
     const double Vgas_1AU; // gas velocity at 1 AU
     const double Mgas; // gas molecule mass (already converted from molar to KG)
     const double Cd; // drag coefficient
@@ -625,7 +790,7 @@ public:
         }
         
         if (nucleusIBPS.inertial->originalShape()->isInside(grain_r_relative_local)) {
-            ORSA_DEBUG("collision, aborting integration");
+            // ORSA_DEBUG("collision, aborting integration");
 #warning note: the collision is not resolved exactly (i.e. rewind time for exact contact of body surface)
             outcome = IMPACT;
             // ORSA_DEBUG("outcome: %i",outcome);
