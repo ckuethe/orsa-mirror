@@ -523,8 +523,8 @@ public:
             const double theta_sun = acos(g2l*(rSun-rComet).normalized() * plt_normal);
             
             // const double theta_sun_factor = std::max(0.0,cos(0.5*theta_sun));
-            const double theta_sun_factor = std::max(0.0,pow(cos(theta_sun),0.25)); // temperature for a low thermal inertia body goes as cos(theta_sun)^(1/4)
-            // const double theta_sun_factor = std::max(0.0,cos(theta_sun));
+            // const double theta_sun_factor = std::max(0.0,pow(cos(theta_sun),0.25)); // temperature for a low thermal inertia body goes as cos(theta_sun)^(1/4)
+            const double theta_sun_factor = std::max(0.0,cos(theta_sun));
             
 #warning compare factors all around in this loop and make sure they match
             
@@ -552,9 +552,16 @@ public:
             const double lp_ratio  = lp/sqrt(nucleus_shape->_getFaceArea(plt)/orsa::pi());
             const double lp_factor = 1.0 / (1.0 + orsa::square(lp_ratio));
             const double lp_integral_normalization = 1.0/orsa::square(orsa::pi());
+            /* const double mx_factor =
+               lp_integral_normalization * lp_factor / (nucleus_shape->_getFaceArea(plt) + orsa::square(plt_normal*delta_l)); // ~ 1/r^2
+            */
             const double mx_factor =
-                lp_integral_normalization * lp_factor / (nucleus_shape->_getFaceArea(plt) + orsa::square(plt_normal*delta_l)); // ~ 1/r^2
-
+                lp_integral_normalization * lp_factor / (nucleus_shape->_getFaceArea(plt) + delta_l.lengthSquared()); // ~ 1/r^2
+            
+            
+            
+            
+            
 #warning fix cos theta sun
             
             const double plt_term = 
@@ -683,7 +690,9 @@ public:
             // print for gas test
             const orsa::Vector r_local = g2l*(rGrain-rComet);
             const orsa::Vector v_gas_l = g2l*v_gas_g;
-            gmp_printf("GAS_TEST %+8.3f %+8.3f %+8.3f %8.3f   %8.3e   %+10.6f %+10.6f %+10.6f %10.6f\n",
+            const double test_grain_area = orsa::pi()*orsa::square(orsa::FromUnits(0.010000,orsa::Unit::METER));
+            const orsa::Vector unit_thrust = 0.5*rho*v_gas_l.lengthSquared()*Cd*test_grain_area*v_gas_l.normalized();
+            gmp_printf("GAS_TEST %+8.3f %+8.3f %+8.3f %8.3f   %8.3e   %+10.6f %+10.6f %+10.6f %10.6f   %+10.3e %+10.3e %+10.3e %10.3e\n",
                        orsa::FromUnits(r_local.getX(),orsa::Unit::KM,-1),
                        orsa::FromUnits(r_local.getY(),orsa::Unit::KM,-1),
                        orsa::FromUnits(r_local.getZ(),orsa::Unit::KM,-1),
@@ -694,7 +703,12 @@ public:
                        orsa::FromUnits(orsa::FromUnits(v_gas_l.getX(),orsa::Unit::KM,-1),orsa::Unit::SECOND),
                        orsa::FromUnits(orsa::FromUnits(v_gas_l.getY(),orsa::Unit::KM,-1),orsa::Unit::SECOND),
                        orsa::FromUnits(orsa::FromUnits(v_gas_l.getZ(),orsa::Unit::KM,-1),orsa::Unit::SECOND),
-                       orsa::FromUnits(orsa::FromUnits(v_gas_l.length(),orsa::Unit::KM,-1),orsa::Unit::SECOND));
+                       orsa::FromUnits(orsa::FromUnits(v_gas_l.length(),orsa::Unit::KM,-1),orsa::Unit::SECOND),
+                       //
+                       unit_thrust.getX(),
+                       unit_thrust.getY(),
+                       unit_thrust.getZ(),
+                       unit_thrust.length());
             
         }
         
