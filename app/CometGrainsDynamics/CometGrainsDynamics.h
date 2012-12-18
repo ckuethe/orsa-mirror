@@ -514,9 +514,9 @@ public:
             const orsa::Vector & v_j = vv[plt_TriIndex.j()];
             const orsa::Vector & v_k = vv[plt_TriIndex.k()];
             
-            const orsa::Vector & plt_center = (v_i+v_j+v_k)/3.0;
+            const orsa::Vector plt_center = (v_i+v_j+v_k)/3.0;
             
-            const orsa::Vector & plt_normal = nucleus_shape->_getFaceNormal(plt);
+            const orsa::Vector plt_normal = nucleus_shape->_getFaceNormal(plt);
             
             const orsa::Vector delta_l = (g2l*(rGrain-rComet)-plt_center);
             
@@ -534,61 +534,63 @@ public:
                 theta_sun_factor;
             
             if (plt_normal*delta_l <= 0.0) continue;
-            
-            // ORSA_DEBUG("one good...");
-            
-            // RMS of each side lenght
-            /* const double plt_RMS_scale = sqrt(((v_j-v_i).lengthSquared()+
-               (v_k-v_i).lengthSquared()+
-               (v_k-v_j).lengthSquared())/3.0);
-            */
 
-            // const double mx_factor = std::max(0.0,plt_normal*delta_l) / pow(delta_l.lengthSquared()+orsa::square(plt_RMS_scale),1.5);
-            // const double mx_factor = std::max(0.0,plt_normal*delta_l) / pow(delta_l.lengthSquared()+nucleus_shape->_getFaceArea(plt),1.5);
-            // const double mx_factor = std::max(0.0,plt_normal*delta_l) * nucleus_shape->_getFaceArea(plt) / pow(delta_l.lengthSquared()+nucleus_shape->_getFaceArea(plt),1.5);
-            // const double mx_factor = 1.0 / (nucleus_shape->_getFaceArea(plt) + orsa::square(plt_normal*delta_l));
-            // const double lp = (delta_l.length()-delta_l*plt_normal);
-            const double lp = (delta_l-(delta_l*plt_normal)*plt_normal).length();
-            const double lp_ratio  = lp/sqrt(nucleus_shape->_getFaceArea(plt)/orsa::pi());
-            const double lp_factor = 1.0 / (1.0 + orsa::square(lp_ratio));
-            const double lp_integral_normalization = 1.0/orsa::square(orsa::pi());
+            /* const double lp = (delta_l-(delta_l*plt_normal)*plt_normal).length();
+               const double lp_ratio  = lp/sqrt(nucleus_shape->_getFaceArea(plt)/orsa::pi());
+               const double lp_factor = 1.0 / (1.0 + orsa::square(lp_ratio));
+               const double lp_integral_normalization = 1.0/orsa::square(orsa::pi());
+            */
             /* const double mx_factor =
                lp_integral_normalization * lp_factor / (nucleus_shape->_getFaceArea(plt) + orsa::square(plt_normal*delta_l)); // ~ 1/r^2
             */
-            const double mx_factor =
-                lp_integral_normalization * lp_factor / (nucleus_shape->_getFaceArea(plt) + delta_l.lengthSquared()); // ~ 1/r^2
-            
-            
-            
-            
-            
-#warning fix cos theta sun
-            
-            const double plt_term = 
-                production_rate_per_unit_surface *
-                nucleus_shape->_getFaceArea(plt) *
-                theta_sun_factor *
-                mx_factor;
-            
-            // std::max(0.0,plt_normal*delta_l) / pow(orsa::square(plt_normal*delta_l)+orsa::square(plt_RMS_scale),1.5);
-            // std::max(0.0,plt_normal*delta_l) / pow(orsa::square(plt_normal*delta_l)+1.0,1.5);
-            // std::max(0.0,plt_normal*delta_l) / pow(delta_l.lengthSquared()+orsa::square(plt_RMS_scale),1.5);
-            tmp_number_density_gas += plt_term;
-            // tmp_u_gas += plt_term*delta_l.normalized();
-            // tmp_u_gas += plt_term*plt_normal;
-            // tmp_u_gas += plt_term*(lp_factor*plt_normal+(1.0-lp_factor)*delta_l.normalized());
-            tmp_u_gas += plt_term*delta_l.normalized();
-            
-            /* if (plt_term > max_test) {
-               max_test = plt_term;
-               mtt1 = delta_l.length();
-               mtt2 = lp_ratio;
-               mtt3 = lp_factor;
-               mtt4 = nucleus_shape->_getFaceArea(plt) * mx_factor;
-               }   
+            /* const double mx_factor =
+               lp_integral_normalization * lp_factor / (nucleus_shape->_getFaceArea(plt) + delta_l.lengthSquared()); // ~ 1/r^2
             */
             
+            const double plt_area_equivalent_radius = sqrt(nucleus_shape->_getFaceArea(plt)/orsa::pi());
+#warning variable factor here...
+            const double height_below_plt = 1.0*plt_area_equivalent_radius; // variable from about 1.0 to a few...
+            const orsa::Vector plt_ghost_center = plt_center - plt_normal*height_below_plt;
+            const orsa::Vector delta_ghost = g2l*(rGrain-rComet)-plt_ghost_center;
+            
+            orsa::Vector intersectionPoint;
+            /* if (orsa::rayIntersectsTriangle(intersectionPoint,
+               g2l*(rGrain-rComet),
+               -delta_ghost.normalized(),
+               v_i,
+               v_j,
+               v_k,
+               false)) {
+            */
+            {            
+                const double plt_term = 
+                    production_rate_per_unit_surface *
+                    nucleus_shape->_getFaceArea(plt) *
+                    theta_sun_factor *
+                    1.0 / delta_ghost.lengthSquared();
+                
+                // std::max(0.0,plt_normal*delta_l) / pow(orsa::square(plt_normal*delta_l)+orsa::square(plt_RMS_scale),1.5);
+                // std::max(0.0,plt_normal*delta_l) / pow(orsa::square(plt_normal*delta_l)+1.0,1.5);
+                // std::max(0.0,plt_normal*delta_l) / pow(delta_l.lengthSquared()+orsa::square(plt_RMS_scale),1.5);
+                tmp_number_density_gas += plt_term;
+                // tmp_u_gas += plt_term*delta_l.normalized();
+                // tmp_u_gas += plt_term*plt_normal;
+                // tmp_u_gas += plt_term*(lp_factor*plt_normal+(1.0-lp_factor)*delta_l.normalized());
+                // tmp_u_gas += plt_term*delta_l.normalized();
+                tmp_u_gas += plt_term*delta_ghost.normalized();
+                
+                /* if (plt_term > max_test) {
+                   max_test = plt_term;
+                   mtt1 = delta_l.length();
+                   mtt2 = lp_ratio;
+                   mtt3 = lp_factor;
+                   mtt4 = nucleus_shape->_getFaceArea(plt) * mx_factor;
+                   }   
+                */
+            }
+            
         }
+#warning CHECK AGAIN THIS NORMALIZATION ...
         const double number_density_gas_at_grain = 1.0/(orsa::twopi()*v_gas_at_grain)*tmp_number_density_gas;
         // const orsa::Vector u_gas_l = 1.0/(orsa::twopi()*v_gas_at_grain*number_density_gas_at_grain)*tmp_u_gas.normalized();
         // ORSA_DEBUG("------------");
