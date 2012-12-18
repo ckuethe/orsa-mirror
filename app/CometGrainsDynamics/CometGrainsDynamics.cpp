@@ -58,7 +58,7 @@ int main (int argc, char **argv) {
        const orsa::Time comet_orbit_epoch = orsaSolarSystem::gregorTime(2010,9,17.0); // comet_orbit_Tp; // orsaSolarSystem::gregorTime(2010,1,1);
     */
     //
-    const double comet_orbit_q = orsa::FromUnits(2.0,orsa::Unit::AU);
+    const double comet_orbit_q = orsa::FromUnits(1.0,orsa::Unit::AU);
     const double comet_orbit_e = .5;
     const double comet_orbit_i = 13.61716956119923*orsa::degToRad();
     const double comet_orbit_node = 219.7626609177958*orsa::degToRad();
@@ -74,14 +74,14 @@ int main (int argc, char **argv) {
     const size_t massCluster_points = 1024;
     const double comet_density = orsa::FromUnits(orsa::FromUnits(0.22,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double grain_density = orsa::FromUnits(orsa::FromUnits(0.50,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-    const double rotation_period = orsa::FromUnits(6.00,orsa::Unit::HOUR); // orsa::FromUnits(18.34,orsa::Unit::HOUR);
+    const double rotation_period = orsa::FromUnits(5.00,orsa::Unit::HOUR); // orsa::FromUnits(18.34,orsa::Unit::HOUR);
     const double pole_phi_Tp = 0.0*orsa::degToRad(); // rotation angle at time Tp
     const double pole_ecliptic_longitude = +69.0*orsa::degToRad();
     const double pole_ecliptic_latitude  = +34.0*orsa::degToRad();
     const double water_sublimation_rate_at_1AU = orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1); // water
     // const double min_latitude = -90.0*orsa::degToRad(); // can do this in post-processing
     // const double max_latitude = +90.0*orsa::degToRad(); // can do this in post-processing
-    const double min_grain_radius = orsa::FromUnits(0.000001,orsa::Unit::METER);
+    const double min_grain_radius = orsa::FromUnits(0.001000,orsa::Unit::METER);
     const double max_grain_radius = orsa::FromUnits(0.100000,orsa::Unit::METER);    
     const int min_time_seconds =  60; // grains flying less than this time are not included
     const int max_time_days    =  10; // 100;
@@ -159,7 +159,14 @@ int main (int argc, char **argv) {
         // const orsa::Time t0 = t_snapshot - orsa::Time((max_time_days*86400)*(1000000*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()));
         // #warning maybe use log scale for interval sampling!?
         // #warning have a minimumum here too? as it is, the minimum is 1 mu-sec...
-        const orsa::Time t0 = t_snapshot - orsa::Time(exp(log(min_time_seconds*1e6) + (log(max_time_days*86400.0*1.0e6)-log(min_time_seconds*1e6))*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()));
+#warning use this one
+        // const orsa::Time t0 = t_snapshot - orsa::Time(exp(log(min_time_seconds*1e6) + (log(max_time_days*86400.0*1.0e6)-log(min_time_seconds*1e6))*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()));
+        //
+        // this one for gas test only
+        // const orsa::Time t0 = t_snapshot;
+        // 
+        //
+        const orsa::Time t0 = (gas_plot_run) ? t_snapshot : t_snapshot - orsa::Time(exp(log(min_time_seconds*1e6) + (log(max_time_days*86400.0*1.0e6)-log(min_time_seconds*1e6))*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()));
         
         // ORSA_DEBUG("t0: %20.12e",t0.get_d());
         
@@ -443,7 +450,7 @@ int main (int argc, char **argv) {
             // gas drag
             // if (gas_drag_coefficient > 0.0) {
             {
-                // this actuall also included sublimation force computation...
+                // this also includes sublimation force computation...
                 grain->propulsion = new GasDrag(bg,
                                                 sun,
                                                 nucleus,
@@ -459,6 +466,55 @@ int main (int argc, char **argv) {
             grain->setInitialConditions(grain_ibps);
         }
         bg->addBody(grain);
+        
+        if (gas_plot_run) {
+            // test: gas around nucleus
+            if (t_snapshot != t0) {
+                ORSA_DEBUG("must set t_snapshot = t0 to run this test...");
+                exit(0);
+            }
+            const orsa::Matrix nucleus_l2g_t0 = orsa::localToGlobal(nucleus.get(),
+                                                                    bg.get(),
+                                                                    t0);
+            const orsa::Matrix nucleus_g2l_t0 = orsa::globalToLocal(nucleus.get(),
+                                                                    bg.get(),
+                                                                    t0);
+            IBPS grain_ibps = grain->getInitialConditions();
+            const double ds = orsa::FromUnits( 50.0,orsa::Unit::METER);
+            const double  L = orsa::FromUnits(  2.0,orsa::Unit::KM);
+            double x=-L;
+            while (x<=L) {
+                double y=-L;
+                while (y<=L) {
+                    // const orsa::Vector tmp_r0(x,y,0.0);
+                    const orsa::Vector tmp_r0(x,0.0,y);
+                    if (!nucleus_shape->isInside(tmp_r0)) {
+                        grain_ibps.translational->setPosition(nucleus_r0+nucleus_l2g_t0*tmp_r0);
+#warning set grain velocity too??
+                        // grain->setInitialConditions(grain_ibps);
+                        bg->insertIBPS(grain_ibps,grain,false,true);
+                        const orsa::Vector thrust = grain->propulsion->getThrust(t0);
+                        // ORSA_DEBUG("%g %g",x,y);
+                        // orsa::print(nucleus_g2l_t0*(grain_ibps.translational->position()-nucleus_r0));
+                        
+                        /* orsa::Vector rComet, vComet;
+                           if (!bg->getInterpolatedPosVel(rComet,vComet,nucleus,t0)) {
+                           ORSA_DEBUG("problems...");
+                           }
+                           orsa::Vector rGrain,vGrain;
+                           if (!bg->getInterpolatedPosVel(rGrain,vGrain,grain,t0)) {
+                           ORSA_DEBUG("problems...");
+                           }	
+                           orsa::print(nucleus_g2l_t0*(rGrain-rComet));
+                        */
+                        
+                    }
+                    y += ds;
+                }                
+                x += ds;
+            }
+            exit(0);
+        }
         
         // gather some more initial conditions
         double initial_distance;

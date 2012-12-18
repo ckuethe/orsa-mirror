@@ -19,10 +19,15 @@
 #include <orsaSPICE/spiceBodyTranslationalCallback.h>
 
 // choose one depending on the shape file loaded
-#include "gaskell.h"
-// #include "gaskell_mod.h"
+// #include "gaskell.h"
+#include "gaskell_mod.h"
 
 using namespace orsa;
+
+// some global vars...
+
+#warning use gas_plot_run = false in production...
+static const bool gas_plot_run = true;
 
 // Burns, Lamy, Soter 1979, Eq. (19)
 double GrainBetaToRadius(const double & grainBeta,
@@ -517,10 +522,16 @@ public:
             
             const double theta_sun = acos(g2l*(rSun-rComet).normalized() * plt_normal);
             
+            // const double theta_sun_factor = std::max(0.0,cos(0.5*theta_sun));
+            const double theta_sun_factor = std::max(0.0,pow(cos(theta_sun),0.25)); // temperature for a low thermal inertia body goes as cos(theta_sun)^(1/4)
+            // const double theta_sun_factor = std::max(0.0,cos(theta_sun));
+            
+#warning compare factors all around in this loop and make sure they match
+            
             effective_production_rate +=
                 production_rate_per_unit_surface *
                 nucleus_shape->_getFaceArea(plt) *
-                cos(0.5*theta_sun);
+                theta_sun_factor;
             
             if (plt_normal*delta_l <= 0.0) continue;
             
@@ -543,11 +554,13 @@ public:
             const double lp_integral_normalization = 1.0/orsa::square(orsa::pi());
             const double mx_factor =
                 lp_integral_normalization * lp_factor / (nucleus_shape->_getFaceArea(plt) + orsa::square(plt_normal*delta_l)); // ~ 1/r^2
+
+#warning fix cos theta sun
             
             const double plt_term = 
                 production_rate_per_unit_surface *
                 nucleus_shape->_getFaceArea(plt) *
-                cos(0.5*theta_sun) * 
+                theta_sun_factor *
                 mx_factor;
             
             // std::max(0.0,plt_normal*delta_l) / pow(orsa::square(plt_normal*delta_l)+orsa::square(plt_RMS_scale),1.5);
@@ -652,7 +665,7 @@ public:
                 -uS*sublimationForceFactor*Mgas*grain_sublimation_rate_at_1AU*pow(r_h_AU,-2)*v_gas_h*grainArea;
         }
         
-        if (1) {
+        if (1 && !gas_plot_run) {
             gmp_printf("%12.6f %12.3f %12.6f %12.6f %12.6f %12.6f %10.3f %10.3f %10.3f %10.6f\n",
                        orsa::FromUnits(t.get_d(),orsa::Unit::DAY,-1),
                        orsa::FromUnits(R_c.length(),orsa::Unit::KM,-1),
@@ -664,6 +677,25 @@ public:
                        orsa::FromUnits(R_c*uV,orsa::Unit::KM,-1),
                        orsa::FromUnits(R_c*uN,orsa::Unit::KM,-1),
                        orsa::FromUnits(grainRadius,orsa::Unit::METER,-1));
+        }
+        
+        if (gas_plot_run) {
+            // print for gas test
+            const orsa::Vector r_local = g2l*(rGrain-rComet);
+            const orsa::Vector v_gas_l = g2l*v_gas_g;
+            gmp_printf("GAS_TEST %+8.3f %+8.3f %+8.3f %8.3f   %8.3e   %+10.6f %+10.6f %+10.6f %10.6f\n",
+                       orsa::FromUnits(r_local.getX(),orsa::Unit::KM,-1),
+                       orsa::FromUnits(r_local.getY(),orsa::Unit::KM,-1),
+                       orsa::FromUnits(r_local.getZ(),orsa::Unit::KM,-1),
+                       orsa::FromUnits(r_local.length(),orsa::Unit::KM,-1),
+                       //
+                       number_density_gas_at_grain,
+                       //
+                       orsa::FromUnits(orsa::FromUnits(v_gas_l.getX(),orsa::Unit::KM,-1),orsa::Unit::SECOND),
+                       orsa::FromUnits(orsa::FromUnits(v_gas_l.getY(),orsa::Unit::KM,-1),orsa::Unit::SECOND),
+                       orsa::FromUnits(orsa::FromUnits(v_gas_l.getZ(),orsa::Unit::KM,-1),orsa::Unit::SECOND),
+                       orsa::FromUnits(orsa::FromUnits(v_gas_l.length(),orsa::Unit::KM,-1),orsa::Unit::SECOND));
+            
         }
         
 #warning make sure the expressions used are for a thrust, not for an acceleration
