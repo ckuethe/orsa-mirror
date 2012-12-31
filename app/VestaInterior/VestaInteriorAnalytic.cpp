@@ -590,6 +590,14 @@ int main(int argc, char **argv) {
                                     needToCompute_C = false;
                                 } else { // if (nrows>size_H) {
                                     ORSA_ERROR("database corrupted, only 1 entry per index is admitted");
+                                    ORSA_DEBUG("nrows: %i z_sh=%i z_cT=%i",nrows,z_C,z_cT);
+                                    for (int i=0; i<nrows; ++i) {
+                                        for (int j=0; j<ncols; ++j) {
+                                            // i=0 is the header
+                                            const int index = (i+1)*ncols+j;
+                                            ORSA_DEBUG("result[%i] = %s",index, result[index]);
+                                        }
+                                    }
                                 }
                                 //
                                 sqlite3_free_table(result);
@@ -633,6 +641,14 @@ int main(int argc, char **argv) {
                                     needToCompute_S = false;
                                 } else { // if (nrows>size_H) {
                                     ORSA_ERROR("database corrupted, only 1 entry per index is admitted");
+                                    ORSA_DEBUG("nrows: %i z_sh=%i z_cT=%i",nrows,z_S,z_cT);
+                                    for (int i=0; i<nrows; ++i) {
+                                        for (int j=0; j<ncols; ++j) {
+                                            // i=0 is the header
+                                            const int index = (i+1)*ncols+j;
+                                            ORSA_DEBUG("result[%i] = %s",index, result[index]);
+                                        }
+                                    }
                                 }
                                 //
                                 sqlite3_free_table(result);
