@@ -201,6 +201,7 @@ int main (int argc, char **argv) {
         // osg::ref_ptr<orsa::EllipsoidShape> nucleus_shape = new orsa::EllipsoidShape(nucleus_ax,nucleus_ay,nucleus_az);
         // nucleus_shape->closestVertexEpsilonRelative = 1.0e-3;
 
+        orsa::Vector sun_r0;
         orsa::Vector nucleus_r0;
         orsa::Vector nucleus_v0;
         {
@@ -223,6 +224,7 @@ int main (int argc, char **argv) {
             }
             
             // 'export'
+            sun_r0     = rSun;
             nucleus_r0 = rOrbit;
             nucleus_v0 = vOrbit;
             
@@ -299,6 +301,13 @@ int main (int argc, char **argv) {
         
         const double grain_initial_radius = exp(log(min_grain_radius) + (log(max_grain_radius)-log(min_grain_radius))*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
         const double grain_initial_beta   = GrainRadiusToBeta(grain_initial_radius,grain_density);
+
+        const orsa::Matrix nucleus_l2g_t0 = orsa::localToGlobal(nucleus.get(),
+                                                                bg.get(),
+                                                                t0);
+        const orsa::Matrix nucleus_g2l_t0 = orsa::globalToLocal(nucleus.get(),
+                                                                bg.get(),
+                                                                t0);
         
         // position of grain on the nucleus surface
         /* const double lon = orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
@@ -371,7 +380,8 @@ int main (int argc, char **argv) {
             rnd1 * (vv[emit_face.j()]-vv[emit_face.i()]) +
             rnd2 * (vv[emit_face.k()]-vv[emit_face.i()]);
         // lift it a bit
-        const orsa::Vector r0 = tmp_r0 + tmp_r0.normalized()*orsa::FromUnits(10.0,orsa::Unit::METER);
+#warning should check dependence on this small lift parameter
+        const orsa::Vector r0 = tmp_r0 + tmp_r0.normalized()*orsa::FromUnits(1.0,orsa::Unit::METER);
         const orsa::Vector n0 = nucleus_shape->_getFaceNormal(emit_face_index);
         
         /* ORSA_DEBUG("--------> positive: %g",r0.normalized()*n0.normalized());
@@ -384,12 +394,20 @@ int main (int argc, char **argv) {
         const double lon = atan2(u_r0.getY(),
                                  u_r0.getX());
         const double lat =  asin(u_r0.getZ());
+
+        const orsa::Vector u_solar = nucleus_g2l_t0*(sun_r0-nucleus_r0).normalized();
+        
+        const double sub_solar_lon = atan2(u_solar.getY(),
+                                           u_solar.getX());
+        const double sub_solar_lat =  asin(u_solar.getZ());
         
         /* const orsa::Vector u_rot =
            orsa::externalProduct(orsa::Vector(0,0,1),n0).normalized();
            const orsa::Vector u_pol =
            orsa::externalProduct(n0,u_rot).normalized();
         */
+        
+        const double initial_illumination_angle = acos(nucleus_g2l_t0*(sun_r0-nucleus_r0).normalized()*n0);
         
         // not including rotation yet
 #warning escape velocity approximate for points within the bounding sphere of the body
@@ -473,12 +491,13 @@ int main (int argc, char **argv) {
                 ORSA_DEBUG("must set t_snapshot = t0 to run this test...");
                 exit(0);
             }
-            const orsa::Matrix nucleus_l2g_t0 = orsa::localToGlobal(nucleus.get(),
-                                                                    bg.get(),
-                                                                    t0);
-            const orsa::Matrix nucleus_g2l_t0 = orsa::globalToLocal(nucleus.get(),
-                                                                    bg.get(),
-                                                                    t0);
+            /* const orsa::Matrix nucleus_l2g_t0 = orsa::localToGlobal(nucleus.get(),
+               bg.get(),
+               t0);
+               const orsa::Matrix nucleus_g2l_t0 = orsa::globalToLocal(nucleus.get(),
+               bg.get(),
+               t0);
+            */
             IBPS grain_ibps = grain->getInitialConditions();
             const double ds = orsa::FromUnits( 50.0,orsa::Unit::METER);
             const double  L = orsa::FromUnits(  2.0,orsa::Unit::KM);
@@ -710,7 +729,7 @@ int main (int argc, char **argv) {
                 fclose (fp);
             }
             
-            // colden = column density file (including all the particles that do nor reach t_snapshot, to normalize production)
+            // colden = column density file (including all the particles that do not reach t_snapshot, to normalize production)
             {
                 // init to 0 for grains that don't make it to t_snapshot
                 double grainRadius = 0.0;
@@ -861,7 +880,7 @@ int main (int argc, char **argv) {
 #warning keep fields in sync with histo.cpp
                 
                 char line[4096];
-                gmp_sprintf(line,"%.6f   %.5f %.5f   %.3e %.3e   %+8.3f %+7.3f   %.3e %.3e %.3e   %.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %.3e",
+                gmp_sprintf(line,"%.6f   %.5f %.5f   %.3e %.3e   %+8.3f %+7.3f   %+8.3f %+7.3f   %+8.3f %+8.3f   %.3e %.3e %.3e   %.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %+.3e %+.3e %+.3e   %.3e",
                             orsa::FromUnits(r_comet_t0,orsa::Unit::AU,-1),
                             //
                             orsaSolarSystem::timeToJulian(t0),
@@ -870,8 +889,14 @@ int main (int argc, char **argv) {
                             orsa::FromUnits((t_snapshot-t0).get_d(),orsa::Unit::DAY,-1),
                             orsa::FromUnits((common_stop_time-t0).get_d(),orsa::Unit::DAY,-1),
                             //
-                            lon*orsa::radToDeg(),
+                            fmod(lon+orsa::twopi(),orsa::twopi())*orsa::radToDeg(),
                             lat*orsa::radToDeg(),
+                            //
+                            fmod(sub_solar_lon+orsa::twopi(),orsa::twopi())*orsa::radToDeg(),
+                            sub_solar_lat*orsa::radToDeg(),
+                            //
+                            fmod((lon-sub_solar_lon)+orsa::twopi(),orsa::twopi())*orsa::radToDeg(),
+                            initial_illumination_angle*orsa::radToDeg(),
                             //
                             orsa::FromUnits(grain_initial_radius,orsa::Unit::METER,-1),
                             orsa::FromUnits(grainRadius,orsa::Unit::METER,-1),

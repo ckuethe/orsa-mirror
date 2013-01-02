@@ -27,7 +27,7 @@ using namespace orsa;
 // some global vars...
 
 #warning use gas_plot_run = false in production...
-static const bool gas_plot_run = true;
+static const bool gas_plot_run = false;
 
 // Burns, Lamy, Soter 1979, Eq. (19)
 double GrainBetaToRadius(const double & grainBeta,
