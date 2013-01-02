@@ -19,8 +19,8 @@
 #include <orsaSPICE/spiceBodyTranslationalCallback.h>
 
 // choose one depending on the shape file loaded
-// #include "gaskell.h"
-#include "gaskell_mod.h"
+#include "gaskell.h"
+// #include "gaskell_mod.h"
 
 using namespace orsa;
 
@@ -674,7 +674,7 @@ public:
                 -uS*sublimationForceFactor*Mgas*grain_sublimation_rate_at_1AU*pow(r_h_AU,-2)*v_gas_h*grainArea;
         }
         
-        if (1 && !gas_plot_run) {
+        if (0 && !gas_plot_run) {
             gmp_printf("%12.6f %12.3f %12.6f %12.6f %12.6f %12.6f %10.3f %10.3f %10.3f %10.6f\n",
                        orsa::FromUnits(t.get_d(),orsa::Unit::DAY,-1),
                        orsa::FromUnits(R_c.length(),orsa::Unit::KM,-1),

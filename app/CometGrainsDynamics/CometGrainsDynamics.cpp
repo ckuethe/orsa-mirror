@@ -74,14 +74,14 @@ int main (int argc, char **argv) {
     const size_t massCluster_points = 1024;
     const double comet_density = orsa::FromUnits(orsa::FromUnits(0.22,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double grain_density = orsa::FromUnits(orsa::FromUnits(0.50,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-    const double rotation_period = orsa::FromUnits(5.00,orsa::Unit::HOUR); // orsa::FromUnits(18.34,orsa::Unit::HOUR);
+    const double rotation_period = orsa::FromUnits(3.0,orsa::Unit::HOUR); // orsa::FromUnits(18.34,orsa::Unit::HOUR);
     const double pole_phi_Tp = 0.0*orsa::degToRad(); // rotation angle at time Tp
     const double pole_ecliptic_longitude = +69.0*orsa::degToRad();
     const double pole_ecliptic_latitude  = +34.0*orsa::degToRad();
     const double water_sublimation_rate_at_1AU = orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1); // water
     // const double min_latitude = -90.0*orsa::degToRad(); // can do this in post-processing
     // const double max_latitude = +90.0*orsa::degToRad(); // can do this in post-processing
-    const double min_grain_radius = orsa::FromUnits(0.001000,orsa::Unit::METER);
+    const double min_grain_radius = orsa::FromUnits(0.000001,orsa::Unit::METER);
     const double max_grain_radius = orsa::FromUnits(0.100000,orsa::Unit::METER);    
     const int min_time_seconds =  60; // grains flying less than this time are not included
     const int max_time_days    =  10; // 100;
@@ -159,7 +159,7 @@ int main (int argc, char **argv) {
         // const orsa::Time t0 = t_snapshot - orsa::Time((max_time_days*86400)*(1000000*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()));
         // #warning maybe use log scale for interval sampling!?
         // #warning have a minimumum here too? as it is, the minimum is 1 mu-sec...
-#warning use this one
+        // #warning use this one
         // const orsa::Time t0 = t_snapshot - orsa::Time(exp(log(min_time_seconds*1e6) + (log(max_time_days*86400.0*1.0e6)-log(min_time_seconds*1e6))*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform()));
         //
         // this one for gas test only
@@ -380,8 +380,13 @@ int main (int argc, char **argv) {
             rnd1 * (vv[emit_face.j()]-vv[emit_face.i()]) +
             rnd2 * (vv[emit_face.k()]-vv[emit_face.i()]);
         // lift it a bit
-#warning should check dependence on this small lift parameter
-        const orsa::Vector r0 = tmp_r0 + tmp_r0.normalized()*orsa::FromUnits(1.0,orsa::Unit::METER);
+        const double plt_area_equivalent_radius = sqrt(nucleus_shape->_getFaceArea(emit_face_index)/orsa::pi());
+#warning variable factor here... similar to height_below_plt of plt_ghost_center in GasDrag class
+        const double height_above_plt = 0.1*plt_area_equivalent_radius; // variable from about 1.0 to a few...
+#warning should check dependence on this small lift parameter... should the lift be of absolute length?
+        // const orsa::Vector r0 = tmp_r0 + tmp_r0.normalized()*orsa::FromUnits(10.0,orsa::Unit::METER);
+        ORSA_DEBUG("height_above_plt: %6.3f [meter]",orsa::FromUnits(height_above_plt,orsa::Unit::METER,-1));
+        const orsa::Vector r0 = tmp_r0 + tmp_r0.normalized()*height_above_plt;
         const orsa::Vector n0 = nucleus_shape->_getFaceNormal(emit_face_index);
         
         /* ORSA_DEBUG("--------> positive: %g",r0.normalized()*n0.normalized());
