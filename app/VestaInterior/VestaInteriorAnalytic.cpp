@@ -535,6 +535,19 @@ int main(int argc, char **argv) {
             
             // ORSA_DEBUG("l=%i m=%i z_C=%i z_S=%i",l,m,z_C,z_S);
             
+            {
+                // begin transaction
+                std::string sql = "begin";
+                char * zErr;
+                rc = sqlite3_exec(db,sql.c_str(),NULL,NULL,&zErr);
+                if (rc != SQLITE_OK) {
+                    if (zErr != NULL) {
+                        fprintf(stderr,"SQL error: %s\n",zErr);
+                        sqlite3_free(zErr);
+                    }
+                }
+            }
+            
             // ti,tj,tk are the expansion of the density in terms of the cubic Chebyshev
             for (size_t running_T_degree=0; running_T_degree<=T_degree; ++running_T_degree) {
                 for (size_t ti=0; ti<=T_degree; ++ti) {
@@ -779,6 +792,24 @@ int main(int argc, char **argv) {
                                 }
                             }
                         }
+                    }
+                }
+            }
+            
+            {
+                // close transaction
+                std::string sql = "commit";
+                char * zErr;
+                do {
+                    rc = sqlite3_exec(db,sql.c_str(),NULL,NULL,&zErr);
+                    if (rc==SQLITE_BUSY) {
+                        ORSA_DEBUG("database busy, retrying...");
+                    }
+                } while (rc==SQLITE_BUSY);
+                if (rc != SQLITE_OK) {
+                    if (zErr != NULL) {
+                        fprintf(stderr,"SQL error: %s\n",zErr);
+                        sqlite3_free(zErr);
                     }
                 }
             }
