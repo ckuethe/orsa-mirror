@@ -439,7 +439,7 @@ public:
             ORSA_DEBUG("problems...");
             exit(0);
         }
-        const double nucleus_volume_equivalent_average_radius = cbrt(3*nucleus_shape->volume()/(4*orsa::pi()));
+        const double nucleus_volume_equivalent_average_radius = cbrt(3.0*nucleus_shape->volume()/(4.0*orsa::pi()));
         /* ORSA_DEBUG("nucleus_volume_equivalent_average_radius = %g [km]   nucleus volume: %g [km^3]",
            orsa::FromUnits(nucleus_volume_equivalent_average_radius,orsa::Unit::KM,-1),
            orsa::FromUnits(nucleus_shape->volume(),orsa::Unit::KM,-3));
@@ -501,10 +501,16 @@ public:
         const double production_rate_per_unit_surface = eta_water*water_sublimation_rate;
         
 #warning compute plate center and size once for all in Shape class?
+
+#warning tune beaming_factor coefficients here...
+        const double beaming_factor_isotropic_fraction = 0.05; // small positive, between 0 and 1
+        const double beaming_factor_power = 4.0; // 0.0 for isotropic or positive for beaming
+        const double beaming_factor_normalization = 4.0*orsa::pi()*(beaming_factor_isotropic_fraction + (1.0-beaming_factor_isotropic_fraction)/(beaming_factor_power+1.0));
         
         double effective_production_rate=0.0;
         orsa::Vector tmp_u_gas(0,0,0);
         double tmp_number_density_gas=0.0;
+        size_t number_of_plt_contributing=0;
         // double max_test=0.0, mtt1=0.0, mtt2=0.0, mtt3=0.0, mtt4=0.0;
         for (size_t plt=0; plt<nucleus_shape->getFaceVector().size(); ++plt) {
             
@@ -525,16 +531,32 @@ public:
             // const double theta_sun_factor = std::max(0.0,cos(0.5*theta_sun));
             // const double theta_sun_factor = std::max(0.0,pow(cos(theta_sun),0.25)); // temperature for a low thermal inertia body goes as cos(theta_sun)^(1/4)
             const double theta_sun_factor = std::max(0.0,cos(theta_sun));
+            //
+            // fold into theta_sun_factor the beaming factor
+            /* const double theta_sun_factor =
+               orsa::square(0.5*(1.0+plt_normal*delta_l.normalized())) *
+               std::max(0.0,cos(theta_sun));
+            */
+            // note the normalization already included here...
+            const double beaming_factor =
+                (beaming_factor_isotropic_fraction + (1.0-beaming_factor_isotropic_fraction)*pow(0.5*(1.0+plt_normal*delta_l.normalized()),beaming_factor_power)) / beaming_factor_normalization;
+            
+            // ORSA_DEBUG("beaming_factor: %g",beaming_factor);
             
 #warning compare factors all around in this loop and make sure they match
             
             effective_production_rate +=
                 production_rate_per_unit_surface *
                 nucleus_shape->_getFaceArea(plt) *
-                theta_sun_factor;
+                theta_sun_factor *
+                beaming_factor;
             
-            if (plt_normal*delta_l <= 0.0) continue;
-
+            // #warning need this!
+            // if (plt_normal*delta_l <= 0.0) continue;
+            // if (plt_normal*delta_l.normalized() <= -0.1) continue; // slightly below plate plane
+            
+            ++number_of_plt_contributing;
+            
             /* const double lp = (delta_l-(delta_l*plt_normal)*plt_normal).length();
                const double lp_ratio  = lp/sqrt(nucleus_shape->_getFaceArea(plt)/orsa::pi());
                const double lp_factor = 1.0 / (1.0 + orsa::square(lp_ratio));
@@ -567,6 +589,7 @@ public:
                     production_rate_per_unit_surface *
                     nucleus_shape->_getFaceArea(plt) *
                     theta_sun_factor *
+                    beaming_factor *
                     1.0 / delta_ghost.lengthSquared();
                 
                 // std::max(0.0,plt_normal*delta_l) / pow(orsa::square(plt_normal*delta_l)+orsa::square(plt_RMS_scale),1.5);
@@ -590,8 +613,10 @@ public:
             }
             
         }
+        
 #warning CHECK AGAIN THIS NORMALIZATION ...
-        const double number_density_gas_at_grain = 1.0/(orsa::twopi()*v_gas_at_grain)*tmp_number_density_gas;
+        // const double number_density_gas_at_grain = 1.0/(orsa::twopi()*v_gas_at_grain)*tmp_number_density_gas;
+        const double number_density_gas_at_grain = tmp_number_density_gas/v_gas_at_grain;
         // const orsa::Vector u_gas_l = 1.0/(orsa::twopi()*v_gas_at_grain*number_density_gas_at_grain)*tmp_u_gas.normalized();
         // ORSA_DEBUG("------------");
         const orsa::Vector u_gas_l = tmp_u_gas.normalized();
@@ -674,8 +699,8 @@ public:
                 -uS*sublimationForceFactor*Mgas*grain_sublimation_rate_at_1AU*pow(r_h_AU,-2)*v_gas_h*grainArea;
         }
         
-        if (0 && !gas_plot_run) {
-            gmp_printf("%12.6f %12.3f %12.6f %12.6f %12.6f %12.6f %10.3f %10.3f %10.3f %10.6f\n",
+        if (1 && !gas_plot_run) {
+            gmp_printf("GDB %12.6f %12.3f %12.6f %12.6f %12.6f %12.6f %10.3f %10.3f %10.3f %10.6f   %.3e    %.3e %3i %+.3e %+.3e %+.3e\n",
                        orsa::FromUnits(t.get_d(),orsa::Unit::DAY,-1),
                        orsa::FromUnits(R_c.length(),orsa::Unit::KM,-1),
                        dist_ratio,
@@ -685,8 +710,24 @@ public:
                        orsa::FromUnits(R_c*uS,orsa::Unit::KM,-1),
                        orsa::FromUnits(R_c*uV,orsa::Unit::KM,-1),
                        orsa::FromUnits(R_c*uN,orsa::Unit::KM,-1),
-                       orsa::FromUnits(grainRadius,orsa::Unit::METER,-1));
+                       orsa::FromUnits(grainRadius,orsa::Unit::METER,-1),
+                       //
+                       number_density_gas_at_grain,
+                       //
+                       thrust.length(),
+                       number_of_plt_contributing,
+                       thrust.getX(),
+                       thrust.getY(),
+                       thrust.getZ());
         }
+
+        /* gmp_printf("GAS_DRAG_MONITOR %g %g %g %g %g\n",
+           orsa::FromUnits(t.get_d(),orsa::Unit::DAY,-1),
+           thrust.length(),
+           thrust.getX(),
+           thrust.getY(),
+           thrust.getZ());
+        */
         
         if (gas_plot_run) {
             // print for gas test

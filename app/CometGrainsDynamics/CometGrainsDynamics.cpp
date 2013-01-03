@@ -81,7 +81,7 @@ int main (int argc, char **argv) {
     const double water_sublimation_rate_at_1AU = orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1); // water
     // const double min_latitude = -90.0*orsa::degToRad(); // can do this in post-processing
     // const double max_latitude = +90.0*orsa::degToRad(); // can do this in post-processing
-    const double min_grain_radius = orsa::FromUnits(0.000001,orsa::Unit::METER);
+    const double min_grain_radius = orsa::FromUnits(0.010000,orsa::Unit::METER);
     const double max_grain_radius = orsa::FromUnits(0.100000,orsa::Unit::METER);    
     const int min_time_seconds =  60; // grains flying less than this time are not included
     const int max_time_days    =  10; // 100;
@@ -151,6 +151,7 @@ int main (int argc, char **argv) {
     }
     
     size_t iter=0;
+    // while (iter < 1) {
     while (iter < 1250000) {
         // while (1) {
         
