@@ -531,11 +531,11 @@ int main(int argc, char **argv) {
             const double coreRx = 115*km;
             const double coreRy = 115*km;
             const double coreRz = 115*km;
-            const double coreDensity = 3.4*gcm3;
+            const double coreDensity = 3.456*gcm3;
             const double coreMantleInterfaceThickness = 10.0*km;
-            const double mantleDensity = 3.4*gcm3;
+            const double mantleDensity = 3.456*gcm3;
             const double mantleCrustInterfaceThickness = 10.0*km;
-            const double crustDensity = 3.4*gcm3;
+            const double crustDensity = 3.456*gcm3;
             const double crustRx = 220*km;
             const double crustRy = 210*km;
             const double crustRz = 180*km;
@@ -901,11 +901,56 @@ int main(int argc, char **argv) {
     // inertia moments, barycentric
 #warning A ROTATION WOULD BE NEEDED TOO!
     const double inertiaMomentXX_over_plateModelR0squared =
-        N[0][2][0]/N[0][0][0] + N[0][0][2]/N[0][0][0] - N[0][1][0]/N[0][0][0] * N[0][1][0]/N[0][0][0] - N[0][0][1]/N[0][0][0]*N[0][0][1]/N[0][0][0];
+        N[0][2][0]/N[0][0][0] + N[0][0][2]/N[0][0][0] - N[0][1][0]/N[0][0][0] * N[0][1][0]/N[0][0][0] - N[0][0][1]/N[0][0][0] * N[0][0][1]/N[0][0][0];
     const double inertiaMomentYY_over_plateModelR0squared =
-        N[2][0][0]/N[0][0][0] + N[0][0][2]/N[0][0][0] - N[1][0][0]/N[0][0][0] * N[1][0][0]/N[0][0][0] - N[0][0][1]/N[0][0][0]*N[0][0][1]/N[0][0][0];
+        N[2][0][0]/N[0][0][0] + N[0][0][2]/N[0][0][0] - N[1][0][0]/N[0][0][0] * N[1][0][0]/N[0][0][0] - N[0][0][1]/N[0][0][0] * N[0][0][1]/N[0][0][0];
     const double inertiaMomentZZ_over_plateModelR0squared =
-        N[2][0][0]/N[0][0][0] + N[0][2][0]/N[0][0][0] - N[1][0][0]/N[0][0][0] * N[1][0][0]/N[0][0][0] - N[0][1][0]/N[0][0][0]*N[0][1][0]/N[0][0][0];
+        N[2][0][0]/N[0][0][0] + N[0][2][0]/N[0][0][0] - N[1][0][0]/N[0][0][0] * N[1][0][0]/N[0][0][0] - N[0][1][0]/N[0][0][0] * N[0][1][0]/N[0][0][0];
+    
+    // inertia components, before rotation
+    // diagonal
+    const double pre_rot_Ixx_over_R2 = 
+        N[0][2][0]/N[0][0][0] + N[0][0][2]/N[0][0][0] - N[0][1][0]/N[0][0][0] * N[0][1][0]/N[0][0][0] - N[0][0][1]/N[0][0][0] * N[0][0][1]/N[0][0][0];
+    const double pre_rot_Iyy_over_R2 =
+        N[2][0][0]/N[0][0][0] + N[0][0][2]/N[0][0][0] - N[1][0][0]/N[0][0][0] * N[1][0][0]/N[0][0][0] - N[0][0][1]/N[0][0][0] * N[0][0][1]/N[0][0][0];
+    const double pre_rot_Izz_over_R2 =
+        N[2][0][0]/N[0][0][0] + N[0][2][0]/N[0][0][0] - N[1][0][0]/N[0][0][0] * N[1][0][0]/N[0][0][0] - N[0][1][0]/N[0][0][0] * N[0][1][0]/N[0][0][0];
+    // mixed terms
+    const double pre_rot_Ixy_over_R2 = 
+        N[1][1][0]/N[0][0][0] - N[1][0][0]/N[0][0][0] * N[0][1][0]/N[0][0][0];
+    const double pre_rot_Ixz_over_R2 = 
+        N[1][0][1]/N[0][0][0] - N[1][0][0]/N[0][0][0] * N[0][0][1]/N[0][0][0];
+    const double pre_rot_Iyz_over_R2 = 
+        N[0][1][1]/N[0][0][0] - N[0][1][0]/N[0][0][0] * N[0][0][1]/N[0][0][0];
+
+    ORSA_DEBUG("pre_rot_Ixx_over_R2: %g",pre_rot_Ixx_over_R2);
+    ORSA_DEBUG("pre_rot_Iyy_over_R2: %g",pre_rot_Iyy_over_R2);
+    ORSA_DEBUG("pre_rot_Izz_over_R2: %g",pre_rot_Izz_over_R2);
+    ORSA_DEBUG("pre_rot_Ixy_over_R2: %g",pre_rot_Ixy_over_R2);
+    ORSA_DEBUG("pre_rot_Ixz_over_R2: %g",pre_rot_Ixz_over_R2);
+    ORSA_DEBUG("pre_rot_Iyz_over_R2: %g",pre_rot_Iyz_over_R2);
+
+    orsa::Matrix pre_rot_I(pre_rot_Ixx_over_R2,pre_rot_Ixy_over_R2,pre_rot_Ixz_over_R2,
+                           pre_rot_Ixy_over_R2,pre_rot_Iyy_over_R2,pre_rot_Iyz_over_R2,
+                           pre_rot_Ixz_over_R2,pre_rot_Iyz_over_R2,pre_rot_Izz_over_R2);
+    
+    orsa::Matrix genericToPrincipal;
+    orsa::Matrix principalInertiaMatrix;
+    orsa::principalAxis(genericToPrincipal,
+                        principalInertiaMatrix,
+                        pre_rot_I);
+    double psi, theta, phi;
+    matrixToEulerAngles(psi,
+                        theta,
+                        phi,
+                        genericToPrincipal);
+    
+    orsa::print(pre_rot_I);
+    orsa::print(principalInertiaMatrix);
+    ORSA_DEBUG("psi,theta,phi = %g %g %g [deg]",
+               orsa::radToDeg()*psi,
+               orsa::radToDeg()*theta,
+               orsa::radToDeg()*phi);
     
     /* ORSA_DEBUG("si->getIntegral(0,0,0): %g",si->getIntegral(0,0,0));
        ORSA_DEBUG("i1d:  %g",i1d);
