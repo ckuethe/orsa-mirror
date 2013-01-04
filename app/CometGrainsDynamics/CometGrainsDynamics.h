@@ -27,7 +27,7 @@ using namespace orsa;
 // some global vars...
 
 #warning use gas_plot_run = false in production...
-static const bool gas_plot_run = false;
+static const bool gas_plot_run = true;
 
 // Burns, Lamy, Soter 1979, Eq. (19)
 double GrainBetaToRadius(const double & grainBeta,
@@ -503,8 +503,8 @@ public:
 #warning compute plate center and size once for all in Shape class?
 
 #warning tune beaming_factor coefficients here...
-        const double beaming_factor_isotropic_fraction = 0.05; // small positive, between 0 and 1
-        const double beaming_factor_power = 4.0; // 0.0 for isotropic or positive for beaming
+        const double beaming_factor_isotropic_fraction = 0.01; // small positive, between 0 and 1
+        const double beaming_factor_power = 6.0; // 0.0 for isotropic or positive for beaming
         const double beaming_factor_normalization = 4.0*orsa::pi()*(beaming_factor_isotropic_fraction + (1.0-beaming_factor_isotropic_fraction)/(beaming_factor_power+1.0));
         
         double effective_production_rate=0.0;
@@ -528,6 +528,7 @@ public:
             
             const double theta_sun = acos(g2l*(rSun-rComet).normalized() * plt_normal);
             
+#warning theta_sun_factor should include a small constant contribution from the night side?
             // const double theta_sun_factor = std::max(0.0,cos(0.5*theta_sun));
             // const double theta_sun_factor = std::max(0.0,pow(cos(theta_sun),0.25)); // temperature for a low thermal inertia body goes as cos(theta_sun)^(1/4)
             const double theta_sun_factor = std::max(0.0,cos(theta_sun));
@@ -549,13 +550,13 @@ public:
                 production_rate_per_unit_surface *
                 nucleus_shape->_getFaceArea(plt) *
                 theta_sun_factor *
-                beaming_factor;
+                1.0; // beaming_factor; // NO BEAMING FACTOR HERE!!
             
             // #warning need this!
             // if (plt_normal*delta_l <= 0.0) continue;
             // if (plt_normal*delta_l.normalized() <= -0.1) continue; // slightly below plate plane
             
-            ++number_of_plt_contributing;
+            // ++number_of_plt_contributing;
             
             /* const double lp = (delta_l-(delta_l*plt_normal)*plt_normal).length();
                const double lp_ratio  = lp/sqrt(nucleus_shape->_getFaceArea(plt)/orsa::pi());
@@ -592,24 +593,30 @@ public:
                     beaming_factor *
                     1.0 / delta_ghost.lengthSquared();
                 
-                // std::max(0.0,plt_normal*delta_l) / pow(orsa::square(plt_normal*delta_l)+orsa::square(plt_RMS_scale),1.5);
-                // std::max(0.0,plt_normal*delta_l) / pow(orsa::square(plt_normal*delta_l)+1.0,1.5);
-                // std::max(0.0,plt_normal*delta_l) / pow(delta_l.lengthSquared()+orsa::square(plt_RMS_scale),1.5);
-                tmp_number_density_gas += plt_term;
-                // tmp_u_gas += plt_term*delta_l.normalized();
-                // tmp_u_gas += plt_term*plt_normal;
-                // tmp_u_gas += plt_term*(lp_factor*plt_normal+(1.0-lp_factor)*delta_l.normalized());
-                // tmp_u_gas += plt_term*delta_l.normalized();
-                tmp_u_gas += plt_term*delta_ghost.normalized();
+                if (plt_term != 0.0) {
+
+                    ++number_of_plt_contributing;
+                    
+                    // std::max(0.0,plt_normal*delta_l) / pow(orsa::square(plt_normal*delta_l)+orsa::square(plt_RMS_scale),1.5);
+                    // std::max(0.0,plt_normal*delta_l) / pow(orsa::square(plt_normal*delta_l)+1.0,1.5);
+                    // std::max(0.0,plt_normal*delta_l) / pow(delta_l.lengthSquared()+orsa::square(plt_RMS_scale),1.5);
+                    tmp_number_density_gas += plt_term;
+                    // tmp_u_gas += plt_term*delta_l.normalized();
+                    // tmp_u_gas += plt_term*plt_normal;
+                    // tmp_u_gas += plt_term*(lp_factor*plt_normal+(1.0-lp_factor)*delta_l.normalized());
+                    // tmp_u_gas += plt_term*delta_l.normalized();
+                    tmp_u_gas += plt_term*delta_ghost.normalized();
+                    
+                    /* if (plt_term > max_test) {
+                       max_test = plt_term;
+                       mtt1 = delta_l.length();
+                       mtt2 = lp_ratio;
+                       mtt3 = lp_factor;
+                       mtt4 = nucleus_shape->_getFaceArea(plt) * mx_factor;
+                       }   
+                    */
+                }
                 
-                /* if (plt_term > max_test) {
-                   max_test = plt_term;
-                   mtt1 = delta_l.length();
-                   mtt2 = lp_ratio;
-                   mtt3 = lp_factor;
-                   mtt4 = nucleus_shape->_getFaceArea(plt) * mx_factor;
-                   }   
-                */
             }
             
         }
@@ -630,7 +637,7 @@ public:
         
         const double rho = number_density_gas_at_grain * Mgas;
         
-        // ORSA_DEBUG("effecitive production rate: %g [molecules/second]",orsa::FromUnits(effective_production_rate,orsa::Unit::SECOND));
+        ORSA_DEBUG("effecitive production rate: %g [molecules/second]",orsa::FromUnits(effective_production_rate,orsa::Unit::SECOND));
         // ORSA_DEBUG("number density: %g",number_density_gas_at_grain);
         
         // ORSA_DEBUG("scp: %g",v_gas_g.normalized()*(rGrain-rComet).normalized());

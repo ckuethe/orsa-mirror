@@ -58,11 +58,11 @@ int main (int argc, char **argv) {
        const orsa::Time comet_orbit_epoch = orsaSolarSystem::gregorTime(2010,9,17.0); // comet_orbit_Tp; // orsaSolarSystem::gregorTime(2010,1,1);
     */
     //
-    const double comet_orbit_q = orsa::FromUnits(1.0,orsa::Unit::AU);
-    const double comet_orbit_e = .5;
-    const double comet_orbit_i = 13.61716956119923*orsa::degToRad();
-    const double comet_orbit_node = 219.7626609177958*orsa::degToRad();
-    const double comet_orbit_peri = 181.1954811299036*orsa::degToRad();
+    const double comet_orbit_q = orsa::FromUnits(1.29,orsa::Unit::AU);
+    const double comet_orbit_e = 0;
+    const double comet_orbit_i = 0; // 13.61716956119923*orsa::degToRad();
+    const double comet_orbit_node = 0; // 219.7626609177958*orsa::degToRad();
+    const double comet_orbit_peri = 0; // 181.1954811299036*orsa::degToRad();
     const orsa::Time comet_orbit_Tp = orsaSolarSystem::gregorTime(2010,10,28.25696720); // 2010-Oct-28.25696720
     const orsa::Time comet_orbit_epoch = comet_orbit_Tp; // orsaSolarSystem::gregorTime(2010,1,1);
     //
@@ -76,12 +76,12 @@ int main (int argc, char **argv) {
     const double grain_density = orsa::FromUnits(orsa::FromUnits(0.50,orsa::Unit::GRAM),orsa::Unit::CM,-3);
     const double rotation_period = orsa::FromUnits(3.0,orsa::Unit::HOUR); // orsa::FromUnits(18.34,orsa::Unit::HOUR);
     const double pole_phi_Tp = 0.0*orsa::degToRad(); // rotation angle at time Tp
-    const double pole_ecliptic_longitude = +69.0*orsa::degToRad();
-    const double pole_ecliptic_latitude  = +34.0*orsa::degToRad();
+    const double pole_ecliptic_longitude = 0.0*orsa::degToRad(); // +69.0*orsa::degToRad();
+    const double pole_ecliptic_latitude  = +90*orsa::degToRad(); // +34.0*orsa::degToRad();
     const double water_sublimation_rate_at_1AU = orsa::FromUnits(orsa::FromUnits(1.0e17,orsa::Unit::CM,-2),orsa::Unit::SECOND,-1); // water
     // const double min_latitude = -90.0*orsa::degToRad(); // can do this in post-processing
     // const double max_latitude = +90.0*orsa::degToRad(); // can do this in post-processing
-    const double min_grain_radius = orsa::FromUnits(0.010000,orsa::Unit::METER);
+    const double min_grain_radius = orsa::FromUnits(0.000001,orsa::Unit::METER);
     const double max_grain_radius = orsa::FromUnits(0.100000,orsa::Unit::METER);    
     const int min_time_seconds =  60; // grains flying less than this time are not included
     const int max_time_days    =  10; // 100;
@@ -89,10 +89,10 @@ int main (int argc, char **argv) {
     
     // gas (drag) coefficients
     // const double gas_production_rate_at_1AU = orsa::FromUnits(1.0e27,orsa::Unit::SECOND,-1); // molecules/second
-    const double nucleus_water_production_rate_factor = 1.0; // to be multiplied later by total nucleus surface, water_sublimation_rate, and illumination factor, to give the total gas production rate of the comet
+    const double nucleus_water_production_rate_factor = 0.676; // 1.0; // to be multiplied later by total nucleus surface, water_sublimation_rate, and illumination factor, to give the total gas production rate of the comet
     const double gas_velocity_at_1AU = orsa::FromUnits(orsa::FromUnits(0.5,orsa::Unit::KM),orsa::Unit::SECOND,-1);
     const double gas_molar_mass = 18; // 18 for H20
-    const double gas_drag_coefficient = 0.40; // Cd nominal: 0.40 (OR 2.00 ??)
+    const double gas_drag_coefficient = 2.0; // 0.40; // Cd nominal: 0.40 (OR 2.00 ??)
     
     // molecules per unit area per unit time
 #warning EYE ON THIS!!! (zero?)
@@ -505,14 +505,14 @@ int main (int argc, char **argv) {
                t0);
             */
             IBPS grain_ibps = grain->getInitialConditions();
-            const double ds = orsa::FromUnits( 50.0,orsa::Unit::METER);
-            const double  L = orsa::FromUnits(  2.0,orsa::Unit::KM);
+            const double ds = orsa::FromUnits(100.0,orsa::Unit::METER);
+            const double  L = orsa::FromUnits(  5.0,orsa::Unit::KM);
             double x=-L;
             while (x<=L) {
                 double y=-L;
                 while (y<=L) {
-                    // const orsa::Vector tmp_r0(x,y,0.0);
-                    const orsa::Vector tmp_r0(x,0.0,y);
+                    const orsa::Vector tmp_r0(x,y,0.0);
+                    // const orsa::Vector tmp_r0(x,0.0,y);
                     if (!nucleus_shape->isInside(tmp_r0)) {
                         grain_ibps.translational->setPosition(nucleus_r0+nucleus_l2g_t0*tmp_r0);
 #warning set grain velocity too??
