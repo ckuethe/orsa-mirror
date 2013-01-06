@@ -18,11 +18,21 @@
 // SQLite3
 #include "sqlite3.h"
 
+#include <libgen.h>
+
 inline std::string getSqliteDBFileName_simplex(const std::string & inputFile,
                                                const double & R0) {
-    char line[1024];
-    // sprintf(line,"%s_simplex_%gkm.sqlite",inputFile.c_str(),orsa::FromUnits(R0,orsa::Unit::KM,-1));
-    sprintf(line,".%s_simplex_%gkm.sqlite",inputFile.c_str(),orsa::FromUnits(R0,orsa::Unit::KM,-1));
+    ORSA_DEBUG("test: [%s]",inputFile.c_str());
+    char line[4096];
+    char arg_of_dirname[4096];
+    char arg_of_basename[4096];
+    strcpy(arg_of_dirname,inputFile.c_str());
+    strcpy(arg_of_basename,inputFile.c_str());
+    sprintf(line,"%s/.%s_simplex_%gkm.sqlite",
+            dirname(arg_of_dirname),
+            basename(arg_of_basename),
+            orsa::FromUnits(R0,orsa::Unit::KM,-1));
+    ORSA_DEBUG("test: [%s]",inputFile.c_str());
     return line;
 }
 
