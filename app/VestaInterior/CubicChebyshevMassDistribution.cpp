@@ -174,19 +174,12 @@ CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(con
                 for (size_t nz=0; nz<=degree-nx-ny; ++nz) {
                     if (nx+ny+nz != running_n) continue;
                     double sum = 0.0;
-                    for (size_t kx=0; kx<degree; ++kx) {
-                        const double x = cos(orsa::pi()*(kx+0.5)/degree);
-                        for (size_t ky=0; ky<degree; ++ky) {
-                            const double y = cos(orsa::pi()*(ky+0.5)/degree);
-                            for (size_t kz=0; kz<degree; ++kz) {
-                                const double z = cos(orsa::pi()*(kz+0.5)/degree);
-                                
-                                /* sum +=
-                                   cos(nx*orsa::pi()*(kx+0.5)/degree) *
-                                   cos(ny*orsa::pi()*(ky+0.5)/degree) *
-                                   cos(nz*orsa::pi()*(kz+0.5)/degree) *
-                                   massDistribution->density(R0*orsa::Vector(x,y,z)) / densityScale;
-                                */
+                    for (size_t kx=0; kx<=degree; ++kx) {
+                        const double x = cos(orsa::pi()*(kx+0.5)/(degree+1));
+                        for (size_t ky=0; ky<=degree; ++ky) {
+                            const double y = cos(orsa::pi()*(ky+0.5)/(degree+1));
+                            for (size_t kz=0; kz<=degree; ++kz) {
+                                const double z = cos(orsa::pi()*(kz+0.5)/(degree+1));
                                 
                                 const orsa::Vector p = R0*orsa::Vector(x,y,z);
                                 
@@ -199,22 +192,10 @@ CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(con
                                     }
                                 }
                                 
-                                /* ORSA_DEBUG("p:");
-                                   orsa::print(p);
-                                   ORSA_DEBUG("density: %g",delta_density);
-                                */
-                                
-                                /* sum +=
-                                   cos(nx*orsa::pi()*(kx+0.5)/degree) *
-                                   cos(ny*orsa::pi()*(ky+0.5)/degree) *
-                                   cos(nz*orsa::pi()*(kz+0.5)/degree) *
-                                   delta_density / densityScale;
-                                */
-
                                 sum +=
-                                    cos(nx*orsa::pi()*(kx+0.5)/degree) *
-                                    cos(ny*orsa::pi()*(ky+0.5)/degree) *
-                                    cos(nz*orsa::pi()*(kz+0.5)/degree) *
+                                    cos(nx*orsa::pi()*(kx+0.5)/(degree+1)) *
+                                    cos(ny*orsa::pi()*(ky+0.5)/(degree+1)) *
+                                    cos(nz*orsa::pi()*(kz+0.5)/(degree+1)) *
                                     delta_density;
                             }
                         }
@@ -223,8 +204,8 @@ CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(con
                         (2-orsa::kronecker(0,nx)) *
                         (2-orsa::kronecker(0,ny)) *
                         (2-orsa::kronecker(0,nz)) *
-                        sum/orsa::cube(degree);
-
+                        sum/orsa::cube(degree+1);
+                    
                     /* 
                        ORSA_DEBUG("coeff[%02i][%02i][%02i] = %20.12f",
                        nx,ny,nz,coeff[nx][ny][nz]);
@@ -233,14 +214,6 @@ CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(con
             }
         }
     }
-    
-    /* CubicChebyshevMassDistribution * CCMD;
-       if (decompose_layerData) {
-       CCMD = new CubicChebyshevMassDistribution(coeff,densityScale,R0,0);
-       } else {
-       CCMD = new CubicChebyshevMassDistribution(coeff,densityScale,R0,layerData);
-       }
-    */
     
     CubicChebyshevMassDistribution * CCMD;
     if (decompose_layerData) {
