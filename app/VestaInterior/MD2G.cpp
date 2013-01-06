@@ -1066,6 +1066,28 @@ int main(int argc, char **argv) {
         fclose(fp);
     }
     
+    {
+        // yet another output file...
+        char filename[1024];
+        sprintf(filename,"%s.inertial.dat",plateModelFile.c_str());
+        FILE * fp = fopen(filename,"w");
+        ORSA_DEBUG("writing file [%s]",filename);
+        const double R2 = orsa::square(plateModelR0);
+        const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
+        gmp_fprintf(fp,"%s ",plateModelFile.c_str());
+        gmp_fprintf(fp,"%12.9f ",R2*pre_rot_Ixx_over_R2/km/km);
+        gmp_fprintf(fp,"%12.9f ",R2*pre_rot_Iyy_over_R2/km/km);
+        gmp_fprintf(fp,"%12.9f ",R2*pre_rot_Izz_over_R2/km/km);
+        gmp_fprintf(fp,"%12.9f ",plateModelR0*CMx_over_plateModelR0/km);
+        gmp_fprintf(fp,"%12.9f ",plateModelR0*CMy_over_plateModelR0/km);
+        gmp_fprintf(fp,"%12.9f ",plateModelR0*CMz_over_plateModelR0/km);
+        gmp_fprintf(fp,"%12.9f ",R2*principalInertiaMatrix.getM11()/km/km);
+        gmp_fprintf(fp,"%12.9f ",R2*principalInertiaMatrix.getM22()/km/km);
+        gmp_fprintf(fp,"%12.9f ",R2*principalInertiaMatrix.getM33()/km/km);
+        gmp_fprintf(fp,"\n");
+        fclose(fp);
+    }
+    
 #warning track precision of operations
     
     orsa::Cache<orsa::Vector> CM;
