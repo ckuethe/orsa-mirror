@@ -480,11 +480,19 @@ int main(int argc, char **argv) {
 
     // SQLite db
     char db_name[4096];
-    gmp_sprintf(db_name,".cT2sh_CM_%.12g_%.12g_%.12g%s",
-                CMx_over_plateModelR0,
-                CMy_over_plateModelR0,
-                CMz_over_plateModelR0,
-                SQLiteDBFileName.c_str());
+    {
+        char arg_of_dirname[4096];
+        char arg_of_basename[4096];
+        strcpy(arg_of_dirname,SQLiteDBFileName.c_str());
+        strcpy(arg_of_basename,SQLiteDBFileName.c_str());
+        gmp_sprintf(db_name,"%s/.cT2sh_CM_%.12g_%.12g_%.12g%s",
+                    dirname(arg_of_dirname),
+                    CMx_over_plateModelR0,
+                    CMy_over_plateModelR0,
+                    CMz_over_plateModelR0,
+                    basename(arg_of_basename));
+        // ORSA_DEBUG("db_name: [%s]",db_name);
+    }
     sqlite3 * db;
     int rc = sqlite3_open(db_name,&db);
     /* int rc = sqlite3_open_v2(db_name,
