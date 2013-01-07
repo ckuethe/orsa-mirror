@@ -212,9 +212,14 @@ int main(int argc, char **argv) {
     // mpf_set_default_prec(512);
     // ORSA_DEBUG("updated mpf precision: %i",mpf_get_default_prec());
     
-    if ( (argc != 14) &&
-         (argc != 15) ) {
-        printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> <Izz/MR^2> <num-sample-points> [CCMDF-input-file]\n",argv[0]);
+    /* if ( (argc != 14) &&
+       (argc != 15) ) {
+       printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> <Izz/MR^2> <num-sample-points> [CCMDF-input-file]\n",argv[0]);
+       exit(0);
+       }   
+    */
+    if (argc != 14) {
+        printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> <Izz/MR^2> <num-sample-points>\n",argv[0]);
         exit(0);
     }   
     
@@ -231,8 +236,8 @@ int main(int argc, char **argv) {
     const double CM_sz = orsa::FromUnits(atof(argv[11]),orsa::Unit::KM);
     IzzMR2 = atof(argv[12]); // global
     const int numSamplePoints = atoi(argv[13]);
-    const bool have_CCMDF_file = (argc == 15);
-    const std::string CCMDF_filename = (argc == 15) ? argv[14] : "";
+    // const bool have_CCMDF_file = (argc == 15);
+    // const std::string CCMDF_filename = (argc == 15) ? argv[14] : "";
     
     // safer over NFS
     // sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
@@ -441,20 +446,20 @@ int main(int argc, char **argv) {
     }
     
     osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution;
-    if (have_CCMDF_file) {
-        
-        CubicChebyshevMassDistributionFile::DataContainer CCMDF;
-        CubicChebyshevMassDistributionFile::read(CCMDF,CCMDF_filename);
-        if (CCMDF.size() == 0) {
-            ORSA_DEBUG("empty CCMDF file: [%s]",CCMDF_filename.c_str());
-            exit(0);
-        }
-        if (CCMDF.size() > 1) {
-            ORSA_DEBUG("CCMDF [%s] should contain only one set of coefficients.",CCMDF_filename.c_str());
-        }
-        
-        massDistribution = CCMD(CCMDF[CCMDF.size()-1]);
-    }
+    /* 
+       if (have_CCMDF_file) {
+       CubicChebyshevMassDistributionFile::DataContainer CCMDF;
+       CubicChebyshevMassDistributionFile::read(CCMDF,CCMDF_filename);
+       if (CCMDF.size() == 0) {
+       ORSA_DEBUG("empty CCMDF file: [%s]",CCMDF_filename.c_str());
+       exit(0);
+       }
+       if (CCMDF.size() > 1) {
+       ORSA_DEBUG("CCMDF [%s] should contain only one set of coefficients.",CCMDF_filename.c_str());
+       }
+       massDistribution = CCMD(CCMDF[CCMDF.size()-1]);
+       }
+    */
     
 #warning check if there is any ROTATION between reference systems
     
@@ -1319,36 +1324,38 @@ int main(int argc, char **argv) {
                                 getpid());
                     CCMDF_output_filename = line;
                 }
+
+                /* 
+                   if (have_CCMDF_file) {
+                   
+                   // using the input CCMDF
+                   const size_t cT_CCMDF_degree = massDistribution->coeff.size()-1;
+                   const size_t cT_CCMDF_size   = CubicChebyshevMassDistribution::totalSize(cT_CCMDF_degree);
+                   size_t Tx,Ty,Tz;
+                   for (size_t b=0; b<x0.uK_size; ++b) {
+                   x0.factor[b] = 0.0;
+                   for (size_t s=0; s<N; ++s) {
+                   double cT_CCMDF = 0.0; // default value
+                   if (s < cT_CCMDF_size) {
+                   CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,s);
+                   cT_CCMDF  = massDistribution->coeff[Tx][Ty][Tz];
+                   }
+                   x0.factor[b] += (cT_CCMDF-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
+                   
+                   // ORSA_DEBUG("cT_CCMDF = %+12.6e   cT0[%02i] = %+12.6e   uK[%02i][%02i] = %+12.6e   x0.factor[%02i] = %+12.6e",
+                   // cT_CCMDF,
+                   // s,gsl_vector_get(cT0,s),
+                   // b,s,gsl_vector_get(uK[b],s),
+                   // b,x0.factor[b]);
+                   
+                   }
+                   ORSA_DEBUG("factor[%03i] = %g",b,x0.factor[b]);
+                   }
+                   
+                   } else {
+                */
                 
-                if (have_CCMDF_file) {
-                    
-                    // using the input CCMDF
-                    const size_t cT_CCMDF_degree = massDistribution->coeff.size()-1;
-                    const size_t cT_CCMDF_size   = CubicChebyshevMassDistribution::totalSize(cT_CCMDF_degree);
-                    size_t Tx,Ty,Tz;
-                    for (size_t b=0; b<x0.uK_size; ++b) {
-                        x0.factor[b] = 0.0;
-                        for (size_t s=0; s<N; ++s) {
-                            double cT_CCMDF = 0.0; // default value
-                            if (s < cT_CCMDF_size) {
-                                CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,s);
-                                cT_CCMDF  = massDistribution->coeff[Tx][Ty][Tz];
-                            }
-                            x0.factor[b] += (cT_CCMDF-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
-                            
-                            /* ORSA_DEBUG("cT_CCMDF = %+12.6e   cT0[%02i] = %+12.6e   uK[%02i][%02i] = %+12.6e   x0.factor[%02i] = %+12.6e",
-                               cT_CCMDF,
-                               s,gsl_vector_get(cT0,s),
-                               b,s,gsl_vector_get(uK[b],s),
-                               b,x0.factor[b]);
-                            */
-                            
-                        }
-                        ORSA_DEBUG("factor[%03i] = %g",b,x0.factor[b]);
-                    }
-                    
-                } else {
-                    // get as close as possible to cT = {1,0,0,0,0...} = constant density
+                {   // get as close as possible to cT = {1,0,0,0,0...} = constant density
                     // project (1,0,0,0..) - cT0 along uK_b
                     for (size_t b=0; b<x0.uK_size; ++b) {
                         x0.factor[b] = 0.0;

@@ -203,7 +203,7 @@ double E1(void * xp) {
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: closest to uniform density]",delta_penalty);
         }
         
-        if (1) {
+        if (0) {
             // target: closest to uniform (simple)
             const double delta_penalty = (maxDensity-minDensity)/x->bulkDensity;
             penalty += delta_penalty;
@@ -233,7 +233,7 @@ double E1(void * xp) {
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: most volume with high density]",delta_penalty);
         }
         
-        if (0) {
+        if (1) {
             // target: highest single density peak
             const double delta_penalty = (minDensity-maxDensity)/x->bulkDensity;
             penalty += delta_penalty;
