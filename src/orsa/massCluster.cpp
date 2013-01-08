@@ -100,6 +100,7 @@ orsa::Vector MassCluster::gravitationalForce(const orsa::MassCluster * M1,
     }
     if (sum_weight != 0.0) F /= sum_weight;
     // ORSA_DEBUG("R: %g   1/R^2 = %g   F = %g",R.length(),1.0/R.lengthSquared(),F.length());
+    // ORSA_DEBUG("QQQ R: %g acos(R*F): %g",R.length(),orsa::radToDeg()*acos(R.normalized()*F.normalized()));
     return F;
 }
 
