@@ -212,16 +212,12 @@ int main(int argc, char **argv) {
     // mpf_set_default_prec(512);
     // ORSA_DEBUG("updated mpf precision: %i",mpf_get_default_prec());
     
-    /* if ( (argc != 14) &&
-       (argc != 15) ) {
-       printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> <Izz/MR^2> <num-sample-points> [CCMDF-input-file]\n",argv[0]);
-       exit(0);
-       }   
-    */
     if (argc != 14) {
         printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> <Izz/MR^2> <num-sample-points>\n",argv[0]);
         exit(0);
     }   
+    
+    const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
     
     const std::string radioScienceGravityFile = argv[1];
     const std::string plateModelFile = argv[2];
@@ -244,169 +240,11 @@ int main(int argc, char **argv) {
     
     const std::string SQLiteDBFileName = getSqliteDBFileName_simplex(plateModelFile,plateModelR0);
     
-    /* // test
-       {
-       for (size_t n=0; n<=10; ++n) {
-       const std::vector<mpz_class> & coeff = orsa::ChebyshevTcoeff(n);
-       gmp_printf("cT[n=%03i]: ",n);
-       for (size_t k=0; k<=n; ++k) {
-       gmp_printf("%+9Zi ",coeff[k].get_mpz_t());
-       }
-       gmp_printf("\n");
-       }
-       }
-    */
-    /* {
-       for (size_t n=0; n<=10; ++n) {
-       const std::vector<double> & ext = orsa::ChebyshevTextrema(n);
-       gmp_printf("cText[n=%03i]: ",n);
-       for (size_t k=0; k<=n; ++k) {
-       gmp_printf("%+12.9f ",ext[k]);
-       }
-       gmp_printf("\n");
-       }
-       }
-    */
-    /* {
-       orsa::triIndex_mpq tri_integral;
-       orsa::triIndex_d   tri_plain;
-       orsa::triIndex_d   tri_norm;
-       for (size_t l=0; l<=10; ++l) {
-       for(size_t m=0; m<=l; ++m) {
-       {
-       // C
-       tri_integral = orsa::conversionCoefficients_C_integral(l,m);
-       tri_plain    = orsa::conversionCoefficients_C_plain(l,m);
-       tri_norm     = orsa::conversionCoefficients_C_norm(l,m);
-       for (size_t ti=0; ti<=l; ++ti) {
-       for (size_t tj=0; tj<=l-ti; ++tj) {
-       for (size_t tk=0; tk<=l-ti-tj; ++tk) {
-       if (tri_integral[ti][tj][tk] != 0) {
-       if (tri_integral[ti][tj][tk].get_den() == 1) {
-       ORSA_DEBUG("C[%i][%i] += %Zi N[%i][%i][%i]",l,m,
-       tri_integral[ti][tj][tk].get_num().get_mpz_t(),
-       // tri_integral[ti][tj][tk].get_den().get_mpz_t(),
-       ti,tj,tk);
-       } else {
-       ORSA_DEBUG("C[%i][%i] += %Zi/%Zi N[%i][%i][%i]",l,m,
-       tri_integral[ti][tj][tk].get_num().get_mpz_t(),
-       tri_integral[ti][tj][tk].get_den().get_mpz_t(),
-       ti,tj,tk);
-       }
-       ORSA_DEBUG("C[%i][%i] += %g N[%i][%i][%i]",l,m,
-       tri_plain[ti][tj][tk],
-       ti,tj,tk);
-       ORSA_DEBUG("C[%i][%i] += %g N[%i][%i][%i]",l,m,
-       tri_norm[ti][tj][tk],
-       ti,tj,tk);
-       }
-       }
-       }
-       }
-       }
-       {
-       // S
-       tri_integral = orsa::conversionCoefficients_S_integral(l,m);
-       tri_plain    = orsa::conversionCoefficients_S_plain(l,m);
-       tri_norm     = orsa::conversionCoefficients_S_norm(l,m);
-       for (size_t ti=0; ti<=l; ++ti) {
-       for (size_t tj=0; tj<=l-ti; ++tj) {
-       for (size_t tk=0; tk<=l-ti-tj; ++tk) {
-       if (tri_integral[ti][tj][tk] != 0) {
-       if (tri_integral[ti][tj][tk].get_den() == 1) {
-       ORSA_DEBUG("S[%i][%i] += %Zi N[%i][%i][%i]",l,m,
-       tri_integral[ti][tj][tk].get_num().get_mpz_t(),
-       // tri_integral[ti][tj][tk].get_den().get_mpz_t(),
-       ti,tj,tk);
-       } else {
-       ORSA_DEBUG("S[%i][%i] += %Zi/%Zi N[%i][%i][%i]",l,m,
-       tri_integral[ti][tj][tk].get_num().get_mpz_t(),
-       tri_integral[ti][tj][tk].get_den().get_mpz_t(),
-       ti,tj,tk);
-       }
-       ORSA_DEBUG("S[%i][%i] += %g N[%i][%i][%i]",l,m,
-       tri_plain[ti][tj][tk],
-       ti,tj,tk);
-       ORSA_DEBUG("S[%i][%i] += %g N[%i][%i][%i]",l,m,
-       tri_norm[ti][tj][tk],
-       ti,tj,tk);
-       }
-       }
-       }
-       }
-       }
-       }
-       }
-       }
-    */
-    
     // test specific cases, for debug purposes only!
     // orsa::GlobalRNG::randomSeed = -800402816;
     
     osg::ref_ptr<orsaPDS::RadioScienceGravityData> gravityData = new orsaPDS::RadioScienceGravityData;
     orsaPDS::RadioScienceGravityFile::read(gravityData.get(),radioScienceGravityFile,512,1518);
-    
-    /* {
-       ORSA_DEBUG("testing writing of gravity data file...");
-       std::string testGravityFile = "gra.dat";
-       orsaPDS::RadioScienceGravityFile::write(gravityData.get(),testGravityFile,512,1518);
-       osg::ref_ptr<orsaPDS::RadioScienceGravityData> testGravityData = new orsaPDS::RadioScienceGravityData;
-       orsaPDS::RadioScienceGravityFile::read(testGravityData.get(),testGravityFile,512,1518);
-       {
-       gsl_vector *  pds_coeff = gravityData->getCoefficientVector();
-       gsl_vector * test_coeff = testGravityData->getCoefficientVector();
-       for (size_t i=0; i<gravityData->numberOfCoefficients; ++i) {
-       const double delta =
-       gsl_vector_get(test_coeff,i) -
-       gsl_vector_get( pds_coeff,i);
-       const double perc = 100*fabs(delta / gsl_vector_get(pds_coeff,i));
-       if (delta != 0.0) {
-       ORSA_DEBUG("i: %i %+12.6e %9.3e %%",i,delta,perc);
-       }
-       }
-       }
-       {
-       gsl_matrix *  pds_covm = gravityData->getCovarianceMatrix();
-       gsl_matrix * test_covm = testGravityData->getCovarianceMatrix();
-       for (size_t i=0; i<gravityData->numberOfCoefficients; ++i) {
-       for (size_t j=0; j<=i; ++j) {
-       const double delta =
-       gsl_matrix_get(test_covm,i,j) -
-       gsl_matrix_get( pds_covm,i,j);
-       const double perc = 100*fabs(delta / gsl_matrix_get(pds_covm,i,j));
-       if (delta != 0.0) {
-       ORSA_DEBUG("i: %i j: %i %+12.6e %9.3e %%",i,j,delta,perc);
-       }
-       }
-       }
-       }
-       ORSA_DEBUG("testing writing of gravity data file... done.");
-       }
-    */
-    
-    /* osg::ref_ptr<orsaPDS::RadioScienceGravityFile> pds =
-    // new orsaPDS::RadioScienceGravityFile("JGDAWN20SIMA.DAT",512,1518);
-    new orsaPDS::RadioScienceGravityFile(radioScienceGravityFile,512,1518);
-    */
-    
-    /* if (0) {
-       gsl_matrix * identity = gsl_matrix_alloc(gravityData->numberOfCoefficients,gravityData->numberOfCoefficients);
-       // gsl_blas_dgemm(CblasNoTrans,CblasNoTrans,1.0,pds_covm,pds_inv_covm,0.0,identity);
-       gsl_blas_dgemm(CblasNoTrans,CblasNoTrans,1.0,pds_inv_covm,pds_covm,0.0,identity);
-       for (size_t i=0; i<gravityData->numberOfCoefficients; ++i) {
-       for (size_t j=0; j<gravityData->numberOfCoefficients; ++j) {
-       ORSA_DEBUG("identity[%03i][%03i] = %+20.9f",i,j,gsl_matrix_get(identity,i,j));
-       }
-       }
-       }
-    */
-    
-    /* osg::ref_ptr<VestaShape> shape = new VestaShape;
-       if (!shape->read("vesta_thomas.dat")) {
-       ORSA_ERROR("problems encountered while reading shape file...");
-       exit(0);
-       }
-    */
     
     osg::ref_ptr<GaskellPlateModel> shapeModel = new GaskellPlateModel;
     if (!shapeModel->read(plateModelFile)) {
@@ -928,7 +766,7 @@ int main(int argc, char **argv) {
        }
     */
     
-    if (1) {
+    if (0) {
         // LaTeX output
         ORSA_DEBUG("LaTeX output --------------------");
         // bulk density = M/V = M / (si000*R0^3) 
@@ -1107,8 +945,59 @@ int main(int argc, char **argv) {
         gsl_vector * sampleCoeff_x  = gsl_vector_alloc(M);
         gsl_vector * sampleCoeff_y  = gsl_vector_alloc(M); 
         
-        // for (size_t gen=0; gen<1000; ++gen) {
+        // const double minimumDensity = orsa::FromUnits(orsa::FromUnits(1.50,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+        
+        // output file, global
         {
+            char line[4096];
+            gmp_sprintf(line,
+                        // "CCMDF_%i_%i_%g_%i.out",
+                        "CCMDF_%i_%i_%i.out",
+                        gravityDegree,
+                        polynomialDegree,
+                        // orsa::FromUnits(orsa::FromUnits(minimumDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+                        getpid());
+            CCMDF_output_filename = line;
+        }
+        
+        // for (size_t gen=0; gen<1000; ++gen) {
+        while (1) {
+
+            // modify massDistribution
+            CubicChebyshevMassDistribution::CoefficientType coeff;
+            CubicChebyshevMassDistribution::resize(coeff,T_degree);
+            for (size_t runningDegree=0; runningDegree<=T_degree; ++runningDegree) {
+                for (size_t i=0; i<=T_degree; ++i) {
+                    for (size_t j=0; j<=T_degree-i; ++j) {
+                        for (size_t k=0; k<=T_degree-i-j; ++k) {
+                            if (i+j+k == runningDegree) {
+                                coeff[i][j][k] = 0.0;
+                                // ORSA_DEBUG("ijk: %i %i %i   coeff: %g",i,j,k,data.coeff[i][j][k]);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            LayerData::EllipsoidLayerVectorType ellipsoidLayerVector;
+            {
+                const double excessDensity = orsa::FromUnits(orsa::FromUnits(6.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::GRAM),orsa::Unit::CM,-3);
+#warning add code to check that ellipsoid layer is fully contained in shape...
+                const double a = orsa::FromUnits(150.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
+                const double b = orsa::FromUnits(150.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
+                const double c = orsa::FromUnits(150.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
+                const double v0x = orsa::FromUnits(5.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
+                const double v0y = orsa::FromUnits(5.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
+                const double v0z = orsa::FromUnits(5.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
+                ellipsoidLayerVector.push_back(new LayerData::EllipsoidLayer(excessDensity,a,b,c,orsa::Vector(v0x,v0y,v0z)));
+            }
+            LayerData::SHLayerVectorType shLayerVector;
+            osg::ref_ptr<const LayerData> layerData = new LayerData(ellipsoidLayerVector,shLayerVector);
+            massDistribution = new CubicChebyshevMassDistribution(coeff,
+                                                                  plateModelR0,
+                                                                  layerData);
+            
+            
             
             std::vector< std::vector<mpf_class> > layerData_norm_C;
             std::vector< std::vector<mpf_class> > layerData_norm_S;
@@ -1124,7 +1013,6 @@ int main(int argc, char **argv) {
                 }
             }
             mpf_class layerData_IzzMR2 = 0.0;
-            
             if (massDistribution.get() != 0) {
                 if (massDistribution->layerData.get() != 0) {
                     CubicChebyshevMassDistribution::CoefficientType md_lD_coeff;
@@ -1244,7 +1132,7 @@ int main(int argc, char **argv) {
                 }
             }
             
-            if (1) {
+            if (0) {
                 
                 // trying simulated annealing approach
                 
@@ -1376,6 +1264,99 @@ int main(int argc, char **argv) {
                 gsl_siman_solve(rng, &x0, E1, S1, M1, P1,
                                 SIMAN_copy, SIMAN_copy_construct, SIMAN_destroy,
                                 0, params);
+                
+            }
+
+            if (1) {
+                // just project this case on the solution space
+                
+                // get as close as possible to cT = {bulkDensity,0,0,0,0...} = constant density
+                // project (bulkDensity,0,0,0..) - cT0 along uK_b
+                const size_t uK_size = N-M;
+                std::vector<double> factor;
+                factor.resize(uK_size);
+                for (size_t b=0; b<uK_size; ++b) {
+                    factor[b] = 0.0;
+                    for (size_t s=0; s<N; ++s) {
+                        if (s==0) {
+                            // first element of target cT = 1
+                            // first element of target cT = bulkDensity
+                            factor[b] += (bulkDensity-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
+                        } else {
+                            // all other elements of target cT = 0
+                            factor[b] += (0.0-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
+                        }
+                    }
+                    // ORSA_DEBUG("factor[%03i] = %g",b,factor[b]);
+                }
+                
+                gsl_vector_memcpy(cT,cT0);
+                for (size_t b=0; b<uK_size; ++b) {
+                    for (size_t j=0; j<T_size; ++j) {
+                        gsl_vector_set(cT,j,gsl_vector_get(cT,j)+factor[b]*gsl_vector_get(uK[b],j));
+                    }
+                }
+                
+                for (unsigned int i=0; i<=T_degree; ++i) {
+                    for (unsigned int j=0; j<=T_degree-i; ++j) {
+                        for (unsigned int k=0; k<=T_degree-i-j; ++k) {
+                            if (i+j+k<=T_degree) {
+                                const size_t index = CubicChebyshevMassDistribution::index(i,j,k);
+                                coeff[i][j][k] = gsl_vector_get(cT,index);
+                            }
+                        }            
+                    }
+                }
+                
+                osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
+                    new CubicChebyshevMassDistribution(coeff,
+                                                       plateModelR0,
+                                                       layerData);
+                
+                {
+                    // another quick output...
+                    CubicChebyshevMassDistributionFile::CCMDF_data data;
+                    data.minDensity = 0.0;
+                    data.maxDensity = 0.0;
+                    data.deltaDensity = 0.0;
+                    data.penalty = 0.0;
+                    // data.densityScale = x->bulkDensity;
+                    data.R0 = plateModelR0;
+                    data.SH_degree = SH_degree;
+                    data.coeff = coeff;
+                    data.layerData = layerData;
+                    //
+                    if (1) {
+                        orsa::Cache<orsa::Vector> CM;
+                        mpf_class IxxMR2, IyyMR2, IzzMR2;
+                        inertia(CM,
+                                IxxMR2,
+                                IyyMR2,
+                                IzzMR2,
+                                SH_degree,
+                                si.get(),
+                                massDistribution.get(),
+                                plateModelR0);
+                        
+                        char comment[4096];
+                        sprintf(comment,"%.6f %.6f %.6f",IxxMR2.get_d(),IyyMR2.get_d(),IzzMR2.get_d());
+                        if (0) {
+                            char tmpstr[4096];
+                            for (size_t b=0; b<uK_size; ++b) {
+                                sprintf(tmpstr," %+12.6f",factor[b]);
+                                strcat(comment,tmpstr);
+                            }
+                        }
+                        // strcat(comment," ");
+                        // strcat(comment,pvline);
+                        data.comment = comment;
+                    }
+                    //
+                    // CubicChebyshevMassDistributionFile::append(data,"CCMDF.out");
+                    CubicChebyshevMassDistributionFile::append(data,CCMDF_output_filename.c_str());
+                }
+                
+                
                 
             }
             
