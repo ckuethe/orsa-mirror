@@ -82,7 +82,11 @@ namespace orsa {
     public:
         static bool invert(const Matrix & src, Matrix & inverse);
         static void transpose(const Matrix & src, Matrix & transposed);
-    
+        
+    public:
+        static Matrix inverted(const Matrix & m);
+        static Matrix transposed(const Matrix & m);
+        
     public:
         static void OpenGLMatrix(const Matrix & src, double opengl_matrix[16]);
     

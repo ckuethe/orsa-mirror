@@ -205,7 +205,13 @@ bool Matrix::invert(const Matrix & src, Matrix & inverse) {
     
     return true;
 }
-  
+
+Matrix inverted(const Matrix & m) {
+    orsa::Matrix inv;
+    orsa::Matrix::invert(m,inv);
+    return inv;
+}
+
 void Matrix::transpose(const Matrix & src, Matrix & transposed) {
     transposed.m11 = src.m11;
     transposed.m22 = src.m22;
@@ -217,7 +223,13 @@ void Matrix::transpose(const Matrix & src, Matrix & transposed) {
     transposed.m23 = src.m32;
     transposed.m32 = src.m23;
 }
-  
+
+Matrix transposed(const Matrix & m) {
+    orsa::Matrix tr;
+    orsa::Matrix::transpose(m,tr);
+    return tr;
+}
+
 void Matrix::OpenGLMatrix(const Matrix & src, double opengl_matrix[16]) {
     opengl_matrix[0]  = src.m11;
     opengl_matrix[1]  = src.m21;
