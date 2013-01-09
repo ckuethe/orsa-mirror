@@ -348,15 +348,19 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
             double excessDensity;
             double a,b,c;
             double v0x,v0y,v0z;
+            double psi,theta,phi;
             for (unsigned int k=0; k<ellipsoidLayerVectorSize; ++k) {
-                if (7 == gmp_fscanf(fp,"%lf %lf %lf %lf %lf %lf %lf",
-                                    &excessDensity,
-                                    &a,
-                                    &b,
-                                    &c,
-                                    &v0x,
-                                    &v0y,
-                                    &v0z)) {
+                if (10 == gmp_fscanf(fp,"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
+                                     &excessDensity,
+                                     &a,
+                                     &b,
+                                     &c,
+                                     &v0x,
+                                     &v0y,
+                                     &v0z,
+                                     &psi,
+                                     &theta,
+                                     &phi)) {
                     excessDensity = orsa::FromUnits(orsa::FromUnits(excessDensity,orsa::Unit::GRAM),orsa::Unit::CM,-3);
                     a = orsa::FromUnits(a,orsa::Unit::KM);
                     b = orsa::FromUnits(b,orsa::Unit::KM);
@@ -364,7 +368,12 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
                     v0x = orsa::FromUnits(v0x,orsa::Unit::KM);
                     v0y = orsa::FromUnits(v0y,orsa::Unit::KM);
                     v0z = orsa::FromUnits(v0z,orsa::Unit::KM);
-                    ellipsoidLayerVector.push_back(new LayerData::EllipsoidLayer(excessDensity,a,b,c,orsa::Vector(v0x,v0y,v0z)));
+                    psi *= orsa::degToRad();
+                    theta *= orsa::degToRad();
+                    phi *= orsa::degToRad();
+                    orsa::Matrix rot;
+                    orsa::eulerAnglesToMatrix(rot,psi,theta,phi);
+                    ellipsoidLayerVector.push_back(new LayerData::EllipsoidLayer(excessDensity,a,b,c,orsa::Vector(v0x,v0y,v0z),rot));
                     
                     // ORSA_DEBUG("read layer: %g %g %g %g %g %g %g",excessDensity,a,b,c,v0x,v0y,v0z);
                 } else {
@@ -410,16 +419,25 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
                     }
                 }
                 double v0x,v0y,v0z;
-                if (3 != gmp_fscanf(fp,"%lf %lf %lf ",
+                double psi,theta,phi;
+                if (6 != gmp_fscanf(fp,"%lf %lf %lf %lf %lf %lf ",
                                     &v0x,
                                     &v0y,
-                                    &v0z)) {
+                                    &v0z,
+                                    &psi,
+                                    &theta,
+                                    &phi)) {
                     return false;
                 }
                 v0x = orsa::FromUnits(v0x,orsa::Unit::KM);
                 v0y = orsa::FromUnits(v0y,orsa::Unit::KM);
                 v0z = orsa::FromUnits(v0z,orsa::Unit::KM);
-                shLayerVector.push_back(new LayerData::SHLayer(excessDensity,norm_A,norm_B,orsa::Vector(v0x,v0y,v0z)));
+                psi *= orsa::degToRad();
+                theta *= orsa::degToRad();
+                phi *= orsa::degToRad();
+                orsa::Matrix rot;
+                orsa::eulerAnglesToMatrix(rot,psi,theta,phi);
+                shLayerVector.push_back(new LayerData::SHLayer(excessDensity,norm_A,norm_B,orsa::Vector(v0x,v0y,v0z),rot));
             }
         }
     }
@@ -461,14 +479,19 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
             // if (lv.size() > 0) {
             gmp_fprintf(fp,"%i ",lv.size());
             for (unsigned int k=0; k<lv.size(); ++k) {
-                gmp_fprintf(fp,"%.3f %g %g %g %g %g %g ",
+                double psi, theta, phi;
+                orsa::matrixToEulerAngles(psi,theta,phi,lv[k]->rot);
+                gmp_fprintf(fp,"%.3f %12.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f ",
                             orsa::FromUnits(orsa::FromUnits(lv[k]->excessDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
                             orsa::FromUnits(lv[k]->a,orsa::Unit::KM,-1),
                             orsa::FromUnits(lv[k]->b,orsa::Unit::KM,-1),
                             orsa::FromUnits(lv[k]->c,orsa::Unit::KM,-1),
                             orsa::FromUnits(lv[k]->v0.getX(),orsa::Unit::KM,-1),
                             orsa::FromUnits(lv[k]->v0.getY(),orsa::Unit::KM,-1),
-                            orsa::FromUnits(lv[k]->v0.getZ(),orsa::Unit::KM,-1));
+                            orsa::FromUnits(lv[k]->v0.getZ(),orsa::Unit::KM,-1),
+                            orsa::radToDeg()*psi,
+                            orsa::radToDeg()*theta,
+                            orsa::radToDeg()*phi);
             }
             // }
         }
@@ -484,14 +507,19 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
                 gmp_fprintf(fp,"%i ",degree);
                 for (int l=0; l<=degree; ++l) {
                     for (int m=0; m<=l; ++m) {
-                        gmp_fprintf(fp,"%g ",orsa::FromUnits(sv[k]->norm_A[l][m],orsa::Unit::KM,-1));
-                        if (m>0) gmp_fprintf(fp,"%g ",orsa::FromUnits(sv[k]->norm_B[l][m],orsa::Unit::KM,-1));
+                        gmp_fprintf(fp,"%+12.6f ",orsa::FromUnits(sv[k]->norm_A[l][m],orsa::Unit::KM,-1));
+                        if (m>0) gmp_fprintf(fp,"%+12.6f ",orsa::FromUnits(sv[k]->norm_B[l][m],orsa::Unit::KM,-1));
                     }
                 }
-                gmp_fprintf(fp,"%g %g %g ",
+                double psi, theta, phi;
+                orsa::matrixToEulerAngles(psi,theta,phi,sv[k]->rot);
+                gmp_fprintf(fp,"%+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f ",
                             orsa::FromUnits(sv[k]->v0.getX(),orsa::Unit::KM,-1),
                             orsa::FromUnits(sv[k]->v0.getY(),orsa::Unit::KM,-1),
-                            orsa::FromUnits(sv[k]->v0.getZ(),orsa::Unit::KM,-1));
+                            orsa::FromUnits(sv[k]->v0.getZ(),orsa::Unit::KM,-1),
+                            orsa::radToDeg()*psi,
+                            orsa::radToDeg()*theta,
+                            orsa::radToDeg()*phi);
             }
             // }
         }

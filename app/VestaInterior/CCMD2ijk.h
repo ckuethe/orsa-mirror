@@ -6,6 +6,7 @@
 #include "SH2ijk.h"
 #include "global_SH_epsrel.h"
 #include "translate_ijk.h"
+#include "rotate_ijk.h"
 
 static mpz_class EllipsoidExpansion_product_utility(const unsigned int n) {
     mpz_class product = 1;
@@ -146,11 +147,13 @@ void CCMD2ijk(std::vector< std::vector< std::vector<double> > > & N,
                 }
                 std::vector< std::vector< std::vector<double> > > translated_N_ell;
                 translate(translated_N_ell,N_ell,elv[k]->v0/plateModelR0);
+                std::vector< std::vector< std::vector<double> > > translated_and_rotated_N_ell;
+                rotate(translated_and_rotated_N_ell,translated_N_ell,elv[k]->rot);
                 for (size_t ni=0; ni<=degree; ++ni) {
                     for (size_t nj=0; nj<=degree-ni; ++nj) {
                         for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
                             N[ni][nj][nk] +=
-                                translated_N_ell[ni][nj][nk];
+                                translated_and_rotated_N_ell[ni][nj][nk];
                         }
                     }
                 }
@@ -182,11 +185,13 @@ void CCMD2ijk(std::vector< std::vector< std::vector<double> > > & N,
                 }
                 std::vector< std::vector< std::vector<double> > > translated_N_SH;
                 translate(translated_N_SH,N_SH,shlv[k]->v0/plateModelR0);
+                std::vector< std::vector< std::vector<double> > > translated_and_rotated_N_SH;
+                rotate(translated_and_rotated_N_SH,translated_N_SH,shlv[k]->rot);
                 for (size_t ni=0; ni<=degree; ++ni) {
                     for (size_t nj=0; nj<=degree-ni; ++nj) {
                         for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
                             N[ni][nj][nk] +=
-                                translated_N_SH[ni][nj][nk];
+                                translated_and_rotated_N_SH[ni][nj][nk];
                         }
                     }
                 }

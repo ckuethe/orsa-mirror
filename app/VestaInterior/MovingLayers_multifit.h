@@ -19,6 +19,7 @@ public:
         double volume;
         double excessDensity;
         orsa::Vector v0;
+        orsa::Matrix rot;
     };
 public:
     // all input vars

@@ -983,13 +983,14 @@ int main(int argc, char **argv) {
             {
                 const double excessDensity = orsa::FromUnits(orsa::FromUnits(6.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::GRAM),orsa::Unit::CM,-3);
 #warning add code to check that ellipsoid layer is fully contained in shape...
-                const double a = orsa::FromUnits(150.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
-                const double b = orsa::FromUnits(150.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
-                const double c = orsa::FromUnits(150.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
+                const double a = orsa::FromUnits(50+100.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
+                const double b = orsa::FromUnits(50+100.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
+                const double c = orsa::FromUnits(50+100.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
                 const double v0x = orsa::FromUnits(5.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
                 const double v0y = orsa::FromUnits(5.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
                 const double v0z = orsa::FromUnits(5.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
-                ellipsoidLayerVector.push_back(new LayerData::EllipsoidLayer(excessDensity,a,b,c,orsa::Vector(v0x,v0y,v0z)));
+                const orsa::Matrix rot = orsa::Matrix::identity();
+                ellipsoidLayerVector.push_back(new LayerData::EllipsoidLayer(excessDensity,a,b,c,orsa::Vector(v0x,v0y,v0z),rot));
             }
             LayerData::SHLayerVectorType shLayerVector;
             osg::ref_ptr<const LayerData> layerData = new LayerData(ellipsoidLayerVector,shLayerVector);

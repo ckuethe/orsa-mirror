@@ -1010,6 +1010,7 @@ int main(int argc, char **argv) {
                 d.volume = shL->volume();
                 d.excessDensity = shL->excessDensity;
                 d.v0 = shL->v0;
+                d.rot = shL->rot;
                 shLayerData.push_back(d);
             }
             
@@ -1391,7 +1392,8 @@ double MovingLayersMultifit::fun(const orsa::MultifitParameters * par,
             osg::ref_ptr<LayerData::SHLayer> tmpSHLayer = new LayerData::SHLayer(shLayerData[k].excessDensity,
                                                                                  norm_A,
                                                                                  norm_B,
-                                                                                 shLayerData[k].v0);
+                                                                                 shLayerData[k].v0,
+                                                                                 shLayerData[k].rot);
             const double tmpVolume = tmpSHLayer->volume();
             
             const double volumeCorrectionFactor = cbrt(shLayerData[k].volume/tmpVolume);
@@ -1415,7 +1417,8 @@ double MovingLayersMultifit::fun(const orsa::MultifitParameters * par,
         newSHLayerVector.push_back(new LayerData::SHLayer(shLayerData[k].excessDensity,
                                                           norm_A,
                                                           norm_B,
-                                                          shLayerData[k].v0));
+                                                          shLayerData[k].v0,
+                                                          shLayerData[k].rot));
     }
     
     osg::ref_ptr<LayerData> layerData = new LayerData(ellipsoidLayerVector,
@@ -1558,7 +1561,8 @@ void MovingLayersMultifit::save_CCMDF(const orsa::MultifitParameters * par) cons
         osg::ref_ptr<LayerData::SHLayer> tmpSHLayer = new LayerData::SHLayer(shLayerData[k].excessDensity,
                                                                              norm_A,
                                                                              norm_B,
-                                                                             shLayerData[k].v0);
+                                                                             shLayerData[k].v0,
+                                                                             shLayerData[k].rot);
         const double tmpVolume = tmpSHLayer->volume();
         
         const double volumeCorrectionFactor = cbrt(shLayerData[k].volume/tmpVolume);
@@ -1580,7 +1584,8 @@ void MovingLayersMultifit::save_CCMDF(const orsa::MultifitParameters * par) cons
         newSHLayerVector.push_back(new LayerData::SHLayer(shLayerData[k].excessDensity,
                                                           norm_A,
                                                           norm_B,
-                                                          shLayerData[k].v0));
+                                                          shLayerData[k].v0,
+                                                          shLayerData[k].rot));
     }
     
     osg::ref_ptr<LayerData> layerData = new LayerData(ellipsoidLayerVector,

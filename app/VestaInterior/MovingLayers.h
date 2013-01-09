@@ -171,7 +171,8 @@ void S1(const gsl_rng * r, void * xp, double step_size) {
         osg::ref_ptr<LayerData::SHLayer> tmpSHLayer = new LayerData::SHLayer(shL->excessDensity,
                                                                              new_norm_A,
                                                                              new_norm_B,
-                                                                             shL->v0);
+                                                                             shL->v0,
+                                                                             shL->rot);
         const double tmpVolume = tmpSHLayer->volume();
         
         const double volumeCorrectionFactor = cbrt(originalVolume/tmpVolume);
@@ -186,7 +187,8 @@ void S1(const gsl_rng * r, void * xp, double step_size) {
         newSHLayerVector.push_back(new LayerData::SHLayer(shL->excessDensity,
                                                           new_norm_A,
                                                           new_norm_B,
-                                                          shL->v0));
+                                                          shL->v0,
+                                                          shL->rot));
     }
     
     const LayerData::EllipsoidLayerVectorType oldEllipsoidLayerVector = x->layerData->ellipsoidLayerVector;

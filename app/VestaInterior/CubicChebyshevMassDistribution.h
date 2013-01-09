@@ -20,24 +20,29 @@ public:
                        const double & a_,
                        const double & b_,
                        const double & c_,
-                       const orsa::Vector & v0_) :
+                       const orsa::Vector & v0_,
+                       const orsa::Matrix & rot_) :
             osg::Referenced(true),
             excessDensity(excessDensity_),
             a(a_),
             b(b_),
             c(c_),
             v0(v0_),
+            rot(rot_),
+            inv_rot(orsa::Matrix::inverted(rot)),
             _am2(1.0/(a*a)),
             _bm2(1.0/(b*b)),
             _cm2(1.0/(c*c)),
             _volume(4.0/3.0*orsa::pi()*a*b*c),
-            _excessMass(_volume*excessDensity) { }
+            _excessMass(_volume*excessDensity) { }                     
     protected:
         virtual ~EllipsoidLayer() { }
     public: /* input */
         const double excessDensity;
         const double a,b,c; // semi-axes along x,y,z
         const orsa::Vector v0; // center of ellipsoid
+        const orsa::Matrix rot; // rotation of ellipsoid
+        const orsa::Matrix inv_rot; // inverse of rotation
     protected: /* derived */
         const double _am2,_bm2,_cm2;
         const double _volume;
@@ -50,17 +55,19 @@ public:
         double excessMass() const { return _excessMass; }
     public:
         bool containsPoint(const orsa::Vector & p) const {
-            const orsa::Vector dp = p-v0;
+            // const orsa::Vector dp = p-v0;
+            const orsa::Vector dp = inv_rot*(p-v0);
             return (orsa::square(dp.getX())*am2() +
                     orsa::square(dp.getY())*bm2() +
                     orsa::square(dp.getZ())*cm2() <= 1.0);
-        }
+        } 
     public:
-        bool containsLayer(const EllipsoidLayer * layer) const {
-#warning write better method...
-            // simple one; a better one should consided difference in v0 and actual a,b,c values (tricky in particular cases...)
-            return (volume() > layer->volume());
-        }
+        /* bool containsLayer(const EllipsoidLayer * layer) const {
+           #warning write better method...
+           // simple one; a better one should consided difference in v0 and actual a,b,c values (tricky in particular cases...)
+           return (volume() > layer->volume());
+           }
+        */
 #warning errors should be generated in the code using the Layers if layer A is not inside layer B, and layer B is not inside layer A (i.e., they are crossing each other)
     };
 public:
@@ -76,12 +83,15 @@ public:
         SHLayer(const double & excessDensity_,
                 const SHcoeff & norm_A_,
                 const SHcoeff & norm_B_,
-                const orsa::Vector & v0_) :
+                const orsa::Vector & v0_,
+                const orsa::Matrix & rot_) :
             osg::Referenced(true),
             excessDensity(excessDensity_),
             norm_A(norm_A_),
             norm_B(norm_B_),
-            v0(v0_)
+            v0(v0_),
+            rot(rot_),
+            inv_rot(orsa::Matrix::inverted(rot))
             { }
     protected:
         virtual ~SHLayer() { }
@@ -89,6 +99,8 @@ public:
         const double excessDensity;
         const SHcoeff norm_A, norm_B;
         const orsa::Vector v0; // center 
+        const orsa::Matrix rot; // rotation
+        const orsa::Matrix inv_rot; // inverse of rotation
     public:
         // derived
         mutable orsa::Cache<double> volume_, excessMass_;
@@ -103,7 +115,7 @@ public:
             return orsa::normalization_sphericalHarmonicsToNormalizedSphericalHarmonics(l,m).get_d();
         }
     protected:
-        // utility function, pure SH, v0 NOT included
+        // utility function, pure SH, v0 and rot NOT included
         double radius(const double & theta,
                       const double & phi) const {
             const double c_theta = cos(theta);
@@ -133,7 +145,8 @@ public:
         
     public:
         bool containsPoint(const orsa::Vector & p) const {
-            const orsa::Vector dp = p-v0;
+            // const orsa::Vector dp = p-v0;
+            const orsa::Vector dp = inv_rot*(p-v0);
             const orsa::Vector  u = dp.normalized();
             const double theta = acos(u.getZ());
             const double phi   = atan2(u.getY(),u.getX());
