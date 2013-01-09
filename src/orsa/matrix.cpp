@@ -206,7 +206,7 @@ bool Matrix::invert(const Matrix & src, Matrix & inverse) {
     return true;
 }
 
-Matrix inverted(const Matrix & m) {
+Matrix Matrix::inverted(const Matrix & m) {
     orsa::Matrix inv;
     orsa::Matrix::invert(m,inv);
     return inv;
@@ -224,7 +224,7 @@ void Matrix::transpose(const Matrix & src, Matrix & transposed) {
     transposed.m32 = src.m23;
 }
 
-Matrix transposed(const Matrix & m) {
+Matrix Matrix::transposed(const Matrix & m) {
     orsa::Matrix tr;
     orsa::Matrix::transpose(m,tr);
     return tr;
