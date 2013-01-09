@@ -22,7 +22,6 @@
 #warning should change the _simplex_ part of the name to _ijk_ or something like that
 inline std::string getSqliteDBFileName_SH(const std::string & inputFile,
                                           const double & R0) {
-    ORSA_DEBUG("test: [%s]",inputFile.c_str());
     char line[4096];
     char arg_of_dirname[4096];
     char arg_of_basename[4096];
@@ -32,7 +31,6 @@ inline std::string getSqliteDBFileName_SH(const std::string & inputFile,
             dirname(arg_of_dirname),
             basename(arg_of_basename),
             orsa::FromUnits(R0,orsa::Unit::KM,-1));
-    ORSA_DEBUG("test: [%s]",inputFile.c_str());
     return line;    
 }
 

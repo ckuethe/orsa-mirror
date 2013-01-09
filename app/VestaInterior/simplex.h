@@ -22,7 +22,6 @@
 
 inline std::string getSqliteDBFileName_simplex(const std::string & inputFile,
                                                const double & R0) {
-    ORSA_DEBUG("test: [%s]",inputFile.c_str());
     char line[4096];
     char arg_of_dirname[4096];
     char arg_of_basename[4096];
@@ -32,7 +31,6 @@ inline std::string getSqliteDBFileName_simplex(const std::string & inputFile,
             dirname(arg_of_dirname),
             basename(arg_of_basename),
             orsa::FromUnits(R0,orsa::Unit::KM,-1));
-    ORSA_DEBUG("test: [%s]",inputFile.c_str());
     return line;
 }
 
@@ -312,7 +310,7 @@ public:
                         sum_vol_fun += sum_vol_fi*(*aux[fi].volume);
                         /* ORSA_DEBUG("degree: %02i  q: %02i sum_vol_fi: %+16.6e  partial sum_vol_fun: %+16.6e",
                            degree,q,sum_vol_fi,sum_vol_fun);
-                        */
+                        */ 
                     }
                     val_vol_sum_fun[q] = sum_vol_fun;
                 }

@@ -410,6 +410,8 @@ int main(int argc, char **argv) {
         exit(0);
     }
     
+    const double km = orsa::FromUnits(1.0,orsa::Unit::KM);
+    
     const std::string plateModelFile = argv[1];
     const double plateModelR0 = orsa::FromUnits(atof(argv[2]),orsa::Unit::KM);
     const std::string radioScienceGravityTemplateFile = argv[3];
@@ -445,6 +447,130 @@ int main(int argc, char **argv) {
     
     osg::ref_ptr<SimplexIntegration<simplex_T> > si =
         new SimplexIntegration<simplex_T>(shapeModel.get(), plateModelR0, SQLiteDBFileName);
+
+    if (0) {
+        
+        // TEST ONLY!!!
+        
+        // test of Nijk translation and rotation...
+        double x,y,z;
+        orsa::GlobalRNG::instance()->rng()->gsl_ran_dir_3d(&x,&y,&z);
+        const orsa::Vector v0 = 10.0*km*orsa::Vector(x,y,z);
+        orsa::Matrix mtx;
+        orsa::eulerAnglesToMatrix(mtx,
+                                  orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),
+                                  orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),
+                                  orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
+        const orsa::Matrix rot = mtx; // orsa::Matrix::identity(); // mtx;
+        orsa::print(v0);
+        orsa::print(rot);
+        std::vector<orsa::Vector> mod_v = shapeModel->getVertexVector();
+        for (size_t k=0; k<mod_v.size(); ++k) {
+            mod_v[k] = rot*mod_v[k]+v0;
+        }
+        
+        char mod_filename[4096];
+        {
+            sprintf(mod_filename,"mod_shape_%06i.plt",orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform_int(1000000));
+            // write file in Gaskell format
+            FILE * fp = fopen(mod_filename,"w");
+            ORSA_DEBUG("writing file [%s]",mod_filename);
+            fprintf(fp,"%i\n",mod_v.size());
+            for (size_t j=0; j<mod_v.size(); ++j) {
+                fprintf(fp,"%i %10.5f %10.5f %10.5f\n",
+                        j+1,
+                        orsa::FromUnits(mod_v[j].getX(),orsa::Unit::KM,-1),
+                        orsa::FromUnits(mod_v[j].getY(),orsa::Unit::KM,-1),
+                        orsa::FromUnits(mod_v[j].getZ(),orsa::Unit::KM,-1));
+            }
+            const orsa::TriShape::FaceVector & f = shapeModel->getFaceVector();
+            fprintf(fp,"%i\n",f.size());
+            for (size_t p=0; p<f.size(); ++p) {
+                fprintf(fp,"%i %i %i %i\n",
+                        1+p,
+                        1+f[p].i(),
+                        1+f[p].j(),
+                        1+f[p].k());
+            }
+            fflush(fp);
+            fclose(fp);
+        }
+        
+        osg::ref_ptr<GaskellPlateModel> mod_shapeModel = new GaskellPlateModel;
+        if (!mod_shapeModel->read(mod_filename)) {
+            ORSA_ERROR("problems encountered while reading shape file...");
+            exit(0);
+        }
+        ORSA_DEBUG("shape [%s] v.size(): %i f.size(): %i",
+                   mod_filename,
+                   mod_shapeModel->getVertexVector().size(),
+                   mod_shapeModel->getFaceVector().size());
+        
+        const std::string mod_SQLiteDBFileName = getSqliteDBFileName_simplex(mod_filename,plateModelR0);
+        
+        osg::ref_ptr<SimplexIntegration<simplex_T> > mod_si =
+            new SimplexIntegration<simplex_T>(mod_shapeModel.get(), plateModelR0, mod_SQLiteDBFileName);
+        
+        const size_t degree = 2;
+        
+        typedef std::vector< std::vector< std::vector<double> > > D3; 
+        
+        D3 N, mod_N;
+        
+        N.resize(degree+1);
+        for (size_t ni=0; ni<=degree; ++ni) {
+            N[ni].resize(degree+1-ni);
+            for (size_t nj=0; nj<=degree-ni; ++nj) {
+                N[ni][nj].resize(degree+1-ni-nj);
+                for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
+                    N[ni][nj][nk] = 0.0;
+                }
+            }
+        }
+        mod_N = N;
+        
+        for (size_t ni=0; ni<=degree; ++ni) {
+            for (size_t nj=0; nj<=degree-ni; ++nj) {
+                for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
+                    N[ni][nj][nk] = si->getIntegral(ni,nj,nk);
+                    mod_N[ni][nj][nk] = mod_si->getIntegral(ni,nj,nk);
+                }
+            }
+        }
+        
+        /* D3 translated_N;
+           translate(translated_N,N,v0/plateModelR0);
+           D3 translated_and_rotated_N;
+           rotate(translated_and_rotated_N,translated_N,orsa::Matrix::inverted(rot));
+        */
+
+        D3 rotated_N;
+        rotate(rotated_N,N,rot);
+        D3 rotated_and_translated_N;
+        translate(rotated_and_translated_N,rotated_N,v0/plateModelR0);
+        
+        /* D3 translated_N;
+           translate(translated_N,N,v0/plateModelR0);
+           D3 translated_and_rotated_N;
+           rotate(translated_and_rotated_N,translated_N,orsa::Matrix::inverted(rot));
+        */
+        
+        for (size_t running_deg=0; running_deg<=degree; ++running_deg) {
+            for (size_t ni=0; ni<=degree; ++ni) {
+                for (size_t nj=0; nj<=degree-ni; ++nj) {
+                    for (size_t nk=0; nk<=degree-ni-nj; ++nk) {
+                        if (ni+nj+nk!=running_deg) continue;
+                        ORSA_DEBUG("CMP -- %i %i %i %+9.6f %+9.6f %+6.3e",
+                                   ni,nj,nk,
+                                   rotated_and_translated_N[ni][nj][nk], // translated_and_rotated_N[ni][nj][nk],
+                                   mod_N[ni][nj][nk],
+                                   rotated_and_translated_N[ni][nj][nk]-mod_N[ni][nj][nk]);
+                    }
+                }
+            }
+        }
+    }
+    
     
     osg::ref_ptr<orsaPDS::RadioScienceGravityData> gravityData = new orsaPDS::RadioScienceGravityData;
     orsaPDS::RadioScienceGravityFile::read(gravityData.get(),radioScienceGravityTemplateFile,512,1518);
