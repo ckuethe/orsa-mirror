@@ -1379,7 +1379,7 @@ int main(int argc, char **argv) {
                 gsl_vector_memcpy(cT,cT0);
                 for (size_t b=0; b<uK_size; ++b) {
                     for (size_t j=0; j<T_size; ++j) {
-                        gsl_vector_set(cT,j,gsl_vector_get(cT,j)+factor[b]*gsl_vector_get(uK[b],j));
+                        gsl_vector_set(cT,j,gsl_vector_get(cT0,j)+factor[b]*gsl_vector_get(uK[b],j));
                     }
                 }
                 
