@@ -925,6 +925,9 @@ int main(int argc, char **argv) {
         gsl_vector * sh = gsl_vector_calloc(M); // b  of A x = b
         gsl_vector * cT = gsl_vector_calloc(N); // x  of A x = b
         
+        // used in the loop...
+        gsl_vector * cT0 = gsl_vector_calloc(N);
+         
         // sample from SH covariance matrix
         gsl_eigen_symmv_workspace * w = gsl_eigen_symmv_alloc(M); // workspace for eigenvectors/values
         gsl_vector * eval = gsl_vector_alloc(M);   // eigenvalues
@@ -961,6 +964,7 @@ int main(int argc, char **argv) {
         }
         
         // for (size_t gen=0; gen<1000; ++gen) {
+        // for (size_t gen=0; gen<10; ++gen) {
         while (1) {
             
             // set massDistribution
@@ -1002,10 +1006,11 @@ int main(int argc, char **argv) {
                 // before creating the massDistribution, scale the coeff in order to conserve total mass
                 const double coeff_target_mass = (GM/orsa::Unit::G()) - layerData->totalExcessMass();
                 std::vector< std::vector< std::vector<double> > > N;
+                osg::ref_ptr<CubicChebyshevMassDistribution> tmp_MD = new CubicChebyshevMassDistribution(coeff,plateModelR0,0);
                 CCMD2ijk(N,
                          0,
                          si.get(),
-                         new CubicChebyshevMassDistribution(coeff,plateModelR0,0),
+                         tmp_MD.get(),
                          plateModelR0);
                 const double coeff_current_mass = N[0][0][0]*orsa::cube(plateModelR0);
                 const double coeff_factor = coeff_target_mass/coeff_current_mass;
@@ -1200,8 +1205,9 @@ int main(int argc, char **argv) {
             
             // solving here!
             gsl_blas_dgemv(CblasNoTrans,1.0,pseudoInvA,sh,0.0,cT);
-            
-            gsl_vector * cT0 = gsl_vector_calloc(N);
+
+            // allocated earlier...
+            // gsl_vector * cT0 = gsl_vector_calloc(N);
             gsl_vector_memcpy(cT0,cT);
 
             if (0) {
@@ -1447,6 +1453,29 @@ int main(int argc, char **argv) {
             }
             
         }
+        
+        // free GSL stuff
+        gsl_matrix_free(A);
+        gsl_matrix_free(AT);
+        gsl_matrix_free(QR);
+        gsl_vector_free(tau);
+        gsl_matrix_free(Q);
+        gsl_matrix_free(R);
+        for (size_t b=0; b<(N-M); ++b) {
+            gsl_vector_free(uK[b]);
+        }
+        gsl_matrix_free(A_AT);
+        gsl_matrix_free(inv_A_AT);
+        gsl_matrix_free(pseudoInvA);
+        gsl_vector_free(sh);
+        gsl_vector_free(cT);
+        gsl_eigen_symmv_free(w);
+        gsl_vector_free(eval);
+        gsl_matrix_free(evec);
+        gsl_vector_free(sampleCoeff_x);
+        gsl_vector_free(sampleCoeff_y);
+        gsl_vector_free(cT0);
+        
     }
     
     // free GSL stuff
@@ -1454,8 +1483,8 @@ int main(int argc, char **argv) {
     gsl_matrix_free(pds_covm);
     // gsl_matrix_free(pds_inv_covm);
     gsl_matrix_free(cT2sh);
-    
-#warning call gsl_*_free as needed...
+
+    sqlite3_close(db);
     
     return 0;
 }
