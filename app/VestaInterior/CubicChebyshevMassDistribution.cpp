@@ -95,8 +95,7 @@ CubicChebyshevMassDistribution::CubicChebyshevMassDistribution(const Coefficient
     coeff(coefficient),
     // densityScale(densityScale_),
     oneOverR0(1.0/R0),
-    layerData(layerData_) {
-}
+    layerData(layerData_) { }
 
 CubicChebyshevMassDistribution::~CubicChebyshevMassDistribution() { }
 

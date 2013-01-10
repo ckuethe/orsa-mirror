@@ -962,8 +962,8 @@ int main(int argc, char **argv) {
         
         // for (size_t gen=0; gen<1000; ++gen) {
         while (1) {
-
-            // modify massDistribution
+            
+            // set massDistribution
             CubicChebyshevMassDistribution::CoefficientType coeff;
             CubicChebyshevMassDistribution::resize(coeff,T_degree);
             for (size_t runningDegree=0; runningDegree<=T_degree; ++runningDegree) {
@@ -978,27 +978,29 @@ int main(int argc, char **argv) {
                     }
                 }
             }
+            // set coeff above, or just set the non-zero coeff here
+            coeff[0][0][0] = bulkDensity;
             
             LayerData::EllipsoidLayerVectorType ellipsoidLayerVector;
             {
-                const double excessDensity = orsa::FromUnits(orsa::FromUnits(6.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::GRAM),orsa::Unit::CM,-3);
+                const double excessDensity = orsa::FromUnits(orsa::FromUnits(3.0+1.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::GRAM),orsa::Unit::CM,-3);
 #warning add code to check that ellipsoid layer is fully contained in shape...
-                const double a = orsa::FromUnits(50+100.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
-                const double b = orsa::FromUnits(50+100.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
-                const double c = orsa::FromUnits(50+100.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
-                const double v0x = orsa::FromUnits(5.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
-                const double v0y = orsa::FromUnits(5.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
-                const double v0z = orsa::FromUnits(5.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
+                const double a = orsa::FromUnits(100+20.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
+                const double b = orsa::FromUnits(100+20.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
+                const double c = orsa::FromUnits(100+20.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
+                const double v0x = orsa::FromUnits(1.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
+                const double v0y = orsa::FromUnits(1.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
+                const double v0z = orsa::FromUnits(1.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),orsa::Unit::KM);
                 const orsa::Matrix rot = orsa::Matrix::identity();
+                // osg::ref_ptr<LayerData::EllipsoidLayer> ellipsoidLayer = new LayerData::EllipsoidLayer(excessDensity,a,b,c,orsa::Vector(v0x,v0y,v0z),rot);
                 ellipsoidLayerVector.push_back(new LayerData::EllipsoidLayer(excessDensity,a,b,c,orsa::Vector(v0x,v0y,v0z),rot));
+                // ellipsoidLayerVector.push_back(ellipsoidLayer);
             }
             LayerData::SHLayerVectorType shLayerVector;
             osg::ref_ptr<const LayerData> layerData = new LayerData(ellipsoidLayerVector,shLayerVector);
             massDistribution = new CubicChebyshevMassDistribution(coeff,
                                                                   plateModelR0,
                                                                   layerData);
-            
-            
             
             std::vector< std::vector<mpf_class> > layerData_norm_C;
             std::vector< std::vector<mpf_class> > layerData_norm_S;
@@ -1047,6 +1049,48 @@ int main(int argc, char **argv) {
                 }
             }
             
+            std::vector< std::vector<mpf_class> > NOLayerData_norm_C;
+            std::vector< std::vector<mpf_class> > NOLayerData_norm_S;
+            //
+            NOLayerData_norm_C.resize(SH_degree+1);
+            NOLayerData_norm_S.resize(SH_degree+1);
+            for (size_t l=0; l<=SH_degree; ++l) {
+                NOLayerData_norm_C[l].resize(l+1);
+                NOLayerData_norm_S[l].resize(l+1);
+                for (size_t m=0; m<=l; ++m) {
+                    NOLayerData_norm_C[l][m] = 0.0;
+                    NOLayerData_norm_S[l][m] = 0.0;
+                }
+            }
+            mpf_class NOLayerData_IzzMR2 = 0.0;
+            if (massDistribution.get() != 0) {
+                osg::ref_ptr<CubicChebyshevMassDistribution> md_NOLD =
+                    new CubicChebyshevMassDistribution(massDistribution->coeff,
+                                                       // 0.0,    
+                                                       plateModelR0,
+                                                       0);
+                orsa::Cache<orsa::Vector> CM = sampled_CM;
+                CM.lock();
+                CCMD2SH(CM,
+                        NOLayerData_norm_C,
+                        NOLayerData_norm_S,
+                        NOLayerData_IzzMR2,
+                        SH_degree, // gravityData->degree,
+                        si.get(),
+                        md_NOLD,
+                        plateModelR0,
+                        gravityData->R0);
+                
+                const double NOLayerMassFraction = 1.0 - massDistribution->layerData->totalExcessMass() / (GM/orsa::Unit::G());
+                for (size_t l=0; l<=SH_degree; ++l) {
+                    for (size_t m=0; m<=l; ++m) {
+                        NOLayerData_norm_C[l][m] *= NOLayerMassFraction;
+                        NOLayerData_norm_S[l][m] *= NOLayerMassFraction;
+                    }
+                }
+                NOLayerData_IzzMR2 *= NOLayerMassFraction;
+            }
+            
             for (size_t i=0; i<M; ++i) {
                 gsl_vector_set(sampleCoeff_x,i,orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(sigma[i]));
             }
@@ -1057,8 +1101,10 @@ int main(int argc, char **argv) {
                 
                 // correction due to layers
                 orsa::Cache<double> layer_coeff;
+                orsa::Cache<double> NO_layer_coeff;
                 if (massDistribution.get() == 0) {
                     layer_coeff = 0.0;
+                    NO_layer_coeff = 0.0;
                 } else if (massDistribution->layerData.get() == 0) {
                     layer_coeff = 0.0;
                 } else {
@@ -1074,17 +1120,24 @@ int main(int argc, char **argv) {
                             if (orsaPDS::RadioScienceGravityData::keyC(l,m) == ref_key) {
                                 // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
                                 layer_coeff = layerData_norm_C[l][m].get_d();
+                                NO_layer_coeff = NOLayerData_norm_C[l][m].get_d();
                             } else if (orsaPDS::RadioScienceGravityData::keyS(l,m) == ref_key) {
                                 // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
                                 layer_coeff = layerData_norm_S[l][m].get_d();
+                                NO_layer_coeff = NOLayerData_norm_S[l][m].get_d();
                             }                       
                         }
                     }
                     if ("IzzMR2" == ref_key) {
                         layer_coeff = layerData_IzzMR2.get_d();
+                        NO_layer_coeff = NOLayerData_IzzMR2.get_d();
                     }
                 }
                 if (!layer_coeff.isSet()) {
+                    ORSA_DEBUG("problems... M=%i",M);
+                    exit(0);
+                }
+                if (!NO_layer_coeff.isSet()) {
                     ORSA_DEBUG("problems... M=%i",M);
                     exit(0);
                 }
@@ -1103,11 +1156,22 @@ int main(int argc, char **argv) {
                 // get again pds_covm because old one has been destroyed by the call to gsl_eigen_symmv
                 gsl_matrix * pds_covm  = mod_gravityData_getCovarianceMatrix(gravityData.get());
                 
-                ORSA_DEBUG("%7s = %12.6g [sampled] = %12.6g [layers] + %12.6g   nominal: %+12.6g   delta: %+12.6g   sigma: %12.6g",
+                /* ORSA_DEBUG("%7s = %12.6g [sampled] = %12.6g [layers] + %12.6g   nominal: %+12.6g   delta: %+12.6g   sigma: %12.6g",
+                   mod_gravityData_key(gravityData.get(),i).toStdString().c_str(),
+                   gsl_vector_get(sh,i)+(*layer_coeff),
+                   (*layer_coeff),
+                   gsl_vector_get(sh,i),
+                   mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),i)),
+                   gsl_vector_get(sh,i)+(*layer_coeff)-mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),i)),
+                   sqrt(gsl_matrix_get(pds_covm,i,i)));
+                */
+                
+                ORSA_DEBUG("%7s = %12.6g [sampled] = %12.6g [CCMD] + %12.6g [layers] + %12.6g   nominal: %+12.6g   delta: %+12.6g   sigma: %12.6g",
                            mod_gravityData_key(gravityData.get(),i).toStdString().c_str(),
                            gsl_vector_get(sh,i)+(*layer_coeff),
+                           (*NO_layer_coeff),
                            (*layer_coeff),
-                           gsl_vector_get(sh,i),
+                           gsl_vector_get(sh,i)-(*NO_layer_coeff),
                            mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),i)),
                            gsl_vector_get(sh,i)+(*layer_coeff)-mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),i)),
                            sqrt(gsl_matrix_get(pds_covm,i,i)));
