@@ -998,6 +998,25 @@ int main(int argc, char **argv) {
             }
             LayerData::SHLayerVectorType shLayerVector;
             osg::ref_ptr<const LayerData> layerData = new LayerData(ellipsoidLayerVector,shLayerVector);
+            {
+                // before creating the massDistribution, scale the coeff in order to conserve total mass
+                const double coeff_target_mass = (GM/orsa::Unit::G()) - layerData->totalExcessMass();
+                std::vector< std::vector< std::vector<double> > > N;
+                CCMD2ijk(N,
+                         0,
+                         si.get(),
+                         new CubicChebyshevMassDistribution(coeff,plateModelR0,0),
+                         plateModelR0);
+                const double coeff_current_mass = N[0][0][0]*orsa::cube(plateModelR0);
+                const double coeff_factor = coeff_target_mass/coeff_current_mass;
+                for (size_t i=0; i<=T_degree; ++i) {
+                    for (size_t j=0; j<=T_degree-i; ++j) {
+                        for (size_t k=0; k<=T_degree-i-j; ++k) {
+                            coeff[i][j][k] *= coeff_factor;
+                        }
+                    }
+                }
+            }
             massDistribution = new CubicChebyshevMassDistribution(coeff,
                                                                   plateModelR0,
                                                                   layerData);
@@ -1333,26 +1352,28 @@ int main(int argc, char **argv) {
             }
 
             if (1) {
-                // just project this case on the solution space
                 
-                // get as close as possible to cT = {bulkDensity,0,0,0,0...} = constant density
-                // project (bulkDensity,0,0,0..) - cT0 along uK_b
+                // just project on the solution space
+                
                 const size_t uK_size = N-M;
                 std::vector<double> factor;
                 factor.resize(uK_size);
-                for (size_t b=0; b<uK_size; ++b) {
-                    factor[b] = 0.0;
-                    for (size_t s=0; s<N; ++s) {
-                        if (s==0) {
-                            // first element of target cT = 1
-                            // first element of target cT = bulkDensity
-                            factor[b] += (bulkDensity-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
-                        } else {
-                            // all other elements of target cT = 0
-                            factor[b] += (0.0-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
+                {
+                    const size_t cT_CCMD_degree = massDistribution->coeff.size()-1;
+                    const size_t cT_CCMD_size   = CubicChebyshevMassDistribution::totalSize(cT_CCMD_degree);
+                    size_t Tx,Ty,Tz;
+                    for (size_t b=0; b<uK_size; ++b) {
+                        factor[b] = 0.0;
+                        for (size_t s=0; s<N; ++s) {
+                            double cT_CCMD = 0.0; // default value
+                            if (s < cT_CCMD_size) {
+                                CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,s);
+                                cT_CCMD  = massDistribution->coeff[Tx][Ty][Tz];
+                            }
+                            factor[b] += (cT_CCMD-gsl_vector_get(cT0,s))*gsl_vector_get(uK[b],s);
                         }
+                        // ORSA_DEBUG("factor[%03i] = %g",b,factor[b]);
                     }
-                    // ORSA_DEBUG("factor[%03i] = %g",b,factor[b]);
                 }
                 
                 gsl_vector_memcpy(cT,cT0);
