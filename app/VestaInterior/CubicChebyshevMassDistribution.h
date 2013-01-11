@@ -34,7 +34,12 @@ public:
             _bm2(1.0/(b*b)),
             _cm2(1.0/(c*c)),
             _volume(4.0/3.0*orsa::pi()*a*b*c),
-            _excessMass(_volume*excessDensity) { }                     
+            _excessMass(_volume*excessDensity) {
+            // ORSA_DEBUG("excessDensity = %g",excessDensity);
+            // ORSA_DEBUG("a,b,c = %g %g %g",a,b,c);
+            // orsa::print(v0);
+            // orsa::print(rot);
+        }                     
     protected:
         virtual ~EllipsoidLayer() { }
     public: /* input */

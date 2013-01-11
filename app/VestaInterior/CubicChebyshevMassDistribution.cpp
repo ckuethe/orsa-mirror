@@ -301,6 +301,8 @@ bool CubicChebyshevMassDistributionFile::append(const CubicChebyshevMassDistribu
     if (!fp) {
         ORSA_DEBUG("cannot open file [%s]",fileName.c_str());
         return false;
+    } else {
+        ORSA_DEBUG("appending to file [%s]",fileName.c_str());
     }
     write(data,fp);
     fclose(fp);
