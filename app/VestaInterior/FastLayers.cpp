@@ -255,6 +255,8 @@ int main(int argc, char **argv) {
     osg::ref_ptr<SimplexIntegration<simplex_T> > si = new SimplexIntegration<simplex_T>(shapeModel.get(), plateModelR0, SQLiteDBFileName);
     si->reserve(polynomialDegree);
     
+    const GaskellPlateModel::VertexVector & vv = shapeModel->getVertexVector();
+    
     const size_t SH_degree = gravityDegree; // shperical harmonics degree
     const size_t  T_degree = polynomialDegree; // chebyshev polynomials degree
     
@@ -1051,8 +1053,9 @@ int main(int argc, char **argv) {
             std::vector<FastLayersMultifit::EllipsoidLayerData> ellipsoidLayerData;
             {
                 ellipsoidLayerData.resize(1); // number of ellipsoid layers
-                ellipsoidLayerData[0].excessMass = (GM/orsa::Unit::G())*(0.00+0.20*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
-                // ellipsoidLayerData[0].excessMass = 0.10*(GM/orsa::Unit::G());
+                ellipsoidLayerData[0].excessMass = (GM/orsa::Unit::G())*(0.00+0.30*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
+                // ellipsoidLayerData[0].excessMass = (GM/orsa::Unit::G())*(0.10+0.01*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
+                // ellipsoidLayerData[0].excessMass = 0.08*(GM/orsa::Unit::G());
                 
                 char varName[4096];
                 for (size_t k=0; k<ellipsoidLayerData.size(); ++k) {
@@ -1060,28 +1063,28 @@ int main(int argc, char **argv) {
                     ORSA_DEBUG("ellipsoidLayerData[%i] mass fraction: %g",k,ellipsoidLayerData[k].excessMass/(GM/orsa::Unit::G()));
                     
                     sprintf(varName,"a_%i",k);
-                    par->insert(varName,110.0*km,0.01*km);
+                    par->insert(varName,(80.0+40.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform())*km,0.001*km);
                     // par->setRange(varName,0.0*km,300.0*km);
                     sprintf(varName,"b_%i",k);
-                    par->insert(varName,100.0*km,0.01*km);
+                    par->insert(varName,(80.0+40.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform())*km,0.001*km);
                     // par->setRange(varName,0.0*km,300.0*km);
                     sprintf(varName,"c_%i",k);
-                    par->insert(varName, 90.0*km,0.01*km);
+                    par->insert(varName,(80.0+40.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform())*km,0.001*km);
                     // par->setRange(varName,0.0*km,300.0*km);
                     //
                     sprintf(varName,"v0x_%i",k);
-                    par->insert(varName,0.00*km,0.01*km);
+                    par->insert(varName,(0.010+0.020*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform())*km,0.001*km);
                     sprintf(varName,"v0y_%i",k);
-                    par->insert(varName,0.00*km,0.01*km);
+                    par->insert(varName,(0.010+0.020*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform())*km,0.001*km);
                     sprintf(varName,"v0z_%i",k);
-                    par->insert(varName,0.00*km,0.01*km);
+                    par->insert(varName,(0.010+0.020*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform())*km,0.001*km);
                     //
                     sprintf(varName,"psi_%i",k);
-                    par->insert(varName,0.00,0.01);
+                    par->insert(varName,orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),0.00001);
                     sprintf(varName,"theta_%i",k);
-                    par->insert(varName,0.00,0.01);
+                    par->insert(varName,orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),0.00001);
                     sprintf(varName,"phi_%i",k);
-                    par->insert(varName,0.00,0.01);
+                    par->insert(varName,orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),0.00001);
                 }
             }
             
@@ -1186,6 +1189,7 @@ int main(int argc, char **argv) {
             
             LayerData::EllipsoidLayerVectorType ellipsoidLayerVector;
             {
+                bool skip=false;
                 char varName[4096];
                 for (size_t k=0; k<ellipsoidLayerData.size(); ++k) {
                     sprintf(varName,"a_%i",k);
@@ -1220,10 +1224,29 @@ int main(int argc, char **argv) {
                                               theta,
                                               phi);
                     
-                    // osg::ref_ptr<LayerData::EllipsoidLayer> ellipsoidLayer = new LayerData::EllipsoidLayer(excessDensity,a,b,c,orsa::Vector(v0x,v0y,v0z),rot);
-                    ellipsoidLayerVector.push_back(new LayerData::EllipsoidLayer(excessDensity,a,b,c,orsa::Vector(v0x,v0y,v0z),rot));
-                    // ellipsoidLayerVector.push_back(ellipsoidLayer);
+                    osg::ref_ptr<LayerData::EllipsoidLayer> ellipsoidLayer = new LayerData::EllipsoidLayer(excessDensity,a,b,c,orsa::Vector(v0x,v0y,v0z),rot);
+
+                    // first, quicker test
+                    if (std::max(a,std::max(b,c))>shapeModel->boundingRadius()) {
+                        ORSA_DEBUG("===> layer not fully contained in shape, skipping... *****");
+                        skip=true;
+                        break;
+                    }
+                    if (skip) break;
+                    // detailed test...
+                    for (size_t p=0; p<vv.size(); ++p) {
+                        if (ellipsoidLayer->containsPoint(vv[p])) {
+                            ORSA_DEBUG("===> layer not fully contained in shape, skipping... *****");
+                            skip=true;
+                            break;
+                        }
+                    }
+                    if (skip) break;
+                    
+                    // ellipsoidLayerVector.push_back(new LayerData::EllipsoidLayer(excessDensity,a,b,c,orsa::Vector(v0x,v0y,v0z),rot));
+                    ellipsoidLayerVector.push_back(ellipsoidLayer);
                 }
+                if (skip) continue;
             }
             LayerData::SHLayerVectorType shLayerVector;
             osg::ref_ptr<const LayerData> layerData = new LayerData(ellipsoidLayerVector,shLayerVector);
