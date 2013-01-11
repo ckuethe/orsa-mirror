@@ -133,6 +133,13 @@ void inertia(orsa::Cache<orsa::Vector>             & CM,
                                                         N[0][0][1]/N[0][0][0]);
     if (!CM.isSet()) {
         CM = CM_over_plateModelR0*plateModelR0;
+    } else {
+        // test
+        /* orsa::print((*CM));
+           orsa::print(orsa::Vector(N[1][0][0]/N[0][0][0],
+           N[0][1][0]/N[0][0][0],
+           N[0][0][1]/N[0][0][0]));
+        */
     }
     
     // std::vector< std::vector< std::vector<double> > > & translated_N = translated_global_N;
