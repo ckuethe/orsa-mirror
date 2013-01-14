@@ -1168,7 +1168,8 @@ int main(int argc, char **argv) {
             mf->setMultifitParameters(par.get());
             mf->setMultifitData(data.get());
             mf->setLogFile("FastLayersMultifit.log");
-            mf->run();
+            const bool success = mf->run();
+            if (!success) continue;
             
             /* for (size_t row=0; row<M; ++row) {
                const double f = data->getF(row);
