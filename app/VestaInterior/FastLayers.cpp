@@ -1047,6 +1047,38 @@ int main(int argc, char **argv) {
                    NOLayerData_IzzMR2 *= NOLayerMassFraction;
                 */
             }
+
+            if (1) {
+                // test
+                std::vector<double> gravity_data;
+                std::vector<double> gravity_CCMD;
+                gravity_data.reserve(2*SH_degree+1);
+                gravity_CCMD.reserve(2*SH_degree+1);
+                for (size_t l=0; l<=SH_degree; ++l) {
+                    gravity_data.clear();
+                    gravity_CCMD.clear();
+                    for (size_t m=1; m<=l; ++m) {
+                        const QString key = orsaPDS::RadioScienceGravityData::keyS(l,m);
+                        gravity_data.push_back(mod_gravityData_getCoeff(gravityData.get(),key));
+                        gravity_CCMD.push_back(NOLayerData_norm_S[l][m].get_d());
+                    }
+                    for (size_t m=0; m<=l; ++m) {
+                        const QString key = orsaPDS::RadioScienceGravityData::keyC(l,m);
+                        gravity_data.push_back(mod_gravityData_getCoeff(gravityData.get(),key));
+                        gravity_CCMD.push_back(NOLayerData_norm_C[l][m].get_d());
+                    }
+                    double scalar_product=0.0;
+                    double l2_CCMD=0.0;
+                    for (size_t k=0; k<gravity_data.size(); ++k) {
+                        scalar_product += gravity_data[k]*gravity_CCMD[k];
+                        l2_CCMD += orsa::square(gravity_CCMD[k]);
+                        // ORSA_DEBUG("%g %g",gravity_data[k],gravity_CCMD[k]);
+                    }
+                    const double factor = scalar_product/l2_CCMD;
+                    ORSA_DEBUG("l = %2i  factor: %g",l,factor);
+                    
+                }
+            }            
             
             // FastLayersMultifit 
             osg::ref_ptr<orsa::MultifitParameters> par = new orsa::MultifitParameters;
@@ -1054,6 +1086,7 @@ int main(int argc, char **argv) {
             {
                 ellipsoidLayerData.resize(1); // number of ellipsoid layers
                 ellipsoidLayerData[0].excessMass = (GM/orsa::Unit::G())*(0.00+0.30*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
+                // ellipsoidLayerData[0].excessMass =(GM/orsa::Unit::G())*(1.0-0.904121);
                 // ellipsoidLayerData[0].excessMass = (GM/orsa::Unit::G())*(0.10+0.01*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
                 // ellipsoidLayerData[0].excessMass = 0.08*(GM/orsa::Unit::G());
                 
