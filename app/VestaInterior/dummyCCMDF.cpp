@@ -4,8 +4,7 @@ int main(int argc, char **argv) {
     
     orsa::Debug::instance()->initTimer();
     
-    if (argc != 4) {
-        // printf("Usage: %s <CCMD-densityScale> <R0_km> <CCMD-degree>\n",argv[0]);
+    if (argc != 3) {
         printf("Usage: %s <R0_km> <CCMD-degree>\n",argv[0]);
         exit(0);
     }
