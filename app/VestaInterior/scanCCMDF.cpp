@@ -77,14 +77,15 @@ int main(int argc, char **argv) {
             const double lon_short_axis_pole = fmod(orsa::twopi()+atan2(u_short_axis.getY(),
                                                                         u_short_axis.getX()),orsa::twopi());
             gmp_fprintf(fp,
-                        "%i %i %12.6f %+12.6f %+12.6f %12.6f %8.6f\n",
+                        "%i %i %12.6f %+12.6f %+12.6f %12.6f %8.6f %8.6f\n",
                         k,
                         elk,
                         flattening,
                         orsa::radToDeg()*lat_short_axis_pole,
                         orsa::radToDeg()*lon_short_axis_pole,
                         el->excessDensity,
-                        el->volume()*el->excessDensity/(gravityData->GM/orsa::Unit::G()));
+                        el->volume()*el->excessDensity/(gravityData->GM/orsa::Unit::G()),
+                        el->volume()/shapeModel->volume());
             fflush(fp);
             
             
