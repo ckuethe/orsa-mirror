@@ -62,8 +62,21 @@ int main(int argc, char **argv) {
             const double c = el->c;
             const double min_abc = std::min(a,std::min(b,c));
             const double max_abc = std::max(a,std::max(b,c));
+            double tmp_mid=0.0;
+            if ((a!=min_abc) && (a!=max_abc)) tmp_mid=a;
+            if ((b!=min_abc) && (b!=max_abc)) tmp_mid=b;
+            if ((c!=min_abc) && (c!=max_abc)) tmp_mid=c;
+            if (tmp_mid==0.0) {
+                ORSA_DEBUG("problems...");
+                continue;
+            }
+            const double mid_abc = tmp_mid;
+#warning review flattening definition: divide by max or by average?
             const double flattening = (max_abc-min_abc)/max_abc;
+            const double xy_flattening = (max_abc-mid_abc)/max_abc;
+            
             orsa::Vector u_tmp;
+            
             if (a==min_abc) u_tmp = orsa::Vector(1,0,0);
             else if (b==min_abc) u_tmp = orsa::Vector(0,1,0);
             else if (c==min_abc) u_tmp = orsa::Vector(0,0,1);
@@ -71,18 +84,38 @@ int main(int argc, char **argv) {
                 ORSA_DEBUG("problems...");
                 continue;
             }
+            //
             const orsa::Vector tmp_u_short_axis = el->rot * u_tmp;
             const orsa::Vector u_short_axis = (tmp_u_short_axis.getZ() > 0.0) ? tmp_u_short_axis : -tmp_u_short_axis;
             const double lat_short_axis_pole = orsa::halfpi()-acos(u_short_axis.getZ());
             const double lon_short_axis_pole = fmod(orsa::twopi()+atan2(u_short_axis.getY(),
                                                                         u_short_axis.getX()),orsa::twopi());
+            
+            if (a==max_abc) u_tmp = orsa::Vector(1,0,0);
+            else if (b==max_abc) u_tmp = orsa::Vector(0,1,0);
+            else if (c==max_abc) u_tmp = orsa::Vector(0,0,1);
+            else {
+                ORSA_DEBUG("problems...");
+                continue;
+            }
+            const orsa::Vector tmp_u_long_axis = el->rot * u_tmp;
+            const orsa::Vector u_long_axis = (tmp_u_long_axis.getZ() > 0.0) ? tmp_u_long_axis : -tmp_u_long_axis;
+            const double lat_long_axis_pole = orsa::halfpi()-acos(u_long_axis.getZ());
+            const double lon_long_axis_pole = fmod(orsa::twopi()+atan2(u_long_axis.getY(),
+                                                                       u_long_axis.getX()),orsa::twopi());
+            
+#warning add output of inertia moments...
+            
             gmp_fprintf(fp,
-                        "%i %i %12.6f %+12.6f %+12.6f %12.6f %8.6f %8.6f\n",
+                        "%i %i %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %12.6f %8.6f %8.6f\n",
                         k,
                         elk,
                         flattening,
+                        xy_flattening,
                         orsa::radToDeg()*lat_short_axis_pole,
                         orsa::radToDeg()*lon_short_axis_pole,
+                        orsa::radToDeg()*lat_long_axis_pole,
+                        orsa::radToDeg()*lon_long_axis_pole,
                         el->excessDensity,
                         el->volume()*el->excessDensity/(gravityData->GM/orsa::Unit::G()),
                         el->volume()/shapeModel->volume());
