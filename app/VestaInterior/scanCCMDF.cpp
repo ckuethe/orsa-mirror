@@ -106,17 +106,26 @@ int main(int argc, char **argv) {
             
 #warning add output of inertia moments...
             
+            
+            
+            
             gmp_fprintf(fp,
-                        "%i %i %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %12.6f %8.6f %8.6f\n",
+                        "%6i %2i %12.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %10.3f %8.6f %8.6f\n",
                         k,
                         elk,
+                        orsa::FromUnits(a,orsa::Unit::KM,-1),
+                        orsa::FromUnits(b,orsa::Unit::KM,-1),
+                        orsa::FromUnits(c,orsa::Unit::KM,-1),
+                        orsa::FromUnits(el->v0.getX(),orsa::Unit::KM,-1),
+                        orsa::FromUnits(el->v0.getY(),orsa::Unit::KM,-1),
+                        orsa::FromUnits(el->v0.getZ(),orsa::Unit::KM,-1),
                         flattening,
                         xy_flattening,
                         orsa::radToDeg()*lat_short_axis_pole,
                         orsa::radToDeg()*lon_short_axis_pole,
                         orsa::radToDeg()*lat_long_axis_pole,
                         orsa::radToDeg()*lon_long_axis_pole,
-                        el->excessDensity,
+                        orsa::FromUnits(orsa::FromUnits(el->excessDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
                         el->volume()*el->excessDensity/(gravityData->GM/orsa::Unit::G()),
                         el->volume()/shapeModel->volume());
             fflush(fp);
