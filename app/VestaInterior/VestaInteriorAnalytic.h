@@ -363,13 +363,13 @@ double E1(void * xp) {
         data.layerData = x->layerData;
         //
         if (1) {
-            orsa::Cache<orsa::Vector> CM;
+            orsa::Cache<orsa::Vector> CM = x->sampled_CM;
             mpf_class IxxMR2, IyyMR2, IzzMR2;
             inertia(CM,
                     IxxMR2,
                     IyyMR2,
                     IzzMR2,
-                    x->SH_degree,
+                    // x->SH_degree,
                     x->si.get(),
                     massDistribution.get(),
                     x->R0_plate);

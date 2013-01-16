@@ -2,6 +2,17 @@
 #include "simplex.h"
 #include "gaskell.h"
 #include <orsaPDS/RadioScienceGravity.h>
+#include "CCMD2SH.h"
+
+/*** CHOOSE ONE ***/
+// typedef double simplex_T;
+// typedef mpf_class simplex_T;
+typedef dd_real simplex_T;
+// typedef qd_real simplex_T;
+
+#warning how to write this using the typedef inside the class?
+template <typename T> std::vector< std::vector< std::vector<size_t> > > SimplexIntegration<T>::indexTable;
+template <typename T> std::vector< std::vector< std::vector< std::vector<size_t> > > > SimplexIntegration<T>::index4Table;
 
 int main(int argc, char **argv) {
     
@@ -25,6 +36,8 @@ int main(int argc, char **argv) {
         ORSA_ERROR("problems encountered while reading shape file...");
         exit(0);
     }
+    
+    osg::ref_ptr<SimplexIntegration<simplex_T> > si = new SimplexIntegration<simplex_T>(shapeModel.get(), plateModelR0, SQLiteDBFileName);
     
     CubicChebyshevMassDistributionFile::DataContainer CCMDF;
     CubicChebyshevMassDistributionFile::read(CCMDF,CCMDF_filename);
@@ -103,14 +116,22 @@ int main(int argc, char **argv) {
             const double lat_long_axis_pole = orsa::halfpi()-acos(u_long_axis.getZ());
             const double lon_long_axis_pole = fmod(orsa::twopi()+atan2(u_long_axis.getY(),
                                                                        u_long_axis.getX()),orsa::twopi());
-            
-#warning add output of inertia moments...
-            
-            
-            
+
+            // inertia moments
+            orsa::Cache<orsa::Vector> CM;
+            mpf_class IxxMR2, IyyMR2, IzzMR2;
+            inertia(CM,
+                    IxxMR2,
+                    IyyMR2,
+                    IzzMR2,
+                    // 2, // SH_degree,
+                    si.get(),
+                    massDistribution.get(),
+                    plateModelR0);
+            // orsa::print(CM);
             
             gmp_fprintf(fp,
-                        "%6i %2i %12.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %10.3f %8.6f %8.6f\n",
+                        "%6i %2i %12.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %.6f %.6f %.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %10.3f %8.6f %8.6f\n",
                         k,
                         elk,
                         orsa::FromUnits(a,orsa::Unit::KM,-1),
@@ -119,6 +140,12 @@ int main(int argc, char **argv) {
                         orsa::FromUnits(el->v0.getX(),orsa::Unit::KM,-1),
                         orsa::FromUnits(el->v0.getY(),orsa::Unit::KM,-1),
                         orsa::FromUnits(el->v0.getZ(),orsa::Unit::KM,-1),
+                        orsa::FromUnits((*CM).getX(),orsa::Unit::KM,-1),
+                        orsa::FromUnits((*CM).getY(),orsa::Unit::KM,-1),
+                        orsa::FromUnits((*CM).getZ(),orsa::Unit::KM,-1),
+                        IxxMR2.get_d(),
+                        IyyMR2.get_d(),
+                        IzzMR2.get_d(),
                         flattening,
                         xy_flattening,
                         orsa::radToDeg()*lat_short_axis_pole,

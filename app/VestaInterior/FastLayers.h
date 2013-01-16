@@ -371,7 +371,7 @@ double E1(void * xp) {
                     IxxMR2,
                     IyyMR2,
                     IzzMR2,
-                    x->SH_degree,
+                    // x->SH_degree,
                     x->si.get(),
                     massDistribution.get(),
                     x->R0_plate);

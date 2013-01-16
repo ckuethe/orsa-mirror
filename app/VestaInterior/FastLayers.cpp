@@ -1571,7 +1571,7 @@ int main(int argc, char **argv) {
                                 IxxMR2,
                                 IyyMR2,
                                 IzzMR2,
-                                SH_degree,
+                                // SH_degree,
                                 si.get(),
                                 massDistribution.get(),
                                 plateModelR0);

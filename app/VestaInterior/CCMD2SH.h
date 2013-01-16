@@ -114,7 +114,7 @@ void inertia(orsa::Cache<orsa::Vector>             & CM,
              mpf_class                             & IxxMR2,
              mpf_class                             & IyyMR2,
              mpf_class                             & IzzMR2,
-             const size_t                          & SH_degree,
+             // const size_t                          & SH_degree,
              const SimplexIntegration<T>           * si,
              const CubicChebyshevMassDistribution  * CCMD,
              const double                          & plateModelR0) {
@@ -122,7 +122,7 @@ void inertia(orsa::Cache<orsa::Vector>             & CM,
     // std::vector< std::vector< std::vector<double> > > & N = global_N;
     std::vector< std::vector< std::vector<double> > > N;
     CCMD2ijk(N,
-             SH_degree,
+             2, // SH_degree,
              si,
              CCMD,
              plateModelR0);
