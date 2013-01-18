@@ -625,35 +625,33 @@ bool orsa::MOID(double             & moid,
   
     bool found=false;
     
-    {
-        // osg::ref_ptr<orsa::RNG> rng = new orsa::RNG(randomSeed);  
-        osg::ref_ptr<const orsa::RNG> rng = orsa::GlobalRNG::instance()->rng();  
-        for (unsigned int k=0; k<numPoints; ++k) {
-            par->set("M1",rng->gsl_rng_uniform()*orsa::twopi());
-            par->set("M2",rng->gsl_rng_uniform()*orsa::twopi());
-            if (multimin->run_nmsimplex(128,
-                                        epsAbs)) {
-                if ( (found && (multimin->fun(multimin->getMultiminParameters()) < moid) ) ||
-                     (!found) ) {      
-                    moid = multimin->fun(multimin->getMultiminParameters());
-                    M1   = multimin->getMultiminParameters()->get("M1");
-                    M2   = multimin->getMultiminParameters()->get("M2");
-                    found=true;
-	  
-                    M1 = fmod(fmod(M1,orsa::twopi())+orsa::twopi(),orsa::twopi());
-                    M2 = fmod(fmod(M2,orsa::twopi())+orsa::twopi(),orsa::twopi());
-	  
-                    /* ORSA_DEBUG("moid: %.16f [AU]   M1: %f  M2: %f   k: %i",
-                       orsa::FromUnits(moid,orsa::Unit::AU,-1),
-                       M1,
-                       M2,
-                       k);
-                    */
-                }
+    // osg::ref_ptr<orsa::RNG> rng = new orsa::RNG(randomSeed);  
+    osg::ref_ptr<const orsa::RNG> rng = orsa::GlobalRNG::instance()->rng();  
+    for (unsigned int k=0; k<numPoints; ++k) {
+        par->set("M1",rng->gsl_rng_uniform()*orsa::twopi());
+        par->set("M2",rng->gsl_rng_uniform()*orsa::twopi());
+        if (multimin->run_nmsimplex(128,
+                                    epsAbs)) {
+            if ( (found && (multimin->fun(multimin->getMultiminParameters()) < moid) ) ||
+                 (!found) ) {      
+                moid = multimin->fun(multimin->getMultiminParameters());
+                M1   = multimin->getMultiminParameters()->get("M1");
+                M2   = multimin->getMultiminParameters()->get("M2");
+                found=true;
+                
+                M1 = fmod(fmod(M1,orsa::twopi())+orsa::twopi(),orsa::twopi());
+                M2 = fmod(fmod(M2,orsa::twopi())+orsa::twopi(),orsa::twopi());
+                
+                /* ORSA_DEBUG("moid: %.16f [AU]   M1: %f  M2: %f   k: %i",
+                   orsa::FromUnits(moid,orsa::Unit::AU,-1),
+                   M1,
+                   M2,
+                   k);
+                */
             }
         }
     }
-  
+    
     /* 
        #warning remove this in production, testing only...
        {
@@ -679,6 +677,63 @@ bool orsa::MOID(double             & moid,
        }
     */	
   
+    return found;
+}
+
+/********** orbitDistance ***/
+
+class OrbitDistanceMultimin : public orsa::Multimin {
+public:
+    OrbitDistanceMultimin(const orsa::Vector & P_,
+                          const orsa::Orbit  & orbit_) :
+        orsa::Multimin(),
+        P(P_),
+        orbit(orbit_) { }
+public:
+    double fun(const orsa::MultiminParameters * par) const {
+        orbit.M = par->get("meanAnomaly");
+        orbit.M = fmod(fmod(orbit.M,orsa::twopi())+orsa::twopi(),orsa::twopi());
+        orsa::Vector r;
+        orbit.relativePosition(r);
+        return (P-r).length();
+    }
+    mutable orsa::Vector P;
+    mutable orsa::Orbit orbit;
+};
+
+bool orsa::orbitDistance(double             & distance,
+                         double             & meanAnomaly,
+                         const orsa::Vector & P,
+                         const orsa::Orbit  & orbit,
+                         const unsigned int & numPoints,
+                         const double       & epsAbs) {
+     
+    osg::ref_ptr<orsa::MultiminParameters> par = new MultiminParameters;
+    //
+    par->insert("meanAnomaly",orbit.M,orsa::arcsecToRad());
+    
+    osg::ref_ptr<OrbitDistanceMultimin> multimin = new OrbitDistanceMultimin(P,orbit);
+    //
+    multimin->setMultiminParameters(par.get());
+    
+    bool found=false;
+    
+    osg::ref_ptr<const orsa::RNG> rng = orsa::GlobalRNG::instance()->rng();  
+    for (unsigned int k=0; k<numPoints; ++k) {
+        par->set("meanAnomaly",rng->gsl_rng_uniform()*orsa::twopi());
+        if (multimin->run_nmsimplex(128,
+                                    epsAbs)) {
+            if ( (found && (multimin->fun(multimin->getMultiminParameters()) < distance) ) ||
+                 (!found) ) {      
+                distance = multimin->fun(multimin->getMultiminParameters());
+                meanAnomaly = multimin->getMultiminParameters()->get("meanAnomaly");
+                found=true;
+
+                meanAnomaly = fmod(fmod(meanAnomaly,orsa::twopi())+orsa::twopi(),orsa::twopi());
+            }
+        }
+    }
+    
     return found;
 }
 

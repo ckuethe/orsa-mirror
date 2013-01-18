@@ -77,6 +77,14 @@ namespace orsa {
               const unsigned int & numPoints = 16,
               const double       & epsAbs    = 1e-6);
     
+    // minimum distance between a point P and an orbit
+    bool orbitDistance(double             & distance,
+                       double             & meanAmonaly,
+                       const orsa::Vector & P,
+                       const orsa::Orbit  & orbit,
+                       const unsigned int & numPoints = 16,
+                       const double       & epsAbs    = 1e-6);
+    
     double HillRadius(const double & a,
                       const double & m,
                       const double & M);
