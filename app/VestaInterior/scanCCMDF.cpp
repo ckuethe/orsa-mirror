@@ -157,9 +157,54 @@ int main(int argc, char **argv) {
                         el->volume()/shapeModel->volume());
             fflush(fp);
             
+            if (0) {
+                // test: output core-equatorial plane coordinates
+                
+                // core_excess_mass_fraction
+                const double cf = el->volume()*el->excessDensity/(gravityData->GM/orsa::Unit::G());
+                // selection conditions here...
+                if (fabs(cf-0.25) < 0.001) {
+                    
+                    char filename[4096];
+                    gmp_sprintf(filename,"core_equator_%8.6f.latlon",cf);
+                    FILE * fp = fopen(filename,"w");
+                    ORSA_DEBUG("writing file [%s]",filename);
+                    const orsa::Vector u_X = u_long_axis;
+                    const orsa::Vector u_Z = u_short_axis;
+                    const orsa::Vector u_Y = orsa::externalProduct(u_Z,u_X);
+                    double alpha = 0.0;
+                    const double alpha_step = orsa::pi()/36.0;
+                    double s,c;
+                    orsa::Vector intersectionPoint;
+                    orsa::Vector normal;
+                    while (alpha <= orsa::twopi()+0.1*alpha_step) {
+                        ::sincos(alpha,&s,&c);
+                        orsa::Vector u = c*u_X + s*u_Y;
+                        const bool good = shapeModel->rayIntersection(intersectionPoint,
+                                                                      normal,
+                                                                      el->v0,
+                                                                      u,
+                                                                      false);
+                        /* if (!good) {
+                           ORSA_DEBUG("problems...");
+                           }
+                        */
+                        const orsa::Vector u_iP = intersectionPoint.normalized();
+                        const double lat_iP = orsa::halfpi()-acos(u_iP.getZ());
+                        const double lon_iP = fmod(orsa::twopi()+atan2(u_iP.getY(),
+                                                                       u_iP.getX()),orsa::twopi());
+                        
+                        fprintf(fp,"%+12.6f %+12.6f\n",
+                                orsa::radToDeg()*lat_iP,
+                                orsa::radToDeg()*lon_iP);                        
+                        alpha += alpha_step;
+                    }
+                    fclose(fp);
+                    exit(0);
+                }
+            }
             
         }
-        
         
     }
     
