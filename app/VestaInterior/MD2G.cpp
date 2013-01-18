@@ -5,6 +5,7 @@
 #include <orsa/vector.h>
 #include <orsa/multifit.h>
 #include <orsa/chebyshev.h> 
+#include <orsa/statistic.h>
 
 #include <orsaPDS/RadioScienceGravity.h>
 #include "CubicChebyshevMassDistribution.h"
@@ -1143,6 +1144,35 @@ int main(int argc, char **argv) {
         randomPointsInShape->reset();
         while (randomPointsInShape->get(v,density)) { 
             gmp_fprintf(fp,"%.3f\n",density/gcm3);
+        }
+        fclose(fp);
+    }
+
+    {
+        // surface density, or averaged over given depth
+        const double depth = orsa::FromUnits(20.0,orsa::Unit::KM);
+        const size_t numSamples = 20; // actually we have numSamples+1 samples...
+        char filename[1024];
+        sprintf(filename,"%s.surface_density.dat",outputGravityFile.c_str());
+        FILE * fp = fopen(filename,"w");
+        ORSA_DEBUG("writing file [%s]",filename);
+        const double gcm3 = orsa::FromUnits(orsa::FromUnits(1.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+        orsa::TriShape::VertexVector vv = shapeModel->getVertexVector();
+        for (size_t k=0; k<vv.size(); ++k) {
+            const orsa::Vector & vk = vv[k];
+            const orsa::Vector & nk = shapeModel->_getVertexNormal(k);
+            osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
+            for (size_t p=0; p<=numSamples; ++p) {
+                orsa::Vector v = vk - nk*depth*p/numSamples;
+                stat->insert(massDistribution->density(v));
+                // ORSA_DEBUG("p %i  v.l %g   d:  %g",p,v.length(),massDistribution->density(v));
+            }
+            const double lat = orsa::halfpi()-acos(vk.getZ()/vk.length());
+            const double lon = fmod(orsa::twopi()+atan2(vk.getY(),vk.getX()),orsa::twopi());
+            gmp_fprintf(fp,"%g %g %.3f\n",
+                        orsa::radToDeg()*lon,
+                        orsa::radToDeg()*lat,
+                        stat->average()/gcm3);
         }
         fclose(fp);
     }
