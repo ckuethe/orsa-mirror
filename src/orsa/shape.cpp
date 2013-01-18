@@ -468,11 +468,10 @@ bool TriShape::rayIntersection(orsa::Vector & intersectionPoint,
                                   _vertex[t.j()],
                                   _vertex[t.k()],
                                   fullLine)) {
-      
+            
             normal = _getFaceNormal(j);
-            if ((normal*u) < 0) {
-                return true;
-            }
+            
+            return true;
         }
     }
     return false;

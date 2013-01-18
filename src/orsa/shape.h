@@ -111,13 +111,6 @@ namespace orsa {
         mutable orsa::Box _boundingBox;
     protected:    
         mutable orsa::Box _symmetricBoundingBox;
-    
-        /* 
-           public:
-           // for OpenGL purposes...
-           virtual bool draw() const { return false; }
-        */
-    
     };
     
     class TriShape : public orsa::Shape {
@@ -298,11 +291,6 @@ namespace orsa {
     
     public:
         bool isInside(const orsa::Vector &) const;
-    
-        /* 
-           public:
-           bool draw() const { return false; }
-        */
         
     public:
         double volume() const { ORSA_DEBUG("code needed!"); return 0.0; }
