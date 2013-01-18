@@ -1200,7 +1200,7 @@ int main(int argc, char **argv) {
             
             mf->setMultifitParameters(par.get());
             mf->setMultifitData(data.get());
-            mf->setLogFile("FastLayersMultifit.log");
+            // mf->setLogFile("FastLayersMultifit.log");
             const bool success = mf->run();
             if (!success) continue;
             
