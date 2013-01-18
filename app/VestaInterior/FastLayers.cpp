@@ -1084,13 +1084,31 @@ int main(int argc, char **argv) {
             osg::ref_ptr<orsa::MultifitParameters> par = new orsa::MultifitParameters;
             std::vector<FastLayersMultifit::EllipsoidLayerData> ellipsoidLayerData;
             {
-                ellipsoidLayerData.resize(1); // number of ellipsoid layers
+                ellipsoidLayerData.resize(2); // number of ellipsoid layers
                 ellipsoidLayerData[0].excessMass = (GM/orsa::Unit::G())*(0.00+0.30*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
+                // ellipsoidLayerData[1].excessMass = (GM/orsa::Unit::G())*(0.00+0.50*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
+                ellipsoidLayerData[1].excessMass = (GM/orsa::Unit::G())*(0.00+0.30*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
                 // ellipsoidLayerData[0].excessMass =(GM/orsa::Unit::G())*(1.0-0.904121);
                 // ellipsoidLayerData[0].excessMass = (GM/orsa::Unit::G())*(0.10+0.01*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
                 // ellipsoidLayerData[0].excessMass = 0.08*(GM/orsa::Unit::G());
                 
                 char varName[4096];
+                
+                // same for all
+                sprintf(varName,"v0x");
+                par->insert(varName,(0.010+0.020*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform())*km,0.001*km);
+                sprintf(varName,"v0y");
+                par->insert(varName,(0.010+0.020*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform())*km,0.001*km);
+                sprintf(varName,"v0z");
+                par->insert(varName,(0.010+0.020*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform())*km,0.001*km);
+                //
+                sprintf(varName,"psi");
+                par->insert(varName,orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),0.00001);
+                sprintf(varName,"theta");
+                par->insert(varName,orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),0.00001);
+                sprintf(varName,"phi");
+                par->insert(varName,orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),0.00001);
+                
                 for (size_t k=0; k<ellipsoidLayerData.size(); ++k) {
                     
                     ORSA_DEBUG("ellipsoidLayerData[%i] mass fraction: %g",k,ellipsoidLayerData[k].excessMass/(GM/orsa::Unit::G()));
@@ -1105,26 +1123,27 @@ int main(int argc, char **argv) {
                     par->insert(varName,(80.0+40.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform())*km,0.001*km);
                     // par->setRange(varName,0.0*km,300.0*km);
                     //
-                    sprintf(varName,"v0x_%i",k);
-                    par->insert(varName,(0.010+0.020*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform())*km,0.001*km);
-                    sprintf(varName,"v0y_%i",k);
-                    par->insert(varName,(0.010+0.020*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform())*km,0.001*km);
-                    sprintf(varName,"v0z_%i",k);
-                    par->insert(varName,(0.010+0.020*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform())*km,0.001*km);
-                    //
-                    sprintf(varName,"psi_%i",k);
-                    par->insert(varName,orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),0.00001);
-                    sprintf(varName,"theta_%i",k);
-                    par->insert(varName,orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),0.00001);
-                    sprintf(varName,"phi_%i",k);
-                    par->insert(varName,orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),0.00001);
+                    /* sprintf(varName,"v0x_%i",k);
+                       par->insert(varName,(0.010+0.020*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform())*km,0.001*km);
+                       sprintf(varName,"v0y_%i",k);
+                       par->insert(varName,(0.010+0.020*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform())*km,0.001*km);
+                       sprintf(varName,"v0z_%i",k);
+                       par->insert(varName,(0.010+0.020*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform())*km,0.001*km);
+                       //
+                       sprintf(varName,"psi_%i",k);
+                       par->insert(varName,orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),0.00001);
+                       sprintf(varName,"theta_%i",k);
+                       par->insert(varName,orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),0.00001);
+                       sprintf(varName,"phi_%i",k);
+                       par->insert(varName,orsa::twopi()*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform(),0.00001);
+                    */
                 }
             }
             
             osg::ref_ptr<FastLayersMultifit> mf = new FastLayersMultifit;
             mf->ellipsoidLayerData = ellipsoidLayerData;
             mf->totalBodyMass = (GM/orsa::Unit::G());
-            mf->SH_degree = 2;
+            mf->SH_degree = 4;
             mf->SH_size = (mf->SH_degree+1)*(mf->SH_degree+1);
             mf->R0_plate = plateModelR0;
             mf->R0_gravity = gravityData->R0;
@@ -1225,6 +1244,21 @@ int main(int argc, char **argv) {
             {
                 bool skip=false;
                 char varName[4096];
+                
+                sprintf(varName,"v0x");
+                const double v0x = par->get(varName);
+                sprintf(varName,"v0y");
+                const double v0y = par->get(varName);
+                sprintf(varName,"v0z");
+                const double v0z = par->get(varName);
+                //
+                sprintf(varName,"psi");
+                const double psi = par->get(varName);
+                sprintf(varName,"theta");
+                const double theta = par->get(varName);
+                sprintf(varName,"phi");
+                const double phi = par->get(varName);
+                
                 for (size_t k=0; k<ellipsoidLayerData.size(); ++k) {
                     sprintf(varName,"a_%i",k);
                     const double a = fabs(par->get(varName));
@@ -1233,23 +1267,24 @@ int main(int argc, char **argv) {
                     sprintf(varName,"c_%i",k);
                     const double c = fabs(par->get(varName));
                     //
-                    sprintf(varName,"v0x_%i",k);
-                    const double v0x = par->get(varName);
-                    sprintf(varName,"v0y_%i",k);
-                    const double v0y = par->get(varName);
-                    sprintf(varName,"v0z_%i",k);
-                    const double v0z = par->get(varName);
-                    //
-                    sprintf(varName,"psi_%i",k);
-                    const double psi = par->get(varName);
-                    sprintf(varName,"theta_%i",k);
-                    const double theta = par->get(varName);
-                    sprintf(varName,"phi_%i",k);
-                    const double phi = par->get(varName);
+                    /* sprintf(varName,"v0x_%i",k);
+                       const double v0x = par->get(varName);
+                       sprintf(varName,"v0y_%i",k);
+                       const double v0y = par->get(varName);
+                       sprintf(varName,"v0z_%i",k);
+                       const double v0z = par->get(varName);
+                       //
+                       sprintf(varName,"psi_%i",k);
+                       const double psi = par->get(varName);
+                       sprintf(varName,"theta_%i",k);
+                       const double theta = par->get(varName);
+                       sprintf(varName,"phi_%i",k);
+                       const double phi = par->get(varName);
+                    */
                     
                     const double volume = 4.0/3.0*orsa::pi()*a*b*c;
                     const double excessDensity = ellipsoidLayerData[k].excessMass/volume;
-
+                    
                     ORSA_DEBUG("excessDensity[%i] = %g",k,excessDensity);
                     
                     orsa::Matrix rot;
@@ -1259,7 +1294,7 @@ int main(int argc, char **argv) {
                                               phi);
                     
                     osg::ref_ptr<LayerData::EllipsoidLayer> ellipsoidLayer = new LayerData::EllipsoidLayer(excessDensity,a,b,c,orsa::Vector(v0x,v0y,v0z),rot);
-
+                    
                     // first, quicker test
                     if (std::max(a,std::max(b,c))>shapeModel->boundingRadius()) {
                         ORSA_DEBUG("===> layer not fully contained in shape, skipping... *****");
@@ -1651,7 +1686,35 @@ double FastLayersMultifit::fun(const orsa::MultifitParameters * par,
                                const int          d,
                                const unsigned int row) const {
     char varName[4096];
+    
     LayerData::EllipsoidLayerVectorType ellipsoidLayerVector;
+    
+    sprintf(varName,"v0x");
+    double v0x = par->get(varName);
+    if (p == par->index(varName))
+        v0x += d*par->getDelta(varName);
+    sprintf(varName,"v0y");
+    double v0y = par->get(varName);
+    if (p == par->index(varName))
+        v0y += d*par->getDelta(varName);
+    sprintf(varName,"v0z");
+    double v0z = par->get(varName);
+    if (p == par->index(varName))
+        v0z += d*par->getDelta(varName);
+    
+    sprintf(varName,"psi");
+    double psi   = par->get(varName);
+    if (p == par->index(varName))
+        psi += d*par->getDelta(varName);
+    sprintf(varName,"theta");
+    double theta = par->get(varName);
+    if (p == par->index(varName))
+        theta += d*par->getDelta(varName);
+    sprintf(varName,"phi");
+    double phi   = par->get(varName);
+    if (p == par->index(varName))
+        phi += d*par->getDelta(varName);
+    
     for (size_t k=0; k<ellipsoidLayerData.size(); ++k) {
         
         sprintf(varName,"a_%i",k);
@@ -1671,31 +1734,32 @@ double FastLayersMultifit::fun(const orsa::MultifitParameters * par,
         b = fabs(b);
         c = fabs(c);
         
-        sprintf(varName,"v0x_%i",k);
-        double v0x = par->get(varName);
-        if (p == par->index(varName))
-            v0x += d*par->getDelta(varName);
-        sprintf(varName,"v0y_%i",k);
-        double v0y = par->get(varName);
-        if (p == par->index(varName))
-            v0y += d*par->getDelta(varName);
-        sprintf(varName,"v0z_%i",k);
-        double v0z = par->get(varName);
-        if (p == par->index(varName))
-            v0z += d*par->getDelta(varName);
-        
-        sprintf(varName,"psi_%i",k);
-        double psi   = par->get(varName);
-        if (p == par->index(varName))
-            psi += d*par->getDelta(varName);
-        sprintf(varName,"theta_%i",k);
-        double theta = par->get(varName);
-        if (p == par->index(varName))
-            theta += d*par->getDelta(varName);
-        sprintf(varName,"phi_%i",k);
-        double phi   = par->get(varName);
-        if (p == par->index(varName))
-            phi += d*par->getDelta(varName);
+        /* sprintf(varName,"v0x_%i",k);
+           double v0x = par->get(varName);
+           if (p == par->index(varName))
+           v0x += d*par->getDelta(varName);
+           sprintf(varName,"v0y_%i",k);
+           double v0y = par->get(varName);
+           if (p == par->index(varName))
+           v0y += d*par->getDelta(varName);
+           sprintf(varName,"v0z_%i",k);
+           double v0z = par->get(varName);
+           if (p == par->index(varName))
+           v0z += d*par->getDelta(varName);
+           
+           sprintf(varName,"psi_%i",k);
+           double psi   = par->get(varName);
+           if (p == par->index(varName))
+           psi += d*par->getDelta(varName);
+           sprintf(varName,"theta_%i",k);
+           double theta = par->get(varName);
+           if (p == par->index(varName))
+           theta += d*par->getDelta(varName);
+           sprintf(varName,"phi_%i",k);
+           double phi   = par->get(varName);
+           if (p == par->index(varName))
+           phi += d*par->getDelta(varName);
+        */
         
         orsa::Matrix rot;
         eulerAnglesToMatrix(rot,
