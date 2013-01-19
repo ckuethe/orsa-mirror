@@ -45,6 +45,40 @@ int main(int argc, char **argv) {
     osg::ref_ptr<orsaPDS::RadioScienceGravityData> gravityData = new orsaPDS::RadioScienceGravityData;
     orsaPDS::RadioScienceGravityFile::read(gravityData.get(),radioScienceGravityFile,512,1518);
     
+    if (1) {
+        // test expected flatteing for a core at a given rotation period
+        const double G = orsa::Unit::G();
+        const double M = gravityData->GM/G;
+        const double V = shapeModel->volume();
+        const double T = orsa::FromUnits(5.342128,orsa::Unit::HOUR);
+        const double Omega = orsa::twopi()/T;
+        
+        const double gcm3 = orsa::FromUnits(orsa::FromUnits(1.0,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+        
+        double excess_mass_fraction = 0.0;
+        while (excess_mass_fraction <= 1.0) {
+            
+            double excessDensity = 0.0;
+            while (excessDensity <= 10.0*gcm3) {
+                
+                const double f =
+                    15.0/(16.0*orsa::pi()) *
+                    orsa::square(Omega)/G *
+                    1.0/(excessDensity + (M/V)*(1.0-excess_mass_fraction));
+                
+                ORSA_DEBUG("EFEF %g %g %g %g",
+                           T,
+                           excess_mass_fraction,
+                           excessDensity/gcm3,
+                           f);
+                
+                excessDensity += 0.1*gcm3;
+            }
+            
+            excess_mass_fraction += 0.01;
+        }
+    }
+    
     osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape;
     {
         const bool storeSamplePoints = true;

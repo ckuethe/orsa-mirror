@@ -1084,10 +1084,9 @@ int main(int argc, char **argv) {
             osg::ref_ptr<orsa::MultifitParameters> par = new orsa::MultifitParameters;
             std::vector<FastLayersMultifit::EllipsoidLayerData> ellipsoidLayerData;
             {
-                ellipsoidLayerData.resize(2); // number of ellipsoid layers
-                ellipsoidLayerData[0].excessMass = (GM/orsa::Unit::G())*(0.00+0.30*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
-                // ellipsoidLayerData[1].excessMass = (GM/orsa::Unit::G())*(0.00+0.50*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
-                ellipsoidLayerData[1].excessMass = (GM/orsa::Unit::G())*(0.00+0.30*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
+                ellipsoidLayerData.resize(1); // number of ellipsoid layers
+                ellipsoidLayerData[0].excessMass = (GM/orsa::Unit::G())*(0.00+1.00*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
+                // ellipsoidLayerData[1].excessMass = (GM/orsa::Unit::G())*(0.00+0.30*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
                 // ellipsoidLayerData[0].excessMass =(GM/orsa::Unit::G())*(1.0-0.904121);
                 // ellipsoidLayerData[0].excessMass = (GM/orsa::Unit::G())*(0.10+0.01*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
                 // ellipsoidLayerData[0].excessMass = 0.08*(GM/orsa::Unit::G());
