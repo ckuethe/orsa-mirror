@@ -1084,12 +1084,24 @@ int main(int argc, char **argv) {
             osg::ref_ptr<orsa::MultifitParameters> par = new orsa::MultifitParameters;
             std::vector<FastLayersMultifit::EllipsoidLayerData> ellipsoidLayerData;
             {
-                ellipsoidLayerData.resize(1); // number of ellipsoid layers
-                ellipsoidLayerData[0].excessMass = (GM/orsa::Unit::G())*(0.00+1.00*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
-                // ellipsoidLayerData[1].excessMass = (GM/orsa::Unit::G())*(0.00+0.30*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
-                // ellipsoidLayerData[0].excessMass =(GM/orsa::Unit::G())*(1.0-0.904121);
-                // ellipsoidLayerData[0].excessMass = (GM/orsa::Unit::G())*(0.10+0.01*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
-                // ellipsoidLayerData[0].excessMass = 0.08*(GM/orsa::Unit::G());
+                ellipsoidLayerData.resize(2); // number of ellipsoid layers
+
+                {
+                    double totalExcessMass;
+                    do {
+                        
+                        for (size_t k=0; k<ellipsoidLayerData.size(); ++k) {
+                            ellipsoidLayerData[k].excessMass = (GM/orsa::Unit::G())*(0.00+1.00*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
+                            
+                        }
+                        
+                        totalExcessMass=0.0;
+                        for (size_t k=0; k<ellipsoidLayerData.size(); ++k) {
+                            totalExcessMass += ellipsoidLayerData[k].excessMass;
+                        }
+                        
+                    } while (totalExcessMass >= (GM/orsa::Unit::G()));
+                }
                 
                 char varName[4096];
                 
@@ -1142,7 +1154,7 @@ int main(int argc, char **argv) {
             osg::ref_ptr<FastLayersMultifit> mf = new FastLayersMultifit;
             mf->ellipsoidLayerData = ellipsoidLayerData;
             mf->totalBodyMass = (GM/orsa::Unit::G());
-            mf->SH_degree = 2;
+            mf->SH_degree = 4;
             mf->SH_size = (mf->SH_degree+1)*(mf->SH_degree+1);
             mf->R0_plate = plateModelR0;
             mf->R0_gravity = gravityData->R0;
