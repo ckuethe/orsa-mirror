@@ -73,7 +73,7 @@ public:
            return (volume() > layer->volume());
            }
         */
-#warning errors should be generated in the code using the Layers if layer A is not inside layer B, and layer B is not inside layer A (i.e., they are crossing each other)
+        // #warning errors should be generated in the code using the Layers if layer A is not inside layer B, and layer B is not inside layer A (i.e., they are crossing each other)
     };
 public:
     typedef std::vector< osg::ref_ptr<EllipsoidLayer> > EllipsoidLayerVectorType;

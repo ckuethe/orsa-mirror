@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
     osg::ref_ptr<orsaPDS::RadioScienceGravityData> gravityData = new orsaPDS::RadioScienceGravityData;
     orsaPDS::RadioScienceGravityFile::read(gravityData.get(),radioScienceGravityFile,512,1518);
     
-    if (1) {
+    if (0) {
         // test expected flatteing for a core at a given rotation period
         const double G = orsa::Unit::G();
         const double M = gravityData->GM/G;
@@ -98,8 +98,17 @@ int main(int argc, char **argv) {
             new CubicChebyshevMassDistribution(CCMDF[k].coeff,
                                                plateModelR0,
                                                CCMDF[k].layerData);
-
+        
         randomPointsInShape->updateMassDistribution(massDistribution.get());
+        
+        char line[4096];
+        
+        gmp_sprintf(line,"%6i ",k);
+        
+        // some reference values; if any layer has different values, the whole solution is discarded
+        orsa::Cache<double> ref_lat_short_axis_pole;
+        
+        bool discard=false;
         
         // flattening and short-axis pole orientation of ellipsoid layers
         for (size_t elk=0; elk<massDistribution->layerData->ellipsoidLayerVector.size(); ++elk) {
@@ -164,9 +173,47 @@ int main(int argc, char **argv) {
                     plateModelR0);
             // orsa::print(CM);
             
-            gmp_fprintf(fp,
-                        "%6i %2i %12.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %.6f %.6f %.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %10.3f %8.6f %8.6f\n",
-                        k,
+            // filter?
+            
+            if (ref_lat_short_axis_pole.isSet()) {
+                if (lat_short_axis_pole != ref_lat_short_axis_pole) {
+                    discard=true;
+                    break;
+                }
+            } else {
+                ref_lat_short_axis_pole = lat_short_axis_pole;
+            }
+            
+            /* gmp_fprintf(fp,
+               "%6i %2i %12.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %.6f %.6f %.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %10.3f %8.6f %8.6f\n",
+               k,
+               elk,
+               orsa::FromUnits(max_abc,orsa::Unit::KM,-1),
+               orsa::FromUnits(mid_abc,orsa::Unit::KM,-1),
+               orsa::FromUnits(min_abc,orsa::Unit::KM,-1),
+               orsa::FromUnits(el->v0.getX(),orsa::Unit::KM,-1),
+               orsa::FromUnits(el->v0.getY(),orsa::Unit::KM,-1),
+               orsa::FromUnits(el->v0.getZ(),orsa::Unit::KM,-1),
+               orsa::FromUnits((*CM).getX(),orsa::Unit::KM,-1),
+               orsa::FromUnits((*CM).getY(),orsa::Unit::KM,-1),
+               orsa::FromUnits((*CM).getZ(),orsa::Unit::KM,-1),
+               IxxMR2.get_d(),
+               IyyMR2.get_d(),
+               IzzMR2.get_d(),
+               flattening,
+               xy_flattening,
+               orsa::radToDeg()*lat_short_axis_pole,
+               orsa::radToDeg()*lon_short_axis_pole,
+               orsa::radToDeg()*lat_long_axis_pole,
+               orsa::radToDeg()*lon_long_axis_pole,
+               orsa::FromUnits(orsa::FromUnits(el->excessDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+               el->volume()*el->excessDensity/(gravityData->GM/orsa::Unit::G()),
+               el->volume()/shapeModel->volume());
+            */
+
+            char str[4096];
+            gmp_sprintf(str,
+                        "%2i %12.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %.6f %.6f %.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %10.3f %8.6f %8.6f",
                         elk,
                         orsa::FromUnits(max_abc,orsa::Unit::KM,-1),
                         orsa::FromUnits(mid_abc,orsa::Unit::KM,-1),
@@ -189,7 +236,7 @@ int main(int argc, char **argv) {
                         orsa::FromUnits(orsa::FromUnits(el->excessDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
                         el->volume()*el->excessDensity/(gravityData->GM/orsa::Unit::G()),
                         el->volume()/shapeModel->volume());
-            fflush(fp);
+            strcat(line,str);
             
             if (0) {
                 // test: output core-equatorial plane coordinates
@@ -236,8 +283,14 @@ int main(int argc, char **argv) {
                     fclose(fp);
                     exit(0);
                 }
+                
             }
-            
+
+        }
+
+        if (!discard) {
+            gmp_fprintf(fp,"%s\n",line);
+            fflush(fp);
         }
         
     }
