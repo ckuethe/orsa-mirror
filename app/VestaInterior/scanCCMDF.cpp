@@ -116,17 +116,35 @@ int main(int argc, char **argv) {
             const double a = el->a;
             const double b = el->b;
             const double c = el->c;
-            const double min_abc = std::min(a,std::min(b,c));
-            const double max_abc = std::max(a,std::max(b,c));
-            double tmp_mid=0.0;
-            if ((a!=min_abc) && (a!=max_abc)) tmp_mid=a;
-            if ((b!=min_abc) && (b!=max_abc)) tmp_mid=b;
-            if ((c!=min_abc) && (c!=max_abc)) tmp_mid=c;
-            if (tmp_mid==0.0) {
-                ORSA_DEBUG("problems...");
-                continue;
-            }
-            const double mid_abc = tmp_mid;
+            std::list<double> l;
+            l.push_back(a);
+            l.push_back(b);
+            l.push_back(c);
+            l.sort();
+            std::list<double>::const_iterator it=l.begin();
+            const double min_abc = (*it);
+            ++it;
+            const double mid_abc = (*it);
+            ++it;
+            const double max_abc = (*it);
+            ++it;
+            /* 
+               const double min_abc = std::min(a,std::min(b,c));
+               const double max_abc = std::max(a,std::max(b,c));
+               double tmp_mid=0.0;
+               // if ((a!=min_abc) && (a!=max_abc)) tmp_mid=a;
+               // if ((b!=min_abc) && (b!=max_abc)) tmp_mid=b;
+               // if ((c!=min_abc) && (c!=max_abc)) tmp_mid=c;
+               if ((a>=min_abc) && (a<=max_abc)) tmp_mid=a;
+               if ((b>=min_abc) && (b<=max_abc)) tmp_mid=b;
+               if ((c>=min_abc) && (c<=max_abc)) tmp_mid=c;
+               if (tmp_mid==0.0) {
+               ORSA_DEBUG("problems...");
+               continue;
+               }
+               const double mid_abc = tmp_mid;
+            */
+            // ORSA_DEBUG("%g %g %g === %g %g %g",a,b,c,min_abc,mid_abc,max_abc);
 #warning review flattening definition: divide by max or by average?
             const double flattening = (max_abc-min_abc)/max_abc;
             const double xy_flattening = (max_abc-mid_abc)/max_abc;
@@ -174,6 +192,10 @@ int main(int argc, char **argv) {
             // orsa::print(CM);
             
             // filter?
+            if (xy_flattening != 0.0) {
+                discard=true;
+                break;
+            }
             
             if (ref_lat_short_axis_pole.isSet()) {
                 if (lat_short_axis_pole != ref_lat_short_axis_pole) {
