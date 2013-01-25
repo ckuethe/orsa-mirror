@@ -14,6 +14,16 @@ typedef dd_real simplex_T;
 template <typename T> std::vector< std::vector< std::vector<size_t> > > SimplexIntegration<T>::indexTable;
 template <typename T> std::vector< std::vector< std::vector< std::vector<size_t> > > > SimplexIntegration<T>::index4Table;
 
+class index_value {
+public:
+    size_t index;
+    double value;
+public:
+    static bool sort_by_value(const index_value & x, const index_value & y) {
+        return x.value < y.value;
+    }
+};
+
 int main(int argc, char **argv) {
     
     orsa::Debug::instance()->initTimer();
@@ -110,12 +120,41 @@ int main(int argc, char **argv) {
         
         bool discard=false;
         
-        // flattening and short-axis pole orientation of ellipsoid layers
+        std::vector<index_value> ivv;
         for (size_t elk=0; elk<massDistribution->layerData->ellipsoidLayerVector.size(); ++elk) {
+            index_value iv;
+            iv.index = elk;
+            iv.value = massDistribution->layerData->ellipsoidLayerVector[elk]->volume();
+            ivv.push_back(iv);
+        }
+        std::sort(ivv.begin(),ivv.end(),index_value::sort_by_value);
+        /* for (size_t elk=0; elk<massDistribution->layerData->ellipsoidLayerVector.size(); ++elk) {
+           ORSA_DEBUG("ivv[%i] index: %i value: %f",elk,ivv[elk].index,ivv[elk].value);
+           }
+        */
+        
+        double old_a=0.0;
+        double old_b=0.0;
+        double old_c=0.0;
+        for (size_t ivvk=0; ivvk<ivv.size(); ++ivvk) {
+            const size_t elk = ivv[ivvk].index;
             osg::ref_ptr<const LayerData::EllipsoidLayer> el = massDistribution->layerData->ellipsoidLayerVector[elk];
             const double a = el->a;
             const double b = el->b;
             const double c = el->c;
+            
+            if ( (a < old_a) ||
+                 (b < old_b) ||
+                 (c < old_c) ) {
+                ORSA_DEBUG("intersecting layers, skipping...");
+                discard=true;
+                break;
+            } else {
+                old_a = a;
+                old_b = b;
+                old_c = c;
+            }
+            
             std::list<double> l;
             l.push_back(a);
             l.push_back(b);
@@ -128,22 +167,6 @@ int main(int argc, char **argv) {
             ++it;
             const double max_abc = (*it);
             ++it;
-            /* 
-               const double min_abc = std::min(a,std::min(b,c));
-               const double max_abc = std::max(a,std::max(b,c));
-               double tmp_mid=0.0;
-               // if ((a!=min_abc) && (a!=max_abc)) tmp_mid=a;
-               // if ((b!=min_abc) && (b!=max_abc)) tmp_mid=b;
-               // if ((c!=min_abc) && (c!=max_abc)) tmp_mid=c;
-               if ((a>=min_abc) && (a<=max_abc)) tmp_mid=a;
-               if ((b>=min_abc) && (b<=max_abc)) tmp_mid=b;
-               if ((c>=min_abc) && (c<=max_abc)) tmp_mid=c;
-               if (tmp_mid==0.0) {
-               ORSA_DEBUG("problems...");
-               continue;
-               }
-               const double mid_abc = tmp_mid;
-            */
             // ORSA_DEBUG("%g %g %g === %g %g %g",a,b,c,min_abc,mid_abc,max_abc);
 #warning review flattening definition: divide by max or by average?
             const double flattening = (max_abc-min_abc)/max_abc;
