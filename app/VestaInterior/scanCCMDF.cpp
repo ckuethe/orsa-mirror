@@ -103,6 +103,8 @@ int main(int argc, char **argv) {
     ORSA_DEBUG("writing file [scan.out]");
     
     for (size_t k=0; k<CCMDF.size(); ++k) {
+
+        // ORSA_DEBUG(" --- CCMDF %6i --- ",k);
         
         osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
             new CubicChebyshevMassDistribution(CCMDF[k].coeff,
@@ -133,11 +135,48 @@ int main(int argc, char **argv) {
            }
         */
         
+        std::vector<double> total_density; // sum of all excess densities up to this layer
+        std::vector<double> total_volume;  // layer volume minus the volume of the largest layer contained in this layer (it has a hole)
+        std::vector<double> total_mass;    // mass of the layer, given by the product of the above total*density[j]*total_volume[j]
+        {
+            total_density.resize(ivv.size());
+            for (size_t ivvj=0; ivvj<ivv.size(); ++ivvj) {
+                total_density[ivv[ivvj].index] = 0.0;
+                for (size_t ivvk=ivvj; ivvk<ivv.size(); ++ivvk) {
+                    total_density[ivv[ivvj].index] += massDistribution->layerData->ellipsoidLayerVector[ivv[ivvk].index]->excessDensity;
+                    // ORSA_DEBUG("ivvj: %i  ivvk: %i  total_density[%i]: %g",ivvj,ivvk,ivv[ivvj].index,total_density[ivv[ivvj].index]);
+                }
+            }
+            total_volume.resize(ivv.size());
+            for (size_t ivvj=0; ivvj<ivv.size(); ++ivvj) {
+                total_volume[ivv[ivvj].index] = massDistribution->layerData->ellipsoidLayerVector[ivv[ivvj].index]->volume();
+                if (ivvj>0) {
+                    total_volume[ivv[ivvj].index] -= massDistribution->layerData->ellipsoidLayerVector[ivv[ivvj-1].index]->volume();
+                }
+                // ORSA_DEBUG("ivvj: %i  total_volume[%i]: %g    vol[%i] = %g",ivvj,ivv[ivvj].index,total_volume[ivv[ivvj].index],ivv[ivvj].index,massDistribution->layerData->ellipsoidLayerVector[ivv[ivvj].index]->volume());
+            }
+            total_mass.resize(ivv.size());
+            for (size_t ivvj=0; ivvj<ivv.size(); ++ivvj) {
+                total_mass[ivv[ivvj].index] = total_density[ivv[ivvj].index] * total_volume[ivv[ivvj].index];
+            }
+            /* for (size_t ivvj=0; ivvj<ivv.size(); ++ivvj) {
+               ORSA_DEBUG("layer %i total_density: %g total_volume: %g total_mass: %g   vol[%i]: %g",
+               ivv[ivvj].index,
+               total_density[ivv[ivvj].index],
+               total_volume[ivv[ivvj].index],
+               total_mass[ivv[ivvj].index],
+               ivv[ivvj].index,
+               massDistribution->layerData->ellipsoidLayerVector[ivv[ivvj].index]->volume());
+               }
+            */
+        }
+        
         double old_a=0.0;
         double old_b=0.0;
         double old_c=0.0;
         for (size_t ivvk=0; ivvk<ivv.size(); ++ivvk) {
             const size_t elk = ivv[ivvk].index;
+            // ORSA_DEBUG("elk: %i",elk);
             osg::ref_ptr<const LayerData::EllipsoidLayer> el = massDistribution->layerData->ellipsoidLayerVector[elk];
             const double a = el->a;
             const double b = el->b;
@@ -216,12 +255,14 @@ int main(int argc, char **argv) {
             
             // filter?
             if (xy_flattening != 0.0) {
+                ORSA_DEBUG("xy flattening is non-zero, skipping...");
                 discard=true;
                 break;
             }
             
             if (ref_lat_short_axis_pole.isSet()) {
                 if (lat_short_axis_pole != ref_lat_short_axis_pole) {
+                    ORSA_DEBUG("pole problems, skipping...");
                     discard=true;
                     break;
                 }
@@ -229,36 +270,9 @@ int main(int argc, char **argv) {
                 ref_lat_short_axis_pole = lat_short_axis_pole;
             }
             
-            /* gmp_fprintf(fp,
-               "%6i %2i %12.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %.6f %.6f %.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %10.3f %8.6f %8.6f\n",
-               k,
-               elk,
-               orsa::FromUnits(max_abc,orsa::Unit::KM,-1),
-               orsa::FromUnits(mid_abc,orsa::Unit::KM,-1),
-               orsa::FromUnits(min_abc,orsa::Unit::KM,-1),
-               orsa::FromUnits(el->v0.getX(),orsa::Unit::KM,-1),
-               orsa::FromUnits(el->v0.getY(),orsa::Unit::KM,-1),
-               orsa::FromUnits(el->v0.getZ(),orsa::Unit::KM,-1),
-               orsa::FromUnits((*CM).getX(),orsa::Unit::KM,-1),
-               orsa::FromUnits((*CM).getY(),orsa::Unit::KM,-1),
-               orsa::FromUnits((*CM).getZ(),orsa::Unit::KM,-1),
-               IxxMR2.get_d(),
-               IyyMR2.get_d(),
-               IzzMR2.get_d(),
-               flattening,
-               xy_flattening,
-               orsa::radToDeg()*lat_short_axis_pole,
-               orsa::radToDeg()*lon_short_axis_pole,
-               orsa::radToDeg()*lat_long_axis_pole,
-               orsa::radToDeg()*lon_long_axis_pole,
-               orsa::FromUnits(orsa::FromUnits(el->excessDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
-               el->volume()*el->excessDensity/(gravityData->GM/orsa::Unit::G()),
-               el->volume()/shapeModel->volume());
-            */
-
             char str[4096];
             gmp_sprintf(str,
-                        "%2i %12.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %.6f %.6f %.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %10.3f %8.6f %8.6f",
+                        "%2i %12.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %.6f %.6f %.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %10.3f %8.6f %8.6f %10.3f %8.6f %8.6f ",
                         elk,
                         orsa::FromUnits(max_abc,orsa::Unit::KM,-1),
                         orsa::FromUnits(mid_abc,orsa::Unit::KM,-1),
@@ -280,8 +294,17 @@ int main(int argc, char **argv) {
                         orsa::radToDeg()*lon_long_axis_pole,
                         orsa::FromUnits(orsa::FromUnits(el->excessDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
                         el->volume()*el->excessDensity/(gravityData->GM/orsa::Unit::G()),
-                        el->volume()/shapeModel->volume());
+                        el->volume()/shapeModel->volume(),
+                        orsa::FromUnits(orsa::FromUnits(total_density[elk],orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+                        total_mass[elk]/(gravityData->GM/orsa::Unit::G()),
+                        total_volume[elk]/shapeModel->volume());
             strcat(line,str);
+            
+            /* ORSA_DEBUG("%g %g %g",
+               el->volume(),
+               total_volume[elk],
+               shapeModel->volume());
+            */
             
             if (0) {
                 // test: output core-equatorial plane coordinates
@@ -336,6 +359,7 @@ int main(int argc, char **argv) {
         if (!discard) {
             gmp_fprintf(fp,"%s\n",line);
             fflush(fp);
+            // ORSA_DEBUG("line: [%s]",line);
         }
         
     }
