@@ -1083,7 +1083,7 @@ int main(int argc, char **argv) {
             osg::ref_ptr<orsa::MultifitParameters> par = new orsa::MultifitParameters;
             std::vector<FastLayersMultifit::EllipsoidLayerData> ellipsoidLayerData;
             {
-                ellipsoidLayerData.resize(1); // number of ellipsoid layers
+                ellipsoidLayerData.resize(2); // number of ellipsoid layers
                 
                 {
                     double totalExcessMass;
@@ -1155,7 +1155,7 @@ int main(int argc, char **argv) {
             osg::ref_ptr<FastLayersMultifit> mf = new FastLayersMultifit;
             mf->ellipsoidLayerData = ellipsoidLayerData;
             mf->totalBodyMass = (GM/orsa::Unit::G());
-            mf->SH_degree = 2;
+            mf->SH_degree = 4;
             mf->SH_size = (mf->SH_degree+1)*(mf->SH_degree+1);
             mf->R0_plate = plateModelR0;
             mf->R0_gravity = gravityData->R0;
