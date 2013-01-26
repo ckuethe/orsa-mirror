@@ -461,6 +461,97 @@ int main(int argc, char **argv) {
                 ref_lat_short_axis_pole = lat_short_axis_pole;
             }
             
+            char str[4096];
+            gmp_sprintf(str,
+                        "%2i %12.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %.6f %.6f %.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %10.3f %8.6f %8.6f %10.3f %8.6f %8.6f %12.6f ",
+                        elk,
+                        orsa::FromUnits(max_abc,orsa::Unit::KM,-1),
+                        orsa::FromUnits(mid_abc,orsa::Unit::KM,-1),
+                        orsa::FromUnits(min_abc,orsa::Unit::KM,-1),
+                        orsa::FromUnits(el->v0.getX(),orsa::Unit::KM,-1),
+                        orsa::FromUnits(el->v0.getY(),orsa::Unit::KM,-1),
+                        orsa::FromUnits(el->v0.getZ(),orsa::Unit::KM,-1),
+                        orsa::FromUnits((*CM).getX(),orsa::Unit::KM,-1),
+                        orsa::FromUnits((*CM).getY(),orsa::Unit::KM,-1),
+                        orsa::FromUnits((*CM).getZ(),orsa::Unit::KM,-1),
+                        IxxMR2.get_d(),
+                        IyyMR2.get_d(),
+                        IzzMR2.get_d(),
+                        flattening,
+                        xy_flattening,
+                        orsa::radToDeg()*lat_short_axis_pole,
+                        orsa::radToDeg()*lon_short_axis_pole,
+                        orsa::radToDeg()*lat_long_axis_pole,
+                        orsa::radToDeg()*lon_long_axis_pole,
+                        orsa::FromUnits(orsa::FromUnits(el->excessDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+                        el->volume()*el->excessDensity/(gravityData->GM/orsa::Unit::G()),
+                        el->volume()/shapeModel->volume(),
+                        orsa::FromUnits(orsa::FromUnits(total_density[elk],orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+                        total_mass[elk]/(gravityData->GM/orsa::Unit::G()),
+                        total_volume[elk]/shapeModel->volume(),
+                        orsa::FromUnits(cbrt(max_abc*mid_abc*min_abc),orsa::Unit::KM,-1));
+            // sqrt(stat_D2->average()),
+            // sqrt(stat_D4->average()),
+            // sqrt(stat_D10->average()));
+            strcat(line,str);
+            
+            /* ORSA_DEBUG("%g %g %g",
+               el->volume(),
+               total_volume[elk],
+               shapeModel->volume());
+            */
+            
+            if (0) {
+                // test: output core-equatorial plane coordinates
+                
+                // core_excess_mass_fraction
+                const double cf = el->volume()*el->excessDensity/(gravityData->GM/orsa::Unit::G());
+                // selection conditions here...
+                if (fabs(cf-0.25) < 0.001) {
+                    
+                    char filename[4096];
+                    gmp_sprintf(filename,"core_equator_%8.6f.latlon",cf);
+                    FILE * fp = fopen(filename,"w");
+                    ORSA_DEBUG("writing file [%s]",filename);
+                    const orsa::Vector u_X = u_long_axis;
+                    const orsa::Vector u_Z = u_short_axis;
+                    const orsa::Vector u_Y = orsa::externalProduct(u_Z,u_X);
+                    double alpha = 0.0;
+                    const double alpha_step = orsa::pi()/36.0;
+                    double s,c;
+                    orsa::Vector intersectionPoint;
+                    orsa::Vector normal;
+                    while (alpha <= orsa::twopi()+0.1*alpha_step) {
+                        ::sincos(alpha,&s,&c);
+                        orsa::Vector u = c*u_X + s*u_Y;
+                        const bool good = shapeModel->rayIntersection(intersectionPoint,
+                                                                      normal,
+                                                                      el->v0,
+                                                                      u,
+                                                                      false);
+                        /* if (!good) {
+                           ORSA_DEBUG("problems...");
+                           }
+                        */
+                        const orsa::Vector u_iP = intersectionPoint.normalized();
+                        const double lat_iP = orsa::halfpi()-acos(u_iP.getZ());
+                        const double lon_iP = fmod(orsa::twopi()+atan2(u_iP.getY(),
+                                                                       u_iP.getX()),orsa::twopi());
+                        
+                        fprintf(fp,"%+12.6f %+12.6f\n",
+                                orsa::radToDeg()*lat_iP,
+                                orsa::radToDeg()*lon_iP);                        
+                        alpha += alpha_step;
+                    }
+                    fclose(fp);
+                    exit(0);
+                }
+                
+            }
+
+        }
+
+        if (!discard) {
             // delta-gravity
             const size_t max_SH_degree = 4;
             std::vector< osg::ref_ptr< orsa::Statistic<double> > > stat;
@@ -472,22 +563,25 @@ int main(int argc, char **argv) {
             // osg::ref_ptr< orsa::Statistic<double> > stat_D4  = new orsa::Statistic<double>;
             // osg::ref_ptr< orsa::Statistic<double> > stat_D10 = new orsa::Statistic<double>;
             {
-                
-                /* std::vector< std::vector<mpf_class> > norm_C;
-                   std::vector< std::vector<mpf_class> > norm_S;
-                   {
-                   CM.reset();
-                   CCMD2SH(CM,
-                   norm_C,
-                   norm_S,
-                   IzzMR2,
-                   max_SH_degree, //gravityData->degree,
-                   si.get(),
-                   massDistribution.get(),
-                   plateModelR0,
-                   gravityData->R0);
-                   }
-                */
+
+                // need this just to compute CM
+                std::vector< std::vector<mpf_class> > norm_C;
+                std::vector< std::vector<mpf_class> > norm_S;
+                orsa::Cache<orsa::Vector> CM;
+                mpf_class IzzMR2;
+                {
+                    CM.reset();
+                    CCMD2SH(CM,
+                            norm_C,
+                            norm_S,
+                            IzzMR2,
+                            2, // max_SH_degree, //gravityData->degree,
+                            si.get(),
+                            massDistribution.get(),
+                            plateModelR0,
+                            gravityData->R0);
+                }
+                CM.lock();
                 
                 // orsa::print(CM);
                 
@@ -596,102 +690,14 @@ int main(int argc, char **argv) {
             }
             
             char str[4096];
-            gmp_sprintf(str,
-                        "%2i %12.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %.6f %.6f %.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %10.3f %8.6f %8.6f %10.3f %8.6f %8.6f %12.6f ",
-                        elk,
-                        orsa::FromUnits(max_abc,orsa::Unit::KM,-1),
-                        orsa::FromUnits(mid_abc,orsa::Unit::KM,-1),
-                        orsa::FromUnits(min_abc,orsa::Unit::KM,-1),
-                        orsa::FromUnits(el->v0.getX(),orsa::Unit::KM,-1),
-                        orsa::FromUnits(el->v0.getY(),orsa::Unit::KM,-1),
-                        orsa::FromUnits(el->v0.getZ(),orsa::Unit::KM,-1),
-                        orsa::FromUnits((*CM).getX(),orsa::Unit::KM,-1),
-                        orsa::FromUnits((*CM).getY(),orsa::Unit::KM,-1),
-                        orsa::FromUnits((*CM).getZ(),orsa::Unit::KM,-1),
-                        IxxMR2.get_d(),
-                        IyyMR2.get_d(),
-                        IzzMR2.get_d(),
-                        flattening,
-                        xy_flattening,
-                        orsa::radToDeg()*lat_short_axis_pole,
-                        orsa::radToDeg()*lon_short_axis_pole,
-                        orsa::radToDeg()*lat_long_axis_pole,
-                        orsa::radToDeg()*lon_long_axis_pole,
-                        orsa::FromUnits(orsa::FromUnits(el->excessDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
-                        el->volume()*el->excessDensity/(gravityData->GM/orsa::Unit::G()),
-                        el->volume()/shapeModel->volume(),
-                        orsa::FromUnits(orsa::FromUnits(total_density[elk],orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
-                        total_mass[elk]/(gravityData->GM/orsa::Unit::G()),
-                        total_volume[elk]/shapeModel->volume(),
-                        orsa::FromUnits(cbrt(max_abc*mid_abc*min_abc),orsa::Unit::KM,-1));
-            // sqrt(stat_D2->average()),
-            // sqrt(stat_D4->average()),
-            // sqrt(stat_D10->average()));
-            strcat(line,str);
-            
             for (size_t shd=0; shd<stat.size(); ++shd) {
                 gmp_sprintf(str,
                             "%12.9f ",
                             sqrt(stat[shd]->sum()));
                 strcat(line,str);
             }
-            
-            /* ORSA_DEBUG("%g %g %g",
-               el->volume(),
-               total_volume[elk],
-               shapeModel->volume());
-            */
-            
-            if (0) {
-                // test: output core-equatorial plane coordinates
-                
-                // core_excess_mass_fraction
-                const double cf = el->volume()*el->excessDensity/(gravityData->GM/orsa::Unit::G());
-                // selection conditions here...
-                if (fabs(cf-0.25) < 0.001) {
-                    
-                    char filename[4096];
-                    gmp_sprintf(filename,"core_equator_%8.6f.latlon",cf);
-                    FILE * fp = fopen(filename,"w");
-                    ORSA_DEBUG("writing file [%s]",filename);
-                    const orsa::Vector u_X = u_long_axis;
-                    const orsa::Vector u_Z = u_short_axis;
-                    const orsa::Vector u_Y = orsa::externalProduct(u_Z,u_X);
-                    double alpha = 0.0;
-                    const double alpha_step = orsa::pi()/36.0;
-                    double s,c;
-                    orsa::Vector intersectionPoint;
-                    orsa::Vector normal;
-                    while (alpha <= orsa::twopi()+0.1*alpha_step) {
-                        ::sincos(alpha,&s,&c);
-                        orsa::Vector u = c*u_X + s*u_Y;
-                        const bool good = shapeModel->rayIntersection(intersectionPoint,
-                                                                      normal,
-                                                                      el->v0,
-                                                                      u,
-                                                                      false);
-                        /* if (!good) {
-                           ORSA_DEBUG("problems...");
-                           }
-                        */
-                        const orsa::Vector u_iP = intersectionPoint.normalized();
-                        const double lat_iP = orsa::halfpi()-acos(u_iP.getZ());
-                        const double lon_iP = fmod(orsa::twopi()+atan2(u_iP.getY(),
-                                                                       u_iP.getX()),orsa::twopi());
-                        
-                        fprintf(fp,"%+12.6f %+12.6f\n",
-                                orsa::radToDeg()*lat_iP,
-                                orsa::radToDeg()*lon_iP);                        
-                        alpha += alpha_step;
-                    }
-                    fclose(fp);
-                    exit(0);
-                }
-                
-            }
-
-        }
-
+        }        
+        
         if (!discard) {
             gmp_fprintf(fp,"%s\n",line);
             fflush(fp);
