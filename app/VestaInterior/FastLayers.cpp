@@ -1090,8 +1090,8 @@ int main(int argc, char **argv) {
                     do {
                         
                         for (size_t k=0; k<ellipsoidLayerData.size(); ++k) {
-                            ellipsoidLayerData[k].excessMass = (GM/orsa::Unit::G())*(0.00+1.00*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
-                            
+                            // ellipsoidLayerData[k].excessMass = (GM/orsa::Unit::G())*(0.00+1.00*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
+                            ellipsoidLayerData[k].excessMass = (GM/orsa::Unit::G())*(0.00+0.2*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
                         }
                         
                         totalExcessMass=0.0;
