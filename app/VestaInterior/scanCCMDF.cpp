@@ -102,8 +102,10 @@ int main(int argc, char **argv) {
     FILE * fp = fopen("scan.out","w");
     ORSA_DEBUG("writing file [scan.out]");
     
+    char line[4096];
+    
     for (size_t k=0; k<CCMDF.size(); ++k) {
-
+        
         // ORSA_DEBUG(" --- CCMDF %6i --- ",k);
         
         osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution =
@@ -112,10 +114,6 @@ int main(int argc, char **argv) {
                                                CCMDF[k].layerData);
         
         randomPointsInShape->updateMassDistribution(massDistribution.get());
-        
-        char line[4096];
-        
-        gmp_sprintf(line,"%6i ",k);
         
         // some reference values; if any layer has different values, the whole solution is discarded
         orsa::Cache<double> ref_lat_short_axis_pole;
@@ -138,10 +136,20 @@ int main(int argc, char **argv) {
         std::vector<double> total_density; // sum of all excess densities up to this layer
         std::vector<double> total_volume;  // layer volume minus the volume of the largest layer contained in this layer (it has a hole)
         std::vector<double> total_mass;    // mass of the layer, given by the product of the above total*density[j]*total_volume[j]
+        double outer_density;
+        double outer_mass;
         {
+            outer_mass = gravityData->GM/orsa::Unit::G();
+            for (size_t ivvj=0; ivvj<ivv.size(); ++ivvj) {
+                outer_mass -=
+                    massDistribution->layerData->ellipsoidLayerVector[ivv[ivvj].index]->excessDensity *
+                    massDistribution->layerData->ellipsoidLayerVector[ivv[ivvj].index]->volume();
+            }
+            outer_density = outer_mass/shapeModel->volume();
+            
             total_density.resize(ivv.size());
             for (size_t ivvj=0; ivvj<ivv.size(); ++ivvj) {
-                total_density[ivv[ivvj].index] = 0.0;
+                total_density[ivv[ivvj].index] = outer_density;
                 for (size_t ivvk=ivvj; ivvk<ivv.size(); ++ivvk) {
                     total_density[ivv[ivvj].index] += massDistribution->layerData->ellipsoidLayerVector[ivv[ivvk].index]->excessDensity;
                     // ORSA_DEBUG("ivvj: %i  ivvk: %i  total_density[%i]: %g",ivvj,ivvk,ivv[ivvj].index,total_density[ivv[ivvj].index]);
@@ -170,6 +178,12 @@ int main(int argc, char **argv) {
                }
             */
         }
+
+        // init line
+        
+        gmp_sprintf(line,"%6i %10.3f ",
+                    k,
+                    orsa::FromUnits(orsa::FromUnits(outer_density,orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
         
         double old_a=0.0;
         double old_b=0.0;
