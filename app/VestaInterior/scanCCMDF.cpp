@@ -462,8 +462,9 @@ int main(int argc, char **argv) {
             }
             
             // delta-gravity
-            osg::ref_ptr< orsa::Statistic<double> > stat_D2 = new orsa::Statistic<double>;
-            osg::ref_ptr< orsa::Statistic<double> > stat_D4 = new orsa::Statistic<double>;
+            osg::ref_ptr< orsa::Statistic<double> > stat_D2  = new orsa::Statistic<double>;
+            osg::ref_ptr< orsa::Statistic<double> > stat_D4  = new orsa::Statistic<double>;
+            osg::ref_ptr< orsa::Statistic<double> > stat_D10 = new orsa::Statistic<double>;
             {
                 const size_t max_SH_degree = 4;
                 
@@ -557,9 +558,10 @@ int main(int argc, char **argv) {
                         // const double delta = (gravity_data - gravity_ccmd - gravity_layers) / (gravity_data - gravity_ccmd);
                         const double delta = (gravity_data - gravity_ccmd - gravity_layers);
                         //
-                        if (l<=2) stat_D2->insert(orsa::square(delta));
-                        if (l<=4) stat_D4->insert(orsa::square(delta));
-                        ORSA_DEBUG("C%i%i gravity_data: %g   gravity_ccmd: %g   gravity_layers: %g   delta: %g",l,m,gravity_data,gravity_ccmd,gravity_layers,delta);
+                        if (l<=2)   stat_D2->insert(orsa::square(delta));
+                        if (l<=4)   stat_D4->insert(orsa::square(delta));
+                        if (l<=10) stat_D10->insert(orsa::square(delta));
+                        // ORSA_DEBUG("C%i%i gravity_data: %g   gravity_ccmd: %g   gravity_layers: %g   delta: %g",l,m,gravity_data,gravity_ccmd,gravity_layers,delta);
                         if (m!=0) {
                             const double gravity_data   = mod_gravityData_getCoeff(gravityData,orsaPDS::RadioScienceGravityData::keyS(l,m));
                             const double gravity_ccmd   = NOLayerData_norm_S[l][m].get_d();
@@ -568,9 +570,10 @@ int main(int argc, char **argv) {
                             // const double delta = (gravity_data - gravity_ccmd - gravity_layers) / (gravity_data - gravity_ccmd);
                             const double delta = (gravity_data - gravity_ccmd - gravity_layers);
                             //
-                            if (l<=2) stat_D2->insert(orsa::square(delta));
-                            if (l<=4) stat_D4->insert(orsa::square(delta));
-                            ORSA_DEBUG("S%i%i gravity_data: %g   gravity_ccmd: %g   gravity_layers: %g   delta: %g",l,m,gravity_data,gravity_ccmd,gravity_layers,delta);
+                            if (l<=2)   stat_D2->insert(orsa::square(delta));
+                            if (l<=4)   stat_D4->insert(orsa::square(delta));
+                            if (l<=10) stat_D10->insert(orsa::square(delta));
+                            // ORSA_DEBUG("S%i%i gravity_data: %g   gravity_ccmd: %g   gravity_layers: %g   delta: %g",l,m,gravity_data,gravity_ccmd,gravity_layers,delta);
                         }
                     }
                 }                
@@ -578,7 +581,7 @@ int main(int argc, char **argv) {
             
             char str[4096];
             gmp_sprintf(str,
-                        "%2i %12.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %.6f %.6f %.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %10.3f %8.6f %8.6f %10.3f %8.6f %8.6f %12.6f %12.6f %12.6f ",
+                        "%2i %12.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %.6f %.6f %.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %10.3f %8.6f %8.6f %10.3f %8.6f %8.6f %12.6f %12.6f %12.6f %12.6f ",
                         elk,
                         orsa::FromUnits(max_abc,orsa::Unit::KM,-1),
                         orsa::FromUnits(mid_abc,orsa::Unit::KM,-1),
@@ -606,7 +609,8 @@ int main(int argc, char **argv) {
                         total_volume[elk]/shapeModel->volume(),
                         orsa::FromUnits(cbrt(max_abc*mid_abc*min_abc),orsa::Unit::KM,-1),
                         sqrt(stat_D2->average()),
-                        sqrt(stat_D4->average()));
+                        sqrt(stat_D4->average()),
+                        sqrt(stat_D10->average()));
             strcat(line,str);
             
             /* ORSA_DEBUG("%g %g %g",
