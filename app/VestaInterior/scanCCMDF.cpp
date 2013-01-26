@@ -147,6 +147,13 @@ int main(int argc, char **argv) {
             }
             outer_density = outer_mass/shapeModel->volume();
             
+#warning parameter here...
+            if (outer_density < orsa::FromUnits(orsa::FromUnits(1.0,orsa::Unit::GRAM),orsa::Unit::CM,-3)) {
+                ORSA_DEBUG("outer density too low, skipping...");
+                discard=true;
+                continue;
+            }
+            
             total_density.resize(ivv.size());
             for (size_t ivvj=0; ivvj<ivv.size(); ++ivvj) {
                 total_density[ivv[ivvj].index] = outer_density;
@@ -178,7 +185,7 @@ int main(int argc, char **argv) {
                }
             */
         }
-
+        
         // init line
         
         gmp_sprintf(line,"%6i %10.3f ",
@@ -286,7 +293,7 @@ int main(int argc, char **argv) {
             
             char str[4096];
             gmp_sprintf(str,
-                        "%2i %12.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %.6f %.6f %.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %10.3f %8.6f %8.6f %10.3f %8.6f %8.6f ",
+                        "%2i %12.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %+12.6f %.6f %.6f %.6f %12.6f %12.6f %+12.6f %+12.6f %+12.6f %+12.6f %10.3f %8.6f %8.6f %10.3f %8.6f %8.6f %12.6f ",
                         elk,
                         orsa::FromUnits(max_abc,orsa::Unit::KM,-1),
                         orsa::FromUnits(mid_abc,orsa::Unit::KM,-1),
@@ -311,7 +318,8 @@ int main(int argc, char **argv) {
                         el->volume()/shapeModel->volume(),
                         orsa::FromUnits(orsa::FromUnits(total_density[elk],orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
                         total_mass[elk]/(gravityData->GM/orsa::Unit::G()),
-                        total_volume[elk]/shapeModel->volume());
+                        total_volume[elk]/shapeModel->volume(),
+                        orsa::FromUnits(cbrt(max_abc*mid_abc*min_abc),orsa::Unit::KM,-1));
             strcat(line,str);
             
             /* ORSA_DEBUG("%g %g %g",
