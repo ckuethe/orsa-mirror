@@ -18,33 +18,16 @@
 #include "gaskell.h"
 #include "translate_ijk.h"
 
-#include <qd/dd_real.h>
-#include <qd/qd_real.h>
-
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_siman.h>
 
 using namespace orsa;
 
-/*** CHOOSE ONE ***/
-// typedef double simplex_T;
-// typedef mpf_class simplex_T;
-typedef dd_real simplex_T;
-// typedef qd_real simplex_T;
+#include "mpreal.h"
 
 #warning how to write this using the typedef inside the class?
 template <typename T> std::vector< std::vector< std::vector<size_t> > > SimplexIntegration<T>::indexTable;
 template <typename T> std::vector< std::vector< std::vector< std::vector<size_t> > > > SimplexIntegration<T>::index4Table;
-
-/*** CHOOSE ONE ***/
-// typedef double T;
-// typedef mpf_class T;
-typedef dd_real SH_T;
-// typedef qd_real T;
-
-#warning how to write this using the typedef inside the class?
-template <typename T> std::vector< std::vector< std::vector<size_t> > > SHIntegration<T>::indexTable;
-template <typename T> std::vector< std::vector< std::vector< std::vector<size_t> > > > SHIntegration<T>::index4Table;
 
 //// custom mass distibutions
 
@@ -384,21 +367,13 @@ void P1(void *) {
 
 /***/
 
+typedef mpfr::mpreal F;
+
 int main(int argc, char **argv) {
     
     orsa::Debug::instance()->initTimer();
     
     ORSA_DEBUG("PID: %i",getpid());
-    
-    // QD
-    unsigned int oldcw;
-    fpu_fix_start(&oldcw);
-    
-    //ORSA_DEBUG("current mpf precision: %i",mpf_get_default_prec());
-    mpf_set_default_prec(128);
-    // mpf_set_default_prec(256);
-    // mpf_set_default_prec(512);
-    // ORSA_DEBUG("updated mpf precision: %i",mpf_get_default_prec());
     
 #warning add possibility to reduce the degree...
     
@@ -446,8 +421,8 @@ int main(int argc, char **argv) {
         exit(0);
     }
     
-    osg::ref_ptr<SimplexIntegration<simplex_T> > si =
-        new SimplexIntegration<simplex_T>(shapeModel.get(), plateModelR0, SQLiteDBFileName);
+    osg::ref_ptr<SimplexIntegration<F> > si =
+        new SimplexIntegration<F>(shapeModel.get(), plateModelR0, SQLiteDBFileName);
 
     if (0) {
         
@@ -509,8 +484,8 @@ int main(int argc, char **argv) {
         
         const std::string mod_SQLiteDBFileName = getSqliteDBFileName_simplex(mod_filename,plateModelR0);
         
-        osg::ref_ptr<SimplexIntegration<simplex_T> > mod_si =
-            new SimplexIntegration<simplex_T>(mod_shapeModel.get(), plateModelR0, mod_SQLiteDBFileName);
+        osg::ref_ptr<SimplexIntegration<F> > mod_si =
+            new SimplexIntegration<F>(mod_shapeModel.get(), plateModelR0, mod_SQLiteDBFileName);
         
         const size_t degree = 2;
         
@@ -654,6 +629,7 @@ int main(int argc, char **argv) {
             // use and set layerData ??
             
             // Test
+            /*
             const orsa::Vector coreCenter = orsa::Vector(0,0,0)*km;
             const double coreRx = 115*km;
             const double coreRy = 115*km;
@@ -666,6 +642,21 @@ int main(int argc, char **argv) {
             const double crustRx = 220*km;
             const double crustRy = 210*km;
             const double crustRz = 180*km;
+            */
+            
+            // Test
+            const orsa::Vector coreCenter = orsa::Vector(0,0,0)*km;
+            const double coreRx = 0.2*km;
+            const double coreRy = 0.2*km;
+            const double coreRz = 0.18*km;
+            const double coreDensity = (0.75+0.9)*gcm3;
+            const double coreMantleInterfaceThickness = 0.0*km;
+            const double mantleDensity = 0.9*gcm3;
+            const double mantleCrustInterfaceThickness = 0.0*km;
+            const double crustDensity = 0.0*gcm3;
+            const double crustRx = 0.3*km;
+            const double crustRy = 0.3*km;
+            const double crustRz = 0.3*km;
             
             // OblateCore
             /* const orsa::Vector coreCenter = orsa::Vector(0,0,0)*km;
@@ -868,7 +859,8 @@ int main(int argc, char **argv) {
                                            layerData);
     randomPointsInShape->updateMassDistribution(massDistribution.get());
     
-    if (0) {
+    if (1) {
+        ORSA_DEBUG("projecting layerData onto a pure CCMD...")
         // test: project massDistribution, which includes layerData, onto a pure Chebyshev MD (no layers)
         const bool decompose_layerData = true;
         massDistribution =
@@ -881,6 +873,16 @@ int main(int argc, char **argv) {
         
         densityCCC = massDistribution->coeff;
         layerData  = massDistribution->layerData;
+        
+        // save it!
+        /*
+        // better save call below... 
+        CubicChebyshevMassDistributionFile::CCMDF_data data;
+        data.R0        = plateModelR0;
+        data.coeff     = massDistribution->coeff;
+        data.layerData = massDistribution->layerData;
+        CubicChebyshevMassDistributionFile::write(data,"CCMDF_MD2G.out");
+        */
     }
 
     if (0) {
@@ -1147,11 +1149,16 @@ int main(int argc, char **argv) {
         }
         fclose(fp);
     }
-
+    
     {
         // surface density, or averaged over given depth
-        const double depth = orsa::FromUnits(20.0,orsa::Unit::KM);
-        const size_t numSamples = 20; // actually we have numSamples+1 samples...
+        const double depth = orsa::FromUnits(0.01,orsa::Unit::KM);
+        const size_t numSamples = 3; // actually we have numSamples+1 samples...
+        //
+        /* const double depth = orsa::FromUnits(20.0,orsa::Unit::KM);
+           const size_t numSamples = 20; // actually we have numSamples+1 samples...
+        */
+        //
         char filename[1024];
         sprintf(filename,"%s.surface_density.dat",outputGravityFile.c_str());
         FILE * fp = fopen(filename,"w");
@@ -1268,6 +1275,97 @@ int main(int argc, char **argv) {
             gravityData->R0);
     
 #warning must update gravity R0 somewhere too early in the program!
+    
+    if (0) {
+        
+        // add noise?
+        
+        ORSA_DEBUG("*********************************");
+        ORSA_DEBUG("***** WARNING: ADDING NOISE *****");
+        ORSA_DEBUG("*********************************");
+        
+        std::vector<double> power_spectrum;
+        //
+        {
+            power_spectrum.resize(gravityData->degree+1);
+            for (size_t l=0; l<=gravityData->degree; ++l) {
+                power_spectrum[l] = 0.0;
+                for (size_t m=0; m<=l; ++m) {
+                    power_spectrum[l] += norm_C[l][m].get_d()*norm_C[l][m].get_d();
+                    if (m!=0) power_spectrum[l] += norm_S[l][m].get_d()*norm_S[l][m].get_d();
+                }   
+            }
+        }
+
+        const size_t l_ref = T_degree_input;
+        
+        const double ref_power_spectrum = power_spectrum[l_ref];
+        
+#warning IMPORTANT NOISE MAGNITUDE FACTOR
+        const double RMS_ref_signal_factor = 0.100;
+        
+        const double RMS_ref_signal = RMS_ref_signal_factor*sqrt(ref_power_spectrum/(2*l_ref+1));
+        
+        const double beta = 0.333; // how noise scales with l, typically between 0.25 and 0.35; low beta = more noise
+        
+        std::vector<double> RMS_noise_nominal;
+        //
+        {
+            RMS_noise_nominal.resize(gravityData->degree+1);
+            for (size_t l=0; l<=gravityData->degree; ++l) {
+                RMS_noise_nominal[l] = RMS_ref_signal*pow(10,beta*((int)l-(int)l_ref));
+            }
+            // set to zero for l=0 and l=1
+            RMS_noise_nominal[0] = 0.0;
+            RMS_noise_nominal[1] = 0.0;
+            
+        }
+        std::vector<double> RMS_noise_injected;
+        //
+        {
+            RMS_noise_injected.resize(gravityData->degree+1);
+            for (size_t l=0; l<=gravityData->degree; ++l) {
+                RMS_noise_injected[l] = 0.0;
+                for (size_t m=0; m<=l; ++m) {
+                    // C
+                    const double noise = orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(RMS_noise_nominal[l]);
+                    norm_C[l][m] += noise;
+                    RMS_noise_injected[l] += noise*noise;
+                    if (m!=0) {
+                        // S
+                        const double noise = orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(RMS_noise_nominal[l]);
+                        norm_S[l][m] += noise;
+                        RMS_noise_injected[l] += noise*noise;
+                    }
+                }
+                RMS_noise_injected[l] = sqrt(RMS_noise_injected[l]/(2*l+1));
+            }
+        }
+        
+        for (size_t l=0; l<=gravityData->degree; ++l) {
+            ORSA_DEBUG("[noise] l: %2i  RMS_signal: %12.6e  RMS_noise_nominal: %12.6e  RMS_noise_injected: %12.6e",
+                       l,
+                       sqrt(power_spectrum[l]/(2*l+1)),
+                       RMS_noise_nominal[l],
+                       RMS_noise_injected[l]);
+        }
+
+        {
+            // output to file
+            char filename[1024];
+            sprintf(filename,"%s.noise.dat",outputGravityFile.c_str());
+            FILE * fp = fopen(filename,"w");
+            ORSA_DEBUG("writing file [%s]",filename);
+            for (size_t l=0; l<=gravityData->degree; ++l) {
+                gmp_fprintf(fp,"[noise] l: %2i  RMS_signal: %12.6e  RMS_noise_nominal: %12.6e  RMS_noise_injected: %12.6e\n",
+                            l,
+                            sqrt(power_spectrum[l]/(2*l+1)),
+                            RMS_noise_nominal[l],
+                            RMS_noise_injected[l]);
+            }
+            fclose(fp);
+        }
+    }
     
     // update GM and degree>=2 coefficients
     gravityData->GM = totalMass*orsa::Unit::G();

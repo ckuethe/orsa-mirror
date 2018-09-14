@@ -2,6 +2,7 @@
 
 #include <orsa/chebyshev.h>
 #include <orsa/statistic.h>
+#include <orsa/util.h>
 
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_cdf.h>
@@ -15,12 +16,6 @@
 #include "simplex.h"
 
 #include "CCMD2SH.h"
-
-/*** CHOOSE ONE ***/
-// typedef double simplex_T;
-// typedef mpf_class simplex_T;
-// typedef dd_real simplex_T;
-// typedef qd_real simplex_T;
 
 #warning how to write this using the typedef inside the class?
 // template <typename T> std::vector< std::vector< std::vector<size_t> > > SimplexIntegration<T>::indexTable;
@@ -198,25 +193,48 @@ gsl_matrix * mod_gravityData_getInverseCovarianceMatrix(const orsaPDS::RadioScie
 
 int main(int argc, char **argv) {
     
+    typedef mpfr::mpreal F;
+    
     orsa::Debug::instance()->initTimer();
     
     ORSA_DEBUG("PID: %i",getpid());
     
-    // QD
-    unsigned int oldcw;
-    fpu_fix_start(&oldcw);
-    
-    //ORSA_DEBUG("current mpf precision: %i",mpf_get_default_prec());
-    mpf_set_default_prec(128);
-    // mpf_set_default_prec(256);
-    // mpf_set_default_prec(512);
-    // ORSA_DEBUG("updated mpf precision: %i",mpf_get_default_prec());
-    
+    /*
     if ( (argc != 14) &&
          (argc != 15) ) {
         printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> <Izz/MR^2> <num-sample-points> [CCMDF-input-file]\n",argv[0]);
         exit(0);
     }   
+    */
+    //
+    /*
+    if ( (argc != 16) &&
+         (argc != 17) ) {
+        printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> <Izz/MR^2> <rotation-period-hours> <num-sample-points> <num-surface-sample-points> [CCMDF-input-file]\n",argv[0]);
+        exit(0);
+    }
+    */
+    //
+    /*
+    if ( (argc != 17) &&
+         (argc != 18) ) {
+        printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> <Izz/MR^2> <min-rotation-period-hours> <max-rotation-period-hours> <num-sample-points> <num-surface-sample-points> [CCMDF-input-file]\n",argv[0]);
+        exit(0);
+    }
+    */
+    //
+    /*
+    if ( (argc != 18) &&
+         (argc != 19) ) {
+        printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> <Izz/MR^2> <min-rotation-period-hours> <max-rotation-period-hours> <max-axis-tilt-deg> <num-sample-points> <num-surface-sample-points> [CCMDF-input-file]\n",argv[0]);
+        exit(0);
+    }
+    */
+    if ( (argc < 18) ||
+         (argc > 20) ) {
+        printf("Usage: %s <RadioScienceGravityFile> <plate-model-file> <plate-model-R0_km> <gravity-degree> <polynomial-degree> <CM-x_km> <CM-y_km> <CM-z_km> <CM-sigma-x_km> <CM-sigma-y_km> <CM-sigma-z_km> <Izz/MR^2> <min-rotation-period-hours> <max-rotation-period-hours> <max-axis-tilt-deg> <num-sample-points> <num-surface-sample-points> [CCMDF-input-file] [sampling-factor=1]\n",argv[0]);
+        exit(0);
+    }
     
     const std::string radioScienceGravityFile = argv[1];
     const std::string plateModelFile = argv[2];
@@ -230,9 +248,14 @@ int main(int argc, char **argv) {
     const double CM_sy = orsa::FromUnits(atof(argv[10]),orsa::Unit::KM);
     const double CM_sz = orsa::FromUnits(atof(argv[11]),orsa::Unit::KM);
     IzzMR2 = atof(argv[12]); // global
-    const int numSamplePoints = atoi(argv[13]);
-    const bool have_CCMDF_file = (argc == 15);
-    const std::string CCMDF_filename = (argc == 15) ? argv[14] : "";
+    const double min_rotation_period = orsa::FromUnits(atof(argv[13]),orsa::Unit::HOUR);
+    const double max_rotation_period = orsa::FromUnits(atof(argv[14]),orsa::Unit::HOUR);
+    const double max_axis_tilt = orsa::degToRad()*atof(argv[15]);
+    const int numSamplePoints = atoi(argv[16]);
+    const int numSurfaceSamplePoints = atoi(argv[17]);
+    const bool have_CCMDF_file = (argc >= 19);
+    const std::string CCMDF_filename = (argc >= 19) ? argv[18] : "";
+    const double sampling_factor = (argc>=20) ? atof(argv[19]) : 1.0;
     
     // safer over NFS
     // sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
@@ -336,7 +359,7 @@ int main(int argc, char **argv) {
     */
     
     // test specific cases, for debug purposes only!
-    // orsa::GlobalRNG::randomSeed = -800402816;
+    // orsa::GlobalRNG::randomSeed = -99999;
     
     osg::ref_ptr<orsaPDS::RadioScienceGravityData> gravityData = new orsaPDS::RadioScienceGravityData;
     orsaPDS::RadioScienceGravityFile::read(gravityData.get(),radioScienceGravityFile,512,1518);
@@ -409,7 +432,7 @@ int main(int argc, char **argv) {
         exit(0);
     }
     
-    osg::ref_ptr<SimplexIntegration<simplex_T> > si = new SimplexIntegration<simplex_T>(shapeModel.get(), plateModelR0, SQLiteDBFileName);
+    osg::ref_ptr<SimplexIntegration<F> > si = new SimplexIntegration<F>(shapeModel.get(), plateModelR0, SQLiteDBFileName);
     si->reserve(polynomialDegree);
     
     const size_t SH_degree = gravityDegree; // shperical harmonics degree
@@ -1175,16 +1198,21 @@ int main(int argc, char **argv) {
                     // layer_coeff = massDistribution->layerData->totalExcessMass()*orsa::Unit::G();
                     } else {
                     */
+                    bool found_coeff = false;
                     for (size_t l=0; l<=SH_degree; ++l) {
                         for (size_t m=0; m<=l; ++m) {
                             if (orsaPDS::RadioScienceGravityData::keyC(l,m) == ref_key) {
                                 // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
                                 layer_coeff = layerData_norm_C[l][m].get_d();
+                                found_coeff = true;
                             } else if (orsaPDS::RadioScienceGravityData::keyS(l,m) == ref_key) {
                                 // ORSA_DEBUG("found: [%s] for l=%i, m=%i",ref_key.toStdString().c_str(),l,m);
                                 layer_coeff = layerData_norm_S[l][m].get_d();
-                            }                       
+                                found_coeff = true;
+                            }
+                            if (found_coeff) break;
                         }
+                        if (found_coeff) break;
                     }
                     if ("IzzMR2" == ref_key) {
                         layer_coeff = layerData_IzzMR2.get_d();
@@ -1280,6 +1308,25 @@ int main(int argc, char **argv) {
                     }
                 }
                 
+                // more points, just on surface
+                std::vector<orsa::Vector> sv;
+                {
+                    double dx,dy,dz;
+                    orsa::Vector intersectionPoint;
+                    orsa::Vector normal;
+                    const orsa::Vector P(0,0,0);
+                    const bool fullLine = false;
+                    for (size_t k=0; k<numSurfaceSamplePoints; ++k) {
+                        orsa::GlobalRNG::instance()->rng()->gsl_ran_dir_3d(&dx,&dy,&dz);
+                        if (!shapeModel->rayIntersection(intersectionPoint,normal,P,orsa::Vector(dx,dy,dz),fullLine)) {
+                            ORSA_DEBUG("problems...");
+                            exit(0);
+                        } else {
+                            sv.push_back(intersectionPoint - P);
+                        }
+                    }
+                }
+                
                 SIMAN_xp x0;
                 x0.R0_plate   = plateModelR0;
                 x0.R0_gravity = gravityData->R0;
@@ -1287,6 +1334,11 @@ int main(int argc, char **argv) {
                 x0.rv = rv;
                 x0.hv = hv;
                 x0.dfb = dfb;
+                x0.sv = sv;
+                x0.min_rotation_period = min_rotation_period;
+                x0.max_rotation_period = max_rotation_period;
+                x0.max_axis_tilt       = max_axis_tilt;
+                x0.GM = GM;
                 x0.SH_degree = SH_degree;
                 x0.T_degree = T_degree;
                 x0.T_size = T_size;
@@ -1294,9 +1346,10 @@ int main(int argc, char **argv) {
                 x0.uK = &uK[0];
                 x0.uK_size = N-M;
                 x0.factor.resize(x0.uK_size);
-                x0.minimumDensity = orsa::FromUnits(orsa::FromUnits(1.50,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-                x0.maximumDensity = orsa::FromUnits(orsa::FromUnits(9.90,orsa::Unit::GRAM),orsa::Unit::CM,-3);
-                x0.penaltyThreshold = 5.00;
+                x0.sampling_factor = sampling_factor;
+                x0.minimumDensity = orsa::FromUnits(orsa::FromUnits( 0.00,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+                x0.maximumDensity = orsa::FromUnits(orsa::FromUnits(10.00,orsa::Unit::GRAM),orsa::Unit::CM,-3);
+                x0.penaltyThreshold = 10000000.00;
                 if (massDistribution.get() != 0) {
                     x0.layerData = massDistribution->layerData;
                 } else {

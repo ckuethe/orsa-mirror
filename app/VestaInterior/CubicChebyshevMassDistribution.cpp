@@ -6,7 +6,8 @@
 #include "global_SH_epsrel.h"
 
 #include <sys/types.h>
-#include <bsd/md5.h>
+// #include <bsd/md5.h>
+#include<openssl/md5.h>
 
 std::vector< std::vector< std::vector<size_t> > > CubicChebyshevMassDistribution::indexTable;
 
@@ -120,6 +121,8 @@ double CubicChebyshevMassDistribution::density(const orsa::Vector & p) const {
          (fabs(Ty_arg) > 1.0) ||
          (fabs(Tz_arg) > 1.0) ) {
         ORSA_DEBUG("problem: R0 value too small");
+        // ORSA_DEBUG("problem: R0 value too small [%g %g %g] R0: %g",Tx_arg,Ty_arg,Tz_arg,1.0/oneOverR0);
+        // print(p);
         exit(0);
     }
     //
@@ -302,7 +305,7 @@ bool CubicChebyshevMassDistributionFile::append(const CubicChebyshevMassDistribu
         ORSA_DEBUG("cannot open file [%s]",fileName.c_str());
         return false;
     } else {
-        ORSA_DEBUG("appending to file [%s]",fileName.c_str());
+        // ORSA_DEBUG("appending to file [%s]",fileName.c_str());
     }
     write(data,fp);
     fclose(fp);
@@ -397,6 +400,7 @@ bool CubicChebyshevMassDistributionFile::read(CubicChebyshevMassDistributionFile
                                     &degree)) {
                     return false;
                 }
+                ORSA_DEBUG("degree: %i",degree);
                 excessDensity = orsa::FromUnits(orsa::FromUnits(excessDensity,orsa::Unit::GRAM),orsa::Unit::CM,-3);
                 LayerData::SHLayer::SHcoeff norm_A, norm_B;
                 norm_A.resize(degree+1);
@@ -538,11 +542,7 @@ bool CubicChebyshevMassDistributionFile::write(const CubicChebyshevMassDistribut
 
 /*******/
 
-/*** CHOOSE ONE ***/
-// typedef double T;
-// typedef mpf_class T;
-typedef dd_real T;
-// typedef qd_real T;
+typedef mpfr::mpreal F;
 
 #warning how to write this using the typedef inside the class?
 template <typename T> std::vector< std::vector< std::vector<size_t> > > SHIntegration<T>::indexTable;
@@ -556,7 +556,7 @@ double LayerData::SHLayer::volume() const {
     
     const std::string SQLiteDBFileName = getSqliteDBFileName_SH(MD5(),dummy_R0);
     
-    osg::ref_ptr<SHIntegration<T> > shi = new SHIntegration<T>(norm_A, norm_B, dummy_R0, global_SH_epsabs, global_SH_epsrel, SQLiteDBFileName);
+    osg::ref_ptr<SHIntegration<F> > shi = new SHIntegration<F>(norm_A, norm_B, dummy_R0, SQLiteDBFileName);
     
     volume_ = shi->getIntegral(0,0,0)*orsa::cube(dummy_R0);
     
@@ -594,9 +594,22 @@ std::string LayerData::SHLayer::MD5() const {
         str.append(item);
     }
     
+	/* 
     char * md5str = MD5Data((const u_int8_t *)str.c_str(),strlen(str.c_str()),0);
     // ORSA_DEBUG("MD5(\"%s\") = [%s]",str.c_str(),md5str);
-    std::string md5 = md5str;
+    const std::string md5 = md5str;
     free(md5str);
+	*/
+	
+#warning this may not work... if so, look at updated version in ~/orsa/app/boinc/SurveyReview/populate.*
+    
+	MD5_CTX c;
+	unsigned char digest[16];
+    MD5_Init(&c);
+    MD5_Update(&c,(const u_int8_t *)str.c_str(),strlen(str.c_str()));
+    MD5_Final(digest,&c);
+	const std::string md5(reinterpret_cast<char*>(digest));
+	ORSA_DEBUG("MD5 input: [%s]",str.c_str());
+	
     return md5;
 }

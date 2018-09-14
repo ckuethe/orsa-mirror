@@ -17,11 +17,11 @@ MOC_DIR     = .moc/$${PLATFORM_NAME}
 OBJECTS_DIR = .obj/$${PLATFORM_NAME}
 DESTDIR     = .
 
-unix:!macx {
-	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaEssentialOSG -lorsaSolarSystem -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads -lqd -L/home/tricaric/sqlite -lsqlite3
-}
+#unix:!macx {
+	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaEssentialOSG -lorsaSolarSystem -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads -lqd -lsqlite3 -lgmp -lmpfr
+	#}
 
 
-HEADERS += simplex.h   vesta.h	gaskell.h  sqlite3.h
+HEADERS += simplex.h   vesta.h	gaskell.h  eros_shape.h  sqlite3.h
 SOURCES += simplex.cpp 
 

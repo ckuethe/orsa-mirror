@@ -5,11 +5,7 @@
 #include "CCMD2SH.h"
 #include <orsa/statistic.h>
 
-/*** CHOOSE ONE ***/
-// typedef double simplex_T;
-// typedef mpf_class simplex_T;
-typedef dd_real simplex_T;
-// typedef qd_real simplex_T;
+typedef mpfr::mpreal simplex_T;
 
 #warning how to write this using the typedef inside the class?
 template <typename T> std::vector< std::vector< std::vector<size_t> > > SimplexIntegration<T>::indexTable;
@@ -269,7 +265,19 @@ int main(int argc, char **argv) {
                                           storeSamplePoints);   
     }
     
-    FILE * fp = fopen("scan.out","w");
+	char outfile[4096];	
+    {
+        char arg_of_dirname[4096];
+        char arg_of_basename[4096];
+        strcpy(arg_of_dirname,CCMDF_filename.c_str());
+        strcpy(arg_of_basename,CCMDF_filename.c_str());
+        gmp_sprintf(outfile,"%s/scan_%s",
+                    dirname(arg_of_dirname),
+                    basename(arg_of_basename));
+		ORSA_DEBUG("outfile: [%s]",outfile);
+    }
+	
+    FILE * fp = fopen(outfile,"w");
     ORSA_DEBUG("writing file [scan.out]");
     
     char line[4096];
@@ -291,16 +299,18 @@ int main(int argc, char **argv) {
         bool discard=false;
         
         std::vector<index_value> ivv;
-        for (size_t elk=0; elk<massDistribution->layerData->ellipsoidLayerVector.size(); ++elk) {
-            index_value iv;
-            iv.index = elk;
-            iv.value = massDistribution->layerData->ellipsoidLayerVector[elk]->volume();
-            ivv.push_back(iv);
+        if (massDistribution->layerData != 0) {
+            for (size_t elk=0; elk<massDistribution->layerData->ellipsoidLayerVector.size(); ++elk) {
+                index_value iv;
+                iv.index = elk;
+                iv.value = massDistribution->layerData->ellipsoidLayerVector[elk]->volume();
+                ivv.push_back(iv);
+            }
         }
         std::sort(ivv.begin(),ivv.end(),index_value::sort_by_value);
         /* for (size_t elk=0; elk<massDistribution->layerData->ellipsoidLayerVector.size(); ++elk) {
-           ORSA_DEBUG("ivv[%i] index: %i value: %f",elk,ivv[elk].index,ivv[elk].value);
-           }
+        ORSA_DEBUG("ivv[%i] index: %i value: %f",elk,ivv[elk].index,ivv[elk].value);
+        }
         */
         
         std::vector<double> total_density; // sum of all excess densities up to this layer
@@ -398,9 +408,11 @@ int main(int argc, char **argv) {
             const double max_abc = (*it);
             ++it;
             // ORSA_DEBUG("%g %g %g === %g %g %g",a,b,c,min_abc,mid_abc,max_abc);
-#warning review flattening definition: divide by max or by average?
-            const double flattening = (max_abc-min_abc)/max_abc;
-            const double xy_flattening = (max_abc-mid_abc)/max_abc;
+			// #warning review flattening definition: divide by max or by average?
+            // const double flattening = (max_abc-min_abc)/max_abc;
+            // const double xy_flattening = (max_abc-mid_abc)/max_abc;
+			const double epsq = 1.0 - orsa::square(min_abc/max_abc);
+			const double eqsq = 1.0 - orsa::square(mid_abc/max_abc);
             
             orsa::Vector u_tmp;
             
@@ -445,12 +457,13 @@ int main(int argc, char **argv) {
             // orsa::print(CM);
             
             // filter?
-            if (xy_flattening != 0.0) {
-                ORSA_DEBUG("xy flattening is non-zero, skipping...");
+            /* if (eqsq != 0.0) {
+                ORSA_DEBUG("eqsq is non-zero, skipping...");
                 discard=true;
                 break;
             }
-            
+            */
+			
             if (ref_lat_short_axis_pole.isSet()) {
                 if (lat_short_axis_pole != ref_lat_short_axis_pole) {
                     ORSA_DEBUG("pole problems, skipping...");
@@ -477,8 +490,8 @@ int main(int argc, char **argv) {
                         IxxMR2.get_d(),
                         IyyMR2.get_d(),
                         IzzMR2.get_d(),
-                        flattening,
-                        xy_flattening,
+                        epsq,
+                        eqsq,
                         orsa::radToDeg()*lat_short_axis_pole,
                         orsa::radToDeg()*lon_short_axis_pole,
                         orsa::radToDeg()*lat_long_axis_pole,
@@ -522,7 +535,9 @@ int main(int argc, char **argv) {
                     orsa::Vector intersectionPoint;
                     orsa::Vector normal;
                     while (alpha <= orsa::twopi()+0.1*alpha_step) {
-                        ::sincos(alpha,&s,&c);
+                        // ::sincos(alpha,&s,&c);
+						s = sin(alpha);
+						c = cos(alpha);
                         orsa::Vector u = c*u_X + s*u_Y;
                         const bool good = shapeModel->rayIntersection(intersectionPoint,
                                                                       normal,
@@ -587,8 +602,8 @@ int main(int argc, char **argv) {
                 
                 std::vector< std::vector<mpf_class> > layerData_norm_C;
                 std::vector< std::vector<mpf_class> > layerData_norm_S;
-                mpf_class layerData_IzzMR2;
-                {
+                mpf_class layerData_IzzMR2=0;
+                if (massDistribution->layerData != 0) {
                     CubicChebyshevMassDistribution::CoefficientType md_lD_coeff;
                     CubicChebyshevMassDistribution::resize(md_lD_coeff,0);
                     md_lD_coeff[0][0][0] = 0;
@@ -639,7 +654,11 @@ int main(int argc, char **argv) {
                             md_NOLD.get(),
                         plateModelR0,
                             gravityData->R0);
-                    const double NOLayerMassFraction = 1.0 - massDistribution->layerData->totalExcessMass() / (gravityData->GM/orsa::Unit::G());
+                    // const double NOLayerMassFraction = 1.0 - massDistribution->layerData->totalExcessMass() / (gravityData->GM/orsa::Unit::G());
+                    double NOLayerMassFraction = 1.0;
+                    if (massDistribution->layerData) {
+                        NOLayerMassFraction -= massDistribution->layerData->totalExcessMass() / (gravityData->GM/orsa::Unit::G());
+                    }
                     for (size_t l=0; l<=max_SH_degree; ++l) {
                         for (size_t m=0; m<=l; ++m) {
                             NOLayerData_norm_C[l][m] *= NOLayerMassFraction;

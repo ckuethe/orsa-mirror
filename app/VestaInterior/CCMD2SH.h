@@ -95,12 +95,16 @@ void CCMD2SH(orsa::Cache<orsa::Vector>             & CM,
             }
         }
         // debug output
-        if (0) {
+        if (1) {
             ORSA_DEBUG("reference R0: %g [km]",orsa::FromUnits(gravityDataR0,orsa::Unit::KM,-1));
             for (size_t l=0; l<=SH_degree; ++l) {
                 for (size_t m=0; m<=l; ++m) {
+                    /*
                     ORSA_DEBUG("norm_C[%i][%i] = %Fg",l,m,norm_C[l][m].get_mpf_t());
                     if (m != 0) ORSA_DEBUG("norm_S[%i][%i] = %Fg",l,m,norm_S[l][m].get_mpf_t());
+                    */
+                    ORSA_DEBUG("norm_C[%i][%i] = %F+.9f",l,m,norm_C[l][m].get_mpf_t());
+                    if (m != 0) ORSA_DEBUG("norm_S[%i][%i] = %F+.9f",l,m,norm_S[l][m].get_mpf_t());
                 }
             }
         }

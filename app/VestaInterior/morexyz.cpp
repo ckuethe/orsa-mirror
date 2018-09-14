@@ -112,40 +112,41 @@ int main (int argc, char **argv) {
        }
     */
     
-    double dx_max=0.0;
-    double dy_max=0.0;
-    for (size_t k=0; k<vec.size(); ++k) {
-        const P & pk = vec[k];
-        if (pk.x < xmin) continue;
-        if (pk.x > xmax) continue;
-        if (pk.y < ymin) continue;
-        if (pk.y > ymax) continue;
-        double dx_k_min=unset;
-        double dy_k_min=unset;
-        P p_k_min;
-        for (size_t j=0; j<k; ++j) {
-            const P & pj = vec[j];
-            if (pj.x < xmin) continue;
-            if (pj.x > xmax) continue;
-            if (pj.y < ymin) continue;
-            if (pj.y > ymax) continue;
-            const double dx = fabs(pj.x-pk.x);
-            const double dy = fabs(pj.y-pk.y);
-            if ( ( (dx < dx_k_min) && (dy < dy_k_min) ) ||
-                 (dx_k_min == unset) ||
-                 (dy_k_min == unset) ) {
-                dx_k_min = dx;
-                dy_k_min = dy;
-                p_k_min = pk;
-            }
-        }
-        if ( (dx_k_min > dx_max) &&
-             (dy_k_min > dy_max) ) {
-            dx_max = dx_k_min;
-            dy_max = dy_k_min;
-            ORSA_DEBUG("dx_max: %g   dy_max: %g   P: %g %g",dx_max,dy_max,p_k_min.x,p_k_min.y);
-        }
-    }
+    /* double dx_max=0.0;
+       double dy_max=0.0;
+       for (size_t k=0; k<vec.size(); ++k) {
+       const P & pk = vec[k];
+       if (pk.x < xmin) continue;
+       if (pk.x > xmax) continue;
+       if (pk.y < ymin) continue;
+       if (pk.y > ymax) continue;
+       double dx_k_min=unset;
+       double dy_k_min=unset;
+       P p_k_min;
+       for (size_t j=0; j<k; ++j) {
+       const P & pj = vec[j];
+       if (pj.x < xmin) continue;
+       if (pj.x > xmax) continue;
+       if (pj.y < ymin) continue;
+       if (pj.y > ymax) continue;
+       const double dx = fabs(pj.x-pk.x);
+       const double dy = fabs(pj.y-pk.y);
+       if ( ( (dx < dx_k_min) && (dy < dy_k_min) ) ||
+       (dx_k_min == unset) ||
+       (dy_k_min == unset) ) {
+       dx_k_min = dx;
+       dy_k_min = dy;
+       p_k_min = pk;
+       }
+       }
+       if ( (dx_k_min > dx_max) &&
+       (dy_k_min > dy_max) ) {
+       dx_max = dx_k_min;
+       dy_max = dy_k_min;
+       ORSA_DEBUG("dx_max: %g   dy_max: %g   P: %g %g",dx_max,dy_max,p_k_min.x,p_k_min.y);
+       }
+       }
+    */
     
     /* while (1) {
        P p;
@@ -167,6 +168,10 @@ int main (int argc, char **argv) {
        }
        }
     */
+
+    // test: force values for dx_max and dy_max;
+    const double dx_max = 0.003;
+    const double dy_max = 0.20;
     
     while (1) {
         P p;
@@ -177,8 +182,13 @@ int main (int argc, char **argv) {
             const P & pk = vec[k];
             const double dx = fabs(p.x-pk.x);
             const double dy = fabs(p.y-pk.y);
-            if ( (dx < dx_max) &&
-                 (dy < dy_max) ) {
+            /* if ( (dx < dx_max) &&
+               (dy < dy_max) ) {
+               good=false;
+               break;
+               }
+            */
+            if ( orsa::square(dx/dx_max)+orsa::square(dy/dy_max) < 1.0 ) {
                 good=false;
                 break;
             }

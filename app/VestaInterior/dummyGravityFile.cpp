@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
         }
     }
     
-    orsaPDS::RadioScienceGravityFile::write(gravityData.get(),"dummyGravityFile.dat",512,1518);
+    orsaPDS::RadioScienceGravityFile::write(gravityData.get(),"dummyGravityFile.bin",512,1518);
     
     return 0;
 }

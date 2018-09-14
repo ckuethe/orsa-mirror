@@ -245,7 +245,6 @@ protected:
     static void updateIndexTable(const size_t & requestedDegree);
 public:
     CubicChebyshevMassDistribution(const CoefficientType & coefficient,
-                                   // const double & densityScale, // = bulk density if coefficients are relative
                                    const double & R0,
                                    const LayerData * layerData = 0);
 protected:

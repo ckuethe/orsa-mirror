@@ -17,9 +17,10 @@ MOC_DIR     = .moc/$${PLATFORM_NAME}
 OBJECTS_DIR = .obj/$${PLATFORM_NAME}
 DESTDIR     = .
 
-unix:!macx {
-	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaEssentialOSG -lorsaSolarSystem -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads -lqd -L/home/tricaric/sqlite -lsqlite3 -L/home/tricaric/dislin/ -ldislin -lbsd
-}
+#unix:!macx {
+#	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaEssentialOSG -lorsaSolarSystem -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads -lqd -L/home/tricaric/sqlite -lsqlite3 -L/home/tricaric/dislin/ -ldislin -lbsd
+	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaEssentialOSG -lorsaSolarSystem -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads -lqd -L/home/tricaric/sqlite -lsqlite3 -lcrypto -lssl -lgmp -lmpfr
+	#}
 
 
 HEADERS += CubicChebyshevMassDistribution.h vesta.h gaskell.h simplex.h

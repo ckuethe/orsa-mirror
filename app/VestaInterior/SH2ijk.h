@@ -9,9 +9,6 @@
 #include <orsa/unit.h>
 #include <orsa/util.h>
 
-#include <qd/dd_real.h>
-#include <qd/qd_real.h>
-
 // SQLite3
 #include "sqlite3.h"
 
@@ -19,7 +16,9 @@
 
 // #include <gsl/gsl_sf_gamma.h>
 
-#warning should change the _simplex_ part of the name to _ijk_ or something like that
+#include "simplex.h"
+#include "mpreal.h"
+
 inline std::string getSqliteDBFileName_SH(const std::string & inputFile,
                                           const double & R0) {
     char line[4096];
@@ -50,16 +49,38 @@ template <class T> T orsa::int_pow(const T & x,
     return _pow;
 }
 
-template dd_real orsa::int_pow(const dd_real & z,
-                               const int & p);
-
 typedef std::vector< std::vector<double> > SHcoeff;
 
 inline void writeSH(const SHcoeff & norm_A,
                     const SHcoeff & norm_B,
                     const std::string & outputFile,
                     const orsa::Unit::LengthUnit & outputFileLengthScale = orsa::Unit::METER) {
-    ORSA_DEBUG("need code here!");
+    
+    FILE * fp = fopen(outputFile.c_str(),"w");
+    
+    if (!fp) {
+        ORSA_DEBUG("cannot open file [%s]",outputFile.c_str());
+        return;
+    }
+    
+    for (size_t l=0; l<norm_A.size(); ++l) {
+        for (size_t m=0; m<=l; ++m) {
+            if (m!=0) {
+                gmp_fprintf(fp,"%3i %3i %+16.6f %+16.6f\n",
+                            l,
+                            m,
+                            orsa::FromUnits(norm_A[l][m],outputFileLengthScale,-1),
+                            orsa::FromUnits(norm_B[l][m],outputFileLengthScale,-1));
+            } else {
+                gmp_fprintf(fp,"%3i %3i %+16.6f\n",
+                            l,
+                            m,
+                            orsa::FromUnits(norm_A[l][m],outputFileLengthScale,-1));
+            }
+        }
+    }
+    
+    fclose(fp);
 }
 
 inline void readSH(SHcoeff & norm_A,
@@ -74,14 +95,14 @@ inline void readSH(SHcoeff & norm_A,
     
     norm_A.clear();
     norm_B.clear();
-
+    
     char line[4096];
-    char s_l[4096], s_m[4096], s_C[4096], s_S[4096];
+    char s_l[4096], s_m[4096], s_A[4096], s_B[4096];
     while (fgets(line,4096,fp)) {
         int num_good = sscanf(line,
                               "%s %s %s %s",
-                              s_l, s_m, s_C, s_S);
-        // ORSA_DEBUG("[%s] [%s] [%s] [%s] (num_good=%i)",s_l, s_m, s_C, s_S, num_good);
+                              s_l, s_m, s_A, s_B);
+        // ORSA_DEBUG("[%s] [%s] [%s] [%s] (num_good=%i)",s_l, s_m, s_A, s_B, num_good);
         if ( (num_good == 3) ||
              (num_good == 4) ) {
             // test for good lines
@@ -99,9 +120,9 @@ inline void readSH(SHcoeff & norm_A,
                 }
             }
             
-            norm_A[l][m] = orsa::FromUnits(atof(s_C),inputFileLengthScale);
+            norm_A[l][m] = orsa::FromUnits(atof(s_A),inputFileLengthScale);
             if ( (num_good==4) && (m>0) ) {
-                norm_B[l][m] = orsa::FromUnits(atof(s_S),inputFileLengthScale);
+                norm_B[l][m] = orsa::FromUnits(atof(s_B),inputFileLengthScale);
             }   
         }
     }
@@ -117,23 +138,20 @@ inline void readSH(SHcoeff & norm_A,
     fclose(fp);
 }
 
-template <typename T> class SHIntegration : public osg::Referenced {
+template <typename F> class SHIntegration : public osg::Referenced {
 public:
     SHIntegration(const SHcoeff & nA,
                   const SHcoeff & nB,
-                  const T & R0_,
-                  const T & epsabs_,
-                  const T & epsrel_,
+                  const F & R0_,
+                  // const F & epsabs_,
+                  // const F & epsrel_,
                   const std::string & SQLiteDBFileName) :
         osg::Referenced(),
-        // N(3),
         norm_A(nA),
         norm_B(nB),
-        // triShape(s),
-        // R0(R0_),
-        oneOverR0(1.0/R0_),
-        epsabs(epsabs_),
-        epsrel(epsrel_) {
+        oneOverR0(1.0/R0_) {
+        // epsabs(epsabs_),
+        // epsrel(epsrel_) {
         
         int rc = sqlite3_open(SQLiteDBFileName.c_str(),&db);
         //
@@ -197,169 +215,146 @@ protected:
     }
 
 public:
+    /*
     void reserve(const size_t maxDegree) {
         const size_t maxIndex = std::max(getIndex(maxDegree,0,0),
                                          std::max(getIndex(0,maxDegree,0),
                                                   getIndex(0,0,maxDegree)));
         val.reserve(maxIndex+1);
-        // val_vol_sum_fun.reserve(maxIndex+1); 
-        // pochhammer_Np1.reserve(maxDegree+1);
     }
-protected:
-    /* class SHInternals {
-       public:
-       std::vector<orsa::Vector> simplexVertexVector;
-       orsa::Cache<T> volume;
-       };
     */
 protected:
-    // const size_t N; // N = 3 = dimension of space = number of vertexes in n-dim simplex + 1
-    // osg::ref_ptr<const orsa::TriShape> triShape;
     const SHcoeff & norm_A;
     const SHcoeff & norm_B;
-    // const double R0;
-    const T oneOverR0;
-    const T epsabs;
-    const T epsrel;
+    const F oneOverR0;
+    // const F epsabs;
+    // const F epsrel;
     mutable std::vector< orsa::Cache<double> > val; // integral value
-    // mutable std::vector< SHInternals > aux;
-    // val_vol_sum_fun is the sum over all simplexes of the funciton of given q times the volume of each simplex
-    // mutable std::vector< std::vector< orsa::Cache<T> > > val_vol_sum_fun;
-    // mutable std::vector< orsa::Cache<mpz_class> > pochhammer_Np1; // pochhammer_Np1[deg] = pochhammer(N+1,deg)
 protected:
     // needed to work with SQLite database
     sqlite3 * db;
 protected:
-    // utility functions to allow the use of templates
-    static dd_real mpzToDD(const mpz_class & z) {
-        // return dd_real(z.get_d());
-        char * str = (char *)malloc(mpz_sizeinbase(z.get_mpz_t(),10)+2);
-        mpz_get_str(str,10,z.get_mpz_t());
-        dd_real x(str);
-        // ORSA_DEBUG("z: [%Zi]  STR: [%s]   dd: %g",z.get_mpz_t(),str,::to_double(x));
-        free(str);
-        return x;
+    // n!!
+    static mpfr::mpreal bifactorial(int n) {
+        if (n<2) {
+            return 1;
+        } else {
+            mpfr::mpreal retVal=n;
+            while (n>3) {
+                n -= 2;
+                retVal *= n;
+            }
+            return retVal;
+        }
     }
-    static qd_real mpzToQD(const mpz_class & z) {
-        char * str = (char *)malloc(mpz_sizeinbase(z.get_mpz_t(),10)+2);
-        mpz_get_str(str,10,z.get_mpz_t());
-        qd_real x(str);
-        // ORSA_DEBUG("z: [%Zi]  STR: [%s]   qd: %g",z.get_mpz_t(),str,::to_double(x));
-        free(str);
-        return x;
+    // demiGamma(n/2)
+    static mpfr::mpreal demiGamma(const int n) {
+        static const mpfr::mpreal sqrt_pi = sqrt(mpfr::const_pi());
+        static const mpfr::mpreal one_over_sqrt_2 = mpfr::mpreal(1)/sqrt(mpfr::mpreal(2));
+        return sqrt_pi*bifactorial(n-2)*pow(one_over_sqrt_2,n-1);
     }
-    
-    template <class U> T aux_01(const int & sign, const mpz_class & binomial, const U & val) const;
-    double aux_01(const int & sign, const mpz_class & binomial, const double & val) const { return sign*binomial.get_d()*val; }   
-    mpf_class aux_01(const int & sign, const mpz_class & binomial, const mpf_class & val) const { return sign*binomial*val; }   
-    dd_real aux_01(const int & sign, const mpz_class & binomial, const dd_real & val) const { return sign*mpzToDD(binomial)*val; }  
-    qd_real aux_01(const int & sign, const mpz_class & binomial, const qd_real & val) const { return sign*mpzToQD(binomial)*val; }   
-    //
-    template <class U> T aux_02(const U & x, const mpz_class & pochhammer) const;
-    double aux_02 (const double & x, const mpz_class & pochhammer) const {
-        return x/pochhammer.get_d();
+    // fast!
+    /*
+    static mpfr::mpreal triple_gamma(const int c, const int s) {
+        return (demiGamma(c+1)*demiGamma(s+1)/demiGamma(c+s+2));
     }
-    double aux_02 (const mpf_class & x, const mpz_class & pochhammer) const {
-        return mpf_class(x/pochhammer).get_d();
-    }
-    double aux_02 (const dd_real & x, const mpz_class & pochhammer) const {
-        dd_real y = x / mpzToDD(pochhammer);
-        return ::to_double(y);
-    }
-    double aux_02 (const qd_real & x, const mpz_class & pochhammer) const {
-        qd_real y = x / mpzToQD(pochhammer);
-        return ::to_double(y);
-    }
-    
-    // return Gamma(n) = (n-1)!
-    dd_real aux_gamma_n(const mpz_class & n) const {
-        // ORSA_DEBUG("%g",::to_double(mpzToDD(orsa::factorial(n-1))));
-        return mpzToDD(orsa::factorial(n-1));
-    }
-    
-    // return Gamma(n+1/2)
-    dd_real aux_gamma_n_plus_half(const mpz_class & n) const {
-        dd_real result=1;
-        result *= mpzToDD(orsa::factorial(2*n));
-        result /= mpzToDD(orsa::int_pow((mpz_class)4,n)*orsa::factorial(n));
-        result *= sqrt(dd_real::_pi);
-        return result;
-    }
-    
-    // Gamma(n/2)
-    dd_real aux_gamma_half_n(const mpz_class & n) const {
-        // ORSA_DEBUG("n: %Zi",n.get_mpz_t());
-        if (n%2==0) return aux_gamma_n(n/2);
-        else return aux_gamma_n_plus_half(n/2);
-    }
-    
-    // Gamma((c+1)/2)*Gamma((s+1)/2)/Gamma((c+s+2)/2)
-    dd_real triple_factorial(const int & c, const int & s) const {        
-        // ORSA_DEBUG("c: %Zi  s: %Zi",c.get_mpz_t(),s.get_mpz_t());
-        static std::vector< std::vector< orsa::Cache<dd_real> > > stored;
-        if (stored.size()>c) {
-            if (stored[c].size()>s) {
-                if (stored[c][s].isSet()) {
-                    return stored[c][s];
+    */
+    // fast + lookup table
+    static mpfr::mpreal triple_gamma(const unsigned int c, const unsigned int s) {
+        static std::vector<std::vector<orsa::Cache<mpfr::mpreal> > > table;
+        if (table.size()>c) {
+            if (table[c].size()>s) {
+                if (table[c][s].isSet()) {
+                    return table[c][s];
+                } else {
+                    table[c][s] = (demiGamma(c+1)*demiGamma(s+1)/demiGamma(c+s+2));
+                    return table[c][s];
                 }
             } else {
-                stored[c].resize(s+1);
+                table[c].resize(s+1);
+                return triple_gamma(c,s);
             }
         } else {
-            stored.resize(c+1);
-            stored[c].resize(s+1);
+            table.resize(c+1);
+            return triple_gamma(c,s);
         }
-        stored[c][s] = (aux_gamma_half_n(c+1)*aux_gamma_half_n(s+1)/aux_gamma_half_n(c+s+2));
-        return stored[c][s];
     }
-    
-    // integral between 0 and k*pi of cos^c(x) sin^s(x) dx
-    dd_real integral_csk(const int & c, const int & s, const int & k) const {
-        // ORSA_DEBUG("csk: %i %i %i",c,s,k);
+    /*
+    // slow!
+    mpfr::mpreal triple_gamma(const mpfr::mpreal c, const mpfr::mpreal s) const {
+        return (mpfr::gamma((c+1)/2)*mpfr::gamma((s+1)/2)/mpfr::gamma((c+s+2)/2));
+    }
+    */
+protected:
+    // 5-10% faster than version without lookup table...
+    mpfr::mpreal integral_csk(const int & c, const int & s, const int & k) const {
+        static std::vector<std::vector<std::vector<orsa::Cache<mpfr::mpreal> > > > table;
+        if ((c<0) || (s<0) || (k<0)) return 0; // tested only for natural numbers values
+        if (table.size()>c) {
+            if (table[c].size()>s) {
+                if (table[c][s].size()>k) {
+                    if (table[c][s][k].isSet()) {
+                        return table[c][s][k];
+                    } else {
+                        // calculating it here...
+                        const bool c_even = (c%2==0);
+                        if (c_even) {
+                            const bool s_even = (s%2==0);
+                            if (s_even) {
+                                table[c][s][k] = k*triple_gamma(c,s);
+                                return table[c][s][k];
+                            } else {
+                                const bool k_even = (k%2==0);
+                                if (k_even) {
+                                    table[c][s][k] = 0;
+                                    return table[c][s][k];
+                                } else {
+                                    table[c][s][k] = triple_gamma(c,s);
+                                    return table[c][s][k];
+                                }
+                            }
+                        } else {
+                            table[c][s][k] = 0;
+                            return table[c][s][k];
+                        }
+                    }
+                } else {
+                    table[c][s].resize(k+1);
+                    return integral_csk(c,s,k);
+                }
+            } else {
+                table[c].resize(s+1);
+                return integral_csk(c,s,k);
+            }
+        } else {
+            table.resize(c+1);
+            return integral_csk(c,s,k);
+        }
+    }
+    /*
+    mpfr::mpreal integral_csk(const int & c, const int & s, const int & k) const {
         if ((c<0) || (s<0) || (k<0)) return 0; // tested only for natural numbers values
         const bool c_even = (c%2==0);
         if (c_even) {
             const bool s_even = (s%2==0);
             if (s_even) {
-                return k*triple_factorial(c,s);
+                return k*triple_gamma(c,s);
             } else {
                 const bool k_even = (k%2==0);
                 if (k_even) {
-                    return 0.0;
+                    return 0;
                 } else {
-                    return triple_factorial(c,s);
+                    return triple_gamma(c,s);
                 }
             }
         } else {
-            return 0.0;
+            return 0;
         }
     }
-    
-    // norm_coeff = normalization_factor * coeff
-    static dd_real normalization_factor(const int & l,
-                                        const int & m) {
-        /* static std::vector< std::vector< orsa::Cache<dd_real> > > stored;
-           if (stored.size() > l) {
-           // if (stored[l].size() > m) {
-           if (stored[l][m].isSet()) {
-           return stored[l][m];
-           }
-           // }
-           } else {
-           stored.resize(l+1);
-           for (int j=0; j<=l; ++j) {
-           stored[j].resize(j+1);
-           }
-           }
-        */
-        
-        // return mpfToDD(orsa::normalization_sphericalHarmonicsToNormalizedSphericalHarmonics(l,m));
-        // write it explicitely to avoid losing digits...
-        const dd_real val =
-            sqrt(mpzToDD(orsa::factorial(l+m)) /
-                 mpzToDD((2-orsa::kronecker(0,m))*(2*l+1)*orsa::factorial(l-m)));
-        // stored[l][m] = val;
-        return val;
+    */
+protected:
+    mpfr::mpreal normalization_factor(const unsigned long int l, const unsigned long int m) const {
+        return sqrt(mpfr::fac_ui(l+m)/((2-kronecker(0,m))*(2*l+1)*mpfr::fac_ui(l-m)));
     }
     
 public:
@@ -367,24 +362,17 @@ public:
     public:
         int tau, l, m, u, nu;
         // T Q;
-        T ABQ_R0;
+        F ABQ_R0;
     public:
         // note: sorting by absolute value!
         static bool sort_by_absolute_larger_to_smaller(const FiveVars & x, const FiveVars & y) {
-            return fabs(x.ABQ_R0) > fabs(y.ABQ_R0);
+            return (fabs(x.ABQ_R0) > fabs(y.ABQ_R0));
         }
     };
-    
-    inline static dd_real Q(const FiveVars & fv) {
-        return
-            mpzToDD(orsa::power_sign(fv.u+fv.nu) *
-                    orsa::binomial(fv.m,2*fv.nu+fv.tau) *
-                    orsa::binomial(fv.l,fv.u) *
-                    orsa::binomial(2*fv.l-2*fv.u,fv.l) *
-                    orsa::pochhammer(mpz_class(fv.l-fv.m-2*fv.u+1),fv.m)) 
-            / mpzToDD(orsa::int_pow((mpz_class)2,fv.l));
+    inline static F Q(const FiveVars & fv) {                    
+        return (orsa::power_sign(fv.u+fv.nu)*binomial(fv.m,2*fv.nu+fv.tau)*binomial(fv.l,fv.u)*binomial(2*fv.l-2*fv.u,fv.l)*pochhammer(fv.l-fv.m-2*fv.u+1,fv.m))/(mpfr::pow(mpfr::mpreal(2),fv.l));
     }
-
+    
 public:
     class Trii {
     public:
@@ -454,16 +442,17 @@ public:
             } else {
                 if (verbose) ORSA_DEBUG("value for [%i][%i][%i] not available, computing it...",nx,ny,nz);
                 
-                ORSA_DEBUG("NOTE: using accuracy coefficients epsabs = %g and epsrel = %g",::to_double(epsabs),::to_double(epsrel));
+                // ORSA_DEBUG("NOTE: using accuracy coefficients epsabs = %g and epsrel = %g",::to_double(epsabs),::to_double(epsrel));
                 
                 const size_t l_max = std::max(norm_A.size()-1,norm_B.size()-1);
                 
                 std::vector<FiveVars> fvv;
-                fvv.reserve(l_max*l_max*l_max);
+                // fvv.reserve(l_max*l_max*l_max);
                 
                 for (size_t tau=0; tau<=1; ++tau) {
                     for (size_t l=0; l<=l_max; ++l) {
                         for (size_t m=0; m<=l; ++m) {
+                            const F nf = normalization_factor(l,m);
                             for (size_t u=0; u<=(l/2); ++u) {
                                 if (m>=tau) {
                                     for (size_t nu=0; nu<=((m-tau)/2); ++nu) {
@@ -475,11 +464,9 @@ public:
                                         fv.u=u;
                                         fv.nu=nu;
                                         // NOTE the normalization factor included here...
-                                        // fv.ABQ_R0 = orsa::int_pow(norm_A[l][m],1-tau)*orsa::int_pow(norm_B[l][m],tau)*Q(fv)/normalization_factor(l,m);
-                                        // fv.ABQ_R0 = pow(norm_A[l][m],1-tau)*pow(norm_B[l][m],tau)*Q(fv)/normalization_factor(l,m);
-                                        // dividing here by R0 to obtain a global 1/R0^Nr
-                                        fv.ABQ_R0 = oneOverR0*pow(norm_A[l][m],1-tau)*pow(norm_B[l][m],tau)*Q(fv)/normalization_factor(l,m);
-                                        if (fv.ABQ_R0 != 0.0) {
+                                        fv.ABQ_R0 = oneOverR0*pow(norm_A[l][m],1.0-tau)*pow(norm_B[l][m],tau)*Q(fv)/nf;
+                                        // ORSA_DEBUG("%i %i %i %i %i Q: %g   nf: %g",tau,l,m,u,nu,Q(fv).toDouble(),normalization_factor(l,m).toDouble());
+                                        if (fv.ABQ_R0 != 0) {
                                             fvv.push_back(fv);
                                             // if (verbose) ORSA_DEBUG("[%i,%i,%i,%i,%i] = %+12.9f",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.ABQ_R0));
                                         } 
@@ -489,24 +476,24 @@ public:
                         }
                     }
                 }
+                
                 std::sort(fvv.begin(),fvv.end(),FiveVars::sort_by_absolute_larger_to_smaller);
                 if (verbose) for (size_t c=0; c<fvv.size(); ++c) {
                     const FiveVars & fv = fvv[c];
-                    ORSA_DEBUG("[%i,%i,%i,%i,%i] = %+12.9f",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.ABQ_R0));
+                    ORSA_DEBUG("[%i,%i,%i,%i,%i] = %+12.9f",fv.tau,fv.l,fv.m,fv.u,fv.nu,fv.ABQ_R0.toDouble());
                 }
-                // ORSA_DEBUG("fvv.size: %i   skipped: %i",fvv.size(),num_skipped);
+                
+                ORSA_DEBUG("fvv.size(): %u",fvv.size());
                 
                 const size_t Nr = nx+ny+nz+3;
                 
                 // include those integrals needed at same Nr
                 std::vector<Trii> ii; // includedIntegrals;
-                ii.reserve(degree*degree*degree);
                 Trii trii;
                 trii.nx=nx; trii.ny=ny; trii.nz=nz; trii.index=getIndex(nx,ny,nz);
                 ii.push_back(trii);
                 for (int gx=0; gx<=degree; ++gx) {
                     for (int gy=0; gy<=degree-gx; ++gy) {
-                        // for (int gz=0; gz<=degree-gx-gy; ++gz) {
                         int gz = degree-gx-gy;
                         if (gx==nx && gy==ny && gz==nz) continue; // already included this one...
                         // ORSA_DEBUG("testing: %i %i %i   deg: %i",gx,gy,gz,degree);
@@ -524,23 +511,14 @@ public:
                                 if (verbose) ORSA_DEBUG("also including computation for [%i][%i][%i]...",gx,gy,gz);
                             }
                         }
-                        // }
                     }
                 }
                 
-                // dd_real big_sum = 0;
-                std::vector<dd_real> big_sum;
+                std::vector<F> big_sum;
                 big_sum.resize(ii.size());
                 for (size_t jj=0; jj<ii.size(); ++jj) {
-                    big_sum[jj] = 0.0;
+                    big_sum[jj] = 0;
                 }
-                
-                /* std::vector<bool> skip_big_sum;
-                   skip_big_sum.resize(big_sum.size());
-                   for (size_t jj=0; jj<skip_big_sum.size(); ++jj) {
-                   skip_big_sum[jj] = false;
-                   }
-                */
                 
                 std::vector<size_t> pos;
                 pos.resize(Nr);
@@ -548,9 +526,8 @@ public:
                     pos[p] = 0;
                 }
                 
-                // const dd_real Nr_factorial_dd = mpzToDD(orsa::factorial(Nr));
-                orsa::Cache<dd_real> min_abs_big_sum;
-                orsa::Cache<dd_real> coefficients_factor_threshold;
+                // orsa::Cache<F> min_abs_big_sum;
+                // orsa::Cache<F> coefficients_factor_threshold;
                 
                 while (1) {
 
@@ -573,7 +550,7 @@ public:
                                 --p;
                                 const FiveVars & fv = fvv[pos[p]];
                                 char line[4096];
-                                gmp_sprintf(line," [%i,%i,%i,%i,%i|%g]",fv.tau,fv.l,fv.m,fv.u,fv.nu,::to_double(fv.ABQ_R0));
+                                gmp_sprintf(line," [%i,%i,%i,%i,%i|%g]",fv.tau,fv.l,fv.m,fv.u,fv.nu,fv.ABQ_R0.toDouble());
                                 std::cout << line; // << " ";
                                 // if (p=!0) cout << " ";
                             }
@@ -603,101 +580,76 @@ public:
                     for (size_t s=0; s<Nr; ++s) {
                         ++count[pos[s]];
                     }
-
-                    bool skip_term=false;
                     
-                    mpz_class binomial_factor = orsa::factorial(Nr);
+                    // bool skip_term=false;
+                    
+                    F binomial_factor = mpfr::fac_ui(Nr);
                     for (size_t c=0; c<count.size(); ++c) {
-                        binomial_factor /= orsa::factorial(count[c]);
+                        binomial_factor /= mpfr::fac_ui(count[c]);
                     }
-                    const dd_real binomial_factor_dd = mpzToDD(binomial_factor); 
-                    // ORSA_DEBUG("binomial_factor: %Zi",binomial_factor.get_mpz_t());
                     
-                    // dd_real just_norm_factors = 1.0;
-                    // dd_real coefficients_factor = 1.0;
-                    dd_real coefficients_factor = binomial_factor_dd;
-                    //  dividing here already...
-                    // dd_real coefficients_factor = pow(oneOverR0,Nr)/Nr; // 1/(Nr*R0^Nr)
+                    F coefficients_factor = binomial_factor;
                     for (size_t c=0; c<fvv.size(); ++c) {
-                        // const FiveVars & fv = fvv[c];
-                        /* coefficients_factor *=
-                           int_pow(int_pow(norm_A[fv.l][fv.m],1-fv.tau)*
-                           int_pow(norm_B[fv.l][fv.m],fv.tau),
-                           count[c]) *
-                           int_pow(fv.Q,count[c])
-                           / int_pow(normalization_factor(fv.l,fv.m),count[c]); // dealing with normalized coefficients...
-                        */
-                        // coefficients_factor *= pow(fv.ABQ_R0,count[c]);
                         coefficients_factor *= pow(fvv[c].ABQ_R0,count[c]);
-                        // just_norm_factors *= int_pow(normalization_factor(fv.l,fv.m),count[c]);
-                        // if (coefficients_factor != 0) ORSA_DEBUG("nf[%i][%i] = %g    cf: %g",fv.l,fv.m,::to_double(normalization_factor(fv.l,fv.m)),::to_double(coefficients_factor));
-
+                        
+                        /*
                         // can skip this term?
                         if ((nx==0) && (ny==0) && (nz==0)) {
                             // cannot skip for 0,0,0 term, it would introduce a larger error
                         } else if (coefficients_factor_threshold.isSet()) {
-                            if ( (fabs(coefficients_factor) < coefficients_factor_threshold) &&
-                                 (fabs(fvv[c].ABQ_R0) < 1.0) ) {
-                                /* if (verbose) {
-                                   if (1) {
-                                   std::cout << "pos:";
-                                   size_t p=pos.size();
-                                   while(p!=0) {
-                                   --p;
-                                   std::cout << " " << pos[p];
-                                   }
-                                   std::cout << std::endl;
-                                   }
-                                   ORSA_DEBUG("skipping term, min_abs_big_sum = %g   coefficients_factor: %g",::to_double(min_abs_big_sum),::to_double(coefficients_factor));
-                                   }
-                                */
+                            if ( (fabs(coefficients_factor) < coefficients_factor_threshold) && (fabs(fvv[c].ABQ_R0) < 1.0) ) {
+                                
+                                if (verbose) {
+                                    if (1) {
+                                        std::cout << "pos:";
+                                        size_t p=pos.size();
+                                        while(p!=0) {
+                                            --p;
+                                            std::cout << " " << pos[p];
+                                        }
+                                        std::cout << std::endl;
+                                    }
+                                    ORSA_DEBUG("skipping term, min_abs_big_sum = %g   coefficients_factor: %g",(*min_abs_big_sum).toDouble(),coefficients_factor.toDouble());
+                                }
+                                
                                 skip_term=true;
                                 break;
                             }
                         }
+                        */
                     }
                     
-                    // ORSA_DEBUG("coefficients_factor: %g",::to_double(coefficients_factor));
+                    // if (verbose) ORSA_DEBUG("coefficients_factor: %g",coefficients_factor.toDouble());
                     
+                    /* 
                     if ( (!skip_term) &&
-                         (coefficients_factor != 0.0) ) {
-                        
+                         (coefficients_factor != 0) ) {
+                    */
+                    if (coefficients_factor != 0) {
+                            
                         // initial values...
-                        /* int pow_cos_phi=nx;
-                           int pow_sin_phi=ny;
-                           int pow_cos_theta=nz;
-                           int pow_sin_theta=nx+ny+1;
-                        */
                         int pow_cos_phi=0;
                         int pow_sin_phi=0;
                         int pow_cos_theta=0;
                         int pow_sin_theta=0;
                         for (int c=0; c<fvv.size(); ++c) {
-                            /* ORSA_DEBUG("%i %i %i %i",
-                               pow_cos_phi,
-                               pow_sin_phi,
-                               pow_cos_theta,
-                               pow_sin_theta); */
                             const FiveVars & fv = fvv[c];
                             pow_cos_phi   += count[c]*(fv.m-2*fv.nu-fv.tau);
                             pow_sin_phi   += count[c]*(2*fv.nu+fv.tau);
                             pow_cos_theta += count[c]*(fv.l-fv.m-2*fv.u);
                             pow_sin_theta += count[c]*(fv.m);
+                            
+                        /*  ORSA_DEBUG("%i %i %i %i",
+                            pow_cos_phi,
+                            pow_sin_phi,
+                            pow_cos_theta,
+                            pow_sin_theta); */
+                            
                         }
 
                         for (size_t jj=0; jj<ii.size(); ++jj) {
-                        
-                            /* const dd_real   factor_phi_integral = integral_csk(pow_cos_phi,pow_sin_phi,2);
-                               const dd_real factor_theta_integral = integral_csk(pow_cos_theta,pow_sin_theta,1);
-                            */
-                            
-                            const dd_real   factor_phi_integral = integral_csk(pow_cos_phi+ii[jj].nx,
-                                                                               pow_sin_phi+ii[jj].ny,
-                                                                               2);
-                            
-                            const dd_real factor_theta_integral = integral_csk(pow_cos_theta+ii[jj].nz,
-                                                                               pow_sin_theta+ii[jj].nx+ii[jj].ny+1,
-                                                                               1);
+                            const F factor_phi_integral   = integral_csk(pow_cos_phi+ii[jj].nx,pow_sin_phi+ii[jj].ny,2);
+                            const F factor_theta_integral = integral_csk(pow_cos_theta+ii[jj].nz,pow_sin_theta+ii[jj].nx+ii[jj].ny+1,1);
                             
                             /* ORSA_DEBUG("jj: %02i   csk: %i %i %i   itg: %g",
                                jj,
@@ -714,12 +666,11 @@ public:
                             */
                             
                             big_sum[jj] +=
-                                /* binomial already included... */ // binomial_factor_dd * // mpzToDD(binomial_factor) *
                                 coefficients_factor *
                                 factor_phi_integral *
                                 factor_theta_integral;
                             
-                            // ORSA_DEBUG("big_sum[%i] = %g",jj,::to_double(big_sum[jj]));
+                            // ORSA_DEBUG("big_sum[%i] = %40.20f",jj,big_sum[jj].toDouble());
 
                             /* 
                                if (verbose) ORSA_DEBUG("/ff/ %6g %+16.6f %6.3f %6.3f    big_sum[%i] = %+12.9g",
@@ -732,25 +683,7 @@ public:
                             
                         }
                         
-                        /* for (size_t jj=0; jj<big_sum.size(); ++jj) {
-                           ORSA_DEBUG("big_sum[%02i] = %g",jj,::to_double(big_sum[jj]));
-                           }
-                        */
-                        
-                        /* bool skip_all_big_sum=true;
-                           for (size_t jj=0; jj<skip_big_sum.size(); ++jj) {
-                           if (big_sum[jj] == 0.0) {
-                           skip_big_sum[jj]=true;
-                           }
-                           if (skip_big_sum[jj]==false) {
-                           skip_all_big_sum=false;
-                           }
-                           }
-                           #warning include a break here?
-                           // if (skip_all_big_sum) break;
-                           
-                        */
-                        
+                        /*
                         // important update
                         min_abs_big_sum.reset();
                         for (size_t jj=0; jj<ii.size(); ++jj) {
@@ -766,9 +699,11 @@ public:
                         } else {
                             coefficients_factor_threshold.reset();
                         }
+                        */
                     }
                     
                     // now, increment while avoiding repetitions
+                    /*
                     if (skip_term) {
                         bool changed=false;
                         for (size_t p=0; p<pos.size(); ++p) {
@@ -797,32 +732,32 @@ public:
                         }
                         if (!changed) break; // done
                     } else {
-                        bool changed=false;
-                        for (size_t p=0; p<pos.size(); ++p) {
-                            if (pos[p]<fvv.size()-1) {
-                                ++pos[p];
-                                changed=true;
-                                for (size_t s=0; s<p; ++s) {
-                                    if (pos[s]>pos[p]) {
-                                        pos[s]=pos[p];
-                                    }
+                    */
+                    
+                    bool changed=false;
+                    for (size_t p=0; p<pos.size(); ++p) {
+                        if (pos[p]<fvv.size()-1) {
+                            ++pos[p];
+                            changed=true;
+                            for (size_t s=0; s<p; ++s) {
+                                if (pos[s]>pos[p]) {
+                                    pos[s]=pos[p];
                                 }
-                                break;
                             }
+                            break;
                         }
-                        if (!changed) break; // done
                     }
+                    if (!changed) break; // done
+                    
+                    // }
                     
                 }
                 for (size_t jj=0; jj<ii.size(); ++jj) {
                     big_sum[jj] /= Nr;
-                    // big_sum[jj] /= pow(R0,Nr); // dividing earlier, in fv.ABQ_R0
                 }
                 
-                // val[index] = aux_02(retVal,orsa::pochhammer(mpz_class(N+1),degree));
                 for (size_t jj=0; jj<ii.size(); ++jj) {
-                    // val[index] = ::to_double(big_sum);
-                    val[ii[jj].index] = ::to_double(big_sum[jj]);
+                    val[ii[jj].index] = big_sum[jj].toDouble();
                 }
                 
                 for (size_t jj=0; jj<ii.size(); ++jj) {

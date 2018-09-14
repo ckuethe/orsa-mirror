@@ -8,9 +8,6 @@
 #include <orsa/shape.h>
 #include <orsa/unit.h>
 
-#include <qd/dd_real.h>
-#include <qd/qd_real.h>
-
 #warning if shape is strongly concave and a simplex covers volume outside the body shape, then the results are incorrect (including volume computations...)
 
 #warning default origin for 4th simplex vertex, should be a parameter of the class??                
@@ -19,6 +16,36 @@
 #include "sqlite3.h"
 
 #include <libgen.h>
+
+#include "mpreal.h"
+
+inline mpfr::mpreal binomial(const int n, const int k) {
+    if ((k<0) || (k>n)) return 0;
+    return (mpfr::fac_ui(n)/(mpfr::fac_ui(k)*mpfr::fac_ui(n-k)));
+}
+
+inline mpfr::mpreal pochhammer(const int a, const int n) {
+    if (n < 0) {
+        return 0;
+    } else if (n == 0) {
+        return 1;
+    } else if (n == 1) {
+        return a;
+    } else if (a<0) {
+        return 0;
+    } else {
+        // return (mpfr::fac_ui(a+n-1)/mpfr::fac_ui(a-1));
+        return (mpfr::gamma(a+n)/mpfr::gamma(a));
+    }
+}
+
+inline int kronecker(const int i, const int j) {
+    if (i==j) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
 
 inline std::string getSqliteDBFileName_simplex(const std::string & inputFile,
                                                const double & R0) {
@@ -34,7 +61,7 @@ inline std::string getSqliteDBFileName_simplex(const std::string & inputFile,
     return line;
 }
 
-template <typename T> class SimplexIntegration : public osg::Referenced {
+template <typename F> class SimplexIntegration : public osg::Referenced {
 public:
     SimplexIntegration(const orsa::TriShape * s,
                        const double & R0_,
@@ -121,7 +148,7 @@ protected:
     class SimplexInternals {
     public:
         std::vector<orsa::Vector> simplexVertexVector;
-        orsa::Cache<T> volume;
+        orsa::Cache<F> volume;
     };
 protected:
     const size_t N; // N = 3 = dimension of space = number of vertexes in n-dim simplex + 1
@@ -136,67 +163,6 @@ protected:
 protected:
     // needed to work with SQLite database
     sqlite3 * db;
-protected:
-    // utility functions to allow the use of templates
-    /* template <class QD> QD mpzToQD(const mpz_class & z) const {
-       char * str = (char *)malloc(mpz_sizeinbase(z.get_mpz_t(),10)+2);
-       mpz_get_str(str,10,z.get_mpz_t());
-       // ORSA_DEBUG("z: [%Zi]  STR: [%s]",z.get_mpz_t(),str);
-       QD x(str);
-       free(str);
-       return x;
-       }
-       dd_real mpzToQD(const mpz_class & z) const;
-       qd_real mpzToQD(const mpz_class & z) const;
-    */
-    dd_real mpzToDD(const mpz_class & z) const {
-        char * str = (char *)malloc(mpz_sizeinbase(z.get_mpz_t(),10)+2);
-        mpz_get_str(str,10,z.get_mpz_t());
-        // ORSA_DEBUG("z: [%Zi]  STR: [%s]",z.get_mpz_t(),str);
-        dd_real x(str);
-        free(str);
-        return x;
-    }
-    qd_real mpzToQD(const mpz_class & z) const {
-        char * str = (char *)malloc(mpz_sizeinbase(z.get_mpz_t(),10)+2);
-        mpz_get_str(str,10,z.get_mpz_t());
-        // ORSA_DEBUG("z: [%Zi]  STR: [%s]",z.get_mpz_t(),str);
-        qd_real x(str);
-        free(str);
-        return x;
-    }
-    //
-    /* template <class U> T to_T(const U & x) const;
-       double to_T(const double & x) const { return x; }
-       double to_T(const mpf_class & x) const { return x.get_d(); }
-       double to_T(const mpz_class & n) const { return n.get_d(); }
-    */
-    //
-    /* double to_double(const double & x) const { return x; }
-       double to_double(const mpf_class & x) const { return x.get_d(); }
-    */
-    //
-    template <class U> T aux_01(const int & sign, const mpz_class & binomial, const U & val) const;
-    double aux_01(const int & sign, const mpz_class & binomial, const double & val) const { return sign*binomial.get_d()*val; }   
-    mpf_class aux_01(const int & sign, const mpz_class & binomial, const mpf_class & val) const { return sign*binomial*val; }   
-    dd_real aux_01(const int & sign, const mpz_class & binomial, const dd_real & val) const { return sign*mpzToDD(binomial)*val; }  
-    qd_real aux_01(const int & sign, const mpz_class & binomial, const qd_real & val) const { return sign*mpzToQD(binomial)*val; }   
-    //
-    template <class U> T aux_02(const U & x, const mpz_class & pochhammer) const;
-    double aux_02 (const double & x, const mpz_class & pochhammer) const {
-        return x/pochhammer.get_d();
-    }
-    double aux_02 (const mpf_class & x, const mpz_class & pochhammer) const {
-        return mpf_class(x/pochhammer).get_d();
-    }
-    double aux_02 (const dd_real & x, const mpz_class & pochhammer) const {
-        dd_real y = x / mpzToDD(pochhammer);
-        return ::to_double(y);
-    }
-    double aux_02 (const qd_real & x, const mpz_class & pochhammer) const {
-        qd_real y = x / mpzToQD(pochhammer);
-        return ::to_double(y);
-    }
     
 public:
     double getIntegral(const size_t & nx, const size_t & ny, const size_t & nz) const {
@@ -249,24 +215,24 @@ public:
 
             if (needToCompute) {
                 ORSA_DEBUG("value for [%i][%i][%i] not available, computing it...",nx,ny,nz);
-                std::vector<T> val_vol_sum_fun;
+                std::vector<F> val_vol_sum_fun;
                 val_vol_sum_fun.resize(degree+1);
                 const size_t q_min = (degree==0) ? 0 : 1;
                 const orsa::TriShape::FaceVector & fv = triShape->getFaceVector();
                 std::vector<size_t> indexVector;
                 for (size_t q=q_min; q<=degree; ++q) {
-                    T sum_vol_fun = 0;
+                    F sum_vol_fun = 0;
                     indexVector.resize(q);
                     for (size_t fi=0; fi<fv.size(); ++fi) {
                         for (size_t i=0; i<q; ++i) {
                             indexVector[i] = 0;
                         }
-                        T sum_vol_fi = 0;
+                        F sum_vol_fi = 0;
                         while (1) {
                             // orsa::Vector vI(0,0,0);
-                            T vIx = 0;
-                            T vIy = 0;
-                            T vIz = 0;
+                            F vIx = 0;
+                            F vIy = 0;
+                            F vIz = 0;
                             for (size_t i=0; i<q; ++i) {
                                 // vI += aux[fi].simplexVertexVector[indexVector[i]];
                                 // ORSA_DEBUG("iV[%02i] = %i",i,indexVector[i]);
@@ -279,11 +245,12 @@ public:
                                orsa::int_pow(vI.getY(),ny)*
                                orsa::int_pow(vI.getZ(),nz);
                             */
-                            T vI_pow = 1;
+                            F vI_pow = 1;
                             for (size_t p=0; p<nx; ++p) { vI_pow *= vIx; }
                             for (size_t p=0; p<ny; ++p) { vI_pow *= vIy; }
                             for (size_t p=0; p<nz; ++p) { vI_pow *= vIz; }
                             sum_vol_fi += vI_pow;
+                            // sum_vol_fi += pow(vIx,nx)*pow(vIy,ny)*pow(vIz,nz);
                             /* ORSA_DEBUG("vI = %+g %+g %+g sum term: %+16.6e",vI.getX(),vI.getY(),vI.getZ(),
                                orsa::int_pow(vI.getX(),nx)*
                                orsa::int_pow(vI.getY(),ny)*
@@ -314,7 +281,7 @@ public:
                     }
                     val_vol_sum_fun[q] = sum_vol_fun;
                 }
-                T retVal = 0;
+                F retVal = 0;
                 for (size_t q=q_min; q<=degree; ++q) {
                     /* retVal += to_T(mpf_class(orsa::power_sign(degree-q) *
                        orsa::binomial(N+degree,N+q) *
@@ -324,9 +291,14 @@ public:
                        orsa::binomial(N+degree,N+q) *
                        val_vol_sum_fun[q]);
                     */
+                    
+                    /*
                     retVal += aux_01(orsa::power_sign(degree-q),
                                      orsa::binomial(N+degree,N+q),
                                      val_vol_sum_fun[q]);
+                    */
+                    retVal += orsa::power_sign(degree-q)*binomial(N+degree,N+q)*val_vol_sum_fun[q];
+                    
                     /* ORSA_DEBUG("degree: %i  q: %i  factor = binomial(%i,%i): : %g  sign: %i  term: %g",
                        degree,
                        q,
@@ -351,7 +323,10 @@ public:
                 // or even more simply (slightly slower...)
                 // val[index] = to_double((T)(retVal) / (T)(mpf_class(orsa::pochhammer(mpz_class(N+1),degree)).get_d()));
                 // val[index] = to_double(retVal / mpf_class(orsa::pochhammer(mpz_class(N+1),degree)));
-                val[index] = aux_02(retVal,orsa::pochhammer(mpz_class(N+1),degree));
+                //
+                // val[index] = aux_02(retVal,orsa::pochhammer(mpz_class(N+1),degree));
+                //
+                val[index] = (retVal / (binomial(N+degree,degree)*mpfr::fac_ui(degree))).toDouble();
                 
                 char * zErr;
                 char sql_line[1024];

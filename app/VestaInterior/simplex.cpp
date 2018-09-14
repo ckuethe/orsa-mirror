@@ -2,21 +2,17 @@
 
 #include "vesta.h"
 #include "gaskell.h"
+#include "eros_shape.h"
 
-#include <qd/dd_real.h>
-#include <qd/qd_real.h>
+#include "mpreal.h"
 
-/*** CHOOSE ONE ***/
-// typedef double T;
-// typedef mpf_class T;
-typedef dd_real T;
-// typedef qd_real T;
-
-#warning how to write this using the typedef inside the class?
 template <typename T> std::vector< std::vector< std::vector<size_t> > > SimplexIntegration<T>::indexTable;
 template <typename T> std::vector< std::vector< std::vector< std::vector<size_t> > > > SimplexIntegration<T>::index4Table;
 
 int main(int argc, char **argv) {
+    
+    typedef mpfr::mpreal F;
+    mpfr::mpreal::set_default_prec(128); // number of bits of precision
     
     if (argc != 7) {
         printf("Usage: %s <plate-model-file> <R0_km> <min-degree> <max-degree> <mod-N> <mod-i>\n",argv[0]);
@@ -44,21 +40,19 @@ int main(int argc, char **argv) {
     // sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
     
     const std::string SQLiteDBFileName = getSqliteDBFileName_simplex(inputFile,R0);
-    
-    // QD
-    unsigned int oldcw;
-    fpu_fix_start(&oldcw);
+	ORSA_DEBUG("SQLiteDBFileName: [%s]",SQLiteDBFileName.c_str());
     
     orsa::Debug::instance()->initTimer();
+        
+    /* osg::ref_ptr<VestaShape> shapeModel = new VestaShape;
+       if (!shapeModel->read(inputFile)) {
+       ORSA_ERROR("problems encountered while reading shape file...");
+       exit(0);
+       }
+    */
     
-    //ORSA_DEBUG("current mpf precision: %i",mpf_get_default_prec());
-    mpf_set_default_prec(128);
-    // mpf_set_default_prec(256);
-    // mpf_set_default_prec(512);
-    // ORSA_DEBUG("updated mpf precision: %i",mpf_get_default_prec());
-    
-    /* osg::ref_ptr<VestaShape> vestaShape = new VestaShape;
-       if (!vestaShape->read(inputFile)) {
+    /* osg::ref_ptr<ErosShape> shapeModel = new ErosShape;
+       if (!shapeModel->read(inputFile)) {
        ORSA_ERROR("problems encountered while reading shape file...");
        exit(0);
        }
@@ -87,7 +81,7 @@ int main(int argc, char **argv) {
             while (it != vertex.end()) {
                 const orsa::Vector & v = (*it);
                 const double lat = asin(v.getZ()/v.length());
-                const double lon = atan2(v.getY(),v.getX());
+                const double lon = fmod(orsa::twopi()+atan2(v.getY(),v.getX()),orsa::twopi());
                 fprintf(fp,"%g %g %g\n",
                         lon*orsa::radToDeg(),
                         lat*orsa::radToDeg(),
@@ -98,7 +92,7 @@ int main(int argc, char **argv) {
         }
     }
     
-    osg::ref_ptr<SimplexIntegration<T> > si = new SimplexIntegration<T>(shapeModel.get(), R0, SQLiteDBFileName);
+    osg::ref_ptr<SimplexIntegration<F> > si = new SimplexIntegration<F>(shapeModel.get(), R0, SQLiteDBFileName);
     // osg::ref_ptr<SimplexIntegration> si_unit_R0 = new SimplexIntegration(vestaShape.get(),1.0);
     
     si->reserve(maxDegree);
@@ -108,7 +102,7 @@ int main(int argc, char **argv) {
             for (size_t j=0; j<=degree; ++j) {
                 for (size_t k=0; k<=degree; ++k) {
                     if (i+j+k==degree) {
-                        const size_t index = SimplexIntegration<T>::getIndex(i,j,k);
+                        const size_t index = SimplexIntegration<F>::getIndex(i,j,k);
                         if ((index%mod_N)==(size_t)mod_i) {
 
                             const double integral_ijk = si->getIntegral(i,j,k);
@@ -120,9 +114,6 @@ int main(int argc, char **argv) {
             }
         }
     }
-    
-    // QD
-    fpu_fix_end(&oldcw);
     
     return 0;
 }

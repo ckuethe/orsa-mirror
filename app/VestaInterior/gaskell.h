@@ -26,8 +26,14 @@ public:
         char line[1024];
         size_t nv;
         if (fgets(line,1024,fp_model) != 0) {
-            sscanf(line,"%zi",&nv);
+           sscanf(line,"%zi",&nv);
         }
+        /*
+        size_t nv, nt;
+		if (fgets(line,1024,fp_model) != 0) {
+            sscanf(line,"%zi %zi",&nv,&nt);
+        }
+		*/
         // _vertex.resize(nv);
         size_t id;
         double x,y,z;
@@ -44,9 +50,9 @@ public:
             if (count_v == nv) break;
         }
         size_t nt;
-        if (fgets(line,1024,fp_model) != 0) {
-            sscanf(line,"%zi",&nt);
-        }
+           if (fgets(line,1024,fp_model) != 0) {
+           sscanf(line,"%zi",&nt);
+	   	}
         // _face.resize(nt);
         size_t i,j,k;
         while (fgets(line,1024,fp_model) != 0)  {
