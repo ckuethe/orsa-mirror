@@ -155,10 +155,7 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
                 if (b->getInitialConditions().rotational->dynamic()) {
 	  
 #warning "inertia moments needed!! plus rotation to get to the principal axis..."
-	  
-                    // if (b->getPaulMoment()) {
-                    if (ibps.inertial->paulMoment()) {
-	    
+
                         double mass;
                         if (!bg->getInterpolatedMass(mass,b,start+_h2)) {
                             ORSA_DEBUG("problems...");
@@ -167,8 +164,9 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
                         orsa::Matrix inertiaMoment = 
                             mass * 
                             ibps.inertial->inertiaMatrix();
-                        // b->getPaulMoment()->getInertiaMoment();
 	    
+#warning using different method in integrator_radau.cpp, which one is better?
+        
                         // new approach, following I.P. Omelyan (1999)
                         if (1) {
 	      
@@ -265,11 +263,6 @@ bool IntegratorLeapFrog::step(orsa::BodyGroup  * bg,
                             ibps.rotational->set(ibps.rotational->getQ(),
                                                  omegaIter);
                         }
-	    
-                    } else {
-                        ORSA_DEBUG("PaulMoment not available for body [%s]",
-                                   b->getName().c_str());
-                    }
                 }
             }
       

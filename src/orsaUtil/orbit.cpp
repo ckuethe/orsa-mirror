@@ -179,7 +179,7 @@ void orsaUtil::ComputeResidual(std::vector<orsaUtil::Residual>   & residual,
   
 }
 
-void orsaUtil::OrbitMultifit::singleIterationDone(const gsl_multifit_fdfsolver * s) const {
+void orsaUtil::OrbitMultifit::singleIterationDone(gsl_multifit_fdfsolver * s) const {
   
     {
         unsigned int gslIndex=0;
@@ -202,10 +202,10 @@ void orsaUtil::OrbitMultifit::singleIterationDone(const gsl_multifit_fdfsolver *
     }
     //
     const double factor = c;
-  
+    gsl_matrix * jacobian = gsl_matrix_alloc(_data->size(),_par->sizeNotFixed());
+    gsl_multifit_fdfsolver_jac(s,jacobian);
     gsl_matrix * covar = gsl_matrix_alloc(_par->sizeNotFixed(),_par->sizeNotFixed());
-  
-    gsl_multifit_covar(s->J, 0.0, covar);
+    gsl_multifit_covar(jacobian, 0.0, covar);
   
     orsa::EquinoctialOrbit equinoctialOrbit;
     //
@@ -296,7 +296,7 @@ void orsaUtil::OrbitMultifit::singleIterationDone(const gsl_multifit_fdfsolver *
                    orsa::radToDeg()*orbit.M,
                    orsa::radToDeg()*factor*sigma_M);
         
-        {
+        if (0) {
             // approx moid
             double moid, M1, M2;
             orsa::Orbit eo; // earth orbit
@@ -314,5 +314,6 @@ void orsaUtil::OrbitMultifit::singleIterationDone(const gsl_multifit_fdfsolver *
         
     }
     
-    gsl_matrix_free(covar);  
+    gsl_matrix_free(jacobian);
+    gsl_matrix_free(covar);
 }

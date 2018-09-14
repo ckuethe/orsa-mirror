@@ -1,5 +1,5 @@
-#ifndef _ORSA_UTIL_ADAPTIVE_MONTECARLOL_H_
-#define _ORSA_UTIL_ADAPTIVE_MONTECARLOL_H_
+#ifndef _ORSA_UTIL_ADAPTIVE_MONTECARLO_H_
+#define _ORSA_UTIL_ADAPTIVE_MONTECARLO_H_
 
 #include <orsa/interval.h>
 
@@ -210,4 +210,4 @@ namespace orsaUtil {
     
 }; // namespace orsaUtil
 
-#endif // _ORSA_UTIL_ADAPTIVE_MONTECARLOL_H_
+#endif // _ORSA_UTIL_ADAPTIVE_MONTECARLO_H_

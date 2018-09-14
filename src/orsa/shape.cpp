@@ -201,8 +201,8 @@ bool TriShape::isInside(const Vector & v) const {
     //
     // return _isInside_useLineMethod(v);
     // return _isInside_useNormalMethod(v);
-    return _isInside_useFaceMethod(v);
-    // return _isInside_usePointInTetrahedronMethod(v);
+    // return _isInside_useFaceMethod(v);
+    return _isInside_usePointInTetrahedronMethod(v);
 }
 
 bool TriShape::_isInside_useLineMethod(const Vector & v) const {
@@ -371,6 +371,9 @@ bool TriShape::_isInside_useFaceMethod(const Vector & v) const {
        }
        }
     */
+
+    // NOTE: closestVertex or closest vertex direction?
+    //       see _isInside_usePointInTetrahedronMethod below
     const unsigned int id = closestVertexIndex(v);
     std::list<unsigned int>::const_iterator it = vertexInFace[id].begin();
     while (it != vertexInFace[id].end()) {
@@ -383,16 +386,113 @@ bool TriShape::_isInside_useFaceMethod(const Vector & v) const {
     return false;
 }
 
-/* bool TriShape::_isInside_usePointInTetrahedronMethod(const Vector & v) const {
-   _updateCache();
-   if (v.lengthSquared() > (_r_max*_r_max)) {
-   return false;
-   } else if (v.lengthSquared() < (_r_min*_r_min)) {
-   return true;
-   }
-   #warning CONITNUE...
-   }
-*/
+inline double util_volume(const orsa::Vector & v0,
+                          const orsa::Vector & v1,
+                          const orsa::Vector & v2,
+                          const orsa::Vector & v3) {
+    return fabs((v1-v0) * orsa::externalProduct(v2-v0,v3-v0) / 6.0);
+}
+
+bool TriShape::_isInside_usePointInTetrahedronMethod(const Vector & v) const {
+    
+    _updateCache();
+    
+    if (v.lengthSquared() > (_r_max*_r_max)) {
+        return false;
+    } else if (v.lengthSquared() < (_r_min*_r_min)) {
+        return true;
+    }
+    
+    if (!_boundingBox.isInside(v)) {
+        return false;
+    }
+    
+    // check if the point is inside any of the tetrahedrons
+    // to do that, compare the volume of the tetrahedron with the
+    // sum of volumes of 4 sub-tetrahedron using the test point as one of the vertices
+    // if the sum of the sub-volumes excedes the initial volume, the point is outside
+    
+    const orsa::TriShape::VertexVector & vv = getVertexVector();
+    const orsa::TriShape::FaceVector   & fv = getFaceVector();
+    
+    const orsa::Vector v0(0,0,0); // if changing this, need to change some code below too, to include differences vv[...]-v0
+    
+    // NO! const unsigned int cv = closestVertexIndex(v);
+    // instead of closestVertex, we need the vertex for which the distance between v and the line
+    // from the origin to the vertex is minimum
+    //
+    /* unsigned int cvd_id = 0; // closest vertex direction index
+       double       cvd_sp = vv[cvd_id].normalized()*v.normalized(); // scalar product
+       for (size_t vq=0; vq<vv.size(); ++vq) {
+       if (vv[vq].normalized()*v.normalized() > cvd_sp) {
+       cvd_id = vq;
+       cvd_sp = vv[vq].normalized()*v.normalized();
+       }       
+       }
+    */
+    
+    bool inside = false;
+    
+    for (size_t fq=0; fq<fv.size(); ++fq) {
+
+        /* 
+           std::list<unsigned int>::const_iterator it = vertexInFace[cvd_id].begin();
+           while (it != vertexInFace[cvd_id].end()) {
+           
+           const unsigned int fi = fv[*it].i();
+           const unsigned int fj = fv[*it].j();
+           const unsigned int fk = fv[*it].k();
+        */
+        
+        const unsigned int fi = fv[fq].i();
+        const unsigned int fj = fv[fq].j();
+        const unsigned int fk = fv[fq].k();
+        
+        // could speed-up this using vertexInFace
+        /* if ((fi!=cvd_id) && (fj!=cvd_id) && (fk!=cvd_id)) {
+           continue;
+           }
+        */
+        
+        // ORSA_DEBUG("fq: %i   v:",fq);
+        // orsa::print(v);
+        
+        const orsa::Vector & vi = vv[fi];
+        const orsa::Vector & vj = vv[fj];
+        const orsa::Vector & vk = vv[fk];
+        
+        const double ref_volume = util_volume(v0,vi,vj,vk);
+        
+        // factor to take into account round-off
+        const double ff = 1.0 + 1.0e-9;
+        
+        double tmp_volume = 0.0;
+        tmp_volume += util_volume(v ,vi,vj,vk);
+        // if (tmp_volume > ff*ref_volume) { ++it; continue; }
+        tmp_volume += util_volume(v0,v ,vj,vk);
+        // if (tmp_volume > ff*ref_volume) { ++it; continue; }
+        tmp_volume += util_volume(v0,vi,v ,vk);
+        // if (tmp_volume > ff*ref_volume) { ++it; continue; }
+        tmp_volume += util_volume(v0,vi,vj,v );
+        // if (tmp_volume > ff*ref_volume) { ++it; continue; }
+
+        if (tmp_volume < ff*ref_volume) {
+            inside = true;
+            break;
+        }
+        /* else {
+           ++it; continue;
+           }
+        */
+        
+        // if we are here, the point v is inside
+        // inside = true;
+        // ORSA_DEBUG("inside!");
+        // break;
+    }
+    
+    return inside;
+}
 
 const Vector TriShape::closestVertex(const Vector & v) const {
     return _vertex[closestVertexIndex(v)];
@@ -648,7 +748,7 @@ void TriShape::GeodesicGrid(VertexVector & v,
         findNearby(nearby, v, print);
     }
     
-    if (v.size() != (2+10*orsa::int_pow(2,2*Nsub))) {
+    if (v.size() != (2+10*orsa::int_pow(4,Nsub))) {
         ORSA_DEBUG("problems...");
     }
     

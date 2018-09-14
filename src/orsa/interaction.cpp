@@ -30,7 +30,6 @@ Interaction::Interaction() : osg::Referenced(true) {
     el.density = 1.0;
     el.position = orsa::Vector(0,0,0);
     dummyMassCluster->massClusterVector[0] = el;
-    
 }	
 
 bool Interaction::acceleration(InteractionVector & a,  
@@ -231,6 +230,16 @@ bool Interaction::acceleration(InteractionVector & a,
                     ORSA_DEBUG("problems...");
                     return false;
                 }
+
+                if (0) {
+                    const orsa::Vector R =
+                        b_ibps.translational->position() - 
+                        ref_b_ibps.translational->position();
+                    ORSA_DEBUG("distance between [%s] and [%s]: %10.6f AU",
+                               ref_b->getName().c_str(),
+                               b->getName().c_str(),
+                               orsa::FromUnits(R.length(),orsa::Unit::AU,-1));
+                }
                 
                 // ORSA_DEBUG("ref_b_ibps.inertial->paulMoment() = %x",ref_b_ibps.inertial->paulMoment());
                 // ORSA_DEBUG("    b_ibps.inertial->paulMoment() = %x",    b_ibps.inertial->paulMoment());
@@ -296,7 +305,7 @@ bool Interaction::acceleration(InteractionVector & a,
                        orsa::print(ref_b_l2g*ref_b_pm->getCenterOfMass());
                        orsa::print(t);
                     */
-	  
+                    
                     const double     b_radius =     b_ibps.inertial->localShape() ?     b_ibps.inertial->localShape()->boundingRadius() : 0;
                     const double ref_b_radius = ref_b_ibps.inertial->localShape() ? ref_b_ibps.inertial->localShape()->boundingRadius() : 0;
 	  
@@ -386,8 +395,9 @@ bool Interaction::acceleration(InteractionVector & a,
                                                      b_g2l,
                                                      R);
                         
-                        // ORSA_DEBUG("accTerm between [%s] and [%s]:",ref_b->getName().c_str(),b->getName().c_str());
-                        // orsa::print(accTerm);
+                        /* ORSA_DEBUG("accTerm between [%s] and [%s]:",ref_b->getName().c_str(),b->getName().c_str());
+                           orsa::print(accTerm);
+                        */
                         
                         a[j] += orsa::Unit::G() * m_b     * accTerm;
                         a[k] -= orsa::Unit::G() * m_ref_b * accTerm;
@@ -468,8 +478,9 @@ bool Interaction::acceleration(InteractionVector & a,
                                                         b_g2l,
                                                         R);
                     
-                    // ORSA_DEBUG("accTerm between [%s] and [%s]:",ref_b->getName().c_str(),b->getName().c_str());
-                    // orsa::print(accTerm);
+                    /* ORSA_DEBUG("accTerm between [%s] and [%s]:",ref_b->getName().c_str(),b->getName().c_str());
+                       orsa::print(accTerm);
+                    */
                     
                     a[j] += orsa::Unit::G() * m_b     * accTerm;
                     a[k] -= orsa::Unit::G() * m_ref_b * accTerm;

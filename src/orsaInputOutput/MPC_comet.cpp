@@ -35,9 +35,11 @@ bool MPCCometFile::processLine(const char * line) {
     s_epoch_m.assign(line,85,2);
     s_epoch_d.assign(line,87,2);
   
-    s_designation.assign(line,102,strlen(line)-102); // the \n has already been removed  
+    // s_designation.assign(line,102,strlen(line)-102); // the \n has already been removed  
+    s_designation.assign(line,102,56); // the \n has already been removed  
   
     removeLeadingAndTrailingSpaces(s_epoch_y);
+    removeLeadingAndTrailingSpaces(s_designation);
   
     if (strlen(s_epoch_y.c_str()) != 4) {
         // orbit with undefined epoch

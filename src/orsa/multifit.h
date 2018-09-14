@@ -301,7 +301,7 @@ namespace orsa {
         bool run();
     
     protected:
-        virtual void singleIterationDone(const gsl_multifit_fdfsolver *) const { }
+        virtual void singleIterationDone(gsl_multifit_fdfsolver *) const { }
         virtual void singleIterationDone(const orsa::MultifitParameters *) const { }
     
     protected:
@@ -311,7 +311,7 @@ namespace orsa {
     
     protected:
         // called when run is done, before cleaning up
-        virtual void runCompleted(const bool /* success */, const gsl_multifit_fdfsolver *) const { }
+        virtual void runCompleted(const bool /* success */, gsl_multifit_fdfsolver *) const { }
         virtual void runCompleted(const bool /* success */, const orsa::MultifitParameters *) const { }
     
     public:
@@ -327,14 +327,16 @@ namespace orsa {
     private:
         orsa::Cache<std::string> logFile;
     public:
-        virtual void setLogFile(const std::string & lf) { 
+        virtual void setLogFile(const std::string & lf, const bool erase=false) { 
             logFile = lf;
             // erase it
-            FILE * fp = fopen((*logFile).c_str(),"w");
-            if (fp == 0) {
-                ORSA_ERROR("cannot open file %s",(*logFile).c_str());
+            if (erase) {
+                FILE * fp = fopen((*logFile).c_str(),"w");
+                if (fp == 0) {
+                    ORSA_ERROR("cannot open file %s",(*logFile).c_str());
+                }
+                fclose(fp);
             }
-            fclose(fp);
         }
         virtual const std::string & getLogFile() const { return logFile; }
         

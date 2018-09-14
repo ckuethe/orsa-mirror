@@ -38,10 +38,11 @@ bool  StandardObservatoryPositionCallback::getPosition(orsa::Vector & position,
                                                        const std::string & obsCode,
                                                        const orsa::Time  & t) const {
     const orsaSolarSystem::Observatory & observatory = obsCodeFile->_data.observatory[obsCode];
-    if (observatory.moving()) {
+#warning for moving observatories, the right position of the observatory can only be retrieved from an observation, so we default to geocentric here
+    /* if (observatory.moving()) {
         ORSA_DEBUG("problems...");
         return false;
-    }
+    } */
     osg::ref_ptr<orsaSolarSystem::Observation> obs = new orsaSolarSystem::Observation;
     obs->obsCode=obsCode;
     obs->epoch=t;
@@ -62,7 +63,7 @@ bool StandardObservatoryPositionCallback::getPosVel(orsa::Vector      & position
   
     const orsaSolarSystem::Observatory & observatory = obsCodeFile->_data.observatory[obs->obsCode];
   
-    orsa::Vector obsPos;
+    orsa::Vector obsPos(0,0,0);
   
     if (observatory.moving()) {
     

@@ -71,7 +71,12 @@ namespace orsa {
             _mu_sec *= rhs;
             return * this;
         }
-    
+    public:
+        inline Time & operator /= (const mpz_class & rhs) {
+            _mu_sec /= rhs;
+            return * this;
+        }
+        
     public:
         inline const Time operator + (const Time & rhs) const {
             Time _t(*this);

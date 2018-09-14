@@ -33,6 +33,10 @@ namespace orsa {
     inline const std::vector<mpz_class> & ChebyshevTcoeff(const size_t & n) {
         static std::deque< std::vector<mpz_class> > coeff;
         if (coeff.size() > n) {
+            /* for (size_t k=0; k<=n; ++k) {
+               ORSA_DEBUG("ChebyshevTcoeff[%i][%i] = %Zi",n,k,coeff[n][k].get_mpz_t());
+               }
+            */
             return coeff[n];
         } else {
             const size_t oldSize = coeff.size();

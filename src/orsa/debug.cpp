@@ -206,12 +206,13 @@ void Debug::head(const DebugType type, const char * file, const int line, const 
         // should be nanosec resolution, but we just print the microseconds
 
         gmp_sprintf(headString,
-                    "ORSA[%02i:%02i:%02i][%06i.%06i][%s:%i|%s] %s ",
+                    "ORSA[%02i:%02i:%02i][%06i.%06i][%i][%s:%i|%s] %s ",
                     tm_struct->tm_hour,
                     tm_struct->tm_min,
                     tm_struct->tm_sec,
                     tp.tv_sec,
                     tp.tv_nsec/1000,
+                    getpid(),
                     file,
                     line,
                     function,
@@ -220,17 +221,18 @@ void Debug::head(const DebugType type, const char * file, const int line, const 
     } else {
 
 #endif
-
+        
         gmp_sprintf(headString,
-                    "ORSA[%02i:%02i:%02i][%s:%i|%s] %s ",
+                    "ORSA[%02i:%02i:%02i][%i][%s:%i|%s] %s ",
                     tm_struct->tm_hour,
                     tm_struct->tm_min,
                     tm_struct->tm_sec,
+                    getpid(),
                     file,
                     line,
                     function,
                     __head__(type));
-
+        
 #ifdef __ADVANCED_TIMER__
     }
 #endif

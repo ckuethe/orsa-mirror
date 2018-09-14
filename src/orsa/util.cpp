@@ -173,6 +173,26 @@ bool orsa::matrixToEulerAngles(double       & psi,
     return true;
 }	
 
+// Find rotation matrix R that rotates unit vector a into unit vector b.
+// from: https://math.stackexchange.com/a/476311
+orsa::Matrix orsa::rotvec(const orsa::Vector & a, const orsa::Vector & b) {
+    if ((fabs(a.length()-1.0)>10.0*orsa::epsilon()) || (fabs(b.length()-1.0)>10.0*orsa::epsilon())) {
+        ORSA_DEBUG("unit vectors required...");
+        orsa::print(a);
+        orsa::print(b);
+        exit(0);
+    }
+    if (a == b) {
+        return orsa::Matrix::identity();
+    }
+    if (a == (-b)) {
+        return (-orsa::Matrix::identity());
+    }
+    const orsa::Vector nu = orsa::externalProduct(a,b);
+    const double c = a*b;
+    orsa::Matrix cross_mat(0,-nu.getZ(),nu.getY(), nu.getZ(),0,-nu.getX(), -nu.getY(),nu.getX(),0);
+    return (orsa::Matrix::identity() + cross_mat + (cross_mat*cross_mat)*(1.0/(1.0+c)));
+}
 
 orsa::Matrix orsa::QuaternionToMatrix (const orsa::Quaternion & q) {
   

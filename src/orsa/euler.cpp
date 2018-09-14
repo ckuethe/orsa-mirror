@@ -10,14 +10,7 @@ bool orsa::Euler(orsa::Vector       & omegaDot,
                  const orsa::Matrix & I,
                  const orsa::Vector & T,
                  const bool usePrincipalAxisRotationTransformation) {
-  
-    // test
-    /* 
-       #warning test
-       omegaDot = orsa::Vector(0,0,0);
-       return true;
-    */
-  
+    
     if (usePrincipalAxisRotationTransformation) {
     
         orsa::Matrix Ip, genericToPrincipal, principalToGeneric;
@@ -56,6 +49,10 @@ bool orsa::Euler(orsa::Vector       & omegaDot,
       
             const orsa::Vector Lp = Ip * genericToPrincipal * omega;
       
+            // orsa::print(genericToPrincipal);
+            // orsa::print(omega);
+            // orsa::print(Lp);
+      
             omegaDot = principalToGeneric*inv_Ip*(genericToPrincipal*T - orsa::externalProduct(genericToPrincipal*omega,Lp));
       
             // ORSA_DEBUG("omegaDot...");
@@ -79,15 +76,14 @@ bool orsa::Euler(orsa::Vector       & omegaDot,
             const orsa::Vector L = I * omega;
       
             omegaDot = inv_I*(T-orsa::externalProduct(omega,L));
-      
-            // ORSA_DEBUG("omegaDot...");
-            // print(omegaDot);
-      
+         
             return true;
       
         } else {
       
             ORSA_DEBUG("problems...");
+            
+            orsa::print(I);
       
             return false;
         }

@@ -100,13 +100,13 @@ mpz_class Paul::t_lmnLMN::trueGet_mpz(const int l,
     if (!(_data[l][m][n][L][M][N].isSet())) {
 
         const mpq_class _C_lmn = C_lmn(l,m,n);
-        _data[l][m][n][L][M][N] =
-            (orsa::kronecker(l,0)-1)*( (2*l-_C_lmn)*get_mpz(l-1,m,n,L-1,M,N) +
+        _data[l][m][n][L][M][N] = mpz_class(
+			(orsa::kronecker(l,0)-1)*( (2*l-_C_lmn)*get_mpz(l-1,m,n,L-1,M,N) +
                                        (l-1)*(l-_C_lmn)*get_mpz(l-2,m,n,L,M,N) ) +
             (orsa::kronecker(m,0)-1)*( (2*m-_C_lmn)*get_mpz(l,m-1,n,L,M-1,N) +
                                        (m-1)*(m-_C_lmn)*get_mpz(l,m-2,n,L,M,N) ) +
             (orsa::kronecker(n,0)-1)*( (2*n-_C_lmn)*get_mpz(l,m,n-1,L,M,N-1) +
-                                       (n-1)*(n-_C_lmn)*get_mpz(l,m,n-2,L,M,N) );
+                                       (n-1)*(n-_C_lmn)*get_mpz(l,m,n-2,L,M,N) ) );
 
     }
 

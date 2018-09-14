@@ -99,7 +99,11 @@ namespace orsa {
        }
        }
     */
-  
+       
+    // Find rotation matrix R that rotates unit vector a into unit vector b.
+    // from: https://math.stackexchange.com/a/476311
+    orsa::Matrix rotvec(const orsa::Vector & a, const orsa::Vector & b);
+      
     orsa::Matrix QuaternionToMatrix (const orsa::Quaternion &);
   
     orsa::Quaternion MatrixToQuaternion (const orsa::Matrix &);
@@ -192,6 +196,10 @@ namespace orsa {
             ::gsl_ran_dir_3d(rnd,x,y,z);
         }
     public:
+        double gsl_ran_binomial(double p, unsigned int n) const {
+            return ::gsl_ran_binomial(rnd,p,n);
+        }
+    public:
         double gsl_ran_gaussian(double sigma) const {
             return ::gsl_ran_gaussian(rnd,sigma);
         }
@@ -237,6 +245,8 @@ namespace orsa {
         osg::ref_ptr<orsa::RNG> rng_;
     public:
         const orsa::RNG * rng() const { return rng_.get(); }
+    public:
+        void reset() const { randomSeed.unlock(); randomSeed.reset(); _instance=0; }
     };
     
     /***/

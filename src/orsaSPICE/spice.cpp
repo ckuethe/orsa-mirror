@@ -11,6 +11,17 @@ using namespace orsaSPICE;
 
 SPICE * SPICE::_instance = 0;
 
+SPICE::SPICE() { 
+    _observer = "SSB";
+    // _global = "J2000";
+    _global = "ECLIPJ2000";
+    
+    // error handling...
+    // errdev_c("SET",0,"spice_error.log");
+    // errprt_c("SET",0,"ALL");
+    // erract_c("SET",0,"REPORT");
+}
+
 void SPICE::loadKernel(const std::string & filename) {
     mutex.lock();
     furnsh_c(filename.c_str());
@@ -75,6 +86,7 @@ orsa::Matrix SPICE::localToGlobal(const std::string & local,
 }
 
 double SPICE::SPICETime(const orsa::Time & t) {
+    // ORSA_DEBUG("%20.12f",FromUnits((t-J2000()).get_d(),Unit::SECOND,-1));
     // Corrected and verified: no TimeScale needed
     return FromUnits((t-J2000()).get_d(),Unit::SECOND,-1);
 }

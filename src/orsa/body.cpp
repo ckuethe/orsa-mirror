@@ -266,13 +266,24 @@ orsa::Vector RotationalBodyProperty::newOmega (const orsa::Vector & omega,
         const orsa::Vector uTangentOmegaDot          = tangentOmegaDot.normalized();
     
         const orsa::Vector uRotationAxis = (orsa::externalProduct(uOmega,uTangentOmegaDot)).normalized();
-        const double rotationAngle  = tangentOmegaDotMagnitude * dt.get_d() / omegaMagnitude;
+        // const double rotationAngle  = tangentOmegaDotMagnitude * dt.get_d() / omegaMagnitude;
+        const double rotationAngle  = atan2(tangentOmegaDotMagnitude * dt.get_d(),omegaMagnitude);
     
         // rotate old omega direction around uRotationAxis of angle rotationAngle
+        
+        
         const double     qAngle = rotationAngle / 2; // factor 2 due to the quaternion angle definition
         const orsa::Quaternion qRot   = unitQuaternion(Quaternion(cos(qAngle),sin(qAngle)*uRotationAxis));
     
         newOmega = (radialComponent * dt.get_d() + omegaMagnitude) * (qRot*uOmega*conjugate(qRot)).getVector().normalized();
+        
+        
+        
+        /*
+        const orsa::Matrix rot = orsa::Matrix::axisRotation(uRotationAxis,rotationAngle);
+        newOmega = rot*(omega+(radialComponent*uOmega*dt.get_d()));
+        */
+        
         //
         /* 
            newOmega = 
@@ -281,6 +292,8 @@ orsa::Vector RotationalBodyProperty::newOmega (const orsa::Vector & omega,
         */
     
     } else {
+    
+        ORSA_DEBUG("--short--")
     
         newOmega = omega + omegaDot * dt.get_d();
     }

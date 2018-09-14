@@ -29,7 +29,8 @@ namespace orsa {
     protected:
         virtual ~MassCluster() { }
     public:
-        double softeningDistance;
+        // double softeningDistance;
+        double vR, vR2, vR3; // vR=virtualRadius, vR^2, vR^3
         MassClusterVector massClusterVector;
     public:
         void print() const;
@@ -40,11 +41,19 @@ namespace orsa {
                                              const orsa::Matrix      & A2_g2l,
                                              const orsa::Vector      & R);
     public:
+        static double gravitationalPotential(const orsa::MassCluster * M1,
+                                             const orsa::Matrix      & A1_g2l,
+                                             const orsa::Vector      & R);
+    public:
         static orsa::Vector gravitationalForce(const orsa::MassCluster * M1,
                                                const orsa::Matrix      & A1_g2l,
                                                const orsa::MassCluster * M2,
                                                const orsa::Matrix      & A2_g2l,
                                                const orsa::Vector      & R);
+	public:
+		static orsa::Vector gravitationalAcceleration(const orsa::MassCluster * M1,
+		       										  const orsa::Matrix      & A1_g2l,
+													  const orsa::Vector      & R);
     public:
         static orsa::Vector gravitationalTorque(const orsa::MassCluster * M1,
                                                 const orsa::Matrix      & A1_g2l,

@@ -66,7 +66,7 @@ namespace orsa {
     
     public:
         virtual const Vector closestVertex(const Vector &) const = 0;
-    
+        
     public:
         virtual bool rayIntersection(orsa::Vector & intersectionPoint,
                                      orsa::Vector & normal,
@@ -175,7 +175,7 @@ namespace orsa {
         bool _isInside_useFaceMethod(const Vector &) const;
     protected:
         //
-        // bool _isInside_usePointInTetrahedronMethod(const Vector &) const;
+        bool _isInside_usePointInTetrahedronMethod(const Vector &) const;
         
     public:
         const Vector closestVertex(const Vector &) const;   

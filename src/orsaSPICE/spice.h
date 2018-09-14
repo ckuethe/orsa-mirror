@@ -21,11 +21,7 @@ namespace orsaSPICE {
             return _instance;
         }
     protected:
-        SPICE() { 
-            _observer = "SSB";
-            // _global = "J2000";
-            _global = "ECLIPJ2000";  
-        }
+        SPICE();
     public:
         virtual ~SPICE() {
             _instance = 0;

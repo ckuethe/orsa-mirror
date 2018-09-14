@@ -56,7 +56,7 @@ bool JPLCometFile::processLine(const char * line) {
     //
     if (orbit.e > 0.99) {
         // non-periodic orbit, not included for the moment
-        return false;
+        // return false;
     }
     //
     orbit.a                = FromUnits(atof(s_q.c_str())/(1-orbit.e),orsa::Unit::AU);

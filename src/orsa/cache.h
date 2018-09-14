@@ -180,6 +180,10 @@ namespace orsa {
         inline bool isSet() const { return _set; }
     public:
         void reset() { 
+            if (_locked) {
+                ORSA_ERROR("this variable is locked and cannot be changed");
+                orsa::crash();
+            }
             _set=false;
         }
     private:

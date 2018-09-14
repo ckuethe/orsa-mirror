@@ -178,7 +178,8 @@ bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
     // commented all [R] update calls...
     
     if (!b->alive(t)) {
-        // ORSA_DEBUG("out, body [%s]",b->getName().c_str());
+        ORSA_DEBUG("out, body [%s] is not alive...",b->getName().c_str());
+        orsa::print(t);
         return false;
     }
     

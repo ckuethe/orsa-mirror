@@ -85,6 +85,8 @@ ConstantZRotationEquatorial_RotationalBodyProperty::ConstantZRotationEquatorial_
 
 bool ConstantZRotationEquatorial_RotationalBodyProperty::update(const orsa::Time & t) {
   
+	// ORSA_DEBUG("UPDATE");
+  
     if (_previousTime.isSet()) {
         if (_previousTime == t) {
             // ORSA_DEBUG("cached...");
@@ -96,14 +98,16 @@ bool ConstantZRotationEquatorial_RotationalBodyProperty::update(const orsa::Time
   
     const double _phi = fmod(_phi0 + _omega*(t-_t0).get_d(), orsa::twopi());
   
+	// ORSA_DEBUG("t-t0 = %g     omega: %g   phi0: %g   phi: %g",(t-_t0).get_d(),_omega,_phi0,_phi);
+  
     Matrix _m = Matrix::identity();
   
     _m.rotZ(_phi);
   
-    _m.rotY(halfpi()-_delta);
-  
-    _m.rotZ(_alpha);
-  
+    _m.rotX(halfpi()-_delta);
+	  
+	_m.rotZ(halfpi()+_alpha);
+	
     _m = orsaSolarSystem::equatorialToEcliptic()*_m;
   
     _q = MatrixToQuaternion(_m);

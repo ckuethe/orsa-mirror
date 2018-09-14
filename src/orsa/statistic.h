@@ -45,7 +45,7 @@ namespace orsa {
             if (_min.isSet()) {
                 return (*_min);
             } else {
-                ORSA_DEBUG("problem: min value not set");
+                // ORSA_DEBUG("problem: min value not set");
                 return 0;
             }   
         }
@@ -54,14 +54,17 @@ namespace orsa {
             if (_max.isSet()) {
                 return (*_max);
             } else {
-                ORSA_DEBUG("problem: max value not set");
+                // ORSA_DEBUG("problem: max value not set");
                 return 0;
             }
         }
     public:
         T average() const {
-            // return (_s/(T)_n);
-            return (_s/_n.get_d());
+            if (_n > 0) {
+                return (_s/_n.get_d());
+            } else {
+                return 0;
+            }
         }
     public:
         T variance() const {
@@ -85,8 +88,11 @@ namespace orsa {
     public:
         //! Error of the average, i.e. average() +/- averageError()
         T averageError() const {
-            // return sqrt(variance()/(T)_n);
-            return sqrt(variance()/_n.get_d());
+            if (_n > 0) {
+                return sqrt(variance()/_n.get_d());
+            } else {
+                return 0;
+            }
         }
     public:
         T RMS() const {
@@ -114,7 +120,7 @@ namespace orsa {
         }
     protected:
         ~WeightedStatistic() { }
-    
+        
     public:
         void reset() {
             _vw.clear();
@@ -132,6 +138,18 @@ namespace orsa {
             }
         }
     public:
+        void remove(const T & val,
+                    const T & weight) {
+            typename std::vector<VW>::iterator it = _vw.begin();
+            while (it != _vw.end()) {
+                if (((*it).v == val) && ((*it).w==weight)) {
+                    it = _vw.erase(it);
+                    break;
+                }
+                ++it;
+            }
+        }
+    public:
         T average() const {
             T _s = 0;
             T _w = 0;
@@ -143,57 +161,93 @@ namespace orsa {
         }
     public:
         // this formula is "chi-squared" corrected
-        /* T variance() const {
-           if (_vw.size() > 1) {
-           const T _a = average();
-           T _w = 0;
-           for (unsigned int k=0; k<_vw.size(); ++k) {
-           _w += _vw[k].w;
-           }
-           T _s2 = 0;
-           T _w2 = 0;
-           for (unsigned int k=0; k<_vw.size(); ++k) {
-           const T _va = _vw[k].v - _a;
-           const T _norm_w = _vw[k].w/_w;
-           _s2 += _norm_w*_va*_va;
-           _w2 += _norm_w*_norm_w;
-           }
-           _s2 *= 1/(1-_w2);
-           return _s2;
-           } else {
-           return 0;
-           }
-           }
-        */
-    public:
-        // straight-forward formula, preferred in the general case
-        T variance() const {
-            if (_vw.size()==0) {
-                return 0;
-            }
-            T _w = 0;
-            for (unsigned int k=0; k<_vw.size(); ++k) {
-                _w += _vw[k].w;
-            }
-            return (1/_w);
-        }
-    public:
-        T standardDeviation() const {
-            return (sqrt(variance()));
-        }
-    public:
-        T averageError() const {
-            if (_vw.size() > 0) {
-                return sqrt(variance()/_vw.size());
+        /* T unbiased_variance() const {
+            if (_vw.size() > 1) {
+                const T _a = average();
+                T _s2 = 0;
+                T _w  = 0;
+                T _w2 = 0;
+                for (unsigned int k=0; k<_vw.size(); ++k) {
+                    const T _va = _vw[k].v - _a;
+                    _s2 += _vw[k].w*_va*_va;
+                    _w  += _vw[k].w;
+                    _w2 += _vw[k].w*_vw[k].w;
+                }
+                const T _retval = (_w/(_w*_w-_w2))*_s2;
+                return _retval;
             } else {
                 return 0;
             }
+        }
+        */
+    public:
+        // straight-forward formula, preferred in the general case
+        /* T biased_variance() const {
+           if (_vw.size()==0) {
+               return 0;
+           }
+           T _w = 0;
+           for (unsigned int k=0; k<_vw.size(); ++k) {
+               _w += _vw[k].w;
+           }
+           return (1/_w);
+        }
+        */
+    public:
+        /* T variance() const {
+            return unbiased_variance();
+        }
+        */
+    public:
+        /*
+        T unbiased_standardDeviation() const {
+            return (sqrt(unbiased_variance()));
+        }
+        */
+    public:
+        /*
+        T biased_standardDeviation() const {
+            return (sqrt(biased_variance()));
+        }
+        */
+    public:
+        /* T unbiased_averageError() const {
+            if (_vw.size() > 1) {
+                const T _a = average();
+                T _s2 = 0;
+                T _w  = 0;
+                for (unsigned int k=0; k<_vw.size(); ++k) {
+                    const T _va = _vw[k].v - _a;
+                    _s2 += _vw[k].w*_va*_va;
+                    _w  += _vw[k].w;
+                }
+                const T _retval = sqrt((_s2/_w)/(_vw.size()-1));
+                return _retval;
+            } else {
+                return 0;
+            }
+        }
+        */
+    public:
+        T biased_averageError() const {
+           if (_vw.size()==0) {
+               return 0;
+           }
+           T _w = 0;
+           for (unsigned int k=0; k<_vw.size(); ++k) {
+               _w += _vw[k].w;
+           }
+           return sqrt(1/_w);
+       }
+    public:
+        T averageError() const {
+            return biased_averageError();
         }
     public:
         const mpz_class entries() const {
             return _vw.size();
         }
-    protected:
+    public:
         class VW { 
         public:
             T v,w;
@@ -201,7 +255,65 @@ namespace orsa {
     protected:
         std::vector<VW> _vw;
     };
-  
+    
+    // http://stats.stackexchange.com/questions/16608/what-is-the-variance-of-the-weighted-mixture-of-two-gaussians
+    template <class T> class WeightedDistributionStatistic : public osg::Referenced {
+    public:
+        WeightedDistributionStatistic() : Referenced(true) {
+            reset();
+        }
+    protected:
+        ~WeightedDistributionStatistic() { }
+    public:
+        void reset() {
+            _sum_weight         = 0;
+            _sum_weight_sigmaSq = 0;
+            _sum_weight_mean    = 0;
+            _sum_weight_meanSq  = 0;
+            _n  = 0;
+        }
+    public:
+        void insert(const T & mean,
+                    const T & sigmaSq,
+                    const T & weight) {
+            if (weight < 0) {
+                ORSA_DEBUG("problems: negative weight...");
+            } else {
+                _sum_weight         += weight;
+                _sum_weight_sigmaSq += weight*sigmaSq;
+                _sum_weight_mean    += weight*mean;
+                _sum_weight_meanSq  += weight*mean*mean;
+                ++_n;
+            }
+        }
+    public:
+        T average_mean() const {
+            if (_sum_weight > 0) {
+                return (_sum_weight_mean/_sum_weight);
+            } else {
+                return 0;
+            }
+        }
+    public:
+        T average_sigmaSq() const {
+            if (_sum_weight > 0) {
+                return ((_sum_weight_sigmaSq/_sum_weight) + (_sum_weight_meanSq/_sum_weight) - orsa::square(_sum_weight_mean/_sum_weight));
+            } else {
+                return 0;
+            }
+        }
+    public:
+        const mpz_class & entries() const {
+            return _n;
+        }
+    protected:
+        T _sum_weight;
+        T _sum_weight_sigmaSq;
+        T _sum_weight_mean;
+        T _sum_weight_meanSq;
+        mpz_class _n;
+    };
+    
     template <class T> class RunningStatistic : public osg::Referenced {
     public:
         RunningStatistic() : Referenced(true) {

@@ -69,7 +69,7 @@ namespace orsaUtil {
         const orsaSolarSystem::ObservatoryPositionCallback * obsPosCB;
     
     protected:
-        void singleIterationDone(const gsl_multifit_fdfsolver *) const;
+        void singleIterationDone(gsl_multifit_fdfsolver *) const;
     
     protected:
         void computeAllFunctionCalls(const orsa::MultifitParameters * par, 

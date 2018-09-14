@@ -1,6 +1,8 @@
 #ifndef _ORSA_ANGLE_
 #define _ORSA_ANGLE_
 
+#include <cmath>
+
 #include <orsa/debug.h>
 #include <orsa/double.h>
 

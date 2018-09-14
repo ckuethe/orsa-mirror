@@ -1,10 +1,11 @@
 #ifndef _ORSA_DOUBLE_
 #define _ORSA_DOUBLE_
 
+#include <cmath>
 #include <cstdio>
 #include <gmpxx.h>
 
-#include <complex>
+//#include <complex>
 
 #include <orsa/debug.h>
 #include <iostream>

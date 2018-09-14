@@ -180,10 +180,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                 if (b->getInitialConditions().rotational->dynamic()) {
 	  
                     // #warning "inertia moments needed!! plus rotation to get to the principal axis..."
-	  
-                    // if (b->getPaulMoment()) {
-                    if (ibps.inertial->paulMoment()) {
-	    
+                    	    
                         double m;
                         if (!bg->getInterpolatedMass(m,b,start)) {
                             ORSA_DEBUG("problems...");
@@ -192,7 +189,6 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                         orsa::Matrix inertiaMoment = 
                             m * 
                             ibps.inertial->inertiaMatrix();
-                        // b->getPaulMoment()->getInertiaMoment();
 	    
                         //
                         {
@@ -230,11 +226,6 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                             Q1Dot[k]    = RotationalBodyProperty::qDot(Q1[k], omega);
                             Q1DotDot[k] = RotationalBodyProperty::qDotDot(Q1[k], omega, omegaDot);
                         }
-	    
-                    } else {
-                        ORSA_DEBUG("PaulMoment not available for body [%s]",
-                                   b->getName().c_str());
-                    }
                 }
             }
       
@@ -922,9 +913,6 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                         if (b->getInitialConditions().rotational->dynamic()) {
 	      
                             // #warning "inertia moments needed!! plus rotation to get to the principal axis..."
-	      
-                            // if (b->getPaulMoment()) {
-                            if (ibps.inertial->paulMoment()) {
 		
                                 double m;
                                 if (!bg->getInterpolatedMass(m,b,start+timestep_j)) {
@@ -934,7 +922,6 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                                 orsa::Matrix inertiaMoment = 
                                     m * 
                                     ibps.inertial->inertiaMatrix();
-                                // b->getPaulMoment()->getInertiaMoment();
 		
                                 // ORSA_DEBUG("CODE NEEDED HERE!!");
                                 //
@@ -990,12 +977,6 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
 		  
                                     QDotDot[k] = RotationalBodyProperty::qDotDot(Q[k], omega, omegaDot);
                                 }
-		
-                            } else {
-                                ORSA_DEBUG("PaulMoment not available for body [%s]",
-                                           b->getName().c_str());
-                            }
-	      
                         }
                     }
 	  

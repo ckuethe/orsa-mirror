@@ -6,6 +6,7 @@ namespace orsaSolarSystem {
     // as in orsa/unit.h, all units in MKS
   
     // data from: http://ssd.jpl.nasa.gov/?constants
+    // updated from DE431 doc: https://ipnpr.jpl.nasa.gov/progress_report/42-196/196C.pdf
   
     class Data {
     public:
@@ -28,75 +29,86 @@ namespace orsaSolarSystem {
         // GM coefficients
     
         inline static const double & GMSun() {
-            static const double _GM = 1.32712440018e20;
+            static const double _GM = 1.32712440041939400e20;
             return _GM;
         }
     
         inline static const double & GMMercury() {
-            static const double sunMassRatio = 6023600; 
+            static const double sunMassRatio = 6023682.155592; 
             static const double _GM = GMSun()/sunMassRatio;
             return _GM;
         }
     
         inline static const double & GMVenus() {
-            static const double sunMassRatio = 408523.71; 
+            static const double sunMassRatio = 408523.718658; 
             static const double _GM = GMSun()/sunMassRatio;
             return _GM;
         }
-    
+        
+        /*
         inline static const double & EarthMoonMassRatio() {
             static const double EMratio = 81.30059;
             return EMratio;
         }
-    
+        */
+        
+        /*
         inline static const double & GMEarth() {
             static const double _GM = GMEarthMoon()*(EarthMoonMassRatio()/(EarthMoonMassRatio()+1));
             return _GM;
         }
-    
+        */
+        
+        inline static const double & GMEarth() {
+            static const double sunMassRatio = 332946.048834; 
+            static const double _GM = GMSun()/sunMassRatio;
+            return _GM;
+        }
+        
         inline static const double & GMMoon() {
-            static const double _GM = GMEarthMoon()*(1/(EarthMoonMassRatio()+1));
+            static const double sunMassRatio = 27068703.241203; 
+            static const double _GM = GMSun()/sunMassRatio;
             return _GM;
         }
     
         inline static const double & GMEarthMoon() {
-            static const double sunMassRatio = 328900.56; 
+            static const double sunMassRatio = 328900.559810; 
             static const double _GM = GMSun()/sunMassRatio;
             return _GM;
         }
     
         inline static const double & GMMars() {
-            static const double sunMassRatio = 3098708; 
+            static const double sunMassRatio = 3098703.590291; 
             static const double _GM = GMSun()/sunMassRatio;
             return _GM;
         }
     
         inline static const double & GMJupiter() {
-            static const double sunMassRatio = 1047.3486; 
+            static const double sunMassRatio = 1047.348625; 
             static const double _GM = GMSun()/sunMassRatio;
             return _GM;
         }
     
         inline static const double & GMSaturn() {
-            static const double sunMassRatio = 3497.898; 
+            static const double sunMassRatio = 3497.901768; 
             static const double _GM = GMSun()/sunMassRatio;
             return _GM;
         }
     
         inline static const double & GMUranus() {
-            static const double sunMassRatio = 22902.98; 
+            static const double sunMassRatio = 22902.981613; 
             static const double _GM = GMSun()/sunMassRatio;
             return _GM;
         }
     
         inline static const double & GMNeptune() {
-            static const double sunMassRatio = 19412.24; 
+            static const double sunMassRatio = 19412.259776; 
             static const double _GM = GMSun()/sunMassRatio;
             return _GM;
         }
     
         inline static const double & GMPluto() {
-            static const double sunMassRatio = 1.35e8; 
+            static const double sunMassRatio = 1.35836683768617e8; 
             static const double _GM = GMSun()/sunMassRatio;
             return _GM;
         }
@@ -166,7 +178,7 @@ namespace orsaSolarSystem {
         // other constants
     
         inline static const double & REarth() {
-            static const double _R = 6378136.6;
+            static const double _R = 6378136.3;
             return _R;
         }
     

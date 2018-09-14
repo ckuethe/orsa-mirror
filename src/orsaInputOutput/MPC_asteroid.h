@@ -17,6 +17,7 @@ namespace orsaInputOutput {
         orsa::Cache<double> G;
         orsa::Cache<unsigned int> number;
         orsa::Cache<std::string> designation;
+        orsa::Cache<int> U; // orbit uncertainty parameter http://www.minorplanetcenter.net/iau/info/UValue.html
     };
   
     typedef std::vector<MPCAsteroidDataElement> MPCAsteroidData;
@@ -48,6 +49,7 @@ namespace orsaInputOutput {
         orsa::Cache<unsigned int> select_number;
         orsa::Cache<std::string>  select_designation;
         orsa::Cache<bool>         select_NEO;
+        orsa::Cache<int>          select_max_U;
     public:
         static const double NEO_max_q;
     };

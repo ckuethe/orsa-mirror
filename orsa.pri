@@ -8,17 +8,19 @@ CONFIG += thread release warn_on
 # enable this to build static libs, useful to create binaries for BOINC
 #CONFIG += dll staticlib
 
-macx {
-	CONFIG += staticlib
-}
+#macx {
+#	CONFIG += staticlib
+#}
 
 # less verbose compile
-CONFIG += silent
+#CONFIG += silent
 
 # not here... qt and gui are kept local on single directory's .pro files
 #CONFIG += qt
 #QT -= gui
 
+
+#QMAKE_CXXFLAGS += -I/usr/local/opt/qt/include
 
 # define ORSA_PRI as the absolute path to this file
 unix:!macx {
@@ -41,6 +43,9 @@ isEmpty(ORSA_PRI) {
 	error(ORSA_PRI is not set correctly [$$ORSA_PRI])
 }
 
+LIBS += -L/usr/local/opt/openssl/lib/ 
+
+#QMAKE_MAC_SDK = /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
 
 # platform name and other tweaking (unix,macx,win32)
 unix:!macx {
@@ -59,24 +64,34 @@ unix:!macx {
 	QMAKE_LFLAGS_DEBUG   += -pg -ggdb
 }
 macx {
-	CONFIG += x86 # x86 ppc
+#	CONFIG += x86 # x86 ppc
+	
+	CONFIG -= app_bundle
 
-	QMAKE_MAC_SDK = /Developer/SDKs/MacOSX10.5.sdk
+#	CONFIG += staticlib
+
+#	QMAKE_MAC_SDK = /Developer/SDKs/MacOSX10.5.sdk
+#    QMAKE_MAC_SDK = macosx10.13
 
         KERNEL_NAME   = $$system(uname -s)
-        HARDWARE_NAME = $$system(uname -p)
+        HARDWARE_NAME = $$system(uname -m)
         PLATFORM_NAME = $${KERNEL_NAME}_$${HARDWARE_NAME}
 
 	DIR_SEP = "/"
 
-        QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
-	QMAKE_LFLAGS += -undefined dynamic_lookup 
+#        QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.5
+#	QMAKE_LFLAGS += -undefined dynamic_lookup 
 
-	QMAKE_CXXFLAGS += -mmacosx-version-min=10.5 -read_only_relocs suppress
-	QMAKE_LFLAGS   += -mmacosx-version-min=10.5 -read_only_relocs suppress
+#	QMAKE_CXXFLAGS -= -mmacosx-version-min=10.5
+#	QMAKE_LFLAGS   -= -mmacosx-version-min=10.5
+		
+#	QMAKE_CXXFLAGS += -mmacosx-version-min=10.6 -read_only_relocs suppress
+#	QMAKE_LFLAGS   += -mmacosx-version-min=10.6 -read_only_relocs suppress
 
-#	QMAKE_CXXFLAGS_DEBUG += -pg
-#	QMAKE_LFLAGS_DEBUG   += -pg
+#	QMAKE_CFLAGS_X86_64 += -Xarch_x86_64 -mmacosx-version-min=10.13
+
+	QMAKE_CXXFLAGS_DEBUG += -pg
+	QMAKE_LFLAGS_DEBUG   += -pg
 }
 win32 {
 	PLATFORM_NAME = "win32"
@@ -119,7 +134,7 @@ unix:!macx {
 ##		LIBS += -L/usr/local/lib -lgmp -lgmpxx
 	}
 	gsl_include {
-		INCLUDEPATH += /home/tricaric/gsl-1.14-installed/include
+		INCLUDEPATH += /home/tricaric/gsl-repository/install/include
 	}
 	gsl_lib {
 		LIBS += -lgsl -lgslcblas
@@ -127,15 +142,17 @@ unix:!macx {
 	}
 	osg_include {
         	INCLUDEPATH += /home/tricaric/OpenSceneGraph/include		
+##            INCLUDEPATH += /usr/local/opt/open-scene-graph/include
 	}
 	osg_lib {
 		LIBS += -L/home/tricaric/OpenSceneGraph/lib -L/home/tricaric/OpenSceneGraph/lib/osgPlugins-3.0.1
+##        LIBS += -L/usr/local/opt/open-scene-graph/lib -L/usr/local/opt/open-scene-graph/lib/osgPlugins-3.5.6
 	}
 	osg_src {
 		OSG_SRC = /home/tricaric/OpenSceneGraph/src/
 	}
 	qwt_include {
-		INCLUDEPATH += /home/tricaric/qwt/src
+		INCLUDEPATH += /home/tricaric/qwt-6.0/src
 	}
 	qwt_lib {
 		LIBS += -L/home/tricaric/qwt-6.0/lib/ -lqwt
@@ -159,49 +176,57 @@ macx {
 	boinc_include {
 		INCLUDEPATH +=  /Users/tricaric/boinc/ /Users/tricaric/boinc/api/ /Users/tricaric/boinc/lib
 	}
-	boinc_lib {
-		LIBS += /Users/tricaric/boinc/mac_build/build/boinc.build/Deployment/libboinc.build/Objects-normal/i386/libboinc.a
-		LIBS += /Users/tricaric/boinc/mac_build/build/boinc.build/Deployment/api_libboinc.build/Objects-normal/i386/libboinc_api.a
+    boinc_lib {
+#		LIBS += /Users/tricaric/boinc/mac_build/build/boinc.build/Deployment/libboinc.build/Objects-normal/i386/libboinc.a
+#		LIBS += /Users/tricaric/boinc/mac_build/build/boinc.build/Deployment/api_libboinc.build/Objects-normal/i386/libboinc_api.a
 	}
 	gmp_include {
-	     	INCLUDEPATH += $$ORSA_SUPPORT/gmp/include
+#	     	INCLUDEPATH += $$ORSA_SUPPORT/gmp/include
+        INCLUDEPATH += /usr/local/include/
 	}
 	gmp_lib {
-		LIBS += $$ORSA_SUPPORT/gmp/lib/libgmpxx.a $$ORSA_SUPPORT/gmp/lib/libgmp.a
+#		LIBS += $$ORSA_SUPPORT/gmp/lib/libgmpxx.a $$ORSA_SUPPORT/gmp/lib/libgmp.a
+LIBS += -L/usr/local/lib/	-lgmp -lgmpxx
 	}
 	gsl_include {
-		INCLUDEPATH += $$ORSA_SUPPORT/gsl/include
+#		INCLUDEPATH += $$ORSA_SUPPORT/gsl/include
 	}
 	gsl_lib {
-		LIBS += -L$$ORSA_SUPPORT/gsl/lib -lgsl -lgslcblas
+#		LIBS += -L$$ORSA_SUPPORT/gsl/lib -lgsl -lgslcblas
+LIBS += -lgsl -lgslcblas
 	}
 	osg_include {
-        	INCLUDEPATH += /Users/tricaric/OpenSceneGraph/include
+      	INCLUDEPATH += /Users/tricaric/OpenSceneGraph/include
+##        INCLUDEPATH += /usr/local/opt/open-scene-graph/include
 	}
 	osg_lib {
 		LIBS += -L/Users/tricaric/OpenSceneGraph/lib/
+#        LIBS += -L/usr/local/opt/open-scene-graph/lib -L/usr/local/opt/open-scene-graph/lib/osgPlugins-3.5.6
 	}
 	osg_src {
 		OSG_SRC = /Users/tricaric/OpenSceneGraph/src/
 	}
 	qwt_include {
-		INCLUDEPATH += /Users/tricaric/qwt/src
+		INCLUDEPATH += /usr/local/qwt-6.1.3/lib/qwt.framework/Headers
 	}
 	qwt_lib {
-		LIBS += -L/Users/tricaric/qwt/lib/ -lqwt
+#		LIBS += -L/usr/local/qwt-6.1.3/lib/ -lqwt
+        LIBS += /usr/local/qwt-6.1.3/lib/qwt.framework/qwt
 	}
 	spice_include {
-		INCLUDEPATH += $$ORSA_SUPPORT/cspice/include
+#		INCLUDEPATH += $$ORSA_SUPPORT/cspice/include
+		INCLUDEPATH += /Users/tricaric/cspice/include
 	}
 	spice_lib {
-		LIBS += $$ORSA_SUPPORT/cspice/lib/cspice.a $$ORSA_SUPPORT/cspice/lib/csupport.a
+#		LIBS += $$ORSA_SUPPORT/cspice/lib/cspice.a $$ORSA_SUPPORT/cspice/lib/csupport.a
+		LIBS += /Users/tricaric/cspice/lib/cspice.a /Users/tricaric/cspice/lib/csupport.a
 	}
-	zlib_include {
-        	INCLUDEPATH +=
-	}
-	zlib_lib {
-		LIBS +=
-	}
+#	zlib_include {
+#        	INCLUDEPATH +=
+#	}
+#	zlib_lib {
+#		LIBS +=
+#	}
 }
 
 win32 {

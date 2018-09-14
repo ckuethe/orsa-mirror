@@ -11,7 +11,7 @@ namespace orsa {
                const orsa::Vector & omega,
                const orsa::Matrix & I,
                const orsa::Vector & T,
-               const bool usePrincipalAxisRotationTransformation = true);
+               const bool usePrincipalAxisRotationTransformation = false);
   
 } // namespace orsa
 

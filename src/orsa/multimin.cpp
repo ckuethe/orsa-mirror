@@ -398,11 +398,10 @@ void Multimin::df_gsl(const gsl_vector * parameters,
         */
         //
         // ORSA_DEBUG("df[%02i] = %+20.14f",k,gsl_vector_get(df,k));
-        /*     
-               ORSA_DEBUG("par[%02i] = %+020.14f   df5[%02i] = %+020.14f   df2[%02i] = %+020.14f",
-               k,_par->get(k),
-               k,gsl_vector_get(df,k),
-               k,df2());
+        /* 
+           ORSA_DEBUG("par[%02i] = %+020.14f   df5[%02i] = %+020.14f",
+           k,_par->get(k),
+           k,gsl_vector_get(df,k));
         */
     }
 }
@@ -423,13 +422,13 @@ void Multimin::fdf_gsl(const gsl_vector * parameters,
 
 double Multimin::_diff_two_points_ (const double & y_m,
                                     const double & y_p) {
-    /* 
-       ORSA_DEBUG("d2p: y_m=%f   y_p=%f   retVal: %f",
-       y_m(),
-       y_p(),
+    
+    /* ORSA_DEBUG("d2p: y_m=%f   y_p=%f   retVal: %f",
+       y_m,
+       y_p,
        double(0.5*(y_p-y_m)));
     */
-  
+    
     return 0.5*(y_p-y_m);
 }
 
@@ -491,7 +490,7 @@ bool Multimin::run_nmsimplex(const unsigned int maxIter,
         it_status = gsl_multimin_fminimizer_iterate (s);
         //
         // ORSA_DEBUG("itaration status = %s",gsl_strerror(it_status));
-    
+        
         // if (it_status == GSL_ENOPROG) break;
     
         // ORSA_DEBUG("s->size: %g",s->size);
@@ -510,7 +509,7 @@ bool Multimin::run_nmsimplex(const unsigned int maxIter,
         */
         //
         // ORSA_DEBUG("convergence status = %s", gsl_strerror(cv_status));
-    
+        
         if (0) {
             // debug only
             ORSA_DEBUG("iter: %i",iter);

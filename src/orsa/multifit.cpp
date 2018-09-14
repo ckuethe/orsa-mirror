@@ -719,7 +719,7 @@ bool Multifit::run() {
         return false;
     }
     //
-    ORSA_DEBUG("n: %i  p: %i",_data->size(),_par->sizeNotFixed());
+    // ORSA_DEBUG("n: %i  p: %i",_data->size(),_par->sizeNotFixed());
     //
     if (_data->size() == 0) {
         ORSA_ERROR("no data");
@@ -763,7 +763,7 @@ bool Multifit::run() {
         }
     }
     gsl_multifit_fdfsolver_set(s,&mf,x);
-  
+    
     iter = 0;
     int it_status;
     int cv_status;
@@ -773,7 +773,7 @@ bool Multifit::run() {
     
         it_status = gsl_multifit_fdfsolver_iterate(s);
         //
-        ORSA_DEBUG("itaration status = %s",gsl_strerror(it_status));
+        // ORSA_DEBUG("itaration status = %s",gsl_strerror(it_status));
     
         cv_status = gsl_multifit_test_delta(s->dx, s->x, epsabs, epsrel);
         //
@@ -788,9 +788,9 @@ bool Multifit::run() {
            }
         */
         //
-        ORSA_DEBUG("convergence status = %s", gsl_strerror(cv_status));
+        // ORSA_DEBUG("convergence status = %s", gsl_strerror(cv_status));
         
-        ORSA_DEBUG("iter: %i",iter);
+        // ORSA_DEBUG("iter: %i",iter);
         
         if (0) {
             // debug only
@@ -808,7 +808,7 @@ bool Multifit::run() {
                                _par->get(k));
                 } 
             }	
-      
+            
             double c = 1.0;
             //
             if (mf.n > mf.p) {
@@ -833,9 +833,11 @@ bool Multifit::run() {
 
         {
             // stop if a parameter or its estimated uncertainty is not finite
+            gsl_matrix * jacobian = gsl_matrix_alloc(_data->size(),_par->sizeNotFixed());
+            gsl_multifit_fdfsolver_jac(s,jacobian);
             gsl_matrix * covar = gsl_matrix_alloc(_par->sizeNotFixed(),_par->sizeNotFixed());
-            gsl_multifit_covar(s->J, 0.0, covar);
-            bool break_main_iteration=false;
+            gsl_multifit_covar(jacobian, 0.0, covar);
+            // bool break_main_iteration=false;
             {
                 unsigned int gslIndex=0;
                 for (unsigned int k=0; k<_par->totalSize(); ++k) {
@@ -845,20 +847,23 @@ bool Multifit::run() {
                     if (!finite(gsl_vector_get(s->x, gslIndex))) {
                         ORSA_DEBUG("interrupting because parameter [%s] is not finite.",
                                    _par->name(k).c_str());
-                        break_main_iteration=true;
+                        // break_main_iteration=true;
+                        abort();
                         break;
                     }
                     if (!finite(gsl_matrix_get(covar,gslIndex,gslIndex))) {
                         ORSA_DEBUG("interrupting because uncertainty of parameter [%s] is not finite.",
                                    _par->name(k).c_str());
-                        break_main_iteration=true;
+                        // break_main_iteration=true;
+                        abort();
                         break;
                     } 
                     ++gslIndex;
                 }
             }
+            gsl_matrix_free(jacobian);	
             gsl_matrix_free(covar);	
-            if (break_main_iteration) break; // this trick avoids leaking memory, i.e. leaving before freeing covar memory
+            // if (break_main_iteration) break; // this trick avoids leaking memory, i.e. leaving before freeing covar memory
         }
     
         if (logFile.isSet()) {
@@ -880,9 +885,11 @@ bool Multifit::run() {
                 // ORSA_DEBUG("chisq/dof = %g",  chi*chi/dof);
                 gmp_fprintf(fp,"chisq/dof = %g\n",  chi*chi/dof);
             }
-      
+            
+            gsl_matrix * jacobian = gsl_matrix_alloc(_data->size(),_par->sizeNotFixed());
+            gsl_multifit_fdfsolver_jac(s,jacobian);
             gsl_matrix * covar = gsl_matrix_alloc(_par->sizeNotFixed(),_par->sizeNotFixed());
-            gsl_multifit_covar(s->J, 0.0, covar);
+            gsl_multifit_covar(jacobian, 0.0, covar);
       
             // #define FIT(i) gsl_vector_get(s->x, i)
             // #define ERR(i) sqrt(gsl_matrix_get(covar,i,i))
@@ -944,7 +951,8 @@ bool Multifit::run() {
                     gmp_fprintf(fp,"\n");
                 }
             }
-      
+            
+            gsl_matrix_free(jacobian);	
             gsl_matrix_free(covar); 
             fclose(fp);
         }

@@ -26,6 +26,7 @@ bool MPCAsteroidFile::processLine(const char * line) {
     std::string s_G;
     std::string s_epoch;
     std::string s_a, s_e, s_i, s_node, s_peri, s_M;
+    std::string s_U;
     
     // first, fields affected by select_* code
     
@@ -57,6 +58,21 @@ bool MPCAsteroidFile::processLine(const char * line) {
         }
     }
     
+    s_U.assign(line,105,1);
+    int U = -999;
+    
+    if (strlen(s_U.c_str()) != 0) {
+        if (!isalpha(s_U.c_str()[0])) {
+            U = atoi(s_U.c_str());
+        }
+    }
+    
+    if (select_max_U.isSet()) {
+        if (U > select_max_U) {
+            return false;
+        }
+    }
+    
     // now, all the remaining fields
     
     s_H.assign(line,8,5);
@@ -73,13 +89,13 @@ bool MPCAsteroidFile::processLine(const char * line) {
     s_i.assign(line,59,9);
     // s_e.assign(line,70,9);
     // s_a.assign(line,92,11);
-    
+        
     // orsaSolarSystem::OrbitWithEpoch orbit;
     orbit.epoch = MPC_packedToTime(s_epoch.c_str());
     orbit.mu = orsaSolarSystem::Data::GMSun(); 
     // orbit.e  = atof(s_e.c_str());
     //
-    if (orbit.e > 0.99) {
+    if (orbit.e > 0.999999) {
         // non-periodic orbit, not included for the moment
         return false;
     }
@@ -101,10 +117,23 @@ bool MPCAsteroidFile::processLine(const char * line) {
     }
     if (MPC_packedNumber(s_designation) != 0) {
         element.number = MPC_packedNumber(s_designation);
-    }
-    if (strlen(s_designation.c_str()) != 0) {
+    } else if (strlen(s_designation.c_str()) != 0) {
         element.designation = s_designation;
     }
+    //
+    if (!element.designation.isSet()) {
+        // get designation from end of line, then convert it.
+        s_designation.assign(line,175,18);
+        removeLeadingAndTrailingSpaces(s_designation);
+        // ORSA_DEBUG("looking for readable designation in [%s]",s_designation.c_str());
+        const std::string s_packed = orsaInputOutput::MPC_packedDesignation(s_designation);
+        element.designation = s_packed;
+    }
+    
+    // orbit quality parameter
+    if (U>=0 && U <=9) {
+        element.U = U;
+    }    
     
     _data.push_back(element);
     

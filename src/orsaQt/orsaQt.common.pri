@@ -2,6 +2,7 @@ TEMPLATE = lib
 
 CONFIG += qt
 QT     += gui 
+QT += widgets
 
 CONFIG += gmp_include gmp_lib gsl_include gsl_lib osg_include osg_lib
 
