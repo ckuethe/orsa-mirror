@@ -187,9 +187,13 @@ bool RadioScienceGravityFile::read(RadioScienceGravityData * data,
     }
     
     // ORSA_DEBUG("n. coeff: %i",data->numberOfCoefficients);
-
-    if (data->numberOfCoefficients != (data->degree+1)*(data->degree+1)-3) {
-        ORSA_DEBUG("PROBLEM: mismatch between degree and expected number of coefficients");
+    
+    if ((data->degree<2) && (data->numberOfCoefficients==1)) {
+        // all good...    
+    } else if (data->numberOfCoefficients == ((data->degree+1)*(data->degree+1)-3)) {
+        // all good...
+    } else {
+        ORSA_DEBUG("PROBLEM: mismatch between degree and expected number of coefficients: degree=%i   numberOfCoefficients=%i",data->degree,data->numberOfCoefficients);
         exit(0);
     }
     
