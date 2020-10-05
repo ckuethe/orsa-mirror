@@ -138,7 +138,11 @@ namespace orsa {
             
             // ORSA_DEBUG("size: %i   this = %x",size(),this);
             
-            if (size()==0) return false;
+            if (size()==0) {
+                ORSA_DEBUG("returning false...   size: %i   this = %x",size(),this);
+                // orsa::crash();
+                return false;
+            }
             
             if (!isStoringData()) {
                 ORSA_ERROR("this interval is not storing data");
@@ -169,6 +173,12 @@ namespace orsa {
                 return false;
             }
             // ORSA_DEBUG("//5//");
+            
+            if (size() == 1) {
+                sub_max = max();
+                sub_min = min();
+                return true;
+            }
             
             if (size() == 2) {
                 sub_max = max();
@@ -211,6 +221,8 @@ namespace orsa {
                 
                 return true;	  
             }	  
+            
+            ORSA_DEBUG("returning false...   size: %i   this = %x",size(),this);
             
             return false;
         }	

@@ -63,13 +63,20 @@ bool BodyGroup::addBody(const Body * b) {
         insertIBPS(ibps, b, false, false);
     }
     
+    /*
     {
         // debug
-        /* ORSA_DEBUG("added body [%s]  inertial: %x",
+        ORSA_DEBUG("[THIS BG: %x] added body [%s] b: %x  bi size: %i  bi: %x  inertial: %x  dynamic: %i   bi size: %i",
+            this,
            b->getName().c_str(),
-           b->getInitialConditions().inertial.get());
-        */
+           b,
+           getBodyInterval(b)->size(),
+           getBodyInterval(b),
+           b->getInitialConditions().inertial.get(),
+           b->getInitialConditions().dynamic(),
+           getBodyInterval(b)->size());
     }
+    */
     
     return true;
 }
@@ -191,7 +198,8 @@ bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
        }
     */
     
-    /* ORSA_DEBUG("body: [%s]  bodies: %i   inertial: %x   t: [below]",
+    /*
+    ORSA_DEBUG("body: [%s]  bodies: %i   inertial: %x   t: [below]",
        b->getName().c_str(),
        size(),
        b->getInitialConditions().inertial.get());
@@ -333,8 +341,12 @@ bool BodyGroup::getInterpolatedIBPS(orsa::IBPS       & ibps,
                 }
             }	
         } else {
-            ORSA_DEBUG("problems... body: [%s] dynamic: %i time: [below]",
+            ORSA_DEBUG("[THIS BG: %x] problems... body: [%s] b: %x  bi size: %i  bi: %x  dynamic: %i time: [below]",
+                       this,
                        b->getName().c_str(),
+                       b,
+                       getBodyInterval(b)->size(),
+                       getBodyInterval(b),
                        b->getInitialConditions().dynamic());
             orsa::print(t);
             ORSA_DEBUG("body initial conditions time: [below]");
@@ -419,6 +431,7 @@ bool BodyGroup::getInterpolatedMass(double     & mass,
             ibps.lock();
             ibps.update(t);
             mass = ibps.inertial->mass();
+            // ORSA_DEBUG("called for [%s]   mass: %g",b->getName().c_str(),mass);
             ibps.unlock();
             return true;
         } else {
@@ -716,7 +729,7 @@ orsa::BodyGroup::BodyInterval * BodyGroup::getBodyInterval(const orsa::Body * b)
         orsa::BodyGroup::BodyInterval * bi = new orsa::BodyGroup::BodyInterval;
         bi->enableDataStoring();
         _b_interval[b] = bi;
-        // ORSA_DEBUG("creating new interval for body [%s] ... done.",b->getName().c_str());
+        // ORSA_DEBUG("creating new interval for body [%s] ... done   bi: %x",b->getName().c_str(),bi);
         return (bi);
     }
 }

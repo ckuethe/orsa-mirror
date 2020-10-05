@@ -29,9 +29,10 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
   
     // ORSA_DEBUG("called...");
     
-    /* ORSA_DEBUG("call start, start+timestep [below]");
-       orsa::print(start);
-       orsa::print(start+timestep);
+    /*
+    ORSA_DEBUG("call start, start+timestep [below]");
+    orsa::print(start);
+    orsa::print(start+timestep);
     */
     
     unsigned int niter = 2;
@@ -50,7 +51,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
                 continue;
             }
             if (!bg->getInterpolatedMass(m,(*bl_it).get(),start)) {
-                ORSA_DEBUG("problems...");
+                ORSA_DEBUG("problems...  b: %x",(*bl_it).get());
             }
             if (m != mass[(*bl_it).get()]) {
                 _body_mass_or_number_changed(bg,start);
@@ -67,7 +68,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
         }
     }
   
-    // cerr << "niter: " << niter << endl;
+    // ORSA_DEBUG("niter: %i",niter);
     
     // interaction->Acceleration(frame_out,acc);
     /* {
@@ -1519,7 +1520,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
     // const orsa::Time timestep_done = timestep;
   
     // Estimate suitable sequence size for the next call
-    double tmp = 0;
+    double tmp = 0.0;
     /* 
        for(k=0;k<nv;++k) {
        if (interaction->IsSkippingJPLPlanets() && frame_in[k/3].JPLPlanet() != NONE) continue;
@@ -1573,7 +1574,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
         }
     }
   
-    // ORSA_DEBUG("1: tmp: %Fg",tmp());
+    // ORSA_DEBUG("1: tmp: %g",tmp);
   
     // if (tmp!=0.0) tmp /= (72.0 * secure_pow(fabs(timestep),7));
     // if (tmp!=0.0) tmp /= (72.0 * secure_pow(fabs(timestep.Getdouble()),7));
@@ -1582,11 +1583,12 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
     //
     if (tmp != 0) tmp /= (72*int_pow(fabs(timestep.get_d()),7));
   
-    // ORSA_DEBUG("2: tmp: %Fg",tmp());
+    // ORSA_DEBUG("2: tmp: %g",tmp);
   
     // if (tmp < 1.0e-50) { // is equal to zero?
     // if (tmp < epsilon()) { // is equal to zero?
-    if (tmp == 0) {
+    if (tmp == 0.0) {
+    // if (tmp < orsa::epsilon()) {
         // ORSA_DEBUG("zero test...");
         // timestep = timestep_done * 1.4;
         next_timestep = orsa::Time(FromUnits(timestep.get_d()*1.4,Unit::MICROSECOND,-1));
@@ -1613,7 +1615,7 @@ bool IntegratorRadau::step(orsa::BodyGroup  * bg,
     if ((niter > 2) && (fabs(next_timestep.get_d()/timestep.get_d()) < 1.0)) {
         next_timestep = orsa::Time(FromUnits(timestep.get_d()*0.8,Unit::MICROSECOND,-1));
         _lastCallRejected = true;
-        // ORSA_DEBUG("last call REJECTED");
+        // ORSA_DEBUG("last call REJECTED    next_timestep: %g [s]",next_timestep.get_d());
         // "rollback" (kind of) all inserts in this call (done in the Integrator class calling this method)
         return true;
     } else {

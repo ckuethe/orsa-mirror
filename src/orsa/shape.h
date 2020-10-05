@@ -190,6 +190,13 @@ namespace orsa {
                              const orsa::Vector & u,
                              const bool fullLine = false) const;
     public:
+        bool rayIntersection(orsa::Vector & intersectionPoint,
+                             orsa::Vector & normal,
+                             unsigned int & faceIndex,
+                             const orsa::Vector & P,
+                             const orsa::Vector & u,
+                             const bool fullLine = false) const;
+    public:
         double volume() const;
     protected:
         mutable orsa::Cache<double> _volume;

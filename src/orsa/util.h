@@ -208,6 +208,10 @@ namespace orsa {
             return ::gsl_ran_laplace(rnd,a);
         }    
     public:
+        unsigned int gsl_ran_poisson(double mu) const {
+            return ::gsl_ran_poisson(rnd,mu);
+        }
+    public:
         const int randomSeed;
     protected:  
         gsl_rng * rnd;

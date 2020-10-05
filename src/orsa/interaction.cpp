@@ -461,22 +461,35 @@ bool Interaction::acceleration(InteractionVector & a,
                     // ORSA_DEBUG("b_mc:");
                     // b_mc->print();
                     
-                    const orsa::Matrix ref_b_l2g = orsa::localToGlobal(ref_b,bg,t);
+                    // const orsa::Matrix ref_b_l2g = orsa::localToGlobal(ref_b,bg,t);
                     const orsa::Matrix ref_b_g2l = orsa::globalToLocal(ref_b,bg,t);
                     
-                    const orsa::Matrix b_l2g = orsa::localToGlobal(b,bg,t);
+                    // const orsa::Matrix b_l2g = orsa::localToGlobal(b,bg,t);
                     const orsa::Matrix b_g2l = orsa::globalToLocal(b,bg,t);
                     
                     const orsa::Vector R =
                         b_ibps.translational->position() - 
                         ref_b_ibps.translational->position();
                     
+#warning review this part!
+                    orsa::Vector accTerm(0,0,0);
+                    if (b_ibps.inertial->massCluster()==0) {
+#warning is this correct? correct sign?
+                        accTerm = MassCluster::gravitationalAcceleration(ref_b_mc.get(),ref_b_g2l,R);
+                    } else if (ref_b_ibps.inertial->massCluster()==0) {
+                        accTerm = MassCluster::gravitationalAcceleration(b_mc.get(),b_g2l,R);
+                    } else {
+                        ORSA_DEBUG("code needed!!!");
+                    }
+                    
+                    /*
                     const orsa::Vector accTerm =
                         MassCluster::gravitationalForce(ref_b_mc.get(),
                                                         ref_b_g2l,
                                                         b_mc.get(),
                                                         b_g2l,
                                                         R);
+                    */
                     
                     /* ORSA_DEBUG("accTerm between [%s] and [%s]:",ref_b->getName().c_str(),b->getName().c_str());
                        orsa::print(accTerm);

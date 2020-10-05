@@ -498,6 +498,7 @@ const Vector TriShape::closestVertex(const Vector & v) const {
     return _vertex[closestVertexIndex(v)];
 }
 
+#if 0 // old version, slow...
 unsigned int TriShape::closestVertexIndex(const Vector & v) const {
     _updateCache();
     //
@@ -552,9 +553,77 @@ unsigned int TriShape::closestVertexIndex(const Vector & v) const {
     _old_closest_vertex_index = _vertex_index;
     return _vertex_index;
 }
+#endif // 0
+
+#if 1 // new version...
+unsigned int TriShape::closestVertexIndex(const Vector & v) const {
+    _updateCache();
+    unsigned int _vertex_index = _old_closest_vertex_index;
+    double _vertex_d2 = (v-_vertex[_vertex_index]).lengthSquared();
+    while (1) {
+        bool changed=false;
+        std::list<unsigned int>::const_iterator it = vertexInFace[_vertex_index].begin();
+        while (it != vertexInFace[_vertex_index].end()) {
+            {
+                int test_vertex_index = _face[(*it)].i();
+                if (test_vertex_index!=_vertex_index) {
+                    double d2 = (_vertex[test_vertex_index]-v).lengthSquared();
+                    if (d2 < _vertex_d2) {
+                        _vertex_index=test_vertex_index;
+                        _vertex_d2=d2;
+                        changed=true;
+                        break;
+                    }
+                }
+            }
+            {
+                int test_vertex_index = _face[(*it)].j();
+                if (test_vertex_index!=_vertex_index) {
+                    double d2 = (_vertex[test_vertex_index]-v).lengthSquared();
+                    if (d2 < _vertex_d2) {
+                        _vertex_index=test_vertex_index;
+                        _vertex_d2=d2;
+                        changed=true;
+                        break;
+                    }
+                }
+            }
+            {
+                int test_vertex_index = _face[(*it)].k();
+                if (test_vertex_index!=_vertex_index) {
+                    double d2 = (_vertex[test_vertex_index]-v).lengthSquared();
+                    if (d2 < _vertex_d2) {
+                        _vertex_index=test_vertex_index;
+                        _vertex_d2=d2;
+                        changed=true;
+                        break;
+                    }
+                }
+            }
+            ++it;
+        }
+        if (!changed) {
+            break;
+        }
+    }
+    // update local static variable
+    _old_closest_vertex_index = _vertex_index;
+    return _vertex_index;
+}
+#endif // 0
 
 bool TriShape::rayIntersection(orsa::Vector & intersectionPoint,
                                orsa::Vector & normal,
+                               const orsa::Vector & P,
+                               const orsa::Vector & u,
+                               const bool fullLine) const {
+    unsigned int faceIndex;
+    return rayIntersection(intersectionPoint,normal,faceIndex,P,u,fullLine);
+}
+
+bool TriShape::rayIntersection(orsa::Vector & intersectionPoint,
+                               orsa::Vector & normal,
+                               unsigned int & faceIndex,
                                const orsa::Vector & P,
                                const orsa::Vector & u,
                                const bool fullLine) const {
@@ -568,7 +637,7 @@ bool TriShape::rayIntersection(orsa::Vector & intersectionPoint,
                                   _vertex[t.j()],
                                   _vertex[t.k()],
                                   fullLine)) {
-            
+            faceIndex = j;
             normal = _getFaceNormal(j);
             
             return true;
@@ -722,7 +791,7 @@ void TriShape::GeodesicGrid(VertexVector & v,
     
     // normalize
     for (size_t j=0; j<v.size(); ++j) {
-        v[j] = v[j].normalized();
+        v[j].normalize();
     }
     
     std::vector< std::vector<size_t> > nearby;
