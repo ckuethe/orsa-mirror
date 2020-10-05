@@ -251,6 +251,9 @@ protected:
     virtual ~CubicChebyshevMassDistribution();
 public:
     double density(const orsa::Vector & p) const;
+public:
+    // this is used only for density uncertainty if the CCMDF contains that info...
+    double ALT_density(const orsa::Vector & p) const;
 };
 
 // decompose a generic mass distribution into a cubic chebyshev mass distribuiton

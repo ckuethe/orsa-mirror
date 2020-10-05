@@ -4,10 +4,6 @@
 #include <orsa/legendre.h>
 #include <orsa/util.h>
 
-// #include "vesta.h"
-// #include "gaskell.h"
-// #include "eros_shape.h"
-
 // norm_coeff = normalization_factor * coeff
 double normalization_factor(const size_t & l,
                             const size_t & m) {
@@ -70,28 +66,6 @@ int main(int argc, char **argv) {
     orsa::TriShape::FaceVector f;
     orsa::TriShape::GeodesicGrid(v,f,Nsub);
     
-    /* osg::ref_ptr<VestaShape> shapeModel = new VestaShape;
-       if (!shapeModel->read(inputFile)) {
-       ORSA_ERROR("problems encountered while reading shape file...");
-       exit(0);
-       }
-    */
-    
-    /* osg::ref_ptr<ErosShape> shapeModel = new ErosShape;
-       if (!shapeModel->read(inputFile)) {
-       ORSA_ERROR("problems encountered while reading shape file...");
-       exit(0);
-       }
-    */
-    
-    /*
-    osg::ref_ptr<GaskellPlateModel> shapeModel = new GaskellPlateModel;
-    if (!shapeModel->read(inputFile)) {
-        ORSA_ERROR("problems encountered while reading shape file...");
-        exit(0);
-    }
-    */
-    
     SHcoeff norm_A;
     SHcoeff norm_B;
     readSH(norm_A,norm_B,inputFile,orsa::Unit::KM);
@@ -127,6 +101,7 @@ int main(int argc, char **argv) {
     
     // write file in Gaskell format
     {
+        
         char outFileName[4096];
         sprintf(outFileName,"%s_trim_%u_reShapeSH_%u.out",inputFile.c_str(),max_degree,Nsub);
         FILE * fp = fopen(outFileName,"w");

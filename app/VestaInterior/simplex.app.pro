@@ -22,6 +22,6 @@ DESTDIR     = .
 	#}
 
 
-HEADERS += simplex.h   vesta.h	gaskell.h  eros_shape.h  sqlite3.h
+HEADERS += simplex.h shape.h sqlite3.h
 SOURCES += simplex.cpp 
 

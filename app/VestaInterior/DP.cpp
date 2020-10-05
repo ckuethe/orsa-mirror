@@ -15,9 +15,7 @@
 #include "simplex.h"
 #include "CCMD2ijk.h"
 
-#include "vesta.h"
-#include "gaskell.h"
-#include "eros_shape.h"
+#include "shape.h"
 
 #include <libgen.h>
 
@@ -51,25 +49,10 @@ int main(int argc, char **argv) {
         exit(0);
     }
     
-    /* osg::ref_ptr<VestaShape> shapeModel = new VestaShape;
-    if (!shapeModel->read(plateModelFile)) {
-    ORSA_ERROR("problems encountered while reading shape file...");
-    exit(0);
-    }
-    */
-    
-    /* 
-    osg::ref_ptr<ErosShape> shapeModel = new ErosShape;
-    if (!shapeModel->read(plateModelFile)) {
-    ORSA_ERROR("problems encountered while reading shape file...");
-    exit(0);
-    }
-    */
-    
-    osg::ref_ptr<GaskellPlateModel> shapeModel = new GaskellPlateModel;
-    if (!shapeModel->read(plateModelFile)) {
-        ORSA_ERROR("problems encountered while reading shape file...");
-        exit(0);
+    osg::ref_ptr<InputShape> shapeModel = new InputShape;
+       if (!shapeModel->read(plateModelFile)) {
+       ORSA_ERROR("problems encountered while reading shape file...");
+       exit(0);
     }
     
     const std::string SQLiteDBFileName = getSqliteDBFileName_simplex(plateModelFile,plateModelR0);

@@ -129,7 +129,8 @@ int main (int argc, char **argv) {
         const double tilt = orsa::halfpi()-fabs(asin(z));
         
         // NEW version: points within delta_DEG from test-equator
-        osg::ref_ptr<orsa::Statistic<double> > stat = new orsa::Statistic<double>;
+        osg::ref_ptr<orsa::Statistic<double> > stat   = new orsa::Statistic<double>;
+        osg::ref_ptr<orsa::Statistic<double> > stat_w = new orsa::Statistic<double>;
         //
         const double max_SP = cos(orsa::halfpi()-band_half_width); // maximum value of scalar product of points with test-pole, 
         const double min_SP = cos(orsa::halfpi()+band_half_width); // minimum value of scalar product of points with test-pole, 
@@ -139,12 +140,16 @@ int main (int argc, char **argv) {
             const double SP = u_pole*(*it).u;
             // ORSA_DEBUG("%g %g    %g",min_SP,max_SP,SP);
             if ((SP>min_SP) && (SP<max_SP)) {
-                stat->insert((*it).val);
+                const double w = 1.0; // isotropic grid
+                // const double w = (1.0-orsa::square((*it).u.getZ())); // use this for regular lat/lon grid data
+                stat->insert(w*(*it).val);
+                stat_w->insert(w);
                 // ORSA_DEBUG("%g %g %g",(*it).u.getX(),(*it).u.getY(),(*it).u.getZ());
             }
             ++it;
         }
-        printf("%g %g %g %g   %lu\n",lon0*orsa::radToDeg(),tilt*orsa::radToDeg(),stat->average(),stat->averageError(),stat->entries().get_ui());
+        // printf("%g %g %g %g   %lu\n",lon0*orsa::radToDeg(),tilt*orsa::radToDeg(),stat->average(),stat->averageError(),stat->entries().get_ui());
+        printf("%g %g %g %g\n",lon0*orsa::radToDeg(),tilt*orsa::radToDeg(),stat->sum()/stat_w->sum(),stat_w->sum());
         fflush(stdout);
         ++count;
     }

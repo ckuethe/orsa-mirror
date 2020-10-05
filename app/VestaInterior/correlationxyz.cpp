@@ -149,6 +149,42 @@ int main (int argc, char **argv) {
     std::vector<Mask> Y_mask;
     read(Y_mask,argv[4]);
     
+    /*
+    {
+        // test...
+        FILE * fp = fopen("qqq","w");
+        for (size_t k=0; k<100000; ++k) {
+            const orsa::Vector u = sample_u(c_over_a);
+            const double lon = atan2(u.getY(),u.getX());
+            const double lat =  asin(u.getZ()/u.length());
+            const double z = (test_masked(u,Y_mask)) ? 1.0 : 0.0;
+            fprintf(fp,"%g %g %g\n",fmod(lon+orsa::twopi(),orsa::twopi())*orsa::radToDeg(),lat*orsa::radToDeg(),z);
+        }
+        fclose(fp);
+    }
+    */
+    
+    /*
+    {
+        // test: outline of masked regions...
+        FILE * fp = fopen("ooo","w");
+        for (size_t j=0; j<Y_mask.size(); ++j) {
+            const orsa::Vector u = Y_mask[j].u;
+            const double cos_phi = Y_mask[j].cos_phi;
+            //
+            const orsa::Vector v0 = cos_phi*u + sqrt(1.0-cos_phi*cos_phi)*orsa::externalProduct(u,orsa::Vector(0,0,1)).normalized();
+            for (size_t k=0; k<360; ++k) {
+                const orsa::Vector v = orsa::Matrix::axisRotation(u,k*orsa::degToRad())*v0;
+                const double lon = atan2(v.getY(),v.getX());
+                const double lat =  asin(v.getZ()/v.length());
+                fprintf(fp,"%g %g\n",fmod(lon+orsa::twopi(),orsa::twopi())*orsa::radToDeg(),lat*orsa::radToDeg());
+            }
+            fprintf(fp,">\n"); // separation...
+        }
+        fclose(fp);
+    }
+    */
+    
     const size_t num_samples_per_iteration = atoi(argv[5]);
     const size_t max_iterations = atoi(argv[6]);
     

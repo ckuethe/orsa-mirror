@@ -17,7 +17,12 @@ int main(int argc, char **argv) {
     gravityData->R0     = R0;
     gravityData->degree = degree;
     gravityData->order  = degree;
-    gravityData->numberOfCoefficients = (degree+1)*(degree+1)-3;
+    //
+    if (gravityData->degree<2) {
+        gravityData->numberOfCoefficients = 1; // only GM
+    } else {
+        gravityData->numberOfCoefficients = (degree+1)*(degree+1)-3;
+    }
     
     {
         unsigned int index = 0;

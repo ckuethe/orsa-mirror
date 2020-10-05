@@ -7,7 +7,7 @@ CONFIG += gmp_include gmp_lib gsl_include gsl_lib osg_include osg_lib spice_incl
 
 include(../../orsa.pri)
 
-TARGET   = scanCCMDF
+TARGET   = gravityFromAsciiFileCovar
 
 INCLUDEPATH += ../../src/
 DEPENDPATH  += ../../src/
@@ -20,9 +20,7 @@ DESTDIR     = .
 #unix:!macx {
 #	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaSolarSystem -lorsaEssentialOSG -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads -lqd -L/home/tricaric/sqlite -lsqlite3 -lbsd
 #}
-LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaSolarSystem -lorsaEssentialOSG -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads -lqd -lsqlite3 -lcrypto -lssl -lgmp -lmpfr
+LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaSolarSystem -lorsaEssentialOSG -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads -lqd -lsqlite3 -lcrypto -lssl
 
-HEADERS += CubicChebyshevMassDistribution.h shape.h
-SOURCES += scanCCMDF.cpp CubicChebyshevMassDistribution.cpp 
-
-
+HEADERS += 
+SOURCES += gravityFromAsciiFileCovar.cpp

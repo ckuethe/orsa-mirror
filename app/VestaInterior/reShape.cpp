@@ -1,8 +1,6 @@
 #include "simplex.h"
 
-#include "vesta.h"
-#include "gaskell.h"
-#include "eros_shape.h"
+#include "shape.h"
 
 int main(int argc, char **argv) {
     
@@ -21,28 +19,12 @@ int main(int argc, char **argv) {
     
     // PICK one input file type
     
-    /*
-    osg::ref_ptr<VestaShape> shapeModel = new VestaShape;
+    
+    osg::ref_ptr<InputShape> shapeModel = new InputShape;
        if (!shapeModel->read(inputFile)) {
        ORSA_ERROR("problems encountered while reading shape file...");
        exit(0);
-       }
-    */
-    
-    /*
-    osg::ref_ptr<ErosShape> shapeModel = new ErosShape;
-    if (!shapeModel->read(inputFile)) {
-        ORSA_ERROR("problems encountered while reading shape file...");
-        exit(0);
     }
-    */
-    
-    osg::ref_ptr<GaskellPlateModel> shapeModel = new GaskellPlateModel;
-    if (!shapeModel->read(inputFile)) {
-        ORSA_ERROR("problems encountered while reading shape file...");
-        exit(0);
-    }
-    
         
     // *****
     

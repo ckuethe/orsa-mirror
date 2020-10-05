@@ -14,8 +14,7 @@
 #include "simplex.h"
 #include "SH2ijk.h"
 #include "penalty.h"
-#include "vesta.h"
-#include "gaskell.h"
+#include "shape.h"
 #include "translate_ijk.h"
 
 #include <gsl/gsl_blas.h>
@@ -415,12 +414,12 @@ int main(int argc, char **argv) {
     
     const std::string SQLiteDBFileName = getSqliteDBFileName_simplex(plateModelFile,plateModelR0);
     
-    osg::ref_ptr<GaskellPlateModel> shapeModel = new GaskellPlateModel;
-    if (!shapeModel->read(plateModelFile)) {
-        ORSA_ERROR("problems encountered while reading shape file...");
-        exit(0);
+    osg::ref_ptr<InputShape> shapeModel = new InputShape;
+       if (!shapeModel->read(plateModelFile)) {
+       ORSA_ERROR("problems encountered while reading shape file...");
+       exit(0);
     }
-    
+       
     osg::ref_ptr<SimplexIntegration<F> > si =
         new SimplexIntegration<F>(shapeModel.get(), plateModelR0, SQLiteDBFileName);
 
@@ -472,11 +471,12 @@ int main(int argc, char **argv) {
             fclose(fp);
         }
         
-        osg::ref_ptr<GaskellPlateModel> mod_shapeModel = new GaskellPlateModel;
-        if (!mod_shapeModel->read(mod_filename)) {
-            ORSA_ERROR("problems encountered while reading shape file...");
-            exit(0);
+        osg::ref_ptr<InputShape> mod_shapeModel = new InputShape;
+           if (!shapeModel->read(mod_filename)) {
+           ORSA_ERROR("problems encountered while reading shape file...");
+           exit(0);
         }
+        
         ORSA_DEBUG("shape [%s] v.size(): %i f.size(): %i",
                    mod_filename,
                    mod_shapeModel->getVertexVector().size(),
@@ -1377,6 +1377,14 @@ int main(int argc, char **argv) {
             if (m!= 0) gravityData->setCoeff(orsaPDS::RadioScienceGravityData::keyS(l,m),norm_S[l][m].get_d());
         }
     }
+    
+    /*
+    if (0) {
+#warning test only... remove in production!
+        gravityData->setCoeff(orsaPDS::RadioScienceGravityData::keyC(2,1),0.0);
+        gravityData->setCoeff(orsaPDS::RadioScienceGravityData::keyS(2,1),0.0);
+    }
+    */
     
     ORSA_DEBUG("writing file [%s]",outputGravityFile.c_str());
     orsaPDS::RadioScienceGravityFile::write(gravityData.get(),outputGravityFile,512,1518);

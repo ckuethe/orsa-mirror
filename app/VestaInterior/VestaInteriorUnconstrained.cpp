@@ -1,4 +1,4 @@
-#include "VestaInteriorAnalytic.h"
+#include "VestaInteriorUnconstrained.h"
 
 #include <orsa/chebyshev.h>
 #include <orsa/statistic.h>
@@ -140,6 +140,7 @@ gsl_vector * mod_gravityData_getCoefficientVector(const orsaPDS::RadioScienceGra
     return mod_mu;
 }
 
+double global_degree1_sigma;
 gsl_matrix * mod_gravityData_getCovarianceMatrix(const orsaPDS::RadioScienceGravityData * gravityData) {
     gsl_matrix * covm = gravityData->getCovarianceMatrix();
     gsl_matrix * mod_covm = gsl_matrix_alloc(mod_gravityData_numberOfCoefficients(gravityData),
@@ -151,7 +152,14 @@ gsl_matrix * mod_gravityData_getCovarianceMatrix(const orsaPDS::RadioScienceGrav
                 gsl_matrix_set(mod_covm,l,m,gsl_matrix_get(covm,l,m)/orsa::square(gravityData->GM));
 #warning NEED TO SCALE THIS DOWN: from GM to 1.0 level... C_{00}... so check this!
             } else if ((l==1) || (l==2) || (l==3) || (l==get_IzzMR2_index()) || (m==1) || (m==2) || (m==3) || (m==get_IzzMR2_index())) {
-                gsl_matrix_set(mod_covm,l,m,0.0);
+                if (l==m) {
+                    // what values to use here??
+                    // #warning should use input values here...
+                    // gsl_matrix_set(mod_covm,l,m,1e-20);
+                    gsl_matrix_set(mod_covm,l,m,orsa::square(global_degree1_sigma));
+                } else {
+                    gsl_matrix_set(mod_covm,l,m,0.0);
+                }
             } else if ((l==0) && (m!=0)) {
                 gsl_matrix_set(mod_covm,l,m,gsl_matrix_get(covm,l,m-3));
             } else if ((l!=0) && (m==0)) {
@@ -268,6 +276,10 @@ int main(int argc, char **argv) {
     const std::string CCMDF_filename = (argc >= 19) ? argv[18] : "";
     const double sampling_factor = (argc>=20) ? atof(argv[19]) : 1.0;
     // early_mode = (argc>=21) ? atoi(argv[20])==1 : false; // global
+    
+    // copy to global vars...
+#warning review this, there may be some factor like a sqrt(3) or something...
+    global_degree1_sigma = sqrt(orsa::square(CM_sx/plateModelR0)+orsa::square(CM_sy/plateModelR0)+orsa::square(CM_sz/plateModelR0));
     
     // ORSA_DEBUG("early_mode: %i",early_mode);
     
@@ -490,6 +502,8 @@ int main(int argc, char **argv) {
     
 #warning check code for HIGH degree, might have to rewrite linear algebra...
     
+    // const orsa::Vector sampled_CM(CM_x,CM_y,CM_z); // no sampling...
+    //
     const orsa::Vector sampled_CM(CM_x+orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(CM_sx),  
                                   CM_y+orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(CM_sy),
                                   CM_z+orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(CM_sz));
@@ -1027,10 +1041,10 @@ int main(int argc, char **argv) {
             for (size_t s=0; s<N; ++s) {
                 gsl_vector_set(uK[b],s,gsl_matrix_get(Q,s,M+b));
                 //
-                if (0) {
+                if (1) {
                     size_t Tx,Ty,Tz;
                     CubicChebyshevMassDistribution::triIndex(Tx,Ty,Tz,s);
-                    ORSA_DEBUG("uK[%03i][%03i] =%12.6f (null space base vector for cT[%i][%i][%i])",b,s,gsl_vector_get(uK[b],s),Tx,Ty,Tz);
+                    ORSA_DEBUG("uK[%03i][%03i] = %12.6f (null space base vector for cT[%i][%i][%i])",b,s,gsl_vector_get(uK[b],s),Tx,Ty,Tz);
                 }
             }
         }
@@ -1132,7 +1146,185 @@ int main(int argc, char **argv) {
         gsl_vector * sampleCoeff_x  = gsl_vector_alloc(M);
         gsl_vector * sampleCoeff_y  = gsl_vector_alloc(M); 
         
-        // for (size_t gen=0; gen<1000; ++gen) {
+        if (0) {
+            // covariance of the cT0 = pseudoInvA * covariance_SH * pseudoInvA_transposed;
+            
+            gsl_matrix * covariance_T = gsl_matrix_alloc(N,N);
+            
+            // get again pds_covm because old one has been destroyed by the call to gsl_eigen_symmv
+            gsl_matrix * pds_covm  = mod_gravityData_getCovarianceMatrix(gravityData.get());
+            gsl_matrix_view pds_covm_view = gsl_matrix_submatrix(pds_covm, 0, 0, SH_size, SH_size);
+            
+            // gsl_matrix_fprintf(stdout,covariance_T,"%g");
+            
+            printf("pds_covm_view:\n");
+            for (size_t row=0; row<M; ++row) {
+                for (size_t col=0; col<M; ++col) {
+                    printf("%+.1e ",gsl_matrix_get(&pds_covm_view.matrix,row,col));
+                }
+                printf("\n");
+            }
+            
+            /*
+            gsl_matrix * pseudoInvA_transposed = gsl_matrix_alloc(M,N);
+            for (size_t j=0; j<N; ++j) {
+                for (size_t k=0; k<M; ++k) {
+                    gsl_matrix_set(pseudoInvA_transposed,j,k,gsl_matrix_get(pseudoInvA,k,j));
+                }
+            }
+            */
+            
+            printf("pseudoInvA:\n");
+            for (size_t row=0; row<N; ++row) {
+                for (size_t col=0; col<M; ++col) {
+                    printf("%+.1e ",gsl_matrix_get(pseudoInvA,row,col));
+                }
+                printf("\n");
+            }
+                        
+            gsl_matrix * tmp_matrix = gsl_matrix_alloc(N,M);
+            
+            // first step: covariance_T = pseudoInvA * covariance_SH
+            gsl_blas_dgemm(CblasNoTrans,CblasNoTrans,1.0,pseudoInvA,&pds_covm_view.matrix,0.0,tmp_matrix);
+            //
+            // second step: covariance_T = covariance_T * pseudoInvA_transposed
+            gsl_blas_dgemm(CblasNoTrans,CblasTrans,1.0,tmp_matrix,pseudoInvA,0.0,covariance_T);
+            
+            // test only
+            /*
+            if (1) {
+                gsl_matrix * tmp_matrix = gsl_matrix_alloc(N,N);
+                gsl_blas_dgemm(CblasNoTrans,CblasTrans,1.0,pseudoInvA,pseudoInvA,0.0,tmp_matrix);
+                printf("tmp_matrix:\n");
+                for (size_t row=0; row<N; ++row) {
+                    for (size_t col=0; col<N; ++col) {
+                        printf("%+.1e ",gsl_matrix_get(tmp_matrix,row,col));
+                    }
+                    printf("\n");
+                }
+            }
+            */
+            
+            printf("tmp_matrix:\n");
+            for (size_t row=0; row<N; ++row) {
+                for (size_t col=0; col<M; ++col) {
+                    printf("%+.1e ",gsl_matrix_get(tmp_matrix,row,col));
+                }
+                printf("\n");
+            }
+            
+            
+            // here can work with covariance_T
+            
+            // gsl_matrix_fprintf(stdout,covariance_T,"%g");
+            
+            printf("covariance_T:\n");
+            for (size_t row=0; row<N; ++row) {
+                for (size_t col=0; col<N; ++col) {
+                    printf("%+.1e ",gsl_matrix_get(covariance_T,row,col));
+                }
+                printf("\n");
+            }
+            
+             
+            /* 
+            // this is for the principal components...
+            gsl_eigen_symmv_workspace * wT = gsl_eigen_symmv_alloc(N); // workspace for eigenvectors/values
+            gsl_vector * eval = gsl_vector_alloc(N);   // eigenvalues
+            gsl_matrix * evec = gsl_matrix_alloc(N,N); // eigenvectors
+            //
+            // gsl_eigen_symmv(pds_covm, eval, evec, w); // NOTE: The diagonal and lower triangular part of A are destroyed during the computation
+            gsl_eigen_symmv(covariance_T, eval, evec, wT); // NOTE: The diagonal and lower triangular part of A are destroyed during the computation
+            //
+            double sigmaT[M];
+            for (size_t i=0; i<N; ++i) {
+                // ORSA_DEBUG("eval[%i] = %g",i,gsl_vector_get(eval,i));
+                if (gsl_vector_get(eval,i) == 0.0) {
+                    ORSA_ERROR("problems with the covariance matrix: null eigenvalue found.");
+                }
+                sigmaT[i] = sqrt(fabs(gsl_vector_get(eval,i)));
+                ORSA_DEBUG("sigmaT[%i] = %g",i,sigmaT[i]);
+            }
+            */
+            
+            for (size_t i=0; i<N; ++i) {
+                ORSA_DEBUG("sigmaT[%i] = %g",i,sqrt(gsl_matrix_get(covariance_T,i,i)));
+            }
+            
+            if (0) {
+                // output to special CCMDF...
+                
+                CubicChebyshevMassDistribution::CoefficientType coeff;
+                CubicChebyshevMassDistribution::resize(coeff,T_degree); 
+
+                for (unsigned int i=0; i<=T_degree; ++i) {
+                    for (unsigned int j=0; j<=T_degree-i; ++j) {
+                        for (unsigned int k=0; k<=T_degree-i-j; ++k) {
+                            if (i+j+k<=T_degree) {
+                                const size_t index = CubicChebyshevMassDistribution::index(i,j,k);
+                                // coeff[i][j][k] = gsl_vector_get(cT,index);
+                                ORSA_DEBUG("N: %i index: %i  ijk: %i %i %i",N,index,i,j,k);
+                                coeff[i][j][k] = sqrt(gsl_matrix_get(covariance_T,index,index)); // the sigma values from above, right?
+                            }
+                        }            
+                    }
+                }
+                
+                osg::ref_ptr<CubicChebyshevMassDistribution> massDistribution = new CubicChebyshevMassDistribution(coeff,plateModelR0,0);
+                
+                // need one rv here, there's another one later...
+                std::vector<orsa::Vector> rv;
+                //
+                {
+                    const bool storeSamplePoints = false; // saving the points in rv
+                    osg::ref_ptr<orsa::RandomPointsInShape> randomPointsInShape =
+                        new orsa::RandomPointsInShape(shapeModel,
+                                                      0,
+                                                      numSamplePoints,
+                                                      storeSamplePoints);
+                    orsa::Vector v;
+                    randomPointsInShape->reset();
+                    while (randomPointsInShape->get(v)) {
+                        rv.push_back(v);
+                    }
+                }
+                
+                osg::ref_ptr< orsa::Statistic<double> > stat = new orsa::Statistic<double>;
+                orsa::Cache<double> minDensity, maxDensity;
+                std::vector<double> dv;
+                dv.resize(rv.size());
+                for (size_t k=0; k<rv.size(); ++k) {
+                    dv[k] = massDistribution->ALT_density(rv[k]);
+                    stat->insert(dv[k]);
+                    minDensity.setIfSmaller(dv[k]);
+                    maxDensity.setIfLarger(dv[k]);
+                }
+                // const double minDensity = stat->min();
+                // const double maxDensity = stat->max();
+                const double averageSampledDensity = stat->average(); // can differ a bit from nominal average density
+                const double  stddevSampledDensity = stat->standardDeviation();
+                
+                CubicChebyshevMassDistributionFile::CCMDF_data data;
+                data.minDensity   = minDensity;
+                data.maxDensity   = maxDensity;
+                data.deltaDensity = averageSampledDensity;
+                data.penalty      =  stddevSampledDensity*0.001; // factor to offset original CCMDF units when read/write is called...
+                data.R0           = plateModelR0;
+                data.SH_degree    = SH_degree;
+                data.coeff        = coeff;
+                data.layerData    = 0; // massDistribution->layerData.get();
+                //
+                CubicChebyshevMassDistributionFile::write(data,"ALT_CCMDF.out");
+                // CubicChebyshevMassDistributionFile::append(data,"ALT_CCMDF.out");
+            }
+            
+            // free some matrices...
+            gsl_matrix_free(covariance_T);
+            gsl_matrix_free(pds_covm);
+        }
+        
+        // for (size_t gen=0; gen<100; ++gen) {
+        // while (1) {
         {
             
             std::vector< std::vector<mpf_class> > layerData_norm_C;
@@ -1184,10 +1376,18 @@ int main(int argc, char **argv) {
             }
             
             for (size_t i=0; i<M; ++i) {
+                // gsl_vector_set(sampleCoeff_x,i,0.0); // no sampling, for testing...
                 gsl_vector_set(sampleCoeff_x,i,orsa::GlobalRNG::instance()->rng()->gsl_ran_gaussian(sigma[i]));
             }
+            // force values x CM.... correct?
+            gsl_vector_set(sampleCoeff_x,1,(sampled_CM.getZ()-CM_z)/plateModelR0);
+            gsl_vector_set(sampleCoeff_x,2,(sampled_CM.getX()-CM_x)/plateModelR0);
+            gsl_vector_set(sampleCoeff_x,3,(sampled_CM.getY()-CM_y)/plateModelR0);
             //
             gsl_blas_dgemv(CblasNoTrans,1.0,evec,sampleCoeff_x,0.0,sampleCoeff_y);
+            //
+            // chisq stuff
+            double chisq=0.0;
             //
             for (size_t i=0; i<M; ++i) {
                 
@@ -1231,9 +1431,9 @@ int main(int argc, char **argv) {
                 }
                 // choose here if sampling or using nominal value
                 // nominal (no covariance sampling)
-                const double sampled_coeff = gsl_vector_get(pds_coeff,i) - layer_coeff;
+                // const double sampled_coeff = gsl_vector_get(pds_coeff,i) - layer_coeff;
                 // use covariance sampling
-                // const double sampled_coeff = gsl_vector_get(pds_coeff,i) - layer_coeff + gsl_vector_get(sampleCoeff_y,i);
+                const double sampled_coeff = gsl_vector_get(pds_coeff,i) - (*layer_coeff) + gsl_vector_get(sampleCoeff_y,i);
                 
                 
                 // gsl_vector_set(sampleCoeff_y,i,sampled_coeff);
@@ -1244,6 +1444,10 @@ int main(int argc, char **argv) {
                 // get again pds_covm because old one has been destroyed by the call to gsl_eigen_symmv
                 gsl_matrix * pds_covm  = mod_gravityData_getCovarianceMatrix(gravityData.get());
                 
+                const double delta_i = gsl_vector_get(sh,i)+(*layer_coeff)-mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),i));
+                const double sigma_i = sqrt(gsl_matrix_get(pds_covm,i,i));
+                chisq += orsa::square(delta_i/sigma_i);
+                
                 ORSA_DEBUG("%7s = %12.6g [sampled] = %12.6g [layers] + %12.6g   nominal: %+12.6g   delta: %+12.6g   sigma: %12.6g",
                            mod_gravityData_key(gravityData.get(),i).toStdString().c_str(),
                            gsl_vector_get(sh,i)+(*layer_coeff),
@@ -1252,9 +1456,27 @@ int main(int argc, char **argv) {
                            mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),i)),
                            gsl_vector_get(sh,i)+(*layer_coeff)-mod_gravityData_getCoeff(gravityData.get(),mod_gravityData_key(gravityData.get(),i)),
                            sqrt(gsl_matrix_get(pds_covm,i,i)));
-                
+                           
                 gsl_matrix_free(pds_covm);
             }
+            
+            /*
+            if (1) {
+                // testing only
+                ORSA_DEBUG("writing [test_sh.out]...");
+                FILE * fp = fopen("test_sh.out","a");
+                for (size_t i=0; i<M; ++i) {
+                    fprintf(fp,"%g ",gsl_vector_get(sh,i));
+                }
+                fprintf(fp,"\n");
+                fclose(fp);
+            }
+            */
+            
+            // chisq stuff
+            const int chisq_DOF = M;
+            const double chisq_P = gsl_cdf_chisq_P(chisq,chisq_DOF);
+            ORSA_DEBUG("chisq: %g   chisq/DOF: %g   DOF: %i   CL: %g",chisq,chisq/chisq_DOF,chisq_DOF,chisq_P);
             
             // solving here!
             gsl_blas_dgemv(CblasNoTrans,1.0,pseudoInvA,sh,0.0,cT);
@@ -1267,13 +1489,22 @@ int main(int argc, char **argv) {
                     ORSA_DEBUG("cT0[%i] = %g",s,gsl_vector_get(cT0,s));
                 }
             }
-
+            
+            if (1) {
+                printf("cT0: ");
+                for (size_t s=0; s<N; ++s) {
+                    printf(" %+10.3f",gsl_vector_get(cT0,s));
+                }
+                printf("\n");
+                fflush(stdout);
+            }
+            
             if (0) {
                 for (size_t s=0; s<N; ++s) {
                     ORSA_DEBUG("cT0[%i] = %12.6f * bulkDensity",s,gsl_vector_get(cT0,s)/bulkDensity);
                 }
             }
-            
+                        
             if (1) {
                 
                 // trying simulated annealing approach
@@ -1365,6 +1596,9 @@ int main(int argc, char **argv) {
                 x0.shapeModel = shapeModel;
                 x0.si = si;
                 x0.sampled_CM = sampled_CM;
+                x0.chisq      = chisq;
+                x0.chisq_DOF  = chisq_DOF;
+                x0.chisq_P    = chisq_P;
                 
                 // fix value of x0.factor[]  
                 
@@ -1434,6 +1668,19 @@ int main(int argc, char **argv) {
             
         }
     }
+    
+    // cleanup...
+    char cmd[4096];
+    // CCMDF...
+    sprintf(cmd,"cat %s | sort -g -k4 -r | tail -n1 > %s.best",CCMDF_output_filename.c_str(),CCMDF_output_filename.c_str());
+    system(cmd);
+    //
+    // sprintf(cmd,"cat %s.best >> CCMDF_best.out",CCMDF_output_filename.c_str());
+    // system(cmd);
+    //
+    // .cT....
+    sprintf(cmd,"rm %s",db_name);
+    system(cmd);
     
     // free GSL stuff
     gsl_vector_free(pds_coeff);

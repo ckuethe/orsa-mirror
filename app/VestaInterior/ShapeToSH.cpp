@@ -5,9 +5,7 @@
 #include <orsa/util.h>
 #include <orsa/statistic.h>
 
-#include "vesta.h"
-#include "gaskell.h"
-#include "eros_shape.h"
+#include "shape.h"
 
 #include <gsl/gsl_sf_legendre.h>
 
@@ -82,26 +80,13 @@ int main(int argc, char **argv) {
     const double epsabs     = orsa::FromUnits(fabs(atof(argv[4])),orsa::Unit::KM);
     const double epsrel     = fabs(atof(argv[5]));
     
-    osg::ref_ptr<GaskellPlateModel> shapeModel = new GaskellPlateModel;
-    if (!shapeModel->read(inputFile)) {
-        ORSA_ERROR("problems encountered while reading shape file...");
-        exit(0);
+    
+    osg::ref_ptr<InputShape> shapeModel = new InputShape;
+       if (!shapeModel->read(inputFile)) {
+       ORSA_ERROR("problems encountered while reading shape file...");
+       exit(0);
     }
-    
-    /* osg::ref_ptr<VestaShape> shapeModel = new VestaShape;
-       if (!shapeModel->read(inputFile)) {
-       ORSA_ERROR("problems encountered while reading shape file...");
-       exit(0);
-       }
-    */
-    
-    /* osg::ref_ptr<ErosShape> shapeModel = new ErosShape;
-       if (!shapeModel->read(inputFile)) {
-       ORSA_ERROR("problems encountered while reading shape file...");
-       exit(0);
-       }
-    */
-    
+        
     /*
     osg::ref_ptr<GaskellPlateModel> shapeModel = new GaskellPlateModel;
     if (!shapeModel->read(inputFile)) {

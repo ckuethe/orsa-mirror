@@ -1,5 +1,5 @@
-#ifndef _VESTA_INTERIOR_ANALYTIC_H_
-#define _VESTA_INTERIOR_ANALYTIC_H_
+#ifndef _VESTA_INTERIOR_UNCONSTRAINED_H_
+#define _VESTA_INTERIOR_UNCONSTRAINED_H_
 
 #include <orsa/util.h>
 #include <orsa/statistic.h>
@@ -23,10 +23,10 @@ template <typename T> std::vector< std::vector< std::vector< std::vector<size_t>
 // GSL Simulated Annealing
 
 /* how many points do we try before stepping */      
-#define N_TRIES 100 // 100 // 200             
+#define N_TRIES 100 // 100 // 100 // 200             
 
 /* how many iterations for each T? */
-#define ITERS_FIXED_T 100 // 200 // 100 // 1000 // 
+#define ITERS_FIXED_T 100 // 100 // 200 // 100 // 1000 // 
 
 /* max step size in random walk */
 #define STEP_SIZE 1.0 // 50.0 // 1000.0
@@ -36,12 +36,12 @@ template <typename T> std::vector< std::vector< std::vector< std::vector<size_t>
 
 /* initial temperature */
 // #define T_INITIAL 0.008     
-#define T_INITIAL 0.001
+#define T_INITIAL 0.010 // 0.050
 
 /* damping factor for temperature */
-#warning no damping??
-#define MU_T 1.000 // 1.001 // 1.000 // 1.010 // 1.003      
-#define T_MIN 1.0e-5 // 2.0e-6
+// #warning no damping??
+#define MU_T 1.001 // 1.003 // 1.010 // 1.001 // 1.000 // 1.010 // 1.003      
+#define T_MIN 1.0e-9 // 1.0e-6 // 2.0e-6 // 1.0e-5 // 2.0e-6
 
 gsl_siman_params_t params  = {N_TRIES, ITERS_FIXED_T, STEP_SIZE,
                               K, T_INITIAL, MU_T, T_MIN};
@@ -74,6 +74,10 @@ public:
     osg::ref_ptr<orsa::Shape> shapeModel;
     osg::ref_ptr< SimplexIntegration<mpfr::mpreal> > si;
     orsa::Cache<orsa::Vector> sampled_CM;
+    //
+    orsa::Cache<double> chisq;
+    orsa::Cache<int>    chisq_DOF;
+    orsa::Cache<double> chisq_P;
 };
 
 
@@ -106,6 +110,9 @@ void SIMAN_copy (void * source, void * dest) {
     d->shapeModel          = s->shapeModel;
     d->si                  = s->si;
     d->sampled_CM          = s->sampled_CM;
+    d->chisq               = s->chisq;
+    d->chisq_DOF           = s->chisq_DOF;
+    d->chisq_P             = s->chisq_P;
 }
 
 void * SIMAN_copy_construct (void * xp) {
@@ -124,6 +131,13 @@ std::string penalty_string_util(const std::string & type,
                                 const double & val) {
     char line[4096];
     gmp_sprintf(line,"%s %+.6f",type.c_str(),val);
+    return line;
+}
+
+std::string penalty_string_util(const std::string & type,
+                                const int & val) {
+    char line[4096];
+    gmp_sprintf(line,"%s %i",type.c_str(),val);
     return line;
 }
 
@@ -249,7 +263,8 @@ double E1(void * xp) {
     }
     // const double minDensity = stat->min();
     // const double maxDensity = stat->max();
-    const double averageSampledDensity = stat->average(); // can differ a bit from nominal average density
+    const double           averageSampledDensity = stat->average(); // can differ a bit from nominal average density
+    const double standardDeviationSampledDensity = stat->standardDeviation();
     
     // sample rotation values
     const double rotation_period = x->min_rotation_period + (x->max_rotation_period - x->min_rotation_period)*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
@@ -269,6 +284,10 @@ double E1(void * xp) {
     pv.push_back(penalty_string_util("TROT",orsa::FromUnits(rotation_period,orsa::Unit::HOUR,-1)));
     pv.push_back(penalty_string_util("TILT",orsa::radToDeg()*tilt));
     pv.push_back(penalty_string_util("AZIM",orsa::radToDeg()*azim));
+    
+    pv.push_back(penalty_string_util("CHISQ",x->chisq));
+    pv.push_back(penalty_string_util("CHISQ_DOF",x->chisq_DOF));
+    pv.push_back(penalty_string_util("CHISQ_P",x->chisq_P));
     
     // condensed all variants here below...
     /*
@@ -292,7 +311,7 @@ double E1(void * xp) {
         
         // target: low penalty value...
         
-        if (1) {
+        if (0) {
             // target: no low-density "holes"
             double delta_penalty = 0.0;
             size_t entries=0;
@@ -551,13 +570,101 @@ double E1(void * xp) {
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: no low-density \"holes\"]",delta_penalty);
         }
         
-        if (1) {
+        if (0) {
             // target: closest to uniform (simple)
             const double delta_penalty = (maxDensity-minDensity)/x->bulkDensity;
             penalty += delta_penalty;
             pv.push_back(penalty_string_util("MINDR",delta_penalty));
             if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: closest to uniform (simple)]",delta_penalty);
         }
+        
+        if (1) {
+            // similar to MINDR but using standard deviation instead of range
+            // const double delta_penalty = standardDeviationSampledDensity/x->bulkDensity;
+            const double delta_penalty = standardDeviationSampledDensity/averageSampledDensity;
+            // const double delta_penalty = standardDeviationSampledDensity;
+            penalty += delta_penalty;
+            pv.push_back(penalty_string_util("STDDEV_OVER_MU",delta_penalty));
+            // pv.push_back(penalty_string_util("STDDEV",delta_penalty));
+            if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: closest to uniform (stddev)]",delta_penalty);
+        }
+        
+        if (0) {
+            // center lighter than surface...
+            double delta_penalty=0.0;
+            for (size_t k=0; k<dv.size(); ++k) {
+                // pick one...
+                //
+                // delta_penalty -= (dv[k]/averageSampledDensity)*(x->rv[k].length()/x->R0_plate); // proportional to r
+                delta_penalty -= (dv[k]/averageSampledDensity)*orsa::square(x->rv[k].length()/x->R0_plate); // proportional to r
+                //
+                // orsa::Vector & r = x->rv[k];
+                // delta_penalty -= (dv[k]/averageSampledDensity)*(sqrt(orsa::square(r.getX())+orsa::square(r.getY()))/x->R0_plate); // proportional to sqrt(x^2+y^2)   
+            }
+            delta_penalty /= dv.size();
+            delta_penalty *= 10.0; // relative weight...
+            //
+            penalty += delta_penalty;
+            pv.push_back(penalty_string_util("LIGHT_CENTER",delta_penalty));
+            if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: light center]",delta_penalty);
+        }
+        
+        if (0) {
+            // lighter equatorial toroid...
+            double delta_penalty=0.0;
+            for (size_t k=0; k<dv.size(); ++k) {
+                // pick one...
+                //
+                // delta_penalty -= (dv[k]/averageSampledDensity)*(x->rv[k].length()/x->R0_plate); // proportional to r
+                //
+                orsa::Vector & r = x->rv[k];
+                // delta_penalty -= (dv[k]/averageSampledDensity)*fabs(r.getZ()/x->R0_plate);
+                delta_penalty -= (dv[k]/averageSampledDensity)*orsa::square(r.getZ()/x->R0_plate); // <<<<<<<<<<
+                // delta_penalty -= (dv[k]/averageSampledDensity)*(orsa::square(r.getZ())-orsa::square(r.getX())-orsa::square(r.getY()))/orsa::square(x->R0_plate); // no...
+            }
+            delta_penalty /= dv.size();
+            delta_penalty *= 100.0; // relative weight...
+            //
+            penalty += delta_penalty;
+            pv.push_back(penalty_string_util("LIGHT_EQUATORIAL_TOROID",delta_penalty));
+            if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: light center]",delta_penalty);
+        }
+        
+        if (0) {
+            // work in progress...
+            double delta_penalty=0.0;
+            //
+            for (size_t k=0; k<dv.size(); ++k) {
+                // pick one...
+                //
+                // delta_penalty -= (dv[k]/averageSampledDensity)*(x->rv[k].length()/x->R0_plate); // proportional to r
+                //
+                orsa::Vector & r = x->rv[k];
+                // v1
+                /*
+                if (fabs(r.getZ())<orsa::FromUnits(0.1,orsa::Unit::KM)) {
+                    delta_penalty += (dv[k]/averageSampledDensity);
+                }
+                */
+                // v2
+                /*
+                if (fabs(r.getZ())<orsa::FromUnits(0.1,orsa::Unit::KM) && (r.length()<orsa::FromUnits(0.1,orsa::Unit::KM) || r.length()>orsa::FromUnits(0.2,orsa::Unit::KM))) {
+                    delta_penalty += (dv[k]/averageSampledDensity);
+                }
+                */
+                // v3
+                if (r.length()<orsa::FromUnits(0.1,orsa::Unit::KM) || (fabs(r.getZ())<orsa::FromUnits(0.1,orsa::Unit::KM) && r.length()>orsa::FromUnits(0.2,orsa::Unit::KM))) {
+                    delta_penalty += (dv[k]/averageSampledDensity);
+                }
+            }
+            delta_penalty /= dv.size();
+            delta_penalty *= 100.0; // relative weight...
+            //
+            penalty += delta_penalty;
+            pv.push_back(penalty_string_util("WORK_IN_PROGRESS",delta_penalty));
+            if (verbose) ORSA_DEBUG("delta penalty: %+10.6f   [target: light center]",delta_penalty);
+        }
+        
         
         if (0) {
             // target: highest single density peak
@@ -643,16 +750,23 @@ double E1(void * xp) {
     }
     // ORSA_DEBUG("pvline: [%s]",pvline);
     
-    ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3]   penalty: %+10.6f [%s]",
+    ORSA_DEBUG("[density] min: %+6.2f max: %+6.2f avg: %+6.2f [g/cm^3] stddev: %+6.2f [g/cm^3]   penalty: %+10.6f [%s]",
                orsa::FromUnits(orsa::FromUnits(minDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
                orsa::FromUnits(orsa::FromUnits(maxDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
                orsa::FromUnits(orsa::FromUnits(averageSampledDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
+               orsa::FromUnits(orsa::FromUnits(standardDeviationSampledDensity,orsa::Unit::GRAM,-1),orsa::Unit::CM,3),
                penalty,
                pvline);
     
+    static double best_penalty=1e10;
+    
     if ( (minDensity >= x->minimumDensity) &&
          (maxDensity <= x->maximumDensity) &&
-         (penalty <= x->penaltyThreshold) ) {
+         (penalty <= x->penaltyThreshold) &&
+         (penalty < best_penalty) ) {
+             
+             best_penalty=penalty;
+             
         // another quick output...
 #warning pass filename as parameter...
         CubicChebyshevMassDistributionFile::CCMDF_data data;
@@ -729,4 +843,4 @@ void P1(void *) {
 
 
 
-#endif // _VESTA_INTERIOR_ANALYTIC_H_
+#endif // _VESTA_INTERIOR_UNCONSTRAINED_H_

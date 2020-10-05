@@ -11,6 +11,8 @@ SUBDIRS += SH2ijk.app.pro
 SUBDIRS += MD2G.app.pro
 SUBDIRS += MD2SH.app.pro
 SUBDIRS += VestaInteriorAnalytic.app.pro
+SUBDIRS += VestaInteriorAnalytic_EarlyMode.app.pro
+SUBDIRS += VestaInteriorUnconstrained.app.pro
 SUBDIRS += dump3D.app.pro
 SUBDIRS += slice_GMT.app.pro
 SUBDIRS += surface_GMT.app.pro
@@ -30,6 +32,6 @@ SUBDIRS += craterslope.app.pro
 SUBDIRS += dummyCCMDF.app.pro
 SUBDIRS += dummyGravityFile.app.pro
 SUBDIRS += gravityFromAsciiFile.app.pro
+SUBDIRS += gravityFromAsciiFileCovar.app.pro
 SUBDIRS += scanCCMDF.app.pro
 SUBDIRS += circlestatxyz.app.pro
-

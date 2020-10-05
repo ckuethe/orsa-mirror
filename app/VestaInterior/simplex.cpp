@@ -1,8 +1,9 @@
 #include "simplex.h"
 
-#include "vesta.h"
-#include "gaskell.h"
-#include "eros_shape.h"
+// #include "vesta.h"
+// #include "gaskell.h"
+// #include "eros_shape.h"
+#include "shape.h"
 
 #include "mpreal.h"
 
@@ -43,25 +44,11 @@ int main(int argc, char **argv) {
 	ORSA_DEBUG("SQLiteDBFileName: [%s]",SQLiteDBFileName.c_str());
     
     orsa::Debug::instance()->initTimer();
-        
-    /* osg::ref_ptr<VestaShape> shapeModel = new VestaShape;
+         
+    osg::ref_ptr<InputShape> shapeModel = new InputShape;
        if (!shapeModel->read(inputFile)) {
        ORSA_ERROR("problems encountered while reading shape file...");
        exit(0);
-       }
-    */
-    
-    /* osg::ref_ptr<ErosShape> shapeModel = new ErosShape;
-       if (!shapeModel->read(inputFile)) {
-       ORSA_ERROR("problems encountered while reading shape file...");
-       exit(0);
-       }
-    */
-    
-    osg::ref_ptr<GaskellPlateModel> shapeModel = new GaskellPlateModel;
-    if (!shapeModel->read(inputFile)) {
-        ORSA_ERROR("problems encountered while reading shape file...");
-        exit(0);
     }
     
     if (1) {

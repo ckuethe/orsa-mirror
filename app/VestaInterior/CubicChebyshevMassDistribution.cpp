@@ -147,6 +147,60 @@ double CubicChebyshevMassDistribution::density(const orsa::Vector & p) const {
     return density;
 }
 
+double CubicChebyshevMassDistribution::ALT_density(const orsa::Vector & p) const {
+    {
+        static int q=0;
+        if (q==0) ORSA_DEBUG("CubicChebyshevMassDistribution::ALT_density(...) called...");
+        q=1;
+    }
+    if (0) {
+        // debug
+        static size_t calls=0;
+        ++calls;
+        if (calls%1000==0) ORSA_DEBUG("calls: %i",calls);
+    }
+    // if (coeff.size() == 0) return 0.0;
+    if ( (coeff.size() == 0) &&
+         (layerData.get() == 0) ) {
+        return 0.0;
+    }
+    std::vector<double> Tx, Ty, Tz;
+    const double Tx_arg = p.getX()*oneOverR0;
+    const double Ty_arg = p.getY()*oneOverR0;
+    const double Tz_arg = p.getZ()*oneOverR0;
+    //
+    if ( (fabs(Tx_arg) > 1.0) ||
+         (fabs(Ty_arg) > 1.0) ||
+         (fabs(Tz_arg) > 1.0) ) {
+        ORSA_DEBUG("problem: R0 value too small");
+        // ORSA_DEBUG("problem: R0 value too small [%g %g %g] R0: %g",Tx_arg,Ty_arg,Tz_arg,1.0/oneOverR0);
+        // print(p);
+        exit(0);
+    }
+    //
+    const size_t T_degree = degree();
+    orsa::ChebyshevT(Tx,T_degree,Tx_arg);
+    orsa::ChebyshevT(Ty,T_degree,Ty_arg);
+    orsa::ChebyshevT(Tz,T_degree,Tz_arg);
+    double density = 0.0;
+    for (size_t i=0; i<=T_degree; ++i) {
+        for (size_t j=0; j<=T_degree-i; ++j) {
+            for (size_t k=0; k<=T_degree-i-j; ++k) {
+                // density += coeff[i][j][k]*Tx[i]*Ty[j]*Tz[k];
+                density += orsa::square(coeff[i][j][k]*Tx[i]*Ty[j]*Tz[k]);
+            }
+        }
+    }
+    density = sqrt(density);
+    // density *= densityScale;
+    
+    if (layerData.get() != 0) {
+        density += layerData->density(p);
+    }
+    
+    return density;
+}
+
 /***/
 
 
@@ -161,10 +215,12 @@ CubicChebyshevMassDistribution * CubicChebyshevMassDistributionDecomposition(con
                                                                              const LayerData * layerData,
                                                                              const bool & decompose_layerData) {
     
+    /*
     if (degree == 0) {
         ORSA_ERROR("degree has to be larger than zero");
         exit(0);
     }
+    */
     
     CubicChebyshevMassDistribution::CoefficientType coeff;
     CubicChebyshevMassDistribution::resize(coeff,degree);

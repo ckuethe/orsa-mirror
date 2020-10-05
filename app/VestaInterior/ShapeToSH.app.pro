@@ -23,5 +23,5 @@ DESTDIR     = .
 	#}
 
 
-HEADERS += vesta.h gaskell.h SH2ijk.h
+HEADERS += shape.h SH2ijk.h
 SOURCES += ShapeToSH.cpp

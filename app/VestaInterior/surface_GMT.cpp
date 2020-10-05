@@ -15,9 +15,7 @@
 #include "simplex.h"
 #include "CCMD2ijk.h"
 
-#include "vesta.h"
-#include "gaskell.h"
-#include "eros_shape.h"
+#include "shape.h"
 
 #include <libgen.h>
 
@@ -37,8 +35,8 @@ int main(int argc, char **argv) {
     }
     */
     //
-    if (argc != 9) {
-        printf("Usage: %s <plate-model-file> <R0_km> <CCMDF-file> <rotation-period-hours> <axis-tilt-deg> <axis-azimuth-deg> <num-sample-points> <epsAbs-km>\n",argv[0]);
+    if ((argc != 9) && (argc != 10)) {
+        printf("Usage: %s <plate-model-file> <R0_km> <CCMDF-file> <rotation-period-hours> <axis-tilt-deg> <axis-azimuth-deg> <num-sample-points> <epsAbs-km> [ref-potential-MKS]\n",argv[0]);
         exit(0);
     }
     
@@ -53,31 +51,19 @@ int main(int argc, char **argv) {
     const double rotation_azim   = orsa::degToRad()*atof(argv[6]);
     const int numSamplePoints = atoi(argv[7]);
     const double epsAbs = orsa::FromUnits(atof(argv[8]),orsa::Unit::KM);
+    const double ref_potential_input = (argc>=10) ? atof(argv[9]) : 0.0;
+    
+    const bool have_ref_potential = (argc>=10) ? true : false;
     
     if (plateModelR0 <= 0.0){
         ORSA_DEBUG("invalid input...");
         exit(0);
     }
     
-    /* osg::ref_ptr<VestaShape> shapeModel = new VestaShape;
+    osg::ref_ptr<InputShape> shapeModel = new InputShape;
        if (!shapeModel->read(plateModelFile)) {
        ORSA_ERROR("problems encountered while reading shape file...");
        exit(0);
-       }
-    */
-    
-    /* 
-       osg::ref_ptr<ErosShape> shapeModel = new ErosShape;
-       if (!shapeModel->read(plateModelFile)) {
-       ORSA_ERROR("problems encountered while reading shape file...");
-       exit(0);
-       }
-    */
-    
-    osg::ref_ptr<GaskellPlateModel> shapeModel = new GaskellPlateModel;
-    if (!shapeModel->read(plateModelFile)) {
-        ORSA_ERROR("problems encountered while reading shape file...");
-        exit(0);
     }
     
     const std::string SQLiteDBFileName = getSqliteDBFileName_simplex(plateModelFile,plateModelR0);
@@ -134,6 +120,9 @@ int main(int argc, char **argv) {
         }
         fclose(fp_ds);
     }
+    
+    // test...
+    exit(0);
     
     if (0) {
         // density at random depth
@@ -201,6 +190,28 @@ int main(int argc, char **argv) {
     ORSA_DEBUG("total mass: %g [kg]",orsa::FromUnits(totalMass,orsa::Unit::KG,-1));
     const double GM = orsa::Unit::G()*totalMass;
     
+    FILE * fp_surface_gravity_acceleration = fopen("surface_gravity_acceleration.xyz","w");
+    ORSA_DEBUG("writing file [surface_gravity_acceleration.xyz]...");
+    //
+    // value of gravity acceleration at sv; (magnitude only, not direction...)
+    std::vector<double> av;
+    av.resize(sv.size());
+    for (size_t j=0; j<sv.size(); ++j) {
+        av[j] = massClusterAcceleration(sv[j],GM,omega,rv,dv,vR2,vR3,epsAbs).length();
+        // output
+        const orsa::Vector & v = sv[j];
+        const double lat = asin(v.getZ()/v.length());
+        const double lon = fmod(orsa::twopi()+atan2(v.getY(),v.getX()),orsa::twopi());
+        //
+        fprintf(fp_surface_gravity_acceleration,"%g %g %g\n",lon*orsa::radToDeg(),lat*orsa::radToDeg(),av[j]);
+        fflush(fp_surface_gravity_acceleration);
+    }
+    //
+    fclose(fp_surface_gravity_acceleration);
+    
+    // test...
+    // exit(0);
+    
     // value of potential at sv; need this to compute average potential value to use as reference value for geoid
     std::vector<double> ps;
     ps.resize(sv.size());
@@ -210,9 +221,12 @@ int main(int argc, char **argv) {
         stat_ps->insert(ps[j]);
     }
     //
-    const double pRef = stat_ps->average();
-    ORSA_DEBUG("reference potential: %g [mks]",pRef);
+    const double pRef = (have_ref_potential) ? ref_potential_input : stat_ps->average();
+    ORSA_DEBUG("reference potential: %g [mks]   (average from surface: %g [mks])",pRef,stat_ps->average());
     
+    FILE * fp_surface_potential = fopen("surface_potential.xyz","w");
+    ORSA_DEBUG("writing file [surface_potential.xyz]...");
+    //
     FILE * fp_geoid = fopen("geoid.xyz","w");
     ORSA_DEBUG("writing file [geoid.xyz]...");
     //
@@ -224,12 +238,52 @@ int main(int argc, char **argv) {
     gv.resize(sv.size());
     for (size_t j=0; j<sv.size(); ++j) {
         // search (bisection) for point with potential pRef along sv[j];
-#warning could improve initial guess by using ps[j] above...
+        // #warning could improve initial guess by using ps[j] above...
         const orsa::Vector u = sv[j].normalized();
-        double lA = sv[j].length()*0.90;
+        bool found_A=false;
+        bool found_B=false;
+        double lA, pA, lB, pB;
+        double search_coeff=0.01;
+        do {
+            // double l=sv[j].length()*2.0*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform();
+            double l=sv[j].length()*(std::max(0.0,1.0-search_coeff)+2.0*search_coeff*orsa::GlobalRNG::instance()->rng()->gsl_rng_uniform());
+            double p=massClusterPotential(u*l,GM,omega,rv,dv,vR2,vR3);
+            if (p>=pRef) {
+                if (!found_A) {
+                    lA=l;
+                    pA=p;
+                    found_A=true;
+                } else {
+                    if (fabs(p-pRef)<fabs(pA-pRef)) {
+                        lA=l;
+                        pA=p;
+                    }
+                }
+            }
+            if (p<=pRef) {
+                if (!found_B) {
+                    lB=l;
+                    pB=p;
+                    found_B=true;
+                } else {
+                    if (fabs(p-pRef)<fabs(pB-pRef)) {
+                        lB=l;
+                        pB=p;
+                    }
+                }
+            }
+            search_coeff += 0.01;
+            if (search_coeff>2.0) {
+                ORSA_DEBUG("cannot find good starting points...");
+                exit(0);
+            }
+        } while ((found_A==false) || (found_B==false));
+        /*
+        double lA = sv[j].length()*0.50; // 0.90
         double pA = massClusterPotential(u*lA,GM,omega,rv,dv,vR2,vR3);
-        double lB = sv[j].length()*1.10;
+        double lB = sv[j].length()*1.10; // 1.10
         double pB = massClusterPotential(u*lB,GM,omega,rv,dv,vR2,vR3);
+        */
         bool converged=false;
         if ((pRef>=std::min(pA,pB)) && (pRef<=std::max(pA,pB))) {
             while (1) {
@@ -250,25 +304,42 @@ int main(int argc, char **argv) {
             ORSA_DEBUG("lA: %g pA: %g   lB: %g pB: %g   pRef: %g",lA/km,pA,lB/km,pB,pRef);
             exit(0);
         }
+        if ((pRef>=std::min(pA,pB)) && (pRef<=std::max(pA,pB))) {
+            // check again?
+        } else {
+            ORSA_DEBUG("problems... probably you need to increase initial guessed range in code, or use more sampling points...");
+            ORSA_DEBUG("lA: %g pA: %g   lB: %g pB: %g   pRef: %g",lA/km,pA,lB/km,pB,pRef);
+            exit(0);
+        }
+        //
         if (converged) {
             double lC = 0.5*(lA+lB);
             // double potential = massClusterPotential(u*lC,GM,OmegaSq,rv,dv,vR2,vR3);
             gv[j] = u*lC;
+            
+            {
+                // debug
+                // const double pC = massClusterPotential(u*lC,GM,omega,rv,dv,vR2,vR3);
+                // ORSA_DEBUG("l: %.3f p: %.6f   pRef: %.6f   delta-p: %+.6f",lC/km,pC,pRef,pC-pRef);
+            }
             
             // output
             const orsa::Vector & v = gv[j];
             const double lat = asin(v.getZ()/v.length());
             const double lon = fmod(orsa::twopi()+atan2(v.getY(),v.getX()),orsa::twopi());
             
+            fprintf(fp_surface_potential,"%g %g %g\n",lon*orsa::radToDeg(),lat*orsa::radToDeg(),ps[j]);
             fprintf(fp_geoid,"%g %g %g\n",lon*orsa::radToDeg(),lat*orsa::radToDeg(),(gv[j].length())/km);
             fprintf(fp_topo, "%g %g %g\n",lon*orsa::radToDeg(),lat*orsa::radToDeg(),(sv[j].length()-gv[j].length())/km);
+            fflush(fp_surface_potential);
             fflush(fp_geoid);
             fflush(fp_topo);
         }
     }
     //
+    fclose(fp_surface_potential);
     fclose(fp_geoid);
     fclose(fp_topo);
-       
+    
     return 0;
 }

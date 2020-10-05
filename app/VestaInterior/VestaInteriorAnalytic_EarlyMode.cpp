@@ -1,4 +1,4 @@
-#include "VestaInteriorAnalytic.h"
+#include "VestaInteriorAnalytic_EarlyMode.h"
 
 #include <orsa/chebyshev.h>
 #include <orsa/statistic.h>
@@ -65,9 +65,17 @@ unsigned int mod_gravityData_index(const orsaPDS::RadioScienceGravityData * grav
         index = 2;
     } else if (key == orsaPDS::RadioScienceGravityData::keyS(1,1)) {
         index = 3;
+    } else if (key == orsaPDS::RadioScienceGravityData::keyC(2,1)) {
+        index = 4;
+    } else if (key == orsaPDS::RadioScienceGravityData::keyS(2,1)) {
+        index = 5;
     } else if (key == "IzzMR2") {
+        ORSA_DEBUG("should not be here in EarlyMode...");
+        exit(0);
         index = get_IzzMR2_index();
     } else {
+        ORSA_DEBUG("should not be here in EarlyMode...");
+        exit(0);
         index = gravityData->index(key);
         if (index != 0) index += 3;
     }
@@ -85,9 +93,17 @@ QString mod_gravityData_key(const orsaPDS::RadioScienceGravityData * gravityData
         return orsaPDS::RadioScienceGravityData::keyC(1,1);        
     } else if (index == 3) {
         return orsaPDS::RadioScienceGravityData::keyS(1,1);
+    } else if (index == 4) {
+        return orsaPDS::RadioScienceGravityData::keyC(2,1);        
+    } else if (index == 5) {
+        return orsaPDS::RadioScienceGravityData::keyS(2,1);
     } else if (index == get_IzzMR2_index()) {
+        ORSA_DEBUG("should not be here in EarlyMode...");
+        exit(0);
         return "IzzMR2";
     } else {
+        ORSA_DEBUG("should not be here in EarlyMode...");
+        exit(0);
         return gravityData->key(index-3);
     }
 }
@@ -101,9 +117,17 @@ double mod_gravityData_getCoeff(const orsaPDS::RadioScienceGravityData * gravity
                 (key == orsaPDS::RadioScienceGravityData::keyC(1,1)) ||
                 (key == orsaPDS::RadioScienceGravityData::keyS(1,1)) ) {
         coeff = 0.0;
+    } else if ( (key == orsaPDS::RadioScienceGravityData::keyC(2,1)) ||  
+                (key == orsaPDS::RadioScienceGravityData::keyS(2,1)) ) {
+                    // EarlyMode
+        coeff = 0.0;
     } else if (key == "IzzMR2") {
+        ORSA_DEBUG("should not be here in EarlyMode...");
+        exit(0);
         coeff = get_IzzMR2();
     } else {
+        ORSA_DEBUG("should not be here in EarlyMode...");
+        exit(0);
         coeff = gravityData->getCoeff(key);
     }
     return coeff;
@@ -116,9 +140,13 @@ double mod_gravityData_getCoeff(const orsaPDS::RadioScienceGravityData * gravity
 
 unsigned int mod_gravityData_numberOfCoefficients(const orsaPDS::RadioScienceGravityData * gravityData) {
     // return (gravityData->numberOfCoefficients + 3 + (have_IzzMR2() ? 1 : 0));
+    /*
     unsigned int retVal = gravityData->numberOfCoefficients + 3;
     if (get_IzzMR2_index()==retVal) ++retVal;
     return retVal;
+    */
+    // EarlyMode
+    return 6;
 }
 
 gsl_vector * mod_gravityData_getCoefficientVector(const orsaPDS::RadioScienceGravityData * gravityData) {
@@ -128,12 +156,18 @@ gsl_vector * mod_gravityData_getCoefficientVector(const orsaPDS::RadioScienceGra
         if (k==0) {
             // gsl_vector_set(mod_mu,k,gsl_vector_get(mu,k));
             gsl_vector_set(mod_mu,k,1.0);
-        } else if ( (k==1) || (k==2) || (k==3) ) {
+        } else if ( (k==1) || (k==2) || (k==3) || (k==4) || (k==5) ) {
             gsl_vector_set(mod_mu,k,0.0);
         } else if (k == get_IzzMR2_index()) {
+            ORSA_DEBUG("should not be here in EarlyMode...");
+            exit(0);
             gsl_vector_set(mod_mu,k,get_IzzMR2());
         } else {
-            gsl_vector_set(mod_mu,k,gsl_vector_get(mu,k-3));
+            // gsl_vector_set(mod_mu,k,gsl_vector_get(mu,k-3));
+            // EarlyMode
+            ORSA_DEBUG("should not be here in EarlyMode...");
+            exit(0);
+            gsl_vector_set(mod_mu,k,0.0);
         }
     }
     gsl_vector_free(mu);
@@ -144,7 +178,8 @@ gsl_matrix * mod_gravityData_getCovarianceMatrix(const orsaPDS::RadioScienceGrav
     gsl_matrix * covm = gravityData->getCovarianceMatrix();
     gsl_matrix * mod_covm = gsl_matrix_alloc(mod_gravityData_numberOfCoefficients(gravityData),
                                              mod_gravityData_numberOfCoefficients(gravityData));
-    for (unsigned int l=0; l<mod_gravityData_numberOfCoefficients(gravityData); ++l) {
+    /*
+                                             for (unsigned int l=0; l<mod_gravityData_numberOfCoefficients(gravityData); ++l) {
         for (unsigned int m=0; m<mod_gravityData_numberOfCoefficients(gravityData); ++m) { 
             if ((l==0) && (m==0)) {
                 // gsl_matrix_set(mod_covm,l,m,gsl_matrix_get(covm,l,m));
@@ -161,6 +196,13 @@ gsl_matrix * mod_gravityData_getCovarianceMatrix(const orsaPDS::RadioScienceGrav
             }
         }
     }
+                                             */
+    // EarlyMode
+    for (unsigned int j=0; j<mod_gravityData_numberOfCoefficients(gravityData); ++j) {
+        for (unsigned int k=0; k<mod_gravityData_numberOfCoefficients(gravityData); ++k) { 
+            gsl_matrix_set(mod_covm,j,k,0.0);
+        }
+    }
     gsl_matrix_free(covm);
     return mod_covm;   
 }
@@ -169,7 +211,8 @@ gsl_matrix * mod_gravityData_getInverseCovarianceMatrix(const orsaPDS::RadioScie
     gsl_matrix * inv_covm = gravityData->getInverseCovarianceMatrix();
     gsl_matrix * mod_inv_covm = gsl_matrix_alloc(mod_gravityData_numberOfCoefficients(gravityData),
                                              mod_gravityData_numberOfCoefficients(gravityData));
-    for (unsigned int l=0; l<mod_gravityData_numberOfCoefficients(gravityData); ++l) {
+    /*
+                                             for (unsigned int l=0; l<mod_gravityData_numberOfCoefficients(gravityData); ++l) {
         for (unsigned int m=0; m<mod_gravityData_numberOfCoefficients(gravityData); ++m) { 
             if ((l==0) && (m==0)) {
                 // gsl_matrix_set(mod_inv_covm,l,m,gsl_matrix_get(inv_covm,l,m));
@@ -186,13 +229,22 @@ gsl_matrix * mod_gravityData_getInverseCovarianceMatrix(const orsaPDS::RadioScie
             }
         }
     }
+                                             */
+                                             
+    //
+    // EarlyMode
+    for (unsigned int j=0; j<mod_gravityData_numberOfCoefficients(gravityData); ++j) {
+        for (unsigned int k=0; k<mod_gravityData_numberOfCoefficients(gravityData); ++k) { 
+            gsl_matrix_set(mod_inv_covm,j,k,0.0);
+        }
+    }
+                                             
     return mod_inv_covm;   
 }
 
 /**********/
 
-
-
+// EarlyMode = using as input only GM and C00=1, and C10=C11=S11=0 (center of mass = center of figure), and C21=S21=0 (rotation axis = z axis)
 
 int main(int argc, char **argv) {
     
@@ -438,7 +490,7 @@ int main(int argc, char **argv) {
        ORSA_ERROR("problems encountered while reading shape file...");
        exit(0);
     }
-           
+    
     osg::ref_ptr<SimplexIntegration<F> > si = new SimplexIntegration<F>(shapeModel.get(), plateModelR0, SQLiteDBFileName);
     si->reserve(polynomialDegree);
     
@@ -446,8 +498,12 @@ int main(int argc, char **argv) {
     const size_t  T_degree = polynomialDegree; // chebyshev polynomials degree
     
     // const size_t SH_size = (SH_degree+1)*(SH_degree+1);
-    const size_t  SH_size = (SH_degree+1)*(SH_degree+1) + (have_IzzMR2() ? 1 : 0);
-    const size_t   T_size = CubicChebyshevMassDistribution::totalSize(T_degree);
+    // const size_t  SH_size = (SH_degree+1)*(SH_degree+1) + (have_IzzMR2() ? 1 : 0);
+    // const size_t   T_size = CubicChebyshevMassDistribution::totalSize(T_degree);
+    //
+    // EarlyMode
+    const size_t SH_size = 6; 
+    const size_t  T_size = CubicChebyshevMassDistribution::totalSize(T_degree);
     
     IzzMR2_index = (have_IzzMR2() ? SH_size-1 : -1); // global
     
@@ -515,7 +571,7 @@ int main(int argc, char **argv) {
         char arg_of_basename[4096];
         strcpy(arg_of_dirname,SQLiteDBFileName.c_str());
         strcpy(arg_of_basename,SQLiteDBFileName.c_str());
-        gmp_sprintf(db_name,"%s/.cT2sh_CM_%.12g_%.12g_%.12g%s",
+        gmp_sprintf(db_name,"%s/.cT2sh_EarlyMode_CM_%.12g_%.12g_%.12g%s",
                     dirname(arg_of_dirname),
                     CMx_over_plateModelR0,
                     CMy_over_plateModelR0,
@@ -556,6 +612,9 @@ int main(int argc, char **argv) {
         const double radiusCorrectionFactor = orsa::int_pow(radiusCorrectionRatio,l);
         for (size_t m=0; m<=l; ++m) {
             
+            // EarlyMode
+            if (l==2 && m!=1) continue;
+            
             ORSA_DEBUG("l=%i   m=%i",l,m);
             
             const orsa::triIndex_mpq C_tri_integral = orsa::conversionCoefficients_C_integral(l,m);
@@ -571,7 +630,7 @@ int main(int argc, char **argv) {
             const size_t z_C = mod_gravityData_index(gravityData.get(),orsaPDS::RadioScienceGravityData::keyC(l,m));
             const size_t z_S = (m==0) ? 0 : mod_gravityData_index(gravityData.get(),orsaPDS::RadioScienceGravityData::keyS(l,m));
             
-            // ORSA_DEBUG("l=%i m=%i z_C=%i z_S=%i",l,m,z_C,z_S);
+            ORSA_DEBUG("l=%i m=%i z_C=%i z_S=%i",l,m,z_C,z_S);
             
             {
                 // begin transaction

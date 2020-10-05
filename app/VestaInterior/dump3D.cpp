@@ -13,8 +13,7 @@
 #include "CubicChebyshevMassDistribution.h"
 #include "simplex.h"
 
-#include "vesta.h"
-#include "gaskell.h"
+#include "shape.h"
 
 // #include "dislin.h"
 
@@ -41,12 +40,12 @@ int main(int argc, char **argv) {
     // safer over NFS
     // sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
     
-    osg::ref_ptr<GaskellPlateModel> shapeModel = new GaskellPlateModel;
-    if (!shapeModel->read(plateModelFile)) {
-        ORSA_ERROR("problems encountered while reading shape file...");
-        exit(0);
+    osg::ref_ptr<InputShape> shapeModel = new InputShape;
+       if (!shapeModel->read(plateModelFile)) {
+       ORSA_ERROR("problems encountered while reading shape file...");
+       exit(0);
     }
-    
+        
     CubicChebyshevMassDistributionFile::DataContainer CCMDF;
     CubicChebyshevMassDistributionFile::read(CCMDF,CCMDF_filename,1e12);
     if (CCMDF.size() == 0) exit(0);
@@ -147,10 +146,8 @@ int main(int argc, char **argv) {
                                      orsa::FromUnits(z,orsa::Unit::KM));
                 
                 if (shapeModel->isInside(v)) {
-                    fprintf(fp,"%g %g %g %g\n",
-                            x,y,z,
-                            orsa::FromUnits(orsa::FromUnits(md->density(v),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
-                    // orsa::FromUnits(v.length(),orsa::Unit::KM,-1));
+                    fprintf(fp,"%g %g %g %g\n",x,y,z,orsa::FromUnits(orsa::FromUnits(md->density(v),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+                    fflush(fp);
                 }
                 
                 z += z_step;

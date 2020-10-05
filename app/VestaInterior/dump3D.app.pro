@@ -23,7 +23,7 @@ DESTDIR     = .
 LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaEssentialOSG -lorsaSolarSystem -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads -lqd -lsqlite3 -lcrypto -lssl -lgmp -lmpfr
 
 
-HEADERS += CubicChebyshevMassDistribution.h vesta.h gaskell.h simplex.h
+HEADERS += CubicChebyshevMassDistribution.h shape.h simplex.h
 SOURCES += dump3D.cpp CubicChebyshevMassDistribution.cpp
 
 

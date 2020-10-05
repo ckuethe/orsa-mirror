@@ -1,6 +1,6 @@
 #include "CubicChebyshevMassDistribution.h"
 #include "simplex.h"
-#include "gaskell.h"
+#include "shape.h"
 #include <orsaPDS/RadioScienceGravity.h>
 #include "CCMD2SH.h"
 #include <orsa/statistic.h>
@@ -207,10 +207,10 @@ int main(int argc, char **argv) {
     
     const std::string SQLiteDBFileName = getSqliteDBFileName_simplex(plateModelFile,plateModelR0);
     
-    osg::ref_ptr<GaskellPlateModel> shapeModel = new GaskellPlateModel;
-    if (!shapeModel->read(plateModelFile)) {
-        ORSA_ERROR("problems encountered while reading shape file...");
-        exit(0);
+    osg::ref_ptr<InputShape> shapeModel = new InputShape;
+       if (!shapeModel->read(plateModelFile)) {
+       ORSA_ERROR("problems encountered while reading shape file...");
+       exit(0);
     }
     
     osg::ref_ptr<SimplexIntegration<simplex_T> > si = new SimplexIntegration<simplex_T>(shapeModel.get(), plateModelR0, SQLiteDBFileName);

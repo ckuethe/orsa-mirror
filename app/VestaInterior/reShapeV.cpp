@@ -1,9 +1,5 @@
 #include "simplex.h"
 
-// #include "vesta.h"
-// #include "gaskell.h"
-// #include "eros_shape.h"
-
 int main(int argc, char **argv) {
     
     const double km = orsa::FromUnits(1,orsa::Unit::KM);
@@ -20,28 +16,6 @@ int main(int argc, char **argv) {
     orsa::TriShape::VertexVector v;
     orsa::TriShape::FaceVector f;
     orsa::TriShape::GeodesicGrid(v,f,Nsub);
-    
-    /* osg::ref_ptr<VestaShape> shapeModel = new VestaShape;
-       if (!shapeModel->read(inputFile)) {
-       ORSA_ERROR("problems encountered while reading shape file...");
-       exit(0);
-       }
-    */
-    
-    /* osg::ref_ptr<ErosShape> shapeModel = new ErosShape;
-       if (!shapeModel->read(inputFile)) {
-       ORSA_ERROR("problems encountered while reading shape file...");
-       exit(0);
-       }
-    */
-    
-    /*
-    osg::ref_ptr<GaskellPlateModel> shapeModel = new GaskellPlateModel;
-    if (!shapeModel->read(inputFile)) {
-        ORSA_ERROR("problems encountered while reading shape file...");
-        exit(0);
-    }
-    */
     
     orsa::TriShape::VertexVector inVec;
     {

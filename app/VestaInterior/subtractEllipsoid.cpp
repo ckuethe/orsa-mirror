@@ -51,6 +51,8 @@ void getEllipsoidVV(VertexVector & ellipsoidVertexVector, const VertexVector & v
     }
 }
 
+#warning replace subtraction in radial direction with subtraction in normal direction?
+
 int main (int argc, char **argv) {
     
     orsa::Debug::instance()->initTimer();

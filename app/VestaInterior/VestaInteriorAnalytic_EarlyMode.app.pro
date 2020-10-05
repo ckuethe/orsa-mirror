@@ -7,7 +7,7 @@ CONFIG += gmp_include gmp_lib gsl_include gsl_lib osg_include osg_lib spice_incl
 
 include(../../orsa.pri)
 
-TARGET   = VestaInteriorAnalytic
+TARGET   = VestaInteriorAnalytic_EarlyMode
 
 INCLUDEPATH += ../../src/
 DEPENDPATH  += ../../src/
@@ -22,7 +22,7 @@ DESTDIR     = .
 	LIBS += -L../../lib/$${PLATFORM_NAME} -lorsa -lorsaSolarSystem -lorsaEssentialOSG -lorsaSPICE -lorsaPDS -lorsaUtil -lOpenThreads -lqd -lsqlite3 -lcrypto -lssl -lgmp -lmpfr
 	#}
 
-HEADERS += VestaInteriorAnalytic.h   CCMD2SH.h   shape.h  CubicChebyshevMassDistribution.h penalty.h
-SOURCES += VestaInteriorAnalytic.cpp CubicChebyshevMassDistribution.cpp 
+HEADERS += VestaInteriorAnalytic_EarlyMode.h   CCMD2SH.h shape.h  CubicChebyshevMassDistribution.h penalty.h
+SOURCES += VestaInteriorAnalytic_EarlyMode.cpp CubicChebyshevMassDistribution.cpp 
 
 

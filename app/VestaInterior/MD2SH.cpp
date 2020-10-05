@@ -14,8 +14,7 @@
 #include "simplex.h"
 #include "SH2ijk.h"
 #include "penalty.h"
-#include "vesta.h"
-#include "gaskell.h"
+#include "shape.h"
 #include "translate_ijk.h"
 
 #include <gsl/gsl_blas.h>
@@ -59,11 +58,11 @@ int main(int argc, char **argv) {
         ORSA_DEBUG("invalid input...");
         exit(0);
     }
-        
-    osg::ref_ptr<GaskellPlateModel> shapeModel = new GaskellPlateModel;
-    if (!shapeModel->read(plateModelFile)) {
-        ORSA_ERROR("problems encountered while reading shape file...");
-        exit(0);
+    
+    osg::ref_ptr<InputShape> shapeModel = new InputShape;
+       if (!shapeModel->read(plateModelFile)) {
+       ORSA_ERROR("problems encountered while reading shape file...");
+       exit(0);
     }
     
     const std::string SQLiteDBFileName = getSqliteDBFileName_simplex(plateModelFile,plateModelR0);

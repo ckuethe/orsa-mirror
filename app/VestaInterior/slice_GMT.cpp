@@ -13,9 +13,7 @@
 #include "CubicChebyshevMassDistribution.h"
 #include "simplex.h"
 
-#include "vesta.h"
-#include "gaskell.h"
-#include "eros_shape.h"
+#include "shape.h"
 
 #include <libgen.h>
 
@@ -321,28 +319,13 @@ int main(int argc, char **argv) {
     
     // safer over NFS
     // sqlite3_vfs_register(sqlite3_vfs_find("unix-dotfile"), 1);
-
-    /* osg::ref_ptr<VestaShape> shapeModel = new VestaShape;
+    
+    osg::ref_ptr<InputShape> shapeModel = new InputShape;
        if (!shapeModel->read(plateModelFile)) {
        ORSA_ERROR("problems encountered while reading shape file...");
        exit(0);
-       }
-    */
-    
-    /* 
-       osg::ref_ptr<ErosShape> shapeModel = new ErosShape;
-       if (!shapeModel->read(plateModelFile)) {
-       ORSA_ERROR("problems encountered while reading shape file...");
-       exit(0);
-       }
-    */
-    
-    osg::ref_ptr<GaskellPlateModel> shapeModel = new GaskellPlateModel;
-    if (!shapeModel->read(plateModelFile)) {
-        ORSA_ERROR("problems encountered while reading shape file...");
-        exit(0);
     }
-    
+           
     CubicChebyshevMassDistributionFile::DataContainer CCMDF;
     CubicChebyshevMassDistributionFile::read(CCMDF,CCMDF_filename);
     if (CCMDF.size() == 0) {
@@ -610,7 +593,11 @@ int main(int argc, char **argv) {
                 xVector[1] = orsa::FromUnits((*it_rv_in).getZ(),orsa::Unit::KM,-1);
             }
             
+            // main version
             fprintf(fp_xyz,"%g %g %g\n",xVector[0],xVector[1],orsa::FromUnits(orsa::FromUnits(md->density((*it_rv_in)),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
+            //
+            // ALT version x undertainty mapping...
+            // fprintf(fp_xyz,"%g %g %g\n",xVector[0],xVector[1],orsa::FromUnits(orsa::FromUnits(md->ALT_density((*it_rv_in)),orsa::Unit::GRAM,-1),orsa::Unit::CM,3));
             
             ++it_rv_in;
         }

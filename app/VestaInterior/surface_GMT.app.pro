@@ -23,7 +23,7 @@ DESTDIR     = .
 	#}
 
 
-HEADERS += CubicChebyshevMassDistribution.h vesta.h gaskell.h simplex.h VestaInteriorAnalytic.h
+HEADERS += CubicChebyshevMassDistribution.h shape.h simplex.h VestaInteriorAnalytic.h
 SOURCES += surface_GMT.cpp CubicChebyshevMassDistribution.cpp
 
 

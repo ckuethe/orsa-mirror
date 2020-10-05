@@ -23,5 +23,5 @@ DESTDIR     = .
 	#}
 
 
-HEADERS += vesta.h gaskell.h
+HEADERS += shape.h
 SOURCES += reShape.cpp

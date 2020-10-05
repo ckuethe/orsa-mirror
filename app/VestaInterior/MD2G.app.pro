@@ -23,7 +23,7 @@ DESTDIR     = .
 	#}
 
 
-HEADERS += CubicChebyshevMassDistribution.h CCMD2SH.h vesta.h gaskell.h simplex.h penalty.h
+HEADERS += CubicChebyshevMassDistribution.h CCMD2SH.h shape.h simplex.h penalty.h
 SOURCES += MD2G.cpp CubicChebyshevMassDistribution.cpp
 
 
