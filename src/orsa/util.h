@@ -212,6 +212,10 @@ namespace orsa {
             return ::gsl_ran_poisson(rnd,mu);
         }
     public:
+        void gsl_ran_dirichlet(size_t K, const double alpha[], double theta[]) const {
+            return ::gsl_ran_dirichlet(rnd,K,alpha,theta);
+        }
+    public:
         const int randomSeed;
     protected:  
         gsl_rng * rnd;
